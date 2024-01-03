@@ -62,7 +62,7 @@ typedef struct _YORI_WIN_CTRL_MENU_ENTRY {
      The number of child menu items associated with this menu item, or zero
      to indicate no child menu items are present.
      */
-    DWORD ChildItemCount;
+    YORI_ALLOC_SIZE_T ChildItemCount;
 
     /**
      Flags associated with the menu item.
@@ -73,7 +73,7 @@ typedef struct _YORI_WIN_CTRL_MENU_ENTRY {
      Specifies the offset, within DisplayCaption, of the character that is
      the accelerator character.
      */
-    DWORD AcceleratorOffset;
+    YORI_ALLOC_SIZE_T AcceleratorOffset;
 
     /**
      Specifies the character that is an accelerator key for this menu item.
@@ -121,12 +121,12 @@ typedef struct _YORI_WIN_CTRL_MENU_HOTKEY_ARRAY {
     /**
      The number of entries that have been allocated.
      */
-    DWORD Allocated;
+    YORI_ALLOC_SIZE_T Allocated;
 
     /**
      The number of entries that have been populated with entries.
      */
-    DWORD Populated;
+    YORI_ALLOC_SIZE_T Populated;
 
     /**
      An array of entries.
@@ -248,7 +248,7 @@ YoriWinMenuAddHotkeyToArray(
     ASSERT(Hotkey->EntryToInvoke != NULL);
 
     if (Array->Populated + 1 >= Array->Allocated) {
-        DWORD NewAllocated;
+        YORI_ALLOC_SIZE_T NewAllocated;
         PYORI_WIN_CTRL_MENU_HOTKEY NewKeysArray;
 
         NewAllocated = Array->Allocated + 100;
@@ -321,7 +321,7 @@ VOID
 YoriWinMenuFreeEntryArray(
     __in PYORI_WIN_CTRL_MENU_HOTKEY_ARRAY HotkeyArray,
     __in PYORI_WIN_CTRL_MENU_ENTRY ItemArray,
-    __in DWORD ItemCount
+    __in YORI_ALLOC_SIZE_T ItemCount
     )
 {
     DWORD Index;
@@ -390,12 +390,12 @@ BOOLEAN
 YoriWinMenuCopyUserEntry(
     __in PYORI_WIN_CTRL_MENU_HOTKEY_ARRAY HotkeyArray,
     __in PYORI_WIN_MENU_ENTRY Input,
-    __in DWORD MaxCaption,
+    __in YORI_ALLOC_SIZE_T MaxCaption,
     __out PYORI_WIN_CTRL_MENU_ENTRY Output
     )
 {
-    DWORD CharsNeeded;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T CharsNeeded;
+    YORI_ALLOC_SIZE_T Index;
     YORI_WIN_CTRL_MENU_HOTKEY Hotkey;
 
     if (Input->Hotkey.LengthInChars > 0) {
@@ -472,12 +472,12 @@ YoriWinMenuCopyMultipleItems(
     __in PYORI_WIN_CTRL_MENU_HOTKEY_ARRAY HotkeyArray,
     __in PYORI_WIN_MENU_ENTRY SourceArray,
     __out_ecount(ItemCount) PYORI_WIN_CTRL_MENU_ENTRY DestArray,
-    __in DWORD ItemCount
+    __in YORI_ALLOC_SIZE_T ItemCount
     )
 {
-    DWORD Index;
-    DWORD MaxCaption;
-    DWORD MaxHotkey;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T MaxCaption;
+    YORI_ALLOC_SIZE_T MaxHotkey;
 
     MaxCaption = 0;
     MaxHotkey = 0;
@@ -611,12 +611,12 @@ typedef struct _YORI_WIN_CTRL_MENU_POPUP {
     /**
      the number of elements in the Items and ItemCtrlArray arrays.
      */
-    DWORD ItemCount;
+    YORI_ALLOC_SIZE_T ItemCount;
 
     /**
      Specifies the array index of any currently active menu item.
      */
-    DWORD ActiveItemIndex;
+    YORI_ALLOC_SIZE_T ActiveItemIndex;
 
     /**
      The color attributes to use to display a selected menu item.
@@ -649,7 +649,7 @@ YoriWinMenuPopupWindowCreate(
     __in PSMALL_RECT WindowRect,
     __in BOOLEAN Shadow,
     __in_ecount(ChildItemCount) PYORI_WIN_CTRL_MENU_ENTRY ChildItems,
-    __in DWORD ChildItemCount,
+    __in YORI_ALLOC_SIZE_T ChildItemCount,
     __in PYORI_WIN_MENU_OUTCOME Outcome
     );
 
@@ -682,8 +682,8 @@ YoriWinMenuPopupPaint(
     __in PYORI_WIN_CTRL_MENU_POPUP MenuPopup
     )
 {
-    DWORD Index;
-    DWORD CharIndex;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T CharIndex;
     WORD TextAttributes;
     WORD ItemAttributes;
     WORD CharAttributes;
@@ -823,8 +823,8 @@ YoriWinMenuPopupSetNextItemActive(
     __in PYORI_WIN_CTRL_MENU_POPUP MenuPopup
     )
 {
-    DWORD ProbeIndex;
-    DWORD TerminateIndex;
+    YORI_ALLOC_SIZE_T ProbeIndex;
+    YORI_ALLOC_SIZE_T TerminateIndex;
     PYORI_WIN_CTRL_MENU_ENTRY Item;
 
     if (MenuPopup->ItemCount == 0) {
@@ -878,8 +878,8 @@ YoriWinMenuPopupSetPreviousItemActive(
     __in PYORI_WIN_CTRL_MENU_POPUP MenuPopup
     )
 {
-    DWORD ProbeIndex;
-    DWORD TerminateIndex;
+    YORI_ALLOC_SIZE_T ProbeIndex;
+    YORI_ALLOC_SIZE_T TerminateIndex;
     PYORI_WIN_CTRL_MENU_ENTRY Item;
 
     if (MenuPopup->ItemCount == 0) {
@@ -940,7 +940,7 @@ YoriWinMenuPopupSetPreviousItemActive(
 VOID
 YoriWinMenuPopupSetActiveItem(
     __in PYORI_WIN_CTRL_MENU_POPUP MenuPopup,
-    __in DWORD ProbeIndex
+    __in YORI_ALLOC_SIZE_T ProbeIndex
     )
 {
     if (ProbeIndex >= MenuPopup->ItemCount) {
@@ -958,7 +958,7 @@ YoriWinMenuPopupSetActiveItem(
 VOID
 YoriWinMenuGetPopupSizeNeededForItems(
     __in PYORI_WIN_CTRL_MENU_ENTRY Items,
-    __in DWORD ItemCount,
+    __in YORI_ALLOC_SIZE_T ItemCount,
     __out PCOORD SizeNeeded
     );
 
@@ -983,7 +983,7 @@ YoriWinMenuPopupInvokeItem(
 
     if (MenuPopup->Items[Index].ChildItems != NULL) {
         PYORI_WIN_CTRL_MENU_ENTRY ChildItems;
-        DWORD ChildItemCount;
+        YORI_ALLOC_SIZE_T ChildItemCount;
         COORD ClientSize;
         SMALL_RECT ChildRect;
         COORD CtrlCoord;
@@ -1173,7 +1173,7 @@ YoriWinMenuPopupCreate(
     __in PYORI_WIN_CTRL_HANDLE ParentHandle,
     __in PSMALL_RECT Size,
     __in PYORI_WIN_CTRL_MENU_ENTRY Items,
-    __in DWORD ItemCount,
+    __in YORI_ALLOC_SIZE_T ItemCount,
     __in PYORI_WIN_MENU_OUTCOME Outcome,
     __in DWORD Style
     )
@@ -1228,7 +1228,7 @@ YoriWinMenuPopupCreate(
 VOID
 YoriWinMenuGetPopupSizeNeededForItems(
     __in PYORI_WIN_CTRL_MENU_ENTRY Items,
-    __in DWORD ItemCount,
+    __in YORI_ALLOC_SIZE_T ItemCount,
     __out PCOORD SizeNeeded
     )
 {
@@ -1323,7 +1323,7 @@ YoriWinMenuPopupWindowCreate(
     __in PSMALL_RECT WindowRect,
     __in BOOLEAN Shadow,
     __in_ecount(ChildItemCount) PYORI_WIN_CTRL_MENU_ENTRY ChildItems,
-    __in DWORD ChildItemCount,
+    __in YORI_ALLOC_SIZE_T ChildItemCount,
     __in PYORI_WIN_MENU_OUTCOME Outcome
     )
 {
@@ -1385,13 +1385,13 @@ typedef struct _YORI_WIN_CTRL_MENUBAR {
     /**
      the number of elements in the Items and ItemCtrlArray arrays.
      */
-    DWORD ItemCount;
+    YORI_ALLOC_SIZE_T ItemCount;
 
     /**
      Specifies the array index of any currently active menu item.  Note this
      is only meaningful if ActiveMenuItem is TRUE.
      */
-    DWORD ActiveItemIndex;
+    YORI_ALLOC_SIZE_T ActiveItemIndex;
 
     /**
      An array of hotkeys that could reside anywhere within the menu bar
@@ -1448,8 +1448,8 @@ YoriWinMenuBarPaint(
     __in PYORI_WIN_CTRL_MENUBAR MenuBar
     )
 {
-    DWORD ItemIndex;
-    DWORD CharIndex;
+    YORI_ALLOC_SIZE_T ItemIndex;
+    YORI_ALLOC_SIZE_T CharIndex;
     WORD CellIndex;
     WORD TextAttributes;
     WORD ItemAttributes;
@@ -1523,7 +1523,7 @@ YoriWinMenuBarPaint(
 BOOLEAN
 YoriWinMenuBarOpenMenu(
     __in PYORI_WIN_CTRL_MENUBAR MenuBar,
-    __in DWORD ItemIndex,
+    __in YORI_ALLOC_SIZE_T ItemIndex,
     __in PYORI_WIN_MENU_OUTCOME Outcome
     )
 {
@@ -1534,9 +1534,9 @@ YoriWinMenuBarOpenMenu(
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
     SMALL_RECT ChildRect;
     PYORI_WIN_CTRL_MENU_ENTRY ChildItems;
-    DWORD ChildItemCount;
+    YORI_ALLOC_SIZE_T ChildItemCount;
     WORD HorizontalOffset;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     COORD ClientSize;
     COORD WinMgrSize;
 
@@ -1605,11 +1605,11 @@ YoriWinMenuBarOpenMenu(
 BOOLEAN
 YoriWinMenuBarExecuteTopMenu(
     __in PYORI_WIN_CTRL_MENUBAR MenuBar,
-    __in DWORD Index
+    __in YORI_ALLOC_SIZE_T Index
     )
 {
     YORI_WIN_MENU_OUTCOME Outcome;
-    DWORD DisplayIndex;
+    YORI_ALLOC_SIZE_T DisplayIndex;
 
     DisplayIndex = Index;
 
@@ -1684,8 +1684,7 @@ YoriWinMenuBarAccelerator(
     __in TCHAR Char
     )
 {
-    DWORD ItemIndex;
-
+    YORI_ALLOC_SIZE_T ItemIndex;
 
     for (ItemIndex = 0; ItemIndex < MenuBar->ItemCount; ItemIndex++) {
         if (MenuBar->Items[ItemIndex].AcceleratorChar != '\0' &&
@@ -1807,7 +1806,7 @@ YoriWinMenuBarEventHandler(
                 Event->MouseDown.ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
 
                 DWORD HorizFound = 1;
-                DWORD Index;
+                YORI_ALLOC_SIZE_T Index;
                 for (Index = 0; Index < MenuBar->ItemCount; Index++) {
                     if ((DWORD)Event->MouseDown.Location.X >= HorizFound &&
                         (DWORD)Event->MouseDown.Location.X < HorizFound + MenuBar->Items[Index].DisplayCaption.LengthInChars + 2) {
@@ -1845,7 +1844,7 @@ YoriWinMenuBarAppendItems(
 {
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_CTRL_MENUBAR MenuBar;
-    DWORD NewCount;
+    YORI_ALLOC_SIZE_T NewCount;
     PYORI_WIN_CTRL_MENU_ENTRY NewItems;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;

@@ -39,7 +39,7 @@
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_FALSE(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {

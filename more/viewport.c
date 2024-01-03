@@ -230,10 +230,10 @@ MoreDrawStatusLine(
                       SearchString);
     } else {
         UCHAR SearchCount;
-        DWORD CharsNeeded;
-        DWORD TotalSearchChars;
-        DWORD SearchChars;
-        DWORD Index;
+        YORI_ALLOC_SIZE_T CharsNeeded;
+        YORI_ALLOC_SIZE_T TotalSearchChars;
+        YORI_ALLOC_SIZE_T SearchChars;
+        YORI_ALLOC_SIZE_T Index;
         YORI_STRING Remaining;
         YORI_STRING SearchSubstring;
 
@@ -432,11 +432,11 @@ MoreDegenerateDisplay(
 VOID
 MoreOutputSeriesOfLines(
     __in PMORE_LOGICAL_LINE FirstLine,
-    __in DWORD LineCount
+    __in YORI_ALLOC_SIZE_T LineCount
     )
 {
-    DWORD Index;
-    DWORD CharsRequired;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T CharsRequired;
     YORI_STRING CombinedBuffer;
     YORI_STRING VtAttribute;
     TCHAR VtAttributeBuffer[32];
@@ -449,8 +449,8 @@ MoreOutputSeriesOfLines(
 
     for (Index = 0; Index < LineCount; Index++) {
         YoriLibVtStringForTextAttribute(&VtAttribute, 0, FirstLine[Index].InitialDisplayColor);
-        CharsRequired += VtAttribute.LengthInChars;
-        CharsRequired += FirstLine[Index].Line.LengthInChars;
+        CharsRequired = CharsRequired + VtAttribute.LengthInChars;
+        CharsRequired = CharsRequired + FirstLine[Index].Line.LengthInChars;
 
         //
         //  When scrolling to a new line, the console can initialize the
@@ -468,9 +468,9 @@ MoreOutputSeriesOfLines(
         for (Index = 0; Index < LineCount; Index++) {
             YoriLibVtStringForTextAttribute(&VtAttribute, 0, FirstLine[Index].InitialDisplayColor);
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], VtAttribute.StartOfString, VtAttribute.LengthInChars * sizeof(TCHAR));
-            CharsRequired += VtAttribute.LengthInChars;
+            CharsRequired = CharsRequired + VtAttribute.LengthInChars;
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], FirstLine[Index].Line.StartOfString, FirstLine[Index].Line.LengthInChars * sizeof(TCHAR));
-            CharsRequired += FirstLine[Index].Line.LengthInChars;
+            CharsRequired = CharsRequired + FirstLine[Index].Line.LengthInChars;
             CombinedBuffer.StartOfString[CharsRequired] = 0x1b;
             CharsRequired++;
             CombinedBuffer.StartOfString[CharsRequired] = '[';
@@ -524,9 +524,9 @@ MoreDisplayChangedLinesInViewport(
     __inout PMORE_CONTEXT MoreContext
     )
 {
-    DWORD Index;
-    DWORD ChangedLineCount = 0;
-    DWORD NumberNewLines;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T ChangedLineCount = 0;
+    YORI_ALLOC_SIZE_T NumberNewLines;
     DWORD NumberWritten;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE StdOutHandle;
@@ -629,13 +629,13 @@ VOID
 MoreDisplayNewLinesInViewport(
     __inout PMORE_CONTEXT MoreContext,
     __in PMORE_LOGICAL_LINE NewLines,
-    __in DWORD NewLineCount
+    __in YORI_ALLOC_SIZE_T NewLineCount
     )
 {
-    DWORD Index;
-    DWORD FirstLineToDisplay;
-    DWORD LinesToPreserve;
-    DWORD LineIndexToPreserve;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T FirstLineToDisplay;
+    YORI_ALLOC_SIZE_T LinesToPreserve;
+    YORI_ALLOC_SIZE_T LineIndexToPreserve;
 
     //
     //  The math to calculate lines to preserve will get confused if we
@@ -664,8 +664,8 @@ MoreDisplayNewLinesInViewport(
     }
 
     FirstLineToDisplay = MoreContext->LinesInViewport;
-    MoreContext->LinesInViewport += NewLineCount;
-    MoreContext->LinesInPage += NewLineCount;
+    MoreContext->LinesInViewport = MoreContext->LinesInViewport + NewLineCount;
+    MoreContext->LinesInPage = MoreContext->LinesInPage + NewLineCount;
     if (MoreContext->LinesInPage > MoreContext->LinesInViewport) {
         MoreContext->LinesInPage = MoreContext->LinesInViewport;
     }
@@ -696,14 +696,14 @@ VOID
 MoreDisplayPreviousLinesInViewport(
     __inout PMORE_CONTEXT MoreContext,
     __in PMORE_LOGICAL_LINE NewLines,
-    __in DWORD NewLineCount
+    __in YORI_ALLOC_SIZE_T NewLineCount
     )
 {
-    DWORD Index;
-    DWORD LinesToPreserve;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T LinesToPreserve;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE StdOutHandle;
-    DWORD OldLinesInViewport;
+    YORI_ALLOC_SIZE_T OldLinesInViewport;
     COORD NewPosition;
     DWORD NumberWritten;
     SMALL_RECT RectToMove;
@@ -818,9 +818,9 @@ MoreAddNewLinesToViewport(
     )
 {
     PMORE_LOGICAL_LINE CurrentLine;
-    DWORD LinesDesired;
-    DWORD LinesReturned;
-    BOOL Success;
+    YORI_ALLOC_SIZE_T LinesDesired;
+    YORI_ALLOC_SIZE_T LinesReturned;
+    BOOLEAN Success;
 
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
 
@@ -860,13 +860,13 @@ MoreAddNewLinesToViewport(
 
  @return The number of lines actually moved.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MoreMoveViewportToTop(
     __inout PMORE_CONTEXT MoreContext
     )
 {
-    BOOL Success;
-    DWORD LinesReturned;
+    BOOLEAN Success;
+    YORI_ALLOC_SIZE_T LinesReturned;
 
     if (MoreContext->LinesInViewport == 0) {
         return 0;
@@ -895,13 +895,13 @@ MoreMoveViewportToTop(
 
  @return The number of lines actually moved.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MoreMoveViewportToBottom(
     __inout PMORE_CONTEXT MoreContext
     )
 {
-    BOOL Success;
-    DWORD LinesReturned;
+    BOOLEAN Success;
+    YORI_ALLOC_SIZE_T LinesReturned;
 
     if (MoreContext->LinesInViewport == 0) {
         return 0;
@@ -933,16 +933,16 @@ MoreMoveViewportToBottom(
 
  @return The number of lines actually moved.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MoreMoveViewportUp(
     __inout PMORE_CONTEXT MoreContext,
-    __in DWORD LinesToMove
+    __in YORI_ALLOC_SIZE_T LinesToMove
     )
 {
     PMORE_LOGICAL_LINE CurrentLine;
-    BOOL Success;
-    DWORD LinesReturned;
-    DWORD CappedLinesToMove;
+    BOOLEAN Success;
+    YORI_ALLOC_SIZE_T LinesReturned;
+    YORI_ALLOC_SIZE_T CappedLinesToMove;
 
     CappedLinesToMove = LinesToMove;
 
@@ -987,16 +987,16 @@ MoreMoveViewportUp(
 
  @return The number of lines actually moved.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MoreMoveViewportDown(
     __inout PMORE_CONTEXT MoreContext,
-    __in DWORD LinesToMove
+    __in YORI_ALLOC_SIZE_T LinesToMove
     )
 {
     PMORE_LOGICAL_LINE CurrentLine;
-    BOOL Success;
-    DWORD LinesReturned;
-    DWORD CappedLinesToMove;
+    BOOLEAN Success;
+    YORI_ALLOC_SIZE_T LinesReturned;
+    YORI_ALLOC_SIZE_T CappedLinesToMove;
 
     CappedLinesToMove = LinesToMove;
 
@@ -1050,9 +1050,9 @@ MoreRegenerateViewport(
     __in_opt PMORE_PHYSICAL_LINE FirstPhysicalLine
     )
 {
-    DWORD LinesReturned;
-    DWORD CappedLinesToMove;
-    BOOL Success;
+    YORI_ALLOC_SIZE_T LinesReturned;
+    YORI_ALLOC_SIZE_T CappedLinesToMove;
+    BOOLEAN Success;
     MORE_LOGICAL_LINE CurrentLogicalLine;
     MORE_LOGICAL_LINE PreviousLogicalLine;
     PMORE_LOGICAL_LINE LineToFollow;
@@ -1107,14 +1107,14 @@ MoreGenerateEntireViewportWithStartingLine(
     __in_opt PMORE_PHYSICAL_LINE FirstPhysicalLine
     )
 {
-    DWORD LinesReturned;
-    DWORD LinesRemaining;
-    DWORD CappedLinesToMove;
-    BOOL Success;
+    YORI_ALLOC_SIZE_T LinesReturned;
+    YORI_ALLOC_SIZE_T LinesRemaining;
+    YORI_ALLOC_SIZE_T CappedLinesToMove;
+    BOOLEAN Success;
     MORE_LOGICAL_LINE CurrentLogicalLine;
     MORE_LOGICAL_LINE PreviousLogicalLine;
     PMORE_LOGICAL_LINE LineToFollow;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     ZeroMemory(&CurrentLogicalLine, sizeof(CurrentLogicalLine));
     ZeroMemory(&PreviousLogicalLine, sizeof(PreviousLogicalLine));
@@ -1224,7 +1224,7 @@ MoreMoveViewportToNextSearchMatch(
 {
     PMORE_PHYSICAL_LINE NextMatch;
     PMORE_LOGICAL_LINE LineToFollow;
-    DWORD LinesMoved;
+    YORI_ALLOC_SIZE_T LinesMoved;
 
     LineToFollow = NULL;
     if (MoreContext->LinesInViewport > 0) {
@@ -1264,7 +1264,7 @@ MoreMoveViewportToPreviousSearchMatch(
 {
     PMORE_PHYSICAL_LINE NextMatch;
     PMORE_LOGICAL_LINE LineToFollow;
-    DWORD LinesMoved;
+    YORI_ALLOC_SIZE_T LinesMoved;
 
     LineToFollow = NULL;
     if (MoreContext->LinesInViewport > 0) {
@@ -1388,12 +1388,12 @@ MoreCopySelectionIfPresent(
     PMORE_LOGICAL_LINE CopyLogicalLines;
     PMORE_LOGICAL_LINE StartLine;
     YORI_STRING Subset;
-    DWORD LineCount;
-    DWORD StartingLineIndex;
-    DWORD SingleLineBufferSize;
-    DWORD VtTextBufferSize;
-    DWORD LineIndex;
-    DWORD CharactersRemainingInMatch = 0;
+    YORI_ALLOC_SIZE_T LineCount;
+    YORI_ALLOC_SIZE_T StartingLineIndex;
+    YORI_ALLOC_SIZE_T SingleLineBufferSize;
+    YORI_ALLOC_SIZE_T VtTextBufferSize;
+    YORI_ALLOC_SIZE_T LineIndex;
+    YORI_ALLOC_SIZE_T CharactersRemainingInMatch = 0;
     BOOL Result = FALSE;
     YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenInfoEx;
     PDWORD ColorTableToUse = NULL;
@@ -1509,7 +1509,7 @@ MoreCopySelectionIfPresent(
     {
         WORD InitialDisplayColor;
         WORD InitialUserColor;
-        DWORD LogicalLineLength;
+        YORI_ALLOC_SIZE_T LogicalLineLength;
         MORE_LINE_END_CONTEXT LineEndContext;
 
         for (LineIndex = StartingLineIndex; LineIndex < StartingLineIndex + LineCount; LineIndex++) {
@@ -1529,7 +1529,7 @@ MoreCopySelectionIfPresent(
                                                              &LineEndContext);
                 InitialDisplayColor = LineEndContext.FinalDisplayColor;
                 InitialUserColor = LineEndContext.FinalUserColor;
-                Subset.LengthInChars -= LogicalLineLength;
+                Subset.LengthInChars = Subset.LengthInChars - LogicalLineLength;
                 Subset.StartOfString += LogicalLineLength;
                 CharactersRemainingInMatch = LineEndContext.CharactersRemainingInMatch;
             }
@@ -1576,16 +1576,16 @@ MoreCopySelectionIfPresent(
     Subset.LengthAllocated = VtText.LengthAllocated;
     for (LineIndex = StartingLineIndex; LineIndex < StartingLineIndex + LineCount; LineIndex++) {
         YoriLibVtStringForTextAttribute(&Subset, 0, CopyLogicalLines[LineIndex].InitialDisplayColor);
-        VtText.LengthInChars += Subset.LengthInChars;
+        VtText.LengthInChars = VtText.LengthInChars + Subset.LengthInChars;
         Subset.StartOfString += Subset.LengthInChars;
-        Subset.LengthAllocated -= Subset.LengthInChars;
+        Subset.LengthAllocated = Subset.LengthAllocated - Subset.LengthInChars;
         Subset.LengthInChars = 0;
 
         YoriLibYPrintf(&Subset, _T("%y\r\n"), &CopyLogicalLines[LineIndex].Line);
 
-        VtText.LengthInChars += Subset.LengthInChars;
+        VtText.LengthInChars = VtText.LengthInChars + Subset.LengthInChars;
         Subset.StartOfString += Subset.LengthInChars;
-        Subset.LengthAllocated -= Subset.LengthInChars;
+        Subset.LengthAllocated = Subset.LengthAllocated - Subset.LengthInChars;
         Subset.LengthInChars = 0;
     }
 
@@ -1754,25 +1754,31 @@ BOOLEAN
 MoreAppendToSearchString(
     __in PMORE_CONTEXT MoreContext,
     __in PYORI_STRING String,
-    __in DWORD RepeatCount
+    __in YORI_ALLOC_SIZE_T RepeatCount
     )
 {
-    DWORD SearchIndex;
+    YORI_ALLOC_SIZE_T SearchIndex;
     DWORD LengthRequired;
     PYORI_STRING SearchString;
-    DWORD Count;
+    YORI_ALLOC_SIZE_T Count;
 
     SearchIndex = MoreSearchIndexForColorIndex(MoreContext, MoreContext->SearchColorIndex);
     SearchString = &MoreContext->SearchStrings[SearchIndex];
 
-    LengthRequired = SearchString->LengthInChars + String->LengthInChars * RepeatCount + 1;
-
+    LengthRequired = SearchString->LengthInChars;
+    LengthRequired = LengthRequired + String->LengthInChars * RepeatCount + 1;
 
     if (SearchString->LengthAllocated < LengthRequired) {
-        DWORD NewAllocSize;
-        NewAllocSize = SearchString->LengthAllocated + 4096;
-        if (NewAllocSize < LengthRequired) {
-            NewAllocSize = LengthRequired;
+        DWORD BytesDesired;
+        YORI_ALLOC_SIZE_T NewAllocSize;
+        BytesDesired = SearchString->LengthAllocated;
+        BytesDesired = BytesDesired + 4096;
+        if (BytesDesired < LengthRequired) {
+            BytesDesired = LengthRequired;
+        }
+        NewAllocSize = YoriLibMaximumAllocationInRange(LengthRequired, BytesDesired);
+        if (NewAllocSize == 0) {
+            return FALSE;
         }
         if (!YoriLibReallocateString(SearchString, NewAllocSize)) {
             return FALSE;
@@ -2085,10 +2091,10 @@ MoreProcessResizeViewport(
     PMORE_LOGICAL_LINE NewDisplayViewportLines;
     PMORE_LOGICAL_LINE NewStagingViewportLines;
     PMORE_PHYSICAL_LINE FirstPhysicalLine;
-    DWORD NewViewportHeight;
-    DWORD NewViewportWidth;
-    DWORD OldLinesInViewport;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T NewViewportHeight;
+    YORI_ALLOC_SIZE_T NewViewportWidth;
+    YORI_ALLOC_SIZE_T OldLinesInViewport;
+    YORI_ALLOC_SIZE_T Index;
     PMORE_LOGICAL_LINE OldDisplayViewportLines;
     PMORE_LOGICAL_LINE OldStagingViewportLines;
 
@@ -2202,8 +2208,8 @@ MoreCheckForWindowSizeChange(
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE StdOutHandle;
-    DWORD NewViewportWidth;
-    DWORD NewViewportHeight;
+    YORI_ALLOC_SIZE_T NewViewportWidth;
+    YORI_ALLOC_SIZE_T NewViewportHeight;
 
     StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);

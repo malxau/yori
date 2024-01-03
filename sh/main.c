@@ -99,7 +99,7 @@ YoriShExecuteYoriInit(
 
         YoriLibInitEmptyString(&YsExt);
         YsExt.StartOfString = szExt;
-        YsExt.LengthInChars = Filename->LengthInChars - (DWORD)(szExt - Filename->StartOfString);
+        YsExt.LengthInChars = Filename->LengthInChars - (YORI_ALLOC_SIZE_T)(szExt - Filename->StartOfString);
         if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
             YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
 
@@ -177,8 +177,8 @@ YoriShInit(VOID)
         YORI_STRING ExpandedBreakChars;
         YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
         if (YoriLibAllocateString(&ExpandedBreakChars, BreakChars.LengthInChars * 7)) {
-            DWORD ReadIndex;
-            DWORD WriteIndex;
+            YORI_ALLOC_SIZE_T ReadIndex;
+            YORI_ALLOC_SIZE_T WriteIndex;
             YORI_STRING Substring;
 
             WriteIndex = 0;
@@ -192,7 +192,7 @@ YoriShInit(VOID)
                     Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString, _T("0x%04x,"), BreakChars.StartOfString[ReadIndex]);
                 }
 
-                WriteIndex += Substring.LengthInChars;
+                WriteIndex = WriteIndex + Substring.LengthInChars;
             }
 
             if (WriteIndex > 0) {
@@ -223,7 +223,7 @@ YoriShInit(VOID)
             return FALSE;
         }
 
-        ModuleName.LengthInChars = GetModuleFileName(NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
+        ModuleName.LengthInChars = (YORI_ALLOC_SIZE_T)GetModuleFileName(NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
         if (ModuleName.LengthInChars > 0 && ModuleName.LengthInChars < ModuleName.LengthAllocated) {
             SetEnvironmentVariable(_T("YORISPEC"), ModuleName.StartOfString);
             while (ModuleName.LengthInChars > 0) {
@@ -353,15 +353,15 @@ YoriShExecuteInitScripts(
  */
 BOOL
 YoriShParseArgs(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
-    __out PBOOL TerminateApp,
+    __out PBOOLEAN TerminateApp,
     __out PDWORD ExitCode
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD StartArgToExec = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T StartArgToExec = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     BOOLEAN ExecuteStartupScripts = TRUE;
     BOOLEAN IgnoreUserScripts = FALSE;
@@ -483,7 +483,7 @@ YoriShParseArgs(
 BOOL
 YoriShDisplayWarnings(VOID)
 {
-    DWORD EnvVarLength;
+    YORI_ALLOC_SIZE_T EnvVarLength;
     YORI_STRING ModuleName;
 
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NULL, 0, NULL);
@@ -513,7 +513,7 @@ YoriShDisplayWarnings(VOID)
         return FALSE;
     }
 
-    ModuleName.LengthInChars = GetModuleFileName(NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
+    ModuleName.LengthInChars = (YORI_ALLOC_SIZE_T)GetModuleFileName(NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
     if (ModuleName.LengthInChars > 0 && ModuleName.LengthInChars < ModuleName.LengthAllocated) {
         HANDLE ExeHandle;
 
@@ -649,22 +649,22 @@ VOID
 YoriShCaptureCurrentDirectoryAndInformTerminal(VOID)
 {
     HANDLE ConsoleHandle;
-    DWORD NextCurrentDirectoryIndex;
-    DWORD CurrentDirectoryLength;
+    UCHAR NextCurrentDirectoryIndex;
+    YORI_ALLOC_SIZE_T CurrentDirectoryLength;
     PYORI_STRING NextCurrentDirectory;
 
-    NextCurrentDirectoryIndex = (YoriShGlobal.ActiveCurrentDirectory + 1) % (sizeof(YoriShGlobal.CurrentDirectoryBuffers)/sizeof(YoriShGlobal.CurrentDirectoryBuffers[0]));
+    NextCurrentDirectoryIndex = (UCHAR)((YoriShGlobal.ActiveCurrentDirectory + 1) % (sizeof(YoriShGlobal.CurrentDirectoryBuffers)/sizeof(YoriShGlobal.CurrentDirectoryBuffers[0])));
 
     NextCurrentDirectory = &YoriShGlobal.CurrentDirectoryBuffers[NextCurrentDirectoryIndex];
 
-    CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    CurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
     if (CurrentDirectoryLength > NextCurrentDirectory->LengthAllocated) {
         if (!YoriLibReallocateStringWithoutPreservingContents(NextCurrentDirectory, CurrentDirectoryLength + 0x40)) {
             return;
         }
     }
 
-    NextCurrentDirectory->LengthInChars = GetCurrentDirectory(NextCurrentDirectory->LengthAllocated, NextCurrentDirectory->StartOfString);
+    NextCurrentDirectory->LengthInChars = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(NextCurrentDirectory->LengthAllocated, NextCurrentDirectory->StartOfString);
 
     if (!YoriShGlobal.OutputSupportsVtDetermined) {
         ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -744,12 +744,12 @@ YoriShPreCommand(
  */
 DWORD
 ymain (
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     YORI_STRING CurrentExpression;
-    BOOL TerminateApp = FALSE;
+    BOOLEAN TerminateApp = FALSE;
 
     YoriShInit();
     YoriShParseArgs(ArgC, ArgV, &TerminateApp, &YoriShGlobal.ExitProcessExitCode);

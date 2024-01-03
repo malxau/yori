@@ -74,14 +74,14 @@ PauseHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     TCHAR Char;
     DWORD BytesRead;
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
 
     for (i = 1; i < ArgC; i++) {

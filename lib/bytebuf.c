@@ -28,30 +28,6 @@
 #include "yorilib.h"
 
 /**
- Determine if the specified size of the byte buffer is allowable.  If the new
- size exceeds an implementation or specified limit, the size cannot be
- allowed.
-
- @param Size The proposed new size of the byte buffer.
-
- @return TRUE to indicate the new size is acceptable, FALSE if it is not.
- */
-BOOLEAN
-YoriLibByteBufIsSizeAllocatable(
-    __in DWORDLONG Size
-    )
-{
-    LARGE_INTEGER liSize;
-
-    liSize.QuadPart = Size;
-    if (liSize.HighPart != 0) {
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-/**
  Initialize a byte buffer.  The structure itself is owned by the caller.
 
  @param Buffer Pointer to the buffer to initialize.
@@ -72,10 +48,10 @@ YoriLibByteBufferInitialize(
     Buffer->BytesPopulated = 0;
 
     if (InitialSize > 0) {
-        if (!YoriLibByteBufIsSizeAllocatable(InitialSize)) {
+        if (!YoriLibIsSizeAllocatable(InitialSize)) {
             return FALSE;
         }
-        Buffer->Buffer = YoriLibMalloc((DWORD)InitialSize);
+        Buffer->Buffer = YoriLibMalloc((YORI_ALLOC_SIZE_T)InitialSize);
         if (Buffer->Buffer == NULL) {
             return FALSE;
         }
@@ -138,11 +114,11 @@ YoriLibByteBufferExtend(
         return FALSE;
     }
 
-    if (!YoriLibByteBufIsSizeAllocatable(NewTotalLength)) {
+    if (!YoriLibIsSizeAllocatable(NewTotalLength)) {
         return FALSE;
     }
 
-    NewBuffer = YoriLibMalloc((DWORD)NewTotalLength);
+    NewBuffer = YoriLibMalloc((YORI_ALLOC_SIZE_T)NewTotalLength);
     if (NewBuffer == NULL) {
         return FALSE;
     }

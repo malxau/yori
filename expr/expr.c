@@ -96,7 +96,7 @@ BOOL
 ExprStringToNumber(
     __in PYORI_STRING String,
     __out PEXPR_NUMBER Number,
-    __out PDWORD CharsConsumed
+    __out PYORI_ALLOC_SIZE_T CharsConsumed
     )
 {
     return YoriLibStringToNumber(String, TRUE, &Number->Value, CharsConsumed);
@@ -116,11 +116,11 @@ VOID
 ExprOutputNumber(
     __in EXPR_NUMBER Number,
     __in BOOL OutputSeperator,
-    __in DWORD Base
+    __in WORD Base
     )
 {
     YORI_STRING String;
-    DWORD SeperatorDigits = 0;
+    WORD SeperatorDigits = 0;
 
     if (!YoriLibAllocateString(&String, 32)) {
         return;
@@ -159,16 +159,16 @@ ExprOutputNumber(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD OutputBase = 10;
-    BOOL OutputSeperator = FALSE;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD CharsConsumed;
+    BOOLEAN ArgumentUnderstood;
+    WORD OutputBase = 10;
+    BOOLEAN OutputSeperator = FALSE;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD BitsInOutput = 63;
     YORI_STRING RemainingString;
     EXPR_NUMBER Temp;
@@ -254,7 +254,7 @@ ENTRYPOINT(
         goto ParseFailure;
     }
     RemainingString.StartOfString += CharsConsumed;
-    RemainingString.LengthInChars -= CharsConsumed;
+    RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
 
     while (RemainingString.LengthInChars > 0) {
         YoriLibTrimSpaces(&RemainingString);
@@ -269,7 +269,7 @@ ENTRYPOINT(
                 }
                 Result.Value += Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
-                RemainingString.LengthInChars -= CharsConsumed;
+                RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
             case '*':
@@ -281,7 +281,7 @@ ENTRYPOINT(
                 }
                 Result.Value *= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
-                RemainingString.LengthInChars -= CharsConsumed;
+                RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
             case '-':
@@ -293,7 +293,7 @@ ENTRYPOINT(
                 }
                 Result.Value -= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
-                RemainingString.LengthInChars -= CharsConsumed;
+                RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
             case '/':
@@ -311,7 +311,7 @@ ENTRYPOINT(
                     return EXIT_FAILURE;
                 }
                 RemainingString.StartOfString += CharsConsumed;
-                RemainingString.LengthInChars -= CharsConsumed;
+                RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
             case '%':
@@ -329,7 +329,7 @@ ENTRYPOINT(
                     return EXIT_FAILURE;
                 }
                 RemainingString.StartOfString += CharsConsumed;
-                RemainingString.LengthInChars -= CharsConsumed;
+                RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
             case '<':
@@ -341,7 +341,7 @@ ENTRYPOINT(
                 }
                 Result.Value <<= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
-                RemainingString.LengthInChars -= CharsConsumed;
+                RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
             case '>':
@@ -353,7 +353,7 @@ ENTRYPOINT(
                 }
                 Result.Value >>= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
-                RemainingString.LengthInChars -= CharsConsumed;
+                RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
             case '^':
@@ -371,7 +371,7 @@ ENTRYPOINT(
                     }
                 }
                 RemainingString.StartOfString += CharsConsumed;
-                RemainingString.LengthInChars -= CharsConsumed;
+                RemainingString.LengthInChars = RemainingString.LengthInChars - CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
         }

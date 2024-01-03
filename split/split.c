@@ -200,13 +200,13 @@ SplitProcessStream(
         PVOID Buffer;
         ULONG BytesRead;
 
-        Buffer = YoriLibMalloc((DWORD)SplitContext->BytesPerPart);
+        Buffer = YoriLibMalloc((YORI_ALLOC_SIZE_T)SplitContext->BytesPerPart);
         if (Buffer == NULL) {
             return FALSE;
         }
 
         while (TRUE) {
-            if (!ReadFile(hSource, Buffer, (DWORD)SplitContext->BytesPerPart, &BytesRead, NULL)) {
+            if (!ReadFile(hSource, Buffer, (YORI_ALLOC_SIZE_T)SplitContext->BytesPerPart, &BytesRead, NULL)) {
                 break;
             }
 
@@ -262,7 +262,7 @@ SplitJoin(
     HANDLE TargetHandle;
     PUCHAR Buffer;
     DWORD BytesRead;
-    DWORD BytesAllocated;
+    YORI_ALLOC_SIZE_T BytesAllocated;
     LONGLONG CurrentFragment;
     LPTSTR FragmentFileName;
     YORI_STRING NumberString;
@@ -271,8 +271,7 @@ SplitJoin(
 
     ASSERT(YoriLibIsStringNullTerminated(OutputFile));
 
-    BytesAllocated = 256 * 1024;
-
+    BytesAllocated = YoriLibMaximumAllocationInRange(60 * 1024, 256 * 1024);
     Buffer = YoriLibMalloc(BytesAllocated);
     if (Buffer == NULL) {
         return FALSE;
@@ -407,17 +406,17 @@ SplitJoin(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     DWORD Result;
     SPLIT_CONTEXT SplitContext;
     YORI_STRING Arg;
-    BOOL JoinMode = FALSE;
+    BOOLEAN JoinMode = FALSE;
 
     ZeroMemory(&SplitContext, sizeof(SplitContext));
 
@@ -436,7 +435,7 @@ ENTRYPOINT(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 if (ArgC > i + 1) {
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
                     ArgumentUnderstood = TRUE;
                     SplitContext.LinesMode = FALSE;
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &SplitContext.BytesPerPart, &CharsConsumed);
@@ -447,7 +446,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 if (ArgC > i + 1) {
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
                     ArgumentUnderstood = TRUE;
                     SplitContext.LinesMode = TRUE;
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &SplitContext.LinesPerPart, &CharsConsumed);
@@ -516,7 +515,7 @@ ENTRYPOINT(
                 Result = EXIT_FAILURE;
             }
         } else {
-            if (SplitContext.BytesPerPart == 0 || SplitContext.BytesPerPart >= (DWORD)-1) {
+            if (SplitContext.BytesPerPart == 0 || SplitContext.BytesPerPart >= YORI_MAX_ALLOC_SIZE) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: invalid bytes per part\n"));
                 Result = EXIT_FAILURE;
             }

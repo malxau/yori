@@ -491,7 +491,7 @@ PeToolUpdateSubsystemVersion(
     YORI_STRING FullPath;
     YORI_STRING WinVer;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     WORD MajorVersion;
     WORD MinorVersion;
 
@@ -514,7 +514,7 @@ PeToolUpdateSubsystemVersion(
     WinVer.LengthInChars = NewSubsystemVersion->LengthInChars;
     if (YoriLibStringToNumber(&WinVer, FALSE, &llTemp, &CharsConsumed)) {
         MajorVersion = (WORD)llTemp;
-        WinVer.LengthInChars -= CharsConsumed;
+        WinVer.LengthInChars = WinVer.LengthInChars - CharsConsumed;
         WinVer.StartOfString += CharsConsumed;
         if (WinVer.LengthInChars > 0) {
             WinVer.LengthInChars -= 1;
@@ -597,13 +597,13 @@ typedef enum _PETOOL_OP {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg;
     YORI_STRING Arg;
     PYORI_STRING FileName = NULL;
     PYORI_STRING NewSubsystemVersion = NULL;

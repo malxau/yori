@@ -61,7 +61,7 @@ YoriLibFileAttrPairs[] = {
  */
 VOID
 YoriLibGetFileAttrPairs(
-    __out PDWORD Count,
+    __out PYORI_ALLOC_SIZE_T Count,
     __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
     )
 {
@@ -90,7 +90,7 @@ YoriLibFileDirectoryPairs[] = {
  */
 VOID
 YoriLibGetDirectoryPairs(
-    __out PDWORD Count,
+    __out PYORI_ALLOC_SIZE_T Count,
     __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
     )
 {
@@ -125,7 +125,7 @@ YoriLibFilePermissionPairs[] = {
  */
 VOID
 YoriLibGetFilePermissionPairs(
-    __out PDWORD Count,
+    __out PYORI_ALLOC_SIZE_T Count,
     __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
     )
 {
@@ -155,12 +155,12 @@ BOOL
 YoriLibCopyFileName(
     __out_ecount(MaxLength) LPTSTR Dest,
     __in LPCTSTR Src,
-    __in DWORD MaxLength,
-    __out_opt PDWORD ValidCharCount
+    __in YORI_ALLOC_SIZE_T MaxLength,
+    __out_opt PYORI_ALLOC_SIZE_T ValidCharCount
     )
 {
-    DWORD Index;
-    DWORD Length;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T Length;
 
     if (MaxLength == 0) {
         return FALSE;
@@ -371,7 +371,7 @@ YoriLibCollectAllocationSize (
         YoriLibInitEmptyString(&ParentPath);
         FinalSeperator = YoriLibFindRightMostCharacter(FullPath, '\\');
         if (FinalSeperator != NULL) {
-            DWORD StringLength = (DWORD)(FinalSeperator - FullPath->StartOfString);
+            YORI_ALLOC_SIZE_T StringLength = (YORI_ALLOC_SIZE_T)(FinalSeperator - FullPath->StartOfString);
             if (YoriLibAllocateString(&ParentPath, StringLength + 1)) {
                 memcpy(ParentPath.StartOfString, FullPath->StartOfString, StringLength * sizeof(TCHAR));
                 ParentPath.StartOfString[StringLength] = '\0';
@@ -763,7 +763,7 @@ YoriLibCollectDescription (
 {
     DWORD Junk;
     PVOID Buffer;
-    DWORD VerSize;
+    YORI_ALLOC_SIZE_T VerSize;
     PWORD TranslationBlock;
 
     UNREFERENCED_PARAMETER(FindData);
@@ -780,7 +780,7 @@ YoriLibCollectDescription (
         return TRUE;
     }
 
-    VerSize = DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
+    VerSize = (YORI_ALLOC_SIZE_T)DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
 
     Buffer = YoriLibMalloc(VerSize);
     if (Buffer != NULL) {
@@ -848,10 +848,10 @@ YoriLibCollectEffectivePermissions (
     GENERIC_MAPPING Mapping;
     PRIVILEGE_SET Privilege;
     DWORD PrivilegeLength = sizeof(Privilege);
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     ACCESS_MASK UnderstoodPermissions = 0;
     PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
-    DWORD PairCount;
+    YORI_ALLOC_SIZE_T PairCount;
 
     UNREFERENCED_PARAMETER(FindData);
 
@@ -877,8 +877,8 @@ YoriLibCollectEffectivePermissions (
                                        (PSECURITY_DESCRIPTOR)SecurityDescriptor,
                                        sizeof(LocalSecurityDescriptor),
                                        &dwSdRequired)) {
-        if (dwSdRequired != 0) {
-            SecurityDescriptor = YoriLibMalloc(dwSdRequired);
+        if (dwSdRequired != 0 && YoriLibIsSizeAllocatable(dwSdRequired)) {
+            SecurityDescriptor = YoriLibMalloc((YORI_ALLOC_SIZE_T)dwSdRequired);
             if (SecurityDescriptor == NULL) {
                 goto Exit;
             }
@@ -956,10 +956,10 @@ YoriLibCollectFileAttributes (
     __in PYORI_STRING FullPath
     )
 {
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     DWORD Mask;
     PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
-    DWORD PairCount;
+    YORI_ALLOC_SIZE_T PairCount;
 
     UNREFERENCED_PARAMETER(FullPath);
 
@@ -1141,7 +1141,7 @@ YoriLibCollectFileVersionString (
 {
     DWORD Junk;
     PVOID Buffer;
-    DWORD VerSize;
+    YORI_ALLOC_SIZE_T VerSize;
     PWORD TranslationBlock;
 
     UNREFERENCED_PARAMETER(FindData);
@@ -1158,7 +1158,7 @@ YoriLibCollectFileVersionString (
         return TRUE;
     }
 
-    VerSize = DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
+    VerSize = (YORI_ALLOC_SIZE_T)DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
 
     Buffer = YoriLibMalloc(VerSize);
     if (Buffer != NULL) {
@@ -1695,7 +1695,7 @@ YoriLibCollectVersion (
 {
     DWORD Junk;
     PVOID Buffer;
-    DWORD VerSize;
+    YORI_ALLOC_SIZE_T VerSize;
     VS_FIXEDFILEINFO * RootBlock;
 
     UNREFERENCED_PARAMETER(FindData);
@@ -1713,7 +1713,7 @@ YoriLibCollectVersion (
         return TRUE;
     }
 
-    VerSize = DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
+    VerSize = (YORI_ALLOC_SIZE_T)DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
 
     Buffer = YoriLibMalloc(VerSize);
     if (Buffer != NULL) {
@@ -2832,7 +2832,7 @@ YoriLibGenerateAllocatedRangeCount(
     __in PYORI_STRING String
     )
 {
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     if (!YoriLibStringToNumber(String, TRUE, &Entry->AllocatedRangeCount.QuadPart, &CharsConsumed) ||
         CharsConsumed == 0) {
 
@@ -3065,10 +3065,10 @@ YoriLibGenerateDirectory(
     __in PYORI_STRING String
     )
 {
-    DWORD i;
-    DWORD StringIndex = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StringIndex = 0;
     PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
-    DWORD PairCount;
+    YORI_ALLOC_SIZE_T PairCount;
 
     Entry->FileAttributes = 0;
 
@@ -3104,10 +3104,10 @@ YoriLibGenerateEffectivePermissions(
     __in PYORI_STRING String
     )
 {
-    DWORD i;
-    DWORD StringIndex = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StringIndex = 0;
     PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
-    DWORD PairCount;
+    YORI_ALLOC_SIZE_T PairCount;
 
     YoriLibGetFilePermissionPairs(&PairCount, &Pairs);
 
@@ -3142,10 +3142,10 @@ YoriLibGenerateFileAttributes(
     __in PYORI_STRING String
     )
 {
-    DWORD i;
-    DWORD StringIndex = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StringIndex = 0;
     PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
-    DWORD PairCount;
+    YORI_ALLOC_SIZE_T PairCount;
 
     Entry->FileAttributes = 0;
 
@@ -3212,7 +3212,7 @@ YoriLibGenerateFileId(
     __in PYORI_STRING String
     )
 {
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG FileId;
 
     if (!YoriLibStringToNumber(String, TRUE, &FileId, &CharsConsumed) ||
@@ -3309,7 +3309,7 @@ YoriLibGenerateFragmentCount(
     __in PYORI_STRING String
     )
 {
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     if (!YoriLibStringToNumber(String, TRUE, &Entry->FragmentCount.QuadPart, &CharsConsumed) ||
         CharsConsumed == 0) {
 
@@ -3335,7 +3335,7 @@ YoriLibGenerateLinkCount(
     __in PYORI_STRING String
     )
 {
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG llTemp;
     if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
@@ -3388,7 +3388,7 @@ YoriLibGenerateOsVersion(
     )
 {
     YORI_STRING Substring;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG llTemp;
 
     YoriLibInitEmptyString(&Substring);
@@ -3457,7 +3457,7 @@ YoriLibGenerateReparseTag(
     __in PYORI_STRING String
     )
 {
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG llTemp;
     if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
@@ -3562,7 +3562,7 @@ YoriLibGenerateStreamCount(
     __in PYORI_STRING String
     )
 {
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG llTemp;
     if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
@@ -3590,7 +3590,7 @@ YoriLibGenerateUsn(
     __in PYORI_STRING String
     )
 {
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     if (!YoriLibStringToNumber(String, TRUE, &Entry->Usn.QuadPart, &CharsConsumed) ||
         CharsConsumed == 0) {
 
@@ -3618,7 +3618,7 @@ YoriLibGenerateVersion(
 {
     LARGE_INTEGER FileVersion;
     YORI_STRING Substring;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG llTemp;
 
     YoriLibInitEmptyString(&Substring);

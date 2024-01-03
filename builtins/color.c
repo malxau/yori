@@ -211,18 +211,18 @@ typedef enum _COLOR_OP {
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_COLOR(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO BufferInfo;
     DWORD CharsWritten;
     WORD OriginalAttributes;
-    BOOL ArgumentUnderstood;
-    BOOL Fullscreen;
-    BOOL Default;
-    DWORD i;
-    DWORD StartArg;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN Fullscreen;
+    BOOLEAN Default;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg;
     YORI_STRING Arg;
     PYORI_STRING SchemeFile;
     YORILIB_COLOR_ATTRIBUTES Attributes;

@@ -136,16 +136,16 @@ typedef enum {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD Error;
     ERR_TYPE ErrType;
     LPTSTR ErrText;

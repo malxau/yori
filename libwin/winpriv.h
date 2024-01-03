@@ -415,12 +415,12 @@ typedef struct _YORI_WIN_ITEM_ARRAY {
     /**
      Count of items with meaningful data in the array.
      */
-    DWORD Count;
+    YORI_ALLOC_SIZE_T Count;
 
     /**
      Number of elements allocated in the Items array.
      */
-    DWORD CountAllocated;
+    YORI_ALLOC_SIZE_T CountAllocated;
 
     /**
      The base of the string allocation (to reference when consuming.)
@@ -435,7 +435,7 @@ typedef struct _YORI_WIN_ITEM_ARRAY {
     /**
      The number of characters remaining in the string allocation.
      */
-    DWORD StringAllocationRemaining;
+    YORI_ALLOC_SIZE_T StringAllocationRemaining;
 
     /**
      An array of items in memory.  This allocation is referenced because it
@@ -460,7 +460,7 @@ BOOLEAN
 YoriWinItemArrayAddItems(
     __inout PYORI_WIN_ITEM_ARRAY ItemArray,
     __in PCYORI_STRING NewItems,
-    __in DWORD NumNewItems
+    __in YORI_ALLOC_SIZE_T NumNewItems
     );
 
 __success(return)

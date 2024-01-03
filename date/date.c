@@ -109,14 +109,14 @@ typedef struct _DATE_CONTEXT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 DateExpandVariables(
     __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     PDATE_CONTEXT DateContext = (PDATE_CONTEXT)Context;
     FILETIME Clock;
     LARGE_INTEGER liClock;
@@ -406,7 +406,7 @@ DateSetDate(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -419,8 +419,8 @@ ENTRYPOINT(
     LPTSTR DefaultDateFormatString = _T("$YEAR$$MON$$DAY$");
     LPTSTR DefaultTimeFormatString = _T("$YEAR$/$MON$/$DAY$ $HOUR$:$MIN$:$SEC$");
     YORI_STRING AllocatedFormatString;
-    DWORD StartArg;
-    DWORD i;
+    YORI_ALLOC_SIZE_T StartArg;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     PYORI_STRING NewDate;
     DATE_CONTEXT DateContext;
@@ -448,7 +448,7 @@ ENTRYPOINT(
                 YoriLibDisplayMitLicense(_T("2017-2023"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
-                DWORD CharsConsumed;
+                YORI_ALLOC_SIZE_T CharsConsumed;
                 LARGE_INTEGER liTemp;
                 if (i + 1 < ArgC &&
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &liTemp.QuadPart, &CharsConsumed) &&

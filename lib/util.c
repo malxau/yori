@@ -194,9 +194,9 @@ YoriLibCreateDirectoryAndParents(
     __inout PYORI_STRING DirName
     )
 {
-    DWORD MaxIndex = DirName->LengthInChars - 1;
+    YORI_ALLOC_SIZE_T MaxIndex = DirName->LengthInChars - 1;
     DWORD Err;
-    DWORD SepIndex = MaxIndex;
+    YORI_ALLOC_SIZE_T SepIndex = MaxIndex;
     BOOL Result;
     BOOL StartedSucceeding = FALSE;
 
@@ -280,12 +280,12 @@ YoriLibRenameFileToBackupName(
     __out PYORI_STRING NewName
     )
 {
-    DWORD ProbeIndex;
+    YORI_ALLOC_SIZE_T ProbeIndex;
     HANDLE hDeadFile;
     YORI_STRING ShortFullPath;
     BOOLEAN ShortMode;
-    DWORD Index;
-    DWORD EndIndex;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T EndIndex;
     DWORD Err;
 
     ShortMode = FALSE;

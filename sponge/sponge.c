@@ -61,12 +61,12 @@ typedef struct _SPONGE_BUFFER {
     /**
      The number of bytes currently allocated to this buffer.
      */
-    DWORD BytesAllocated;
+    YORI_ALLOC_SIZE_T BytesAllocated;
 
     /**
      The number of bytes populated with data in this buffer.
      */
-    DWORD BytesPopulated;
+    YORI_ALLOC_SIZE_T BytesPopulated;
 
     /**
      A handle to a pipe which is the source of data for this buffer.
@@ -108,13 +108,13 @@ SpongeBufferPump(
                 break;
             }
 
-            ThisBuffer->BytesPopulated += BytesRead;
+            ThisBuffer->BytesPopulated = ThisBuffer->BytesPopulated + (YORI_ALLOC_SIZE_T)BytesRead;
             ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
             if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
-                DWORD NewBytesAllocated;
+                YORI_ALLOC_SIZE_T NewBytesAllocated;
                 PCHAR NewBuffer;
 
-                if (ThisBuffer->BytesAllocated >= ((DWORD)-1) / 4) {
+                if (ThisBuffer->BytesAllocated >= (YORI_MAX_ALLOC_SIZE / 4)) {
                     break;
                 }
 
@@ -245,13 +245,14 @@ SpongeFreeBuffer(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    DWORD Mode;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     SPONGE_BUFFER SpongeBuffer;
     YORI_STRING FullFilePath;
@@ -291,7 +292,7 @@ ENTRYPOINT(
     YoriLibCancelEnable(FALSE);
 #endif
 
-    if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &i)) {
+    if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &Mode)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
         return EXIT_FAILURE;
     }

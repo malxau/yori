@@ -98,7 +98,7 @@ YuiTaskbarIncludeWindow(
 {
     DWORD WinStyle;
     DWORD ExStyle;
-    DWORD WindowTitleLength;
+    YORI_ALLOC_SIZE_T WindowTitleLength;
     YORI_STRING ClassName;
     YORI_STRING ExcludePrefix;
     TCHAR ClassNameBuffer[64];
@@ -131,7 +131,7 @@ YuiTaskbarIncludeWindow(
         return FALSE;
     }
 
-    WindowTitleLength = GetWindowTextLength(hWnd);
+    WindowTitleLength = (YORI_ALLOC_SIZE_T)GetWindowTextLength(hWnd);
     if (WindowTitleLength == 0) {
         return FALSE;
     }
@@ -146,7 +146,7 @@ YuiTaskbarIncludeWindow(
     ClassName.StartOfString = ClassNameBuffer;
     ClassName.LengthAllocated = sizeof(ClassNameBuffer)/sizeof(ClassNameBuffer[0]);
 
-    ClassName.LengthInChars = GetClassName(hWnd, ClassName.StartOfString, ClassName.LengthAllocated);
+    ClassName.LengthInChars = (YORI_ALLOC_SIZE_T)GetClassName(hWnd, ClassName.StartOfString, ClassName.LengthAllocated);
 
     YoriLibConstantString(&ExcludePrefix, _T("Windows.Internal.Shell."));
     if (YoriLibCompareStringCount(&ExcludePrefix, &ClassName, ExcludePrefix.LengthInChars) == 0) {
@@ -331,9 +331,9 @@ YuiTaskbarAllocateAndAddButton(
     )
 {
     PYUI_TASKBAR_BUTTON NewButton;
-    DWORD WindowTitleLength;
+    YORI_ALLOC_SIZE_T WindowTitleLength;
 
-    WindowTitleLength = GetWindowTextLength(hWnd);
+    WindowTitleLength = (YORI_ALLOC_SIZE_T)GetWindowTextLength(hWnd);
 
     NewButton = YoriLibReferencedMalloc(sizeof(YUI_TASKBAR_BUTTON) + (WindowTitleLength + 1) * sizeof(TCHAR));
     if (NewButton == NULL) {
@@ -345,7 +345,8 @@ YuiTaskbarAllocateAndAddButton(
     NewButton->ButtonText.LengthAllocated = WindowTitleLength + 1;
     YoriLibReference(NewButton);
     NewButton->ButtonText.MemoryToFree = NewButton;
-    NewButton->ButtonText.LengthInChars = GetWindowText(hWnd, NewButton->ButtonText.StartOfString, NewButton->ButtonText.LengthAllocated);
+    NewButton->ButtonText.LengthInChars = (YORI_ALLOC_SIZE_T)
+        GetWindowText(hWnd, NewButton->ButtonText.StartOfString, NewButton->ButtonText.LengthAllocated);
 
     NewButton->hWndToActivate = hWnd;
     NewButton->hWndButton = NULL;
@@ -426,12 +427,12 @@ YuiTaskbarWindowCallback(
 
 #if DBG
     {
-        DWORD CharsNeeded;
+        YORI_ALLOC_SIZE_T CharsNeeded;
         YORI_STRING WindowTitle;
 
-        CharsNeeded = GetWindowTextLength(hWnd);
+        CharsNeeded = (YORI_ALLOC_SIZE_T)GetWindowTextLength(hWnd);
         if (YoriLibAllocateString(&WindowTitle, CharsNeeded + 1)) {
-            WindowTitle.LengthInChars = GetWindowText(hWnd, WindowTitle.StartOfString, WindowTitle.LengthAllocated);
+            WindowTitle.LengthInChars = (YORI_ALLOC_SIZE_T)GetWindowText(hWnd, WindowTitle.StartOfString, WindowTitle.LengthAllocated);
         }
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Enumerated window %08x %y\n"), hWnd, &WindowTitle);
         YoriLibFreeStringContents(&WindowTitle);
@@ -892,8 +893,8 @@ YuiTaskbarNotifyTitleChange(
     } else {
         YORI_STRING NewTitle;
         YoriLibInitEmptyString(&NewTitle);
-        if (YoriLibAllocateString(&NewTitle, GetWindowTextLength(hWnd) + 1)) {
-            NewTitle.LengthInChars = GetWindowText(hWnd, NewTitle.StartOfString, NewTitle.LengthAllocated);
+        if (YoriLibAllocateString(&NewTitle, (YORI_ALLOC_SIZE_T)GetWindowTextLength(hWnd) + 1)) {
+            NewTitle.LengthInChars = (YORI_ALLOC_SIZE_T)GetWindowText(hWnd, NewTitle.StartOfString, NewTitle.LengthAllocated);
             YoriLibFreeStringContents(&ThisButton->ButtonText);
             memcpy(&ThisButton->ButtonText, &NewTitle, sizeof(YORI_STRING));
             RedrawWindow(ThisButton->hWndButton, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);

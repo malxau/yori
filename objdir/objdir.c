@@ -83,7 +83,7 @@ typedef struct _OBJDIR_CONTEXT {
     /**
      The number of bytes in SymbolicLinkBuffer allocation.
      */
-    DWORD SymbolicLinkBufferLength;
+    WORD SymbolicLinkBufferLength;
 
 } OBJDIR_CONTEXT, *POBJDIR_CONTEXT;
 
@@ -195,7 +195,7 @@ ObjDirLoadReparseData(
     }
 
     LinkTarget.LengthInBytes =
-    LinkTarget.LengthAllocatedInBytes = (WORD)ObjDirContext->SymbolicLinkBufferLength;
+    LinkTarget.LengthAllocatedInBytes = ObjDirContext->SymbolicLinkBufferLength;
     LinkTarget.Buffer = ObjDirContext->SymbolicLinkBuffer;
 
     NtStatus = DllNtDll.pNtQuerySymbolicLinkObject(FileHandle, &LinkTarget, &BytesReturned);
@@ -386,13 +386,13 @@ ObjDirFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     OBJDIR_CONTEXT ObjDirContext;
     YORI_STRING Arg;
 

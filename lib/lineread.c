@@ -49,17 +49,17 @@ typedef struct _YORI_LIB_LINE_READ_CONTEXT {
      The number of characters in PreviousBuffer.  Note that PreviousBuffer
      is currently an 8 bit string.
      */
-    DWORD BytesInBuffer;
+    YORI_ALLOC_SIZE_T BytesInBuffer;
 
     /**
      The size of the PreviousBuffer allocation, in characters.
      */
-    DWORD LengthOfBuffer;
+    YORI_ALLOC_SIZE_T LengthOfBuffer;
 
     /**
      Offset within the buffer to the data that has not yet been returned.
      */
-    DWORD CurrentBufferOffset;
+    YORI_ALLOC_SIZE_T CurrentBufferOffset;
 
     /**
      The type of the handle (file, pipe, etc.)
@@ -104,15 +104,15 @@ BOOL
 YoriLibCopyLineToUserBufferW(
     __inout PYORI_STRING UserString,
     __in LPSTR SourceBuffer,
-    __in DWORD CharsToCopy
+    __in YORI_ALLOC_SIZE_T CharsToCopy
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
 
     if (CharsToCopy == 0) {
         CharsNeeded = 1;
     } else {
-        CharsNeeded = YoriLibGetMultibyteInputSizeNeeded(SourceBuffer, CharsToCopy) + 1;
+        CharsNeeded = (YORI_ALLOC_SIZE_T)YoriLibGetMultibyteInputSizeNeeded(SourceBuffer, CharsToCopy) + 1;
     }
 
     if (CharsNeeded > UserString->LengthAllocated) {
@@ -147,7 +147,7 @@ YoriLibCopyLineToUserBufferW(
 
  @return The count of bytes in the BOM, which may be zero.
  */
-DWORD
+UCHAR
 YoriLibBytesInBom(
     __in PUCHAR StringToCheck,
     __in DWORD BytesInString
@@ -427,19 +427,19 @@ YoriLibReadLineToStringEx(
     )
 {
     PYORI_LIB_LINE_READ_CONTEXT ReadContext;
-    DWORD Count = 0;
+    YORI_ALLOC_SIZE_T Count = 0;
     DWORD LastError;
-    DWORD BytesToRead;
+    YORI_ALLOC_SIZE_T BytesToRead;
     DWORD BytesRead;
-    DWORD CharsToCopy;
-    DWORD CharsToSkip;
+    YORI_ALLOC_SIZE_T CharsToCopy;
+    YORI_ALLOC_SIZE_T CharsToSkip;
     BOOL BomFound = FALSE;
     BOOL TerminateProcessing;
     HANDLE HandleArray[2];
     DWORD HandleCount;
     DWORD WaitResult;
     DWORD DelayTime;
-    DWORD CharsRemaining;
+    YORI_ALLOC_SIZE_T CharsRemaining;
     DWORD CumulativeDelay;
     YORI_LIB_LINE_ENDING LocalLineEnding;
 
@@ -479,13 +479,19 @@ YoriLibReadLineToStringEx(
     //
 
     if (ReadContext->PreviousBuffer == NULL || UserString->LengthAllocated > ReadContext->LengthOfBuffer) {
+        YORI_ALLOC_SIZE_T MinBufferSize;
         if (ReadContext->PreviousBuffer != NULL) {
             YoriLibFree(ReadContext->PreviousBuffer);
             ReadContext->PreviousBuffer = NULL;
         }
+
+        //
+        //  MSFIX: Need to adjust this for smaller alloc size limits
+        //
         ReadContext->LengthOfBuffer = UserString->LengthAllocated;
-        if (ReadContext->LengthOfBuffer < 256 * 1024) {
-            ReadContext->LengthOfBuffer = 256 * 1024;
+        MinBufferSize = YoriLibMaximumAllocationInRange(60 * 1024, 256 * 1024);
+        if (ReadContext->LengthOfBuffer < MinBufferSize) {
+            ReadContext->LengthOfBuffer = MinBufferSize;
         }
         ReadContext->PreviousBuffer = YoriLibMalloc(ReadContext->LengthOfBuffer);
         if (ReadContext->PreviousBuffer == NULL) {
@@ -542,11 +548,11 @@ YoriLibReadLineToStringEx(
                             if (CharsToSkip > 0) {
                                 BomFound = TRUE;
                                 CharsToSkip = CharsToSkip / sizeof(WCHAR);
-                                CharsToCopy -= CharsToSkip;
+                                CharsToCopy = CharsToCopy - CharsToSkip;
                             }
                         }
                         if (YoriLibCopyLineToUserBufferW(UserString, (LPSTR)&WideBuffer[CharsToSkip], CharsToCopy)) {
-                            ReadContext->CurrentBufferOffset += Count * sizeof(WCHAR);
+                            ReadContext->CurrentBufferOffset = ReadContext->CurrentBufferOffset + Count * sizeof(WCHAR);
                             ReadContext->LinesRead++;
                             *LineEnding = LocalLineEnding;
                             return UserString->StartOfString;
@@ -593,11 +599,11 @@ YoriLibReadLineToStringEx(
                             CharsToSkip = YoriLibBytesInBom((PUCHAR)ReadContext->PreviousBuffer, CharsToCopy);
                             if (CharsToSkip > 0) {
                                 BomFound = TRUE;
-                                CharsToCopy -= CharsToSkip;
+                                CharsToCopy = CharsToCopy - CharsToSkip;
                             }
                         }
                         if (YoriLibCopyLineToUserBufferW(UserString, (LPSTR)&Buffer[CharsToSkip], CharsToCopy)) {
-                            ReadContext->CurrentBufferOffset += Count;
+                            ReadContext->CurrentBufferOffset = ReadContext->CurrentBufferOffset + Count;
                             ReadContext->LinesRead++;
                             *LineEnding = LocalLineEnding;
                             return UserString->StartOfString;
@@ -621,7 +627,7 @@ YoriLibReadLineToStringEx(
             memmove(ReadContext->PreviousBuffer,
                     YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->CurrentBufferOffset),
                     ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset);
-            ReadContext->BytesInBuffer -= ReadContext->CurrentBufferOffset;
+            ReadContext->BytesInBuffer = ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset;
             ReadContext->CurrentBufferOffset = 0;
         }
 
@@ -809,7 +815,7 @@ YoriLibReadLineToStringEx(
                         CharsToSkip = YoriLibBytesInBom((PUCHAR)ReadContext->PreviousBuffer, CharsToCopy);
                         if (CharsToSkip > 0) {
                             BomFound = TRUE;
-                            CharsToCopy -= CharsToSkip;
+                            CharsToCopy = CharsToCopy - CharsToSkip;
                         }
                     }
                     if (ReadContext->ReadWChars) {
@@ -827,7 +833,7 @@ YoriLibReadLineToStringEx(
             return NULL;
         }
 
-        ReadContext->BytesInBuffer += BytesRead;
+        ReadContext->BytesInBuffer = ReadContext->BytesInBuffer + (YORI_ALLOC_SIZE_T)BytesRead;
 
     } while(TRUE);
 }

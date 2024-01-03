@@ -56,25 +56,25 @@ YoriLibLoadLibraryFromSystemDirectory(
     __in LPCTSTR DllName
     )
 {
-    DWORD LengthRequired;
+    YORI_ALLOC_SIZE_T LengthRequired;
     YORI_STRING YsDllName;
     YORI_STRING FullPath;
     HMODULE DllModule;
 
     YoriLibConstantString(&YsDllName, DllName);
-    LengthRequired = GetSystemDirectory(NULL, 0);
+    LengthRequired = (YORI_ALLOC_SIZE_T)GetSystemDirectory(NULL, 0);
 
     if (!YoriLibAllocateString(&FullPath, LengthRequired + 1 + YsDllName.LengthInChars + 1)) {
         return NULL;
     }
 
-    FullPath.LengthInChars = GetSystemDirectory(FullPath.StartOfString, LengthRequired);
+    FullPath.LengthInChars = (YORI_ALLOC_SIZE_T)GetSystemDirectory(FullPath.StartOfString, LengthRequired);
     if (FullPath.LengthInChars == 0) {
         YoriLibFreeStringContents(&FullPath);
         return NULL;
     }
 
-    FullPath.LengthInChars += YoriLibSPrintf(&FullPath.StartOfString[FullPath.LengthInChars], _T("\\%y"), &YsDllName);
+    FullPath.LengthInChars = FullPath.LengthInChars + YoriLibSPrintf(&FullPath.StartOfString[FullPath.LengthInChars], _T("\\%y"), &YsDllName);
 
 
     DllModule = NULL;

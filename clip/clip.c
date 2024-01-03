@@ -139,11 +139,12 @@ ClipCopyAsHtml(
     __in DWORD FileSize
     )
 {
-    DWORD  AllocSize;
+    YORI_ALLOC_SIZE_T AllocSize;
+    DWORD  DesiredSize;
     HANDLE hMem;
     PUCHAR pMem;
     DWORD  BytesTransferred;
-    DWORD  CurrentOffset;
+    YORI_ALLOC_SIZE_T CurrentOffset;
     UINT   ClipFmt;
     DWORD  Err;
     LPTSTR ErrText;
@@ -152,7 +153,11 @@ ClipCopyAsHtml(
     //  Allocate space to copy the file or pipe contents.
     //
 
-    AllocSize = FileSize + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + HTMLCLIP_FRAGEND_SIZE + 2;
+    DesiredSize = FileSize + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + HTMLCLIP_FRAGEND_SIZE + 2;
+    if (!YoriLibIsSizeAllocatable(DesiredSize)) {
+        return FALSE;
+    }
+    AllocSize = (YORI_ALLOC_SIZE_T)DesiredSize;
     hMem = GlobalAlloc(GMEM_MOVEABLE|GMEM_DDESHARE, AllocSize);
     if (hMem == NULL) {
         return FALSE;
@@ -192,7 +197,7 @@ ClipCopyAsHtml(
     //
 
     while (ReadFile(hFile, pMem + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + 1 + CurrentOffset, FileSize - CurrentOffset, &BytesTransferred, NULL)) {
-        CurrentOffset += BytesTransferred;
+        CurrentOffset = CurrentOffset + (YORI_ALLOC_SIZE_T)BytesTransferred;
 
         //
         //  If we're reading from the pipe and have exceeded our storage,
@@ -311,11 +316,11 @@ ClipCopyAsRtf(
     )
 {
     LPSTR  AnsiBuffer;
-    DWORD  AllocSize;
+    YORI_ALLOC_SIZE_T AllocSize;
     HANDLE hMem;
     PCHAR  pMem;
     DWORD  BytesTransferred;
-    DWORD  CurrentOffset;
+    YORI_ALLOC_SIZE_T CurrentOffset;
     DWORD  Err;
     LPTSTR ErrText;
     UINT   ClipFmt;
@@ -324,7 +329,10 @@ ClipCopyAsRtf(
     //  Allocate space to copy the file or pipe contents.
     //
 
-    AllocSize = FileSize + 1;
+    if (!YoriLibIsSizeAllocatable(FileSize + 1)) {
+        return FALSE;
+    }
+    AllocSize = (YORI_ALLOC_SIZE_T)(FileSize + 1);
     AnsiBuffer = YoriLibMalloc(AllocSize);
     if (AnsiBuffer == NULL) {
         return FALSE;
@@ -341,7 +349,7 @@ ClipCopyAsRtf(
     //
 
     while (ReadFile(hFile, AnsiBuffer + CurrentOffset, FileSize - CurrentOffset, &BytesTransferred, NULL)) {
-        CurrentOffset += BytesTransferred;
+        CurrentOffset = CurrentOffset + (YORI_ALLOC_SIZE_T)BytesTransferred;
 
         //
         //  If we're reading from the pipe and have exceeded our storage,
@@ -466,11 +474,11 @@ ClipCopyAsText(
     )
 {
     LPSTR  AnsiBuffer;
-    DWORD  AllocSize;
+    YORI_ALLOC_SIZE_T AllocSize;
     HANDLE hMem;
     PTCHAR pMem;
     DWORD  BytesTransferred;
-    DWORD  CurrentOffset;
+    YORI_ALLOC_SIZE_T CurrentOffset;
     DWORD  Err;
     LPTSTR ErrText;
 
@@ -478,7 +486,10 @@ ClipCopyAsText(
     //  Allocate space to copy the file or pipe contents.
     //
 
-    AllocSize = FileSize + 1;
+    if (!YoriLibIsSizeAllocatable(FileSize + 1)) {
+        return FALSE;
+    }
+    AllocSize = (YORI_ALLOC_SIZE_T)(FileSize + 1);
     AnsiBuffer = YoriLibMalloc(AllocSize);
     if (AnsiBuffer == NULL) {
         return FALSE;
@@ -495,7 +506,7 @@ ClipCopyAsText(
     //
 
     while (ReadFile(hFile, AnsiBuffer + CurrentOffset, FileSize - CurrentOffset, &BytesTransferred, NULL)) {
-        CurrentOffset += BytesTransferred;
+        CurrentOffset = CurrentOffset + (YORI_ALLOC_SIZE_T)BytesTransferred;
 
         //
         //  If we're reading from the pipe and have exceeded our storage,
@@ -1028,17 +1039,17 @@ typedef enum _CLIP_OPERATION {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     HANDLE hFile = NULL;
-    DWORD  Err;
+    DWORD Err;
     LPTSTR ErrText;
-    DWORD  FileSize = 0;
+    DWORD FileSize = 0;
     CLIP_OPERATION Op;
-    BOOL   OpenedFile = FALSE;
-    DWORD  CurrentArg;
+    BOOLEAN OpenedFile = FALSE;
+    YORI_ALLOC_SIZE_T CurrentArg;
     YORI_STRING Arg;
     DWORD  Result;
 

@@ -145,8 +145,8 @@ CutProcessHandleLines(
     YORI_STRING MatchingSubset;
     PVOID LineContext = NULL;
     YORI_STRING LineString;
-    DWORD DesiredOffset;
-    DWORD DesiredLength;
+    YORI_ALLOC_SIZE_T DesiredOffset;
+    YORI_ALLOC_SIZE_T DesiredLength;
 
     //
     //  Truncate the desired offset and length to 32 bits.  The line
@@ -154,8 +154,8 @@ CutProcessHandleLines(
     //  unrealistic that anyone would actually want to support one.
     //  
 
-    DesiredOffset = (DWORD)CutContext->DesiredOffset;
-    DesiredLength = (DWORD)CutContext->DesiredLength;
+    DesiredOffset = (YORI_ALLOC_SIZE_T)CutContext->DesiredOffset;
+    DesiredLength = (YORI_ALLOC_SIZE_T)CutContext->DesiredLength;
 
     YoriLibInitEmptyString(&LineString);
 
@@ -170,16 +170,16 @@ CutProcessHandleLines(
         MatchingSubset.LengthInChars = LineString.LengthInChars;
 
         if (CutContext->FieldDelimited) {
-            DWORD CurrentField = 0;
+            YORI_ALLOC_SIZE_T CurrentField = 0;
 
             for (CurrentField = 0; CurrentField <= CutContext->FieldOfInterest; CurrentField++) {
-                DWORD CharsBeforeSeperator;
+                YORI_ALLOC_SIZE_T CharsBeforeSeperator;
 
                 CharsBeforeSeperator = YoriLibCountStringNotContainingChars(&MatchingSubset, CutContext->FieldSeperator);
                 if (CurrentField == CutContext->FieldOfInterest) {
                     MatchingSubset.LengthInChars = CharsBeforeSeperator;
                 } else {
-                    MatchingSubset.LengthInChars -= CharsBeforeSeperator;
+                    MatchingSubset.LengthInChars = MatchingSubset.LengthInChars - CharsBeforeSeperator;
                     if (MatchingSubset.LengthInChars == 0) {
                         break;
                     }
@@ -238,7 +238,10 @@ CutProcessStreamOffset(
     LARGE_INTEGER StreamOffset;
 
     BufferSize = 64 * 1024;
-    Buffer = YoriLibMalloc(BufferSize);
+    if (!YoriLibIsSizeAllocatable(BufferSize)) {
+        BufferSize = 32 * 1024;
+    }
+    Buffer = YoriLibMalloc((YORI_ALLOC_SIZE_T)BufferSize);
     if (Buffer == NULL) {
         return FALSE;
     }
@@ -473,7 +476,7 @@ CutFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -508,19 +511,19 @@ CutFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     HANDLE hSource = NULL;
-    BOOL ArgumentUnderstood;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
     CUT_CONTEXT CutContext;
-    BOOL BasicEnumeration = FALSE;
-    DWORD StartArg = 0;
+    BOOLEAN BasicEnumeration = FALSE;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     LONGLONG Temp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD Result;
 
     ZeroMemory(&CutContext, sizeof(CutContext));
@@ -630,7 +633,7 @@ ENTRYPOINT(
         hSource = GetStdHandle(STD_INPUT_HANDLE);
         CutFilterHandle(hSource, &CutContext);
     } else {
-        DWORD MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+        WORD MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
         if (CutContext.Recursive) {
             MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN;
         }

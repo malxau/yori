@@ -229,14 +229,14 @@ typedef struct _VOL_RESULT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 VolExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     PVOL_RESULT VolContext = (PVOL_RESULT)Context;
 
     if (VolContext->Have.SectorSize &&
@@ -410,16 +410,16 @@ VolExpandVariables(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     VOL_RESULT VolResult;
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     YORI_STRING DisplayString;
     YORI_STRING YsFormatString;
-    DWORD StartArg = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     DWORD SectorsPerCluster;
     DWORD NumberOfFreeClusters;
     DWORD TotalNumberOfClusters;
@@ -535,8 +535,8 @@ ENTRYPOINT(
 
         VolResult.Have.GetVolInfo = TRUE;
 
-        VolResult.VolumeLabel.LengthInChars = _tcslen(VolResult.VolumeLabel.StartOfString);
-        VolResult.FsName.LengthInChars = _tcslen(VolResult.FsName.StartOfString);
+        VolResult.VolumeLabel.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(VolResult.VolumeLabel.StartOfString);
+        VolResult.FsName.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(VolResult.FsName.StartOfString);
     }
 
     //

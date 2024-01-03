@@ -139,16 +139,16 @@ YoriLibCabWideToNarrow(
      )
 {
     BOOL DefaultUsed;
-    DWORD LengthNeeded;
+    YORI_ALLOC_SIZE_T LengthNeeded;
     LPSTR LocalNarrowString;
     DWORD Error;
     PBOOL DefaultPtr;
 
     DefaultUsed = FALSE;
 
-    LengthNeeded = WideCharToMultiByte(Encoding, 0, WideString->StartOfString, WideString->LengthInChars, NULL, 0, NULL, NULL);
+    LengthNeeded = (YORI_ALLOC_SIZE_T)WideCharToMultiByte(Encoding, 0, WideString->StartOfString, WideString->LengthInChars, NULL, 0, NULL, NULL);
 
-    LocalNarrowString = YoriLibMalloc(LengthNeeded + 1);
+    LocalNarrowString = YoriLibMalloc((YORI_ALLOC_SIZE_T)(LengthNeeded + 1));
     if (LocalNarrowString == NULL) {
         return ERROR_NOT_ENOUGH_MEMORY;
     }
@@ -202,12 +202,12 @@ YoriLibCabNarrowToWide(
     __out PYORI_STRING WideString
     )
 {
-    DWORD LengthNeeded;
+    YORI_ALLOC_SIZE_T LengthNeeded;
     YORI_STRING LocalString;
     DWORD Error;
 
-    LengthNeeded = MultiByteToWideChar(Encoding, 0, NarrowString, -1, NULL, 0);
-    if (!YoriLibAllocateString(&LocalString, LengthNeeded + 1)) {
+    LengthNeeded = (YORI_ALLOC_SIZE_T)MultiByteToWideChar(Encoding, 0, NarrowString, -1, NULL, 0);
+    if (!YoriLibAllocateString(&LocalString, (YORI_ALLOC_SIZE_T)(LengthNeeded + 1))) {
         return ERROR_NOT_ENOUGH_MEMORY;
     }
 
@@ -218,7 +218,7 @@ YoriLibCabNarrowToWide(
     }
 
     LocalString.StartOfString[LengthNeeded] = '\0';
-    LocalString.LengthInChars = LengthNeeded - 1;
+    LocalString.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthNeeded - 1);
     memcpy(WideString, &LocalString, sizeof(YORI_STRING));
     return ERROR_SUCCESS;
 }
@@ -329,8 +329,12 @@ YoriLibCabAlloc(
     )
 {
     LPVOID Alloc;
-    DWORD ExtraBytes;
+    YORI_ALLOC_SIZE_T ExtraBytes;
     ExtraBytes = 0;
+
+    if (Bytes > YORI_MAX_ALLOC_SIZE) {
+        return NULL;
+    }
 
     //
     //  Alpha cabinet appears to access bytes beyond its buffer.  Fudge a bit.
@@ -339,7 +343,11 @@ YoriLibCabAlloc(
     ExtraBytes = 0x1000;
 #endif
 
-    Alloc = YoriLibMalloc(Bytes + ExtraBytes);
+    if (Bytes + ExtraBytes > YORI_MAX_ALLOC_SIZE) {
+        return NULL;
+    }
+
+    Alloc = YoriLibMalloc((YORI_ALLOC_SIZE_T)(Bytes + ExtraBytes));
     return Alloc;
 }
 
@@ -528,7 +536,8 @@ YoriLibCabBuildFileNames(
 {
     YORI_STRING FullPath;
     YORI_STRING WideFileName;
-    DWORD ExtraChars;
+    YORI_ALLOC_SIZE_T ExtraChars;
+    DWORD CharsRequired;
     DWORD Error;
 
     Error = YoriLibCabNarrowToWide(FileName, Encoding, &WideFileName);
@@ -536,7 +545,15 @@ YoriLibCabBuildFileNames(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&FullPath, ParentDirectory->LengthInChars + 1 + WideFileName.LengthInChars + 1)) {
+    CharsRequired = ParentDirectory->LengthInChars;
+    CharsRequired = CharsRequired + 1 + WideFileName.LengthInChars + 1;
+
+    if (!YoriLibIsSizeAllocatable(CharsRequired)) {
+        YoriLibFreeStringContents(&WideFileName);
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&FullPath, (YORI_ALLOC_SIZE_T)CharsRequired)) {
         YoriLibFreeStringContents(&WideFileName);
         return FALSE;
     }
@@ -560,7 +577,7 @@ YoriLibCabBuildFileNames(
     if (FileNameOnly != NULL) {
         YoriLibCloneString(FileNameOnly, &FullPath);
         FileNameOnly->StartOfString += ParentDirectory->LengthInChars + ExtraChars;
-        FileNameOnly->LengthInChars -= ParentDirectory->LengthInChars + ExtraChars;
+        FileNameOnly->LengthInChars = (YORI_ALLOC_SIZE_T)(FileNameOnly->LengthInChars - ParentDirectory->LengthInChars - ExtraChars);
     }
 
     YoriLibFreeStringContents(&FullPath);
@@ -666,7 +683,7 @@ YoriLibCabFileOpenForExtract(
 
         if (Err == ERROR_PATH_NOT_FOUND) {
             LPTSTR LastSep;
-            DWORD OldLength = FullPath->LengthInChars;
+            YORI_ALLOC_SIZE_T OldLength = FullPath->LengthInChars;
 
             LastSep = YoriLibFindRightMostCharacter(FullPath, '\\');
             if (LastSep == NULL) {
@@ -674,7 +691,7 @@ YoriLibCabFileOpenForExtract(
             }
 
             *LastSep = '\0';
-            FullPath->LengthInChars = (DWORD)(LastSep - FullPath->StartOfString);
+            FullPath->LengthInChars = (YORI_ALLOC_SIZE_T)(LastSep - FullPath->StartOfString);
 
             if (!YoriLibCreateDirectoryAndParents(FullPath)) {
                 Err = GetLastError();
@@ -1458,10 +1475,10 @@ YoriLibExtractCab(
     }
 
     CabParentDirectory.StartOfString = FullCabFileName.StartOfString;
-    CabParentDirectory.LengthInChars = (DWORD)(FinalBackslash - FullCabFileName.StartOfString + 1);
+    CabParentDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)(FinalBackslash - FullCabFileName.StartOfString + 1);
 
     CabFileNameOnly.StartOfString = &FullCabFileName.StartOfString[CabParentDirectory.LengthInChars];
-    CabFileNameOnly.LengthInChars = FullCabFileName.LengthInChars - CabParentDirectory.LengthInChars;
+    CabFileNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(FullCabFileName.LengthInChars - CabParentDirectory.LengthInChars);
 
     Error = YoriLibCabWideToNarrow(&CabParentDirectory, Encoding, &AnsiCabParentDirectory);
 

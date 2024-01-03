@@ -180,7 +180,7 @@ YoriDlgFileOkButtonClicked(
     YORI_STRING FullFilePath;
     YORI_STRING FullDirPath;
     PYORI_DLG_FILE_STATE State;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD Attributes;
     BOOLEAN WildFound;
 
@@ -408,7 +408,7 @@ YoriDlgFileFileSelectionChanged(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD ActiveOption;
+    YORI_ALLOC_SIZE_T ActiveOption;
     YORI_STRING String;
     PYORI_WIN_CTRL_HANDLE Parent;
     PYORI_WIN_CTRL_HANDLE EditCtrl;
@@ -442,7 +442,7 @@ YoriDlgFileDirectorySelectionChanged(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD ActiveOption;
+    YORI_ALLOC_SIZE_T ActiveOption;
     YORI_STRING String;
     PYORI_WIN_CTRL_HANDLE Parent;
     PYORI_WIN_CTRL_HANDLE EditCtrl;

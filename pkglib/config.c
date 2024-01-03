@@ -219,9 +219,9 @@ YoriPkgWriteTerminalProfile(
     )
 {
     HANDLE JsonFile;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     YORI_STRING ParentDirectory;
-    DWORD BytesNeeded;
+    YORI_ALLOC_SIZE_T BytesNeeded;
     DWORD BytesWritten;
     YORI_STRING LocalExePath;
     YORI_STRING EscapedExePath;

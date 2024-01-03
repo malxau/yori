@@ -81,7 +81,7 @@ EchoHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -91,10 +91,10 @@ ENTRYPOINT(
     BOOLEAN Result;
     BOOLEAN Debug = FALSE;
     DWORD OutputFlags;
-    DWORD i;
-    DWORD Count;
-    DWORD StartArg = 1;
-    DWORD RepeatCount = 1;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T Count;
+    YORI_ALLOC_SIZE_T StartArg = 1;
+    YORI_ALLOC_SIZE_T RepeatCount = 1;
     YORI_STRING Arg;
     YORI_STRING Text;
 
@@ -123,11 +123,11 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 if (i + 1 < ArgC) {
                     LONGLONG llRepeat;
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llRepeat, &CharsConsumed) &&
                         CharsConsumed > 0) {
 
-                        RepeatCount = (DWORD)llRepeat;
+                        RepeatCount = (YORI_ALLOC_SIZE_T)llRepeat;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }

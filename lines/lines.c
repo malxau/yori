@@ -314,7 +314,7 @@ LinesFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -350,15 +350,15 @@ LinesFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL BasicEnumeration = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN BasicEnumeration = FALSE;
     LINES_CONTEXT LinesContext;
     YORI_STRING Arg;
 

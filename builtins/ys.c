@@ -195,12 +195,12 @@ typedef struct _YS_ARGUMENT_CONTEXT {
     /**
      The number of shifts applied to the arguments.
      */
-    DWORD ShiftCount;
+    YORI_ALLOC_SIZE_T ShiftCount;
 
     /**
      The total number of arguments present.
      */
-    DWORD ArgC;
+    YORI_ALLOC_SIZE_T ArgC;
 
     /**
      An array of strings describing the argument contents.
@@ -394,7 +394,7 @@ YsFreeCallStack(
     __in PYS_CALL_STACK StackLocation
     )
 {
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
     for (i = 0; i < StackLocation->ArgContext.ArgC; i++) {
         YoriLibFreeStringContents(&StackLocation->ArgContext.ArgV[i]);
@@ -463,21 +463,21 @@ YsLoadLines(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_RETURN(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    DWORD i;
-    DWORD StartArg;
-    BOOL ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg;
+    BOOLEAN ArgumentUnderstood;
     PYORI_LIST_ENTRY ListEntry;
     PYS_CALL_STACK StackLocation;
     YORI_STRING CurrentEnvironment;
-    DWORD VarLen;
+    YORI_ALLOC_SIZE_T VarLen;
     DWORD ExitCode;
     LPTSTR ThisVar;
     LPTSTR ThisValue;
-    BOOL PreserveVariable;
+    BOOLEAN PreserveVariable;
     YORI_STRING Arg;
     YORI_STRING VariableName;
     YORI_STRING ValueName;
@@ -529,7 +529,7 @@ YoriCmd_RETURN(
     ExitCode = 0;
     if (StartArg != 0) {
         LONGLONG LlExitCode;
-        DWORD CharsConsumed;
+        YORI_ALLOC_SIZE_T CharsConsumed;
 
         if (!YoriLibStringToNumber(&ArgV[StartArg], TRUE, &LlExitCode, &CharsConsumed) ||
              CharsConsumed == 0) {
@@ -572,7 +572,7 @@ YoriCmd_RETURN(
 
         ThisVar = CurrentEnvironment.StartOfString;
         while (*ThisVar != '\0') {
-            VarLen = _tcslen(ThisVar);
+            VarLen = (YORI_ALLOC_SIZE_T)_tcslen(ThisVar);
 
             //
             //  We know there's at least one char.  Skip it if it's equals since
@@ -583,7 +583,7 @@ YoriCmd_RETURN(
             if (ThisValue != NULL) {
                 ThisValue[0] = '\0';
                 VariableName.StartOfString = ThisVar;
-                VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+                VariableName.LengthInChars = (YORI_ALLOC_SIZE_T)(ThisValue - ThisVar);
                 VariableName.LengthAllocated = VariableName.LengthInChars + 1;
                 for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
                     if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
@@ -606,7 +606,7 @@ YoriCmd_RETURN(
 
         ThisVar = StackLocation->PreviousEnvironment.StartOfString;
         while (*ThisVar != '\0') {
-            VarLen = _tcslen(ThisVar);
+            VarLen = (YORI_ALLOC_SIZE_T)_tcslen(ThisVar);
 
             //
             //  We know there's at least one char.  Skip it if it's equals since
@@ -617,7 +617,7 @@ YoriCmd_RETURN(
             if (ThisValue != NULL) {
                 ThisValue[0] = '\0';
                 VariableName.StartOfString = ThisVar;
-                VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+                VariableName.LengthInChars = (YORI_ALLOC_SIZE_T)(ThisValue - ThisVar);
                 VariableName.LengthAllocated = VariableName.LengthInChars + 1;
                 ThisValue++;
                 ValueName.StartOfString = ThisValue;
@@ -671,15 +671,15 @@ YoriCmd_RETURN(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_CALL(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     PYS_CALL_STACK NewStackEntry;
-    DWORD CurrentDirectoryLength;
+    YORI_ALLOC_SIZE_T CurrentDirectoryLength;
     YORI_STRING Arg;
 
     for (i = 1; i < ArgC; i++) {
@@ -712,7 +712,7 @@ YoriCmd_CALL(
         return EXIT_FAILURE;
     }
 
-    CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    CurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
 
     NewStackEntry = YoriLibMalloc(sizeof(YS_CALL_STACK) + ArgC * sizeof(YORI_STRING) + CurrentDirectoryLength * sizeof(TCHAR));
     if (NewStackEntry == NULL) {
@@ -726,7 +726,7 @@ YoriCmd_CALL(
     NewStackEntry->ArgContext.ArgC = ArgC;
     NewStackEntry->ArgContext.ArgV = (PYORI_STRING)(NewStackEntry + 1);
     NewStackEntry->PreviousDirectory.StartOfString = (LPTSTR)YoriLibAddToPointer(NewStackEntry, sizeof(YS_CALL_STACK) + ArgC * sizeof(YORI_STRING));
-    NewStackEntry->PreviousDirectory.LengthInChars = GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
+    NewStackEntry->PreviousDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
     NewStackEntry->PreviousDirectory.LengthAllocated = CurrentDirectoryLength;
 
     if (!YoriLibGetEnvironmentStrings(&NewStackEntry->PreviousEnvironment)) {
@@ -735,7 +735,7 @@ YoriCmd_CALL(
     }
 
     for (i = 0; i < ArgC; i++) {
-        DWORD ArgLength = ArgV[i].LengthInChars;
+        YORI_ALLOC_SIZE_T ArgLength = ArgV[i].LengthInChars;
         if (!YoriLibAllocateString(&NewStackEntry->ArgContext.ArgV[i], ArgV[i].LengthInChars + 1)) {
             YsFreeCallStack(NewStackEntry);
             return EXIT_FAILURE;
@@ -773,13 +773,13 @@ YoriCmd_CALL(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_GOTO(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    DWORD i;
-    DWORD StartArg = 0;
-    BOOL ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
     YORI_STRING Arg;
 
     for (i = 1; i < ArgC; i++) {
@@ -836,13 +836,13 @@ YoriCmd_GOTO(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_INCLUDE(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    DWORD i;
-    DWORD StartArg = 0;
-    BOOL ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
     HANDLE FileHandle;
     YORI_STRING FileName;
     YORI_STRING Arg;
@@ -929,12 +929,12 @@ YoriCmd_INCLUDE(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_SHIFT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    DWORD i;
-    BOOL ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    BOOLEAN ArgumentUnderstood;
     YORI_STRING Arg;
 
     for (i = 1; i < ArgC; i++) {
@@ -985,16 +985,16 @@ YoriCmd_SHIFT(
  @return The number of characters populated into the buffer, or the number
          of characters required in order to successfully populate the buffer.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YsExpandArgumentVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG ArgIndex;
-    DWORD StringLength;
+    YORI_ALLOC_SIZE_T StringLength;
     PYS_ARGUMENT_CONTEXT ArgContext = (PYS_ARGUMENT_CONTEXT)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("~SCRIPTNAME")) == 0) {
@@ -1248,15 +1248,15 @@ YsLoadScript(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_YS(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     HANDLE FileHandle;
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     YORI_STRING FileName;
-    DWORD i;
-    DWORD StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YS_SCRIPT Script;
     YORI_STRING Arg;
 

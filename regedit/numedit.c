@@ -50,7 +50,7 @@ typedef struct _REGEDIT_NUMEDIT_CONTEXT {
      number base is determined, but the old number base cannot be determined
      from the radio button state, so is saved here.
      */
-    DWORD CurrentBase;
+    WORD CurrentBase;
 } REGEDIT_NUMEDIT_CONTEXT, *PREGEDIT_NUMEDIT_CONTEXT;
 
 /**
@@ -76,17 +76,17 @@ __success(return)
 BOOLEAN
 RegeditNumEditGetNumberFromDialog(
     __in PYORI_WIN_CTRL_HANDLE Parent,
-    __in DWORD ForceBase,
+    __in WORD ForceBase,
     __out PLONGLONG NumberValue,
-    __out_opt PDWORD Base
+    __out_opt PWORD Base
     )
 {
     PYORI_WIN_CTRL_HANDLE ValueEdit;
     PYORI_WIN_CTRL_HANDLE Radio;
     YORI_STRING ValueText;
     LONGLONG NewNumberValue;
-    DWORD CharsConsumed;
-    DWORD NewBase;
+    YORI_ALLOC_SIZE_T CharsConsumed;
+    WORD NewBase;
 
     ValueEdit = YoriWinFindControlById(Parent, RegeditNumeditControlValue);
     ASSERT(ValueEdit != NULL);
@@ -190,7 +190,7 @@ RegeditNumEditCancelButtonClicked(
 VOID
 RegeditNumEditChangeNumberBase(
     __in PYORI_WIN_CTRL_HANDLE Ctrl,
-    __in DWORD NewBase
+    __in WORD NewBase
     )
 {
     PREGEDIT_NUMEDIT_CONTEXT RegeditNumeditContext;
@@ -198,7 +198,7 @@ RegeditNumEditChangeNumberBase(
     PYORI_WIN_CTRL_HANDLE ValueEdit;
     YORI_STRING Value;
     LONGLONG NumberValue;
-    DWORD Base;
+    WORD Base;
 
     Parent = YoriWinGetControlParent(Ctrl);
     RegeditNumeditContext = YoriWinGetControlContext(Parent);

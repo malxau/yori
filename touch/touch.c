@@ -223,19 +223,19 @@ TouchFileFoundCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL Recursive = FALSE;
-    BOOL BasicEnumeration = FALSE;
-    BOOL UpdateLastAccess = FALSE;
-    BOOL UpdateCreationTime = FALSE;
-    BOOL UpdateWriteTime = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN Recursive = FALSE;
+    BOOLEAN BasicEnumeration = FALSE;
+    BOOLEAN UpdateLastAccess = FALSE;
+    BOOLEAN UpdateCreationTime = FALSE;
+    BOOLEAN UpdateWriteTime = FALSE;
     SYSTEMTIME CurrentSystemTime;
     FILETIME TimestampToUse;
     TOUCH_CONTEXT TouchContext;

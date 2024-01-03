@@ -59,13 +59,13 @@ typedef struct _YORI_WIN_CTRL_LIST {
      The index within ItemArray of the first array element to display in the
      list
      */
-    DWORD FirstDisplayedOption;
+    YORI_ALLOC_SIZE_T FirstDisplayedOption;
 
     /**
      The index within ItemArray of the array element that is currently
      highlighted
      */
-    DWORD ActiveOption;
+    YORI_ALLOC_SIZE_T ActiveOption;
 
     /**
      The number of character cells for each item when the list is displayed
@@ -459,7 +459,7 @@ YoriWinListNotifyScrollChange(
     } else {
 
         if (ScrollValue < List->ItemArray.Count) {
-            List->FirstDisplayedOption = (DWORD)ScrollValue;
+            List->FirstDisplayedOption = (YORI_ALLOC_SIZE_T)ScrollValue;
         }
     }
 
@@ -479,7 +479,7 @@ YoriWinListNotifyScrollChange(
 VOID
 YoriWinListNotifyMouseWheel(
     __in PYORI_WIN_CTRL_LIST List,
-    __in DWORD LinesToMove,
+    __in YORI_ALLOC_SIZE_T LinesToMove,
     __in BOOLEAN MoveUp
     )
 {
@@ -530,10 +530,10 @@ BOOLEAN
 YoriWinListGetItemSelectedByMouseLocation(
     __in PYORI_WIN_CTRL_LIST List,
     __in COORD MousePos,
-    __out PDWORD SelectedItem
+    __out PYORI_ALLOC_SIZE_T SelectedItem
     )
 {
-    DWORD ItemRelativeToFirstDisplayed;
+    YORI_ALLOC_SIZE_T ItemRelativeToFirstDisplayed;
 
     if (List->HorizontalDisplay) {
         ItemRelativeToFirstDisplayed = MousePos.X / List->HorizontalItemWidth;
@@ -566,7 +566,7 @@ YoriWinListFindItemByChar(
     __in TCHAR Char
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     PYORI_WIN_ITEM_ENTRY Element;
     TCHAR UpcaseChar;
 
@@ -637,7 +637,7 @@ YoriWinListEventHandler(
     )
 {
     PYORI_WIN_CTRL_LIST List;
-    DWORD NewOption;
+    YORI_ALLOC_SIZE_T NewOption;
     List = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_LIST, Ctrl);
 
     switch(Event->EventType) {
@@ -687,7 +687,7 @@ YoriWinListEventHandler(
                     }
                 } else if (Event->KeyDown.VirtualKeyCode == VK_PRIOR) {
                     COORD ClientSize;
-                    DWORD ElementCountToDisplay;
+                    YORI_ALLOC_SIZE_T ElementCountToDisplay;
                     if (List->ItemActive) {
                         YoriWinGetControlClientSize(&List->Ctrl, &ClientSize);
                         ElementCountToDisplay = ClientSize.Y;
@@ -709,7 +709,7 @@ YoriWinListEventHandler(
                     YoriWinListPaint(List);
                 } else if (Event->KeyDown.VirtualKeyCode == VK_NEXT) {
                     COORD ClientSize;
-                    DWORD ElementCountToDisplay;
+                    YORI_ALLOC_SIZE_T ElementCountToDisplay;
                     if (List->ItemActive) {
                         YoriWinGetControlClientSize(&List->Ctrl, &ClientSize);
                         ElementCountToDisplay = ClientSize.Y;
@@ -823,12 +823,12 @@ YoriWinListEventHandler(
 
         case YoriWinEventMouseWheelDownInClient:
         case YoriWinEventMouseWheelDownInNonClient:
-            YoriWinListNotifyMouseWheel(List, Event->MouseWheel.LinesToMove, FALSE);
+            YoriWinListNotifyMouseWheel(List, (YORI_ALLOC_SIZE_T)Event->MouseWheel.LinesToMove, FALSE);
             break;
 
         case YoriWinEventMouseWheelUpInClient:
         case YoriWinEventMouseWheelUpInNonClient:
-            YoriWinListNotifyMouseWheel(List, Event->MouseWheel.LinesToMove, TRUE);
+            YoriWinListNotifyMouseWheel(List, (YORI_ALLOC_SIZE_T)Event->MouseWheel.LinesToMove, TRUE);
             break;
 
         case YoriWinEventGetFocus:
@@ -892,7 +892,7 @@ __success(return)
 BOOLEAN
 YoriWinListGetActiveOption(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD CurrentlyActiveIndex
+    __out PYORI_ALLOC_SIZE_T CurrentlyActiveIndex
     )
 {
     PYORI_WIN_CTRL Ctrl;
@@ -919,7 +919,7 @@ __success(return)
 BOOLEAN
 YoriWinListSetActiveOption(
     __inout PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD ActiveOption
+    __in YORI_ALLOC_SIZE_T ActiveOption
     )
 {
     PYORI_WIN_CTRL Ctrl;
@@ -955,7 +955,7 @@ YoriWinListSetActiveOption(
 BOOLEAN
 YoriWinListIsOptionSelected(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD Index
+    __in YORI_ALLOC_SIZE_T Index
     )
 {
     PYORI_WIN_CTRL Ctrl;
@@ -995,7 +995,7 @@ BOOLEAN
 YoriWinListAddItems(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PCYORI_STRING ListOptions,
-    __in DWORD NumberOptions
+    __in YORI_ALLOC_SIZE_T NumberOptions
     )
 {
     PYORI_WIN_CTRL Ctrl;
@@ -1060,7 +1060,7 @@ YoriWinListAddItemArray(
 BOOLEAN
 YoriWinListGetItemText(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD Index,
+    __in YORI_ALLOC_SIZE_T Index,
     __inout PYORI_STRING Text
     )
 {

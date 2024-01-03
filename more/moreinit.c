@@ -42,12 +42,12 @@
 VOID
 MoreGetViewportDimensions(
     __in PCONSOLE_SCREEN_BUFFER_INFO ScreenInfo,
-    __out PDWORD ViewportWidth,
-    __out PDWORD ViewportHeight
+    __out PYORI_ALLOC_SIZE_T ViewportWidth,
+    __out PYORI_ALLOC_SIZE_T ViewportHeight
     )
 {
     *ViewportWidth = ScreenInfo->dwSize.X;
-    *ViewportHeight = (DWORD)(ScreenInfo->srWindow.Bottom - ScreenInfo->srWindow.Top);
+    *ViewportHeight = (YORI_ALLOC_SIZE_T)(ScreenInfo->srWindow.Bottom - ScreenInfo->srWindow.Top);
 }
 
 /**
@@ -67,10 +67,10 @@ MoreGetViewportDimensions(
          returned.  FALSE if neither are being returned.
  */
 __success(return)
-BOOL
+BOOLEAN
 MoreAllocateViewportStructures(
-    __in DWORD ViewportWidth,
-    __in DWORD ViewportHeight,
+    __in YORI_ALLOC_SIZE_T ViewportWidth,
+    __in YORI_ALLOC_SIZE_T ViewportHeight,
     __out PMORE_LOGICAL_LINE * DisplayViewportLines,
     __out PMORE_LOGICAL_LINE * StagingViewportLines
     )
@@ -134,10 +134,10 @@ MoreAllocateViewportStructures(
          FALSE to indicate initialization was unsuccessful, and the
          MoreContext should be cleaned up with @ref MoreCleanupContext.
  */
-BOOL
+BOOLEAN
 MoreInitContext(
     __inout PMORE_CONTEXT MoreContext,
-    __in DWORD ArgCount,
+    __in YORI_ALLOC_SIZE_T ArgCount,
     __in_opt PYORI_STRING ArgStrings,
     __in BOOLEAN Recursive,
     __in BOOLEAN BasicEnumeration,
@@ -147,7 +147,7 @@ MoreInitContext(
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD ThreadId;
     UCHAR Color;
     UCHAR SearchColors[5] = {
@@ -239,7 +239,7 @@ MoreCleanupContext(
     __inout PMORE_CONTEXT MoreContext
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     ASSERT(YoriLibIsListEmpty(&MoreContext->PhysicalLineList));
     ASSERT(YoriLibIsListEmpty(&MoreContext->FilteredPhysicalLineList));
@@ -296,7 +296,7 @@ MoreGracefulExit(
 {
     PYORI_LIST_ENTRY ListEntry;
     PMORE_PHYSICAL_LINE PhysicalLine;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     YoriLibCancelSet();
     SetEvent(MoreContext->ShutdownEvent);

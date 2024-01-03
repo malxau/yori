@@ -146,7 +146,7 @@ MoveFileFoundCallback(
 
     if (MoveContext->DestAttributes & FILE_ATTRIBUTE_DIRECTORY || TrailingSlash) {
         YORI_STRING DestWithFile;
-        if (!YoriLibAllocateString(&DestWithFile, MoveContext->Dest.LengthInChars + 1 + _tcslen(FileInfo->cFileName) + 1)) {
+        if (!YoriLibAllocateString(&DestWithFile, MoveContext->Dest.LengthInChars + 1 + (YORI_ALLOC_SIZE_T)_tcslen(FileInfo->cFileName) + 1)) {
             return FALSE;
         }
 
@@ -233,7 +233,7 @@ MoveFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -268,19 +268,19 @@ MoveFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     DWORD FilesProcessed;
     DWORD FileCount;
     DWORD LastFileArg = 0;
-    DWORD MatchFlags;
-    DWORD i;
+    WORD MatchFlags;
+    YORI_ALLOC_SIZE_T i;
     MOVE_CONTEXT MoveContext;
-    BOOL AllocatedDest;
-    BOOL BasicEnumeration;
+    BOOLEAN AllocatedDest;
+    BOOLEAN BasicEnumeration;
     YORI_STRING Arg;
 
     FileCount = 0;

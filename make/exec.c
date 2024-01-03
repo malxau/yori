@@ -285,7 +285,7 @@ MakeDoesTargetHaveMoreCommands(
 DWORD
 MakeProcessCd(
     __in PMAKE_CHILD_RECIPE ChildRecipe,
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -334,12 +334,12 @@ __success(return)
 BOOLEAN
 MakeProcessIf(
     __in PMAKE_CHILD_RECIPE ChildRecipe,
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __inout PYORI_STRING CmdToExec
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     BOOLEAN Not;
     YORI_STRING FullPath;
     HANDLE FindHandle;
@@ -368,7 +368,7 @@ MakeProcessIf(
             YORI_STRING FirstPart;
             YORI_STRING SecondPart;
             PYORI_STRING MatchingOperator;
-            DWORD OperatorIndex;
+            YORI_ALLOC_SIZE_T OperatorIndex;
 
             //
             //  Perform simple string comparison.  If the strings indicate the
@@ -1008,7 +1008,7 @@ MakeExecuteRequiredTargets(
     )
 {
 
-    DWORD NumberActiveProcesses;
+    YORI_ALLOC_SIZE_T NumberActiveProcesses;
     DWORD Index;
     HANDLE *ProcessHandleArray;
     PMAKE_CHILD_RECIPE ChildRecipeArray;
@@ -1107,7 +1107,7 @@ MakeExecuteRequiredTargets(
                     MakeRecipeCompletion(MakeContext, &ChildRecipeArray[Index]);
                 }
 
-                if (NumberActiveProcesses > Index + 1) {
+                if (NumberActiveProcesses > (YORI_ALLOC_SIZE_T)(Index + 1)) {
                     memmove(&ChildRecipeArray[Index],
                             &ChildRecipeArray[Index + 1],
                             (NumberActiveProcesses - Index - 1) * sizeof(MAKE_CHILD_RECIPE));

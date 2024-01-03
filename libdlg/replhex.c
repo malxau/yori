@@ -91,13 +91,13 @@ YoriDlgReplaceHexCancelButtonClicked(
  @return The corresponding combo box index.  On any invalid value, the first
          index (bytes) is used.
  */
-DWORD
+UCHAR
 YoriDlgReplaceHexBytesPerWordToIndex(
-    __in DWORD BytesPerWord
+    __in UCHAR BytesPerWord
     )
 {
-    DWORD Index;
-    DWORD Value;
+    UCHAR Index;
+    UCHAR Value;
 
     Value = BytesPerWord;
     Index = 0;
@@ -107,7 +107,7 @@ YoriDlgReplaceHexBytesPerWordToIndex(
             return Index;
         }
 
-        Value = Value>>1;
+        Value = (UCHAR)(Value>>1);
         Index++;
     }
 
@@ -122,12 +122,12 @@ YoriDlgReplaceHexBytesPerWordToIndex(
 
  @return The corresponding bytes per word.
  */
-DWORD
+UCHAR
 YoriDlgReplaceHexIndexToBytesPerWord(
-    __in DWORD Index
+    __in UCHAR Index
     )
 {
-    return (1 << Index);
+    return (UCHAR)(1 << Index);
 }
 
 /**
@@ -178,8 +178,8 @@ YoriDlgReplaceHexBytesPerWordChanged(
     PYORI_WIN_CTRL_HANDLE Parent;
     PYORI_WIN_CTRL_HANDLE HexEdit;
     PYORI_WIN_WINDOW_HANDLE Window;
-    DWORD Active;
-    DWORD BytesPerWord;
+    YORI_ALLOC_SIZE_T Active;
+    UCHAR BytesPerWord;
 
     Parent = YoriWinGetControlParent(Ctrl);
     Window = YoriWinGetWindowFromWindowCtrl(Parent);
@@ -187,7 +187,7 @@ YoriDlgReplaceHexBytesPerWordChanged(
         return;
     }
 
-    BytesPerWord = YoriDlgReplaceHexIndexToBytesPerWord(Active);
+    BytesPerWord = YoriDlgReplaceHexIndexToBytesPerWord((UCHAR)Active);
     HexEdit = YoriWinFindControlById(Parent, YoriDlgReplaceHexControlFindBuffer);
     ASSERT(HexEdit != NULL);
 
@@ -256,15 +256,15 @@ YoriDlgReplaceHex(
     __in WORD DesiredTop,
     __in PYORI_STRING Title,
     __in_opt PUCHAR InitialBeforeData,
-    __in DWORDLONG InitialBeforeDataLength,
+    __in YORI_ALLOC_SIZE_T InitialBeforeDataLength,
     __in_opt PUCHAR InitialAfterData,
-    __in DWORDLONG InitialAfterDataLength,
-    __in DWORD InitialBytesPerWord,
+    __in YORI_ALLOC_SIZE_T InitialAfterDataLength,
+    __in UCHAR InitialBytesPerWord,
     __out PBOOLEAN ReplaceAll,
     __out PUCHAR * OldData,
-    __out PDWORDLONG OldDataLength,
+    __out PYORI_ALLOC_SIZE_T OldDataLength,
     __out PUCHAR * NewData,
-    __out PDWORDLONG NewDataLength
+    __out PYORI_ALLOC_SIZE_T NewDataLength
     )
 {
     PYORI_WIN_WINDOW_HANDLE Parent;
@@ -283,7 +283,7 @@ YoriDlgReplaceHex(
     WORD DialogHeight;
     YORI_STRING BytesPerWordOptions[4];
     PUCHAR InitialDataCopy;
-    DWORDLONG InitialDataCopyLength;
+    YORI_ALLOC_SIZE_T InitialDataCopyLength;
     SMALL_RECT WindowRect;
 
     if (!YoriWinGetWinMgrDimensions(WinMgrHandle, &WindowSize)) {
@@ -383,19 +383,16 @@ YoriDlgReplaceHex(
     YoriWinSetControlId(HexEditChangeTo, YoriDlgReplaceHexControlChangeToBuffer);
 
     if (InitialBeforeData != NULL) {
-        InitialDataCopyLength = InitialBeforeDataLength + 0x100;
-        if (InitialDataCopyLength > (DWORD)-1) {
-            YoriWinDestroyWindow(Parent);
-            return FALSE;
-        }
 
-        InitialDataCopy = YoriLibReferencedMalloc((DWORD)InitialDataCopyLength);
+        InitialDataCopyLength = YoriLibIsAllocationExtendable(InitialBeforeDataLength, 0, 0x100);
+
+        InitialDataCopy = YoriLibReferencedMalloc(InitialDataCopyLength);
         if (InitialDataCopy == NULL) {
             YoriWinDestroyWindow(Parent);
             return FALSE;
         }
 
-        memcpy(InitialDataCopy, InitialBeforeData, (DWORD)InitialBeforeDataLength);
+        memcpy(InitialDataCopy, InitialBeforeData, InitialBeforeDataLength);
         if (!YoriWinHexEditSetDataNoCopy(HexEditFind, InitialDataCopy, InitialDataCopyLength, InitialBeforeDataLength)) {
             YoriLibDereference(InitialDataCopy);
             YoriWinDestroyWindow(Parent);
@@ -406,19 +403,15 @@ YoriDlgReplaceHex(
     }
 
     if (InitialAfterData != NULL) {
-        InitialDataCopyLength = InitialAfterDataLength + 0x100;
-        if (InitialDataCopyLength > (DWORD)-1) {
-            YoriWinDestroyWindow(Parent);
-            return FALSE;
-        }
+        InitialDataCopyLength = YoriLibIsAllocationExtendable(InitialAfterDataLength, 0, 0x100);
 
-        InitialDataCopy = YoriLibReferencedMalloc((DWORD)InitialDataCopyLength);
+        InitialDataCopy = YoriLibReferencedMalloc(InitialDataCopyLength);
         if (InitialDataCopy == NULL) {
             YoriWinDestroyWindow(Parent);
             return FALSE;
         }
 
-        memcpy(InitialDataCopy, InitialAfterData, (DWORD)InitialAfterDataLength);
+        memcpy(InitialDataCopy, InitialAfterData, InitialAfterDataLength);
         if (!YoriWinHexEditSetDataNoCopy(HexEditChangeTo, InitialDataCopy, InitialDataCopyLength, InitialAfterDataLength)) {
             YoriLibDereference(InitialDataCopy);
             YoriWinDestroyWindow(Parent);
@@ -508,7 +501,7 @@ YoriDlgReplaceHex(
     if (Result) {
         PUCHAR OldBuffer;
         PUCHAR NewBuffer;
-        DWORDLONG BufferLength;
+        YORI_ALLOC_SIZE_T BufferLength;
 
         if (!YoriWinHexEditGetDataNoCopy(HexEditFind, &OldBuffer, &BufferLength)) {
             YoriWinDestroyWindow(Parent);

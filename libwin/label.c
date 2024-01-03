@@ -68,7 +68,7 @@ typedef struct _YORI_WIN_CTRL_LABEL {
      The offset within the Caption string for which character is the keyboard
      accelerator that should be highlighted when the user presses the Alt key.
      */
-    DWORD AcceleratorOffset;
+    YORI_ALLOC_SIZE_T AcceleratorOffset;
 
     /**
      Specifies if the text should be rendered to the left, center, or right of
@@ -197,17 +197,17 @@ YoriWinLabelShouldSwallowBreakChar(
 VOID
 YoriWinLabelGetNextDisplayLine(
     __inout PYORI_STRING Remaining,
-    __in DWORD ClientWidth,
+    __in YORI_ALLOC_SIZE_T ClientWidth,
     __out PYORI_STRING Display,
     __inout PBOOLEAN AcceleratorFound,
-    __out PDWORD OffsetToAcceleratorInDisplay,
-    __inout PDWORD RemainingOffsetToAccelerator
+    __out PYORI_ALLOC_SIZE_T OffsetToAcceleratorInDisplay,
+    __inout PYORI_ALLOC_SIZE_T RemainingOffsetToAccelerator
     )
 {
-    DWORD PotentialBreakOffset;
-    DWORD MaxLengthOfLine;
-    DWORD CharsToDisplayThisLine;
-    DWORD CharsToConsumeThisLine;
+    YORI_ALLOC_SIZE_T PotentialBreakOffset;
+    YORI_ALLOC_SIZE_T MaxLengthOfLine;
+    YORI_ALLOC_SIZE_T CharsToDisplayThisLine;
+    YORI_ALLOC_SIZE_T CharsToConsumeThisLine;
     BOOLEAN BreakCharFound;
     TCHAR TestChar;
     BOOLEAN SoftTruncationRequired;
@@ -311,11 +311,11 @@ YoriWinLabelGetNextDisplayLine(
         *AcceleratorFound = TRUE;
     } else {
         *OffsetToAcceleratorInDisplay = 0;
-        *RemainingOffsetToAccelerator -= CharsToConsumeThisLine;
+        *RemainingOffsetToAccelerator = (*RemainingOffsetToAccelerator) - CharsToConsumeThisLine;
     }
 
     Remaining->StartOfString += CharsToConsumeThisLine;
-    Remaining->LengthInChars -= CharsToConsumeThisLine;
+    Remaining->LengthInChars = Remaining->LengthInChars - CharsToConsumeThisLine;
 }
 
 /**
@@ -338,7 +338,7 @@ VOID
 YoriWinLabelTrimSwallowChars(
     __in PYORI_STRING Remaining,
     __inout PBOOLEAN AcceleratorFound,
-    __inout PDWORD RemainingOffsetToAccelerator
+    __inout PYORI_ALLOC_SIZE_T RemainingOffsetToAccelerator
     )
 {
     while (Remaining->LengthInChars > 0) {
@@ -369,19 +369,19 @@ YoriWinLabelTrimSwallowChars(
 
  @return The number of lines of text within the control.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinLabelCountLinesRequiredForText(
     __in PYORI_STRING Text,
-    __in DWORD CtrlWidth,
-    __out_opt PDWORD MaximumWidth
+    __in YORI_ALLOC_SIZE_T CtrlWidth,
+    __out_opt PYORI_ALLOC_SIZE_T MaximumWidth
     )
 {
     YORI_STRING Remaining;
     YORI_STRING DisplayLine;
-    DWORD OffsetToAcceleratorInDisplay;
-    DWORD RemainingOffsetToAccelerator;
-    DWORD LinesNeeded;
-    DWORD LargestWidthFound;
+    YORI_ALLOC_SIZE_T OffsetToAcceleratorInDisplay;
+    YORI_ALLOC_SIZE_T RemainingOffsetToAccelerator;
+    YORI_ALLOC_SIZE_T LinesNeeded;
+    YORI_ALLOC_SIZE_T LargestWidthFound;
     BOOLEAN AcceleratorFound;
 
     LinesNeeded = 0;
@@ -465,12 +465,12 @@ YoriWinLabelParseAccelerator(
     __in PCYORI_STRING RawString,
     __inout_opt PYORI_STRING ParsedString,
     __out_opt TCHAR* AcceleratorChar,
-    __out_opt PDWORD HighlightOffset,
-    __out_opt PDWORD DisplayLength
+    __out_opt PYORI_ALLOC_SIZE_T HighlightOffset,
+    __out_opt PYORI_ALLOC_SIZE_T DisplayLength
     )
 {
-    DWORD WriteIndex;
-    DWORD ReadIndex;
+    YORI_ALLOC_SIZE_T WriteIndex;
+    YORI_ALLOC_SIZE_T ReadIndex;
     BOOLEAN AcceleratorFound;
 
     WriteIndex = 0;
@@ -572,8 +572,8 @@ YoriWinLabelPaint(
     YORI_STRING DisplayLine;
     BOOLEAN AcceleratorPreviouslyFound;
     BOOLEAN AcceleratorFound;
-    DWORD OffsetToAcceleratorInDisplay;
-    DWORD RemainingOffsetToAccelerator;
+    YORI_ALLOC_SIZE_T OffsetToAcceleratorInDisplay;
+    YORI_ALLOC_SIZE_T RemainingOffsetToAccelerator;
 
     YoriWinGetControlClientSize(&Label->Ctrl, &ClientSize);
     LineCount = YoriWinLabelCountLinesRequired(Label);

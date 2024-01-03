@@ -75,14 +75,14 @@ ClsHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO BufferInfo;
     DWORD CharsWritten;
-    BOOL ArgumentUnderstood;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     HANDLE hConOut;
 

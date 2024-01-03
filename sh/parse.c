@@ -42,10 +42,10 @@
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriShResolveCommandToExecutable(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
-    __out PBOOL ExecutableFound
+    __out PBOOLEAN ExecutableFound
     )
 {
     YORI_STRING FoundExecutable;
@@ -94,8 +94,8 @@ YoriShExpandEnvironmentInCmdContext(
     __inout PYORI_LIBSH_CMD_CONTEXT CmdContext
     )
 {
-    DWORD Index;
-    DWORD ArgOffset;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T ArgOffset;
 
     for (Index = 0; Index < CmdContext->ArgC; Index++) {
         YORI_STRING EnvExpandedString;

@@ -59,7 +59,7 @@ typedef struct _YORI_WIN_CTRL_COMBO {
      The index within ItemArray of the array element that is currently
      highlighted
      */
-    DWORD ActiveOption;
+    YORI_ALLOC_SIZE_T ActiveOption;
 
     /**
      Set to TRUE if any option is activated.  FALSE if no item has been
@@ -88,7 +88,7 @@ __success(return)
 BOOLEAN
 YoriWinComboGetActiveOption(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD CurrentlyActiveIndex
+    __out PYORI_ALLOC_SIZE_T CurrentlyActiveIndex
     )
 {
     PYORI_WIN_CTRL Ctrl;
@@ -115,7 +115,7 @@ __success(return)
 BOOLEAN
 YoriWinComboSetActiveOption(
     __inout PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD ActiveOption
+    __in YORI_ALLOC_SIZE_T ActiveOption
     )
 {
     PYORI_WIN_CTRL Ctrl;
@@ -154,7 +154,7 @@ YoriWinComboChildEvent(
 {
     PYORI_WIN_WINDOW Window;
     PYORI_WIN_CTRL ListCtrl;
-    DWORD ActiveIndex;
+    YORI_ALLOC_SIZE_T ActiveIndex;
 
     Window = YoriWinGetWindowFromWindowCtrl(Ctrl);
     ListCtrl = YoriWinFindControlById(Ctrl, 1);
@@ -258,7 +258,7 @@ YoriWinComboDisplayPullDown(
     //
 
     if (ChildResult > 0) {
-        if (YoriWinComboSetActiveOption(&Combo->Ctrl, (DWORD)(ChildResult - 1))) {
+        if (YoriWinComboSetActiveOption(&Combo->Ctrl, (YORI_ALLOC_SIZE_T)(ChildResult - 1))) {
             if (Combo->ClickCallback != NULL) {
                 Combo->ClickCallback(&Combo->Ctrl);
             }
@@ -344,7 +344,7 @@ BOOLEAN
 YoriWinComboAddItems(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PCYORI_STRING ListOptions,
-    __in DWORD NumberOptions
+    __in YORI_ALLOC_SIZE_T NumberOptions
     )
 {
     PYORI_WIN_CTRL Ctrl;

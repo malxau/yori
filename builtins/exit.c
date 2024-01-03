@@ -64,13 +64,13 @@ ExitHelp(VOID)
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_EXIT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg;
     DWORD ExitCode;
     YORI_STRING Arg;
 
@@ -108,7 +108,7 @@ YoriCmd_EXIT(
         ExitCode = EXIT_SUCCESS;
     } else {
         LONGLONG llTemp;
-        DWORD CharsConsumed;
+        YORI_ALLOC_SIZE_T CharsConsumed;
         if (!YoriLibStringToNumber(&ArgV[StartArg], FALSE, &llTemp, &CharsConsumed) ||
             CharsConsumed == 0) {
 

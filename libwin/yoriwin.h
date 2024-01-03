@@ -112,14 +112,14 @@ __success(return)
 BOOLEAN
 YoriWinComboGetActiveOption(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD CurrentlyActiveIndex
+    __out PYORI_ALLOC_SIZE_T CurrentlyActiveIndex
     );
 
 __success(return)
 BOOLEAN
 YoriWinComboSetActiveOption(
     __inout PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD ActiveOption
+    __in YORI_ALLOC_SIZE_T ActiveOption
     );
 
 __success(return)
@@ -127,7 +127,7 @@ BOOLEAN
 YoriWinComboAddItems(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PCYORI_STRING ListOptions,
-    __in DWORD NumberOptions
+    __in YORI_ALLOC_SIZE_T NumberOptions
     );
 
 BOOLEAN
@@ -240,8 +240,8 @@ YoriWinEditGetSelectedText(
 VOID
 YoriWinEditSetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD StartOffset,
-    __in DWORD EndOffset
+    __in YORI_ALLOC_SIZE_T StartOffset,
+    __in YORI_ALLOC_SIZE_T EndOffset
     );
 
 BOOLEAN
@@ -318,7 +318,7 @@ BOOLEAN
 YoriWinHexEditGetDataNoCopy(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __out PUCHAR *Buffer,
-    __out PDWORDLONG BufferLength
+    __out PYORI_ALLOC_SIZE_T BufferLength
     );
 
 __success(return)
@@ -326,7 +326,7 @@ BOOLEAN
 YoriWinHexEditGetSelectedData(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __out PVOID * Data,
-    __out PDWORDLONG DataLength
+    __out PYORI_ALLOC_SIZE_T DataLength
     );
 
 BOOLEAN
@@ -343,7 +343,7 @@ YoriWinHexEditReposition(
 BOOLEAN
 YoriWinHexEditSetBytesPerWord(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD BytesPerWord
+    __in UCHAR BytesPerWord
     );
 
 BOOLEAN
@@ -375,8 +375,8 @@ BOOLEAN
 YoriWinHexEditSetDataNoCopy(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PUCHAR NewBuffer,
-    __in DWORDLONG NewBufferAllocated,
-    __in DWORDLONG NewBufferValid
+    __in YORI_ALLOC_SIZE_T NewBufferAllocated,
+    __in YORI_ALLOC_SIZE_T NewBufferValid
     );
 
 BOOLEAN
@@ -396,8 +396,8 @@ BOOLEAN
 YoriWinHexEditSetCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in BOOLEAN AsChar,
-    __in DWORDLONG BufferOffset,
-    __in DWORD BitShift
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __in UCHAR BitShift
     );
 
 __success(return)
@@ -405,30 +405,30 @@ BOOLEAN
 YoriWinHexEditGetCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __out PBOOLEAN AsChar,
-    __out PDWORDLONG BufferOffset,
-    __out PDWORD BitShift
+    __out PYORI_ALLOC_SIZE_T BufferOffset,
+    __out PUCHAR BitShift
     );
 
 __success(return)
 BOOLEAN
 YoriWinHexEditGetVisualCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD CursorOffset,
-    __out PDWORD CursorLine
+    __out PYORI_ALLOC_SIZE_T CursorOffset,
+    __out PYORI_ALLOC_SIZE_T CursorLine
     );
 
 VOID
 YoriWinHexEditGetViewportLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD ViewportLeft,
-    __out PDWORD ViewportTop
+    __out PYORI_ALLOC_SIZE_T ViewportLeft,
+    __out PYORI_ALLOC_SIZE_T ViewportTop
     );
 
 VOID
 YoriWinHexEditSetViewportLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD NewViewportLeft,
-    __in DWORD NewViewportTop
+    __in YORI_ALLOC_SIZE_T NewViewportLeft,
+    __in YORI_ALLOC_SIZE_T NewViewportTop
     );
 
 VOID
@@ -445,34 +445,34 @@ __success(return)
 BOOLEAN
 YoriWinHexEditSetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORDLONG FirstByteOffset,
-    __in DWORDLONG LastByteOffset
+    __in YORI_ALLOC_SIZE_T FirstByteOffset,
+    __in YORI_ALLOC_SIZE_T LastByteOffset
     );
 
 __success(return)
 BOOLEAN
 YoriWinHexEditDeleteData(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORDLONG DataOffset,
-    __in DWORDLONG Length
+    __in YORI_ALLOC_SIZE_T DataOffset,
+    __in YORI_ALLOC_SIZE_T Length
     );
 
 __success(return)
 BOOLEAN
 YoriWinHexEditInsertData(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORDLONG DataOffset,
+    __in YORI_ALLOC_SIZE_T DataOffset,
     __in PVOID Data,
-    __in DWORDLONG Length
+    __in YORI_ALLOC_SIZE_T Length
     );
 
 __success(return)
 BOOLEAN
 YoriWinHexEditReplaceData(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORDLONG DataOffset,
+    __in YORI_ALLOC_SIZE_T DataOffset,
     __in PVOID Data,
-    __in DWORDLONG Length
+    __in YORI_ALLOC_SIZE_T Length
     );
 
 PYORI_WIN_CTRL_HANDLE
@@ -480,7 +480,7 @@ YoriWinHexEditCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
     __in_opt PYORI_STRING Caption,
     __in PSMALL_RECT Size,
-    __in DWORD BytesPerWord,
+    __in UCHAR BytesPerWord,
     __in DWORD Style
     );
 
@@ -540,15 +540,15 @@ YoriWinLabelParseAccelerator(
     __in PCYORI_STRING RawString,
     __inout_opt PYORI_STRING ParsedString,
     __out_opt TCHAR* AcceleratorChar,
-    __out_opt PDWORD HighlightOffset,
-    __out_opt PDWORD DisplayLength
+    __out_opt PYORI_ALLOC_SIZE_T HighlightOffset,
+    __out_opt PYORI_ALLOC_SIZE_T DisplayLength
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinLabelCountLinesRequiredForText(
     __in PYORI_STRING Text,
-    __in DWORD CtrlWidth,
-    __out_opt PDWORD MaximumWidth
+    __in YORI_ALLOC_SIZE_T CtrlWidth,
+    __out_opt PYORI_ALLOC_SIZE_T MaximumWidth
     );
 
 BOOLEAN
@@ -607,20 +607,20 @@ __success(return)
 BOOLEAN
 YoriWinListGetActiveOption(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD CurrentlyActiveIndex
+    __out PYORI_ALLOC_SIZE_T CurrentlyActiveIndex
     );
 
 __success(return)
 BOOLEAN
 YoriWinListSetActiveOption(
     __inout PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD ActiveOption
+    __in YORI_ALLOC_SIZE_T ActiveOption
     );
 
 BOOLEAN
 YoriWinListIsOptionSelected(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD Index
+    __in YORI_ALLOC_SIZE_T Index
     );
 
 BOOLEAN
@@ -633,13 +633,13 @@ BOOLEAN
 YoriWinListAddItems(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PCYORI_STRING ListOptions,
-    __in DWORD NumberOptions
+    __in YORI_ALLOC_SIZE_T NumberOptions
     );
 
 BOOLEAN
 YoriWinListGetItemText(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD Index,
+    __in YORI_ALLOC_SIZE_T Index,
     __inout PYORI_STRING Text
     );
 
@@ -678,7 +678,7 @@ typedef struct _YORI_WIN_MENU {
     /**
      The number of menu items contained within the menu.
      */
-    DWORD ItemCount;
+    YORI_ALLOC_SIZE_T ItemCount;
 } YORI_WIN_MENU, *PYORI_WIN_MENU;
 
 /**
@@ -831,7 +831,7 @@ BOOLEAN
 YoriWinMultilineEditAppendLinesNoDataCopy(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PYORI_STRING NewLines,
-    __in DWORD NewLineCount
+    __in YORI_ALLOC_SIZE_T NewLineCount
     );
 
 BOOLEAN
@@ -852,20 +852,20 @@ YoriWinMultilineEditPasteText(
 VOID
 YoriWinMultilineEditSetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD StartLine,
-    __in DWORD StartOffset,
-    __in DWORD EndLine,
-    __in DWORD EndOffset
+    __in YORI_ALLOC_SIZE_T StartLine,
+    __in YORI_ALLOC_SIZE_T StartOffset,
+    __in YORI_ALLOC_SIZE_T EndLine,
+    __in YORI_ALLOC_SIZE_T EndOffset
     );
 
 __success(return)
 BOOLEAN
 YoriWinMultilineEditGetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD StartLine,
-    __out PDWORD StartOffset,
-    __out PDWORD EndLine,
-    __out PDWORD EndOffset
+    __out PYORI_ALLOC_SIZE_T StartLine,
+    __out PYORI_ALLOC_SIZE_T StartOffset,
+    __out PYORI_ALLOC_SIZE_T EndLine,
+    __out PYORI_ALLOC_SIZE_T EndOffset
     );
 
 VOID
@@ -875,7 +875,7 @@ YoriWinMultilineEditSetColor(
     __in WORD SelectedAttributes
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinMultilineEditGetLineCount(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
     );
@@ -883,35 +883,35 @@ YoriWinMultilineEditGetLineCount(
 PYORI_STRING
 YoriWinMultilineEditGetLineByIndex(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD Index
+    __in YORI_ALLOC_SIZE_T Index
     );
 
 VOID
 YoriWinMultilineEditGetCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD CursorOffset,
-    __out PDWORD CursorLine
+    __out PYORI_ALLOC_SIZE_T CursorOffset,
+    __out PYORI_ALLOC_SIZE_T CursorLine
     );
 
 VOID
 YoriWinMultilineEditSetCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD NewCursorOffset,
-    __in DWORD NewCursorLine
+    __in YORI_ALLOC_SIZE_T NewCursorOffset,
+    __in YORI_ALLOC_SIZE_T NewCursorLine
     );
 
 VOID
 YoriWinMultilineEditGetViewportLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD ViewportLeft,
-    __out PDWORD ViewportTop
+    __out PYORI_ALLOC_SIZE_T ViewportLeft,
+    __out PYORI_ALLOC_SIZE_T ViewportTop
     );
 
 VOID
 YoriWinMultilineEditSetViewportLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD NewViewportLeft,
-    __in DWORD NewViewportTop
+    __in YORI_ALLOC_SIZE_T NewViewportLeft,
+    __in YORI_ALLOC_SIZE_T NewViewportTop
     );
 
 BOOLEAN
@@ -930,14 +930,14 @@ __success(return)
 BOOLEAN
 YoriWinMultilineEditGetTabWidth(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD TabWidth
+    __out PYORI_ALLOC_SIZE_T TabWidth
     );
 
 __success(return)
 BOOLEAN
 YoriWinMultilineEditSetTabWidth(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD TabWidth
+    __in YORI_ALLOC_SIZE_T TabWidth
     );
 
 VOID

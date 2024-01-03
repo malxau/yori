@@ -286,7 +286,7 @@ StrideFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -321,18 +321,18 @@ StrideFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL BasicEnumeration = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN BasicEnumeration = FALSE;
     STRIDE_CONTEXT StrideContext;
     YORI_STRING Arg;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG llTemp;
 
     ZeroMemory(&StrideContext, sizeof(StrideContext));

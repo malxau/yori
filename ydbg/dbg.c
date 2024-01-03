@@ -172,6 +172,7 @@ YDbgBuildThreadArrayForProcessId(
     PYORI_SYSTEM_THREAD_INFORMATION CurrentThread;
     DWORD Index;
     PHANDLE LocalHandleArray;
+    DWORD BytesRequired;
 
     if (!YoriLibGetSystemProcessList(&ProcessInfo)) {
         return FALSE;
@@ -195,14 +196,19 @@ YDbgBuildThreadArrayForProcessId(
         return FALSE;
     }
 
-    LocalHandleArray = YoriLibMalloc(CurrentEntry->NumberOfThreads * sizeof(HANDLE));
+    BytesRequired = CurrentEntry->NumberOfThreads * sizeof(HANDLE);
+    if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+        YoriLibFree(ProcessInfo);
+        return FALSE;
+    }
+    LocalHandleArray = YoriLibMalloc((YORI_ALLOC_SIZE_T)BytesRequired);
     if (LocalHandleArray == NULL) {
         YoriLibFree(ProcessInfo);
         return FALSE;
     }
 
     CurrentThread = (PYORI_SYSTEM_THREAD_INFORMATION)(CurrentEntry + 1);
-    for (Index = 0; Index < CurrentEntry->NumberOfThreads; Index++) {
+    for (Index = 0; Index < (YORI_ALLOC_SIZE_T)CurrentEntry->NumberOfThreads; Index++) {
 
         //
         // Ask for all access to the thread including access rights that may
@@ -248,7 +254,7 @@ YDbgDumpProcessKernelStacks(
 {
     YORI_SYSDBG_TRIAGE_DUMP_CONTROL Ctrl;
     PVOID Buffer;
-    DWORD BufferLength;
+    YORI_ALLOC_SIZE_T BufferLength;
     LONG NtStatus;
     HANDLE FileHandle;
     DWORD LastError;
@@ -276,7 +282,7 @@ YDbgDumpProcessKernelStacks(
     //  Allocate space in memory to store the dump contents.
     //
 
-    BufferLength = 4 * 1024 * 1024;
+    BufferLength = YoriLibMaximumAllocationInRange(60 * 1024, 4 * 1024 * 1024);
     Buffer = YoriLibMalloc(BufferLength);
     if (Buffer == NULL) {
         return FALSE;
@@ -685,7 +691,11 @@ YDbgPumpDebugEvents(
                         BufferLengthInBytes = BufferLengthInBytes * sizeof(WCHAR);
                     }
 
-                    Buffer = YoriLibMalloc(BufferLengthInBytes);
+                    if (!YoriLibIsSizeAllocatable(BufferLengthInBytes)) {
+                        break;
+                    }
+
+                    Buffer = YoriLibMalloc((YORI_ALLOC_SIZE_T)BufferLengthInBytes);
                     if (Buffer == NULL) {
                         break;
                     }
@@ -706,7 +716,7 @@ YDbgPumpDebugEvents(
                     YoriLibInitEmptyString(&OutputString);
                     if (DbgEvent.u.DebugString.fUnicode) {
                         OutputString.StartOfString = (LPTSTR)Buffer;
-                        OutputString.LengthInChars = BufferLengthInBytes / sizeof(WCHAR);
+                        OutputString.LengthInChars = (YORI_ALLOC_SIZE_T)(BufferLengthInBytes / sizeof(WCHAR));
                     } else {
                         Buffer[StringLengthInBytes] = '\0';
                         YoriLibYPrintf(&OutputString, _T("%hs"), Buffer);
@@ -799,7 +809,7 @@ YDbgBuildIFEOPathFromExecutable(
     __out PYORI_STRING RegPath
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     YORI_STRING FileName;
 
     YoriLibInitEmptyString(&FileName);
@@ -1015,7 +1025,7 @@ DWORD
 YDbgDebugChildProcess(
     __in BOOLEAN EnableLoaderSnaps,
     __in BOOLEAN CreateNewWindow,
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -1153,19 +1163,19 @@ typedef enum _YDBG_OP {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 1;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 1;
     YORI_STRING Arg;
     YDBG_OP Op;
     DWORD ProcessPid = 0;
     PYORI_STRING FileName = NULL;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD ExitResult;
     BOOLEAN EnableLoaderSnaps;
     BOOLEAN CreateNewWindow;

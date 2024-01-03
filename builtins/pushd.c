@@ -192,14 +192,14 @@ PushdDisplayCurrentStackCount(VOID)
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_POPD(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    DWORD i;
-    BOOL ArgumentUnderstood;
-    BOOL ListStack = FALSE;
-    BOOL CountStack = FALSE;
+    YORI_ALLOC_SIZE_T i;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN ListStack = FALSE;
+    BOOLEAN CountStack = FALSE;
     PYORI_LIST_ENTRY ListEntry;
     PPUSHD_STACK StackLocation;
     YORI_STRING Arg;
@@ -285,19 +285,19 @@ YoriCmd_POPD(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_PUSHD(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     PPUSHD_STACK NewStackEntry;
-    DWORD CurrentDirectoryLength;
+    YORI_ALLOC_SIZE_T CurrentDirectoryLength;
     YORI_STRING ChdirCmd;
     YORI_STRING Arg;
-    BOOL ListStack = FALSE;
-    BOOL CountStack = FALSE;
+    BOOLEAN ListStack = FALSE;
+    BOOLEAN CountStack = FALSE;
     PPUSHD_STACK StackLocation;
     PYORI_LIST_ENTRY ListEntry;
 
@@ -354,7 +354,7 @@ YoriCmd_PUSHD(
         return EXIT_FAILURE;
     }
 
-    CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    CurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
 
     NewStackEntry = YoriLibMalloc(sizeof(PUSHD_STACK) + CurrentDirectoryLength * sizeof(TCHAR));
     if (NewStackEntry == NULL) {
@@ -364,7 +364,7 @@ YoriCmd_PUSHD(
     YoriLibInitEmptyString(&NewStackEntry->PreviousDirectory);
     NewStackEntry->PreviousDirectory.StartOfString = (LPTSTR)(NewStackEntry + 1);
     NewStackEntry->PreviousDirectory.LengthAllocated = CurrentDirectoryLength;
-    NewStackEntry->PreviousDirectory.LengthInChars = GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
+    NewStackEntry->PreviousDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
 
     if (StartArg == 0) {
 

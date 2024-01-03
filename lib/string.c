@@ -75,10 +75,13 @@ YoriLibFreeStringContents(
 BOOL
 YoriLibAllocateString(
     __out PYORI_STRING String,
-    __in DWORD CharsToAllocate
+    __in YORI_ALLOC_SIZE_T CharsToAllocate
     )
 {
     YoriLibInitEmptyString(String);
+    if (CharsToAllocate > YORI_MAX_ALLOC_SIZE / sizeof(TCHAR)) {
+        return FALSE;
+    }
     String->MemoryToFree = YoriLibReferencedMalloc(CharsToAllocate * sizeof(TCHAR));
     if (String->MemoryToFree == NULL) {
         return FALSE;
@@ -101,7 +104,7 @@ YoriLibAllocateString(
 BOOL
 YoriLibReallocateString(
     __inout PYORI_STRING String,
-    __in DWORD CharsToAllocate
+    __in YORI_ALLOC_SIZE_T CharsToAllocate
     )
 {
     LPTSTR NewMemoryToFree;
@@ -142,7 +145,7 @@ YoriLibReallocateString(
 BOOL
 YoriLibReallocateStringWithoutPreservingContents(
     __inout PYORI_STRING String,
-    __in DWORD CharsToAllocate
+    __in YORI_ALLOC_SIZE_T CharsToAllocate
     )
 {
     LPTSTR NewMemoryToFree;
@@ -212,7 +215,7 @@ YoriLibConstantString(
 {
     String->MemoryToFree = NULL;
     String->StartOfString = (LPTSTR)Value;
-    String->LengthInChars = _tcslen(Value);
+    String->LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(Value);
     String->LengthAllocated = String->LengthInChars + 1;
 }
 
@@ -346,14 +349,14 @@ __success(return)
 BOOL
 YoriLibStringToNumberSpecifyBase(
     __in PCYORI_STRING String,
-    __in DWORD Base,
+    __in WORD Base,
     __in BOOL IgnoreSeperators,
     __out PLONGLONG Number,
-    __out PDWORD CharsConsumed
+    __out PYORI_ALLOC_SIZE_T CharsConsumed
     )
 {
     LONGLONG Result;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     BOOL Negative = FALSE;
 
     Result = 0;
@@ -442,13 +445,13 @@ YoriLibStringToNumber(
     __in PCYORI_STRING String,
     __in BOOL IgnoreSeperators,
     __out PLONGLONG Number,
-    __out PDWORD CharsConsumed
+    __out PYORI_ALLOC_SIZE_T CharsConsumed
     )
 {
     DWORDLONG Result;
     LONGLONG SignedResult;
-    DWORD Index;
-    DWORD Base = 10;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T Base = 10;
     BOOL Negative = FALSE;
 
     Result = 0;
@@ -560,16 +563,16 @@ BOOL
 YoriLibNumberToString(
     __inout PYORI_STRING String,
     __in LONGLONG Number,
-    __in DWORD Base,
-    __in DWORD DigitsPerGroup,
+    __in WORD Base,
+    __in WORD DigitsPerGroup,
     __in TCHAR GroupSeperator
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORDLONG Num;
     DWORDLONG IndexValue;
-    DWORD Digits;
-    DWORD DigitIndex;
+    YORI_ALLOC_SIZE_T Digits;
+    YORI_ALLOC_SIZE_T DigitIndex;
 
     Index = 0;
     if (Number < 0) {
@@ -594,10 +597,10 @@ YoriLibNumberToString(
     }
 
     if (DigitsPerGroup != 0) {
-        Digits += (Digits - 1) / DigitsPerGroup;
+        Digits = Digits + ((Digits - 1) / DigitsPerGroup);
     }
 
-    Index += Digits;
+    Index = Index + Digits;
 
     if (String->LengthAllocated < Index + 1) {
         YoriLibFreeStringContents(String);
@@ -715,11 +718,11 @@ YoriLibTrimNullTerminators(
 VOID
 YoriLibRightAlignString(
     __in PYORI_STRING String,
-    __in DWORD Align
+    __in YORI_ALLOC_SIZE_T Align
     )
 {
-    DWORD Index;
-    DWORD Delta;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T Delta;
     if (String->LengthInChars >= Align) {
         return;
     }
@@ -757,10 +760,10 @@ int
 YoriLibCompareStringWithLiteralCount(
     __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     )
 {
-    DWORD Index = 0;
+    YORI_ALLOC_SIZE_T Index = 0;
 
     if (count == 0) {
         return 0;
@@ -853,10 +856,10 @@ int
 YoriLibCompareStringWithLiteralInsensitiveCount(
     __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     )
 {
-    DWORD Index = 0;
+    YORI_ALLOC_SIZE_T Index = 0;
 
     if (count == 0) {
         return 0;
@@ -930,10 +933,10 @@ int
 YoriLibCompareStringCount(
     __in PCYORI_STRING Str1,
     __in PCYORI_STRING Str2,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     )
 {
-    DWORD Index = 0;
+    YORI_ALLOC_SIZE_T Index = 0;
 
     if (count == 0) {
         return 0;
@@ -1008,10 +1011,10 @@ int
 YoriLibCompareStringInsensitiveCount(
     __in PCYORI_STRING Str1,
     __in PCYORI_STRING Str2,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     )
 {
-    DWORD Index = 0;
+    YORI_ALLOC_SIZE_T Index = 0;
 
     if (count == 0) {
         return 0;
@@ -1075,13 +1078,13 @@ YoriLibCompareStringInsensitive(
 
  @return The number of identical characters.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringMatchingChars(
     __in PYORI_STRING Str1,
     __in PYORI_STRING Str2
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     Index = 0;
 
@@ -1105,13 +1108,13 @@ YoriLibCountStringMatchingChars(
 
  @return The number of identical characters.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringMatchingCharsInsensitive(
     __in PYORI_STRING Str1,
     __in PYORI_STRING Str2
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     Index = 0;
 
@@ -1135,14 +1138,14 @@ YoriLibCountStringMatchingCharsInsensitive(
 
  @return The number of characters in String that occur in chars.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringContainingChars(
     __in PCYORI_STRING String,
     __in LPCTSTR chars
     )
 {
-    DWORD len = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T len = 0;
+    YORI_ALLOC_SIZE_T i;
 
     for (len = 0; len < String->LengthInChars; len++) {
         for (i = 0; chars[i] != '\0'; i++) {
@@ -1168,14 +1171,14 @@ YoriLibCountStringContainingChars(
 
  @return The number of characters in String that do not occur in match.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringNotContainingChars(
     __in PCYORI_STRING String,
     __in LPCTSTR match
     )
 {
-    DWORD len = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T len = 0;
+    YORI_ALLOC_SIZE_T i;
 
     for (len = 0; len < String->LengthInChars; len++) {
         for (i = 0; match[i] != '\0'; i++) {
@@ -1198,14 +1201,14 @@ YoriLibCountStringNotContainingChars(
 
  @return The number of characters in String that occur in chars.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringTrailingChars(
     __in PCYORI_STRING String,
     __in LPCTSTR chars
     )
 {
-    DWORD len = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T len = 0;
+    YORI_ALLOC_SIZE_T i;
 
     for (len = String->LengthInChars; len > 0; len--) {
         for (i = 0; chars[i] != '\0'; i++) {
@@ -1243,13 +1246,13 @@ YoriLibCountStringTrailingChars(
 PYORI_STRING
 YoriLibFindFirstMatchingSubstring(
     __in PCYORI_STRING String,
-    __in DWORD NumberMatches,
+    __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
-    __out_opt PDWORD StringOffsetOfMatch
+    __out_opt PYORI_ALLOC_SIZE_T StringOffsetOfMatch
     )
 {
     YORI_STRING RemainingString;
-    DWORD CheckCount;
+    YORI_ALLOC_SIZE_T CheckCount;
 
     YoriLibInitEmptyString(&RemainingString);
     RemainingString.StartOfString = String->StartOfString;
@@ -1297,13 +1300,13 @@ YoriLibFindFirstMatchingSubstring(
 PYORI_STRING
 YoriLibFindFirstMatchingSubstringInsensitive(
     __in PCYORI_STRING String,
-    __in DWORD NumberMatches,
+    __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
-    __out_opt PDWORD StringOffsetOfMatch
+    __out_opt PYORI_ALLOC_SIZE_T StringOffsetOfMatch
     )
 {
     YORI_STRING RemainingString;
-    DWORD CheckCount;
+    YORI_ALLOC_SIZE_T CheckCount;
 
     YoriLibInitEmptyString(&RemainingString);
     RemainingString.StartOfString = String->StartOfString;
@@ -1351,13 +1354,13 @@ YoriLibFindFirstMatchingSubstringInsensitive(
 PYORI_STRING
 YoriLibFindLastMatchingSubstring(
     __in PCYORI_STRING String,
-    __in DWORD NumberMatches,
+    __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
-    __out_opt PDWORD StringOffsetOfMatch
+    __out_opt PYORI_ALLOC_SIZE_T StringOffsetOfMatch
     )
 {
     YORI_STRING RemainingString;
-    DWORD CheckCount;
+    YORI_ALLOC_SIZE_T CheckCount;
 
     YoriLibInitEmptyString(&RemainingString);
 
@@ -1407,13 +1410,13 @@ YoriLibFindLastMatchingSubstring(
 PYORI_STRING
 YoriLibFindLastMatchingSubstringInsensitive(
     __in PCYORI_STRING String,
-    __in DWORD NumberMatches,
+    __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
-    __out_opt PDWORD StringOffsetOfMatch
+    __out_opt PYORI_ALLOC_SIZE_T StringOffsetOfMatch
     )
 {
     YORI_STRING RemainingString;
-    DWORD CheckCount;
+    YORI_ALLOC_SIZE_T CheckCount;
 
     YoriLibInitEmptyString(&RemainingString);
 
@@ -1458,7 +1461,7 @@ YoriLibFindLeftMostCharacter(
     __in TCHAR CharToFind
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     for (Index = 0; Index < String->LengthInChars; Index++) {
         if (String->StartOfString[Index] == CharToFind) {
             return &String->StartOfString[Index];
@@ -1485,7 +1488,7 @@ YoriLibFindRightMostCharacter(
     __in TCHAR CharToFind
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     for (Index = String->LengthInChars; Index > 0; Index--) {
         if (String->StartOfString[Index - 1] == CharToFind) {
             return &String->StartOfString[Index - 1];
@@ -1514,14 +1517,14 @@ BOOL
 YoriLibStringToHexBuffer(
     __in PYORI_STRING String,
     __out_ecount(BufferSize) PUCHAR Buffer,
-    __in DWORD BufferSize
+    __in YORI_ALLOC_SIZE_T BufferSize
     )
 {
     UCHAR DestChar;
     TCHAR SourceChar;
-    DWORD Offset;
-    DWORD Digit;
-    DWORD StrIndex;
+    YORI_ALLOC_SIZE_T Offset;
+    YORI_ALLOC_SIZE_T Digit;
+    YORI_ALLOC_SIZE_T StrIndex;
 
     //
     //  Loop through the output string
@@ -1592,14 +1595,14 @@ __success(return)
 BOOL
 YoriLibHexBufferToString(
     __in PUCHAR Buffer,
-    __in DWORD BufferSize,
+    __in YORI_ALLOC_SIZE_T BufferSize,
     __in PYORI_STRING String
     )
 {
     UCHAR SourceChar;
     UCHAR SourceNibble;
-    DWORD Offset;
-    DWORD StrIndex;
+    YORI_ALLOC_SIZE_T Offset;
+    YORI_ALLOC_SIZE_T StrIndex;
 
     //
     //  Currently this routine assumes the caller allocated a large enough
@@ -1659,7 +1662,7 @@ YoriLibStringToFileSize(
     DWORD SuffixLevel = 0;
     LARGE_INTEGER FileSize;
     DWORD i;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
 
     if (!YoriLibStringToNumber(String, TRUE, &FileSize.QuadPart, &CharsConsumed)) {
         return FileSize;
@@ -1773,12 +1776,12 @@ BOOL
 YoriLibStringToDate(
     __in PCYORI_STRING String,
     __out LPSYSTEMTIME Date,
-    __out_opt PDWORD CharsConsumed
+    __out_opt PYORI_ALLOC_SIZE_T CharsConsumed
     )
 {
     YORI_STRING Substring;
-    DWORD CurrentCharsConsumed;
-    DWORD TotalCharsConsumed;
+    YORI_ALLOC_SIZE_T CurrentCharsConsumed;
+    YORI_ALLOC_SIZE_T TotalCharsConsumed;
     LONGLONG llTemp;
 
     YoriLibInitEmptyString(&Substring);
@@ -1795,7 +1798,7 @@ YoriLibStringToDate(
         Date->wYear += 2000;
     }
 
-    TotalCharsConsumed += CurrentCharsConsumed;
+    TotalCharsConsumed = TotalCharsConsumed + CurrentCharsConsumed;
 
     if (CurrentCharsConsumed < Substring.LengthInChars && Substring.StartOfString[CurrentCharsConsumed] == '/') {
         Substring.LengthInChars -= CurrentCharsConsumed + 1;
@@ -1806,7 +1809,7 @@ YoriLibStringToDate(
         }
 
         Date->wMonth = (WORD)llTemp;
-        TotalCharsConsumed += CurrentCharsConsumed + 1;
+        TotalCharsConsumed = TotalCharsConsumed + CurrentCharsConsumed + 1;
 
         if (CurrentCharsConsumed < Substring.LengthInChars && Substring.StartOfString[CurrentCharsConsumed] == '/') {
             Substring.LengthInChars -= CurrentCharsConsumed + 1;
@@ -1817,7 +1820,7 @@ YoriLibStringToDate(
             }
 
             Date->wDay = (WORD)llTemp;
-            TotalCharsConsumed += CurrentCharsConsumed + 1;
+            TotalCharsConsumed = TotalCharsConsumed + CurrentCharsConsumed + 1;
         }
     }
 
@@ -1845,7 +1848,7 @@ YoriLibStringToTime(
     )
 {
     YORI_STRING Substring;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG llTemp;
 
     YoriLibInitEmptyString(&Substring);
@@ -1859,7 +1862,7 @@ YoriLibStringToTime(
     Date->wHour = (WORD)llTemp;
 
     if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == ':') {
-        Substring.LengthInChars -= CharsConsumed + 1;
+        Substring.LengthInChars = Substring.LengthInChars - (CharsConsumed + 1);
         Substring.StartOfString += CharsConsumed + 1;
 
         if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
@@ -1869,7 +1872,7 @@ YoriLibStringToTime(
         Date->wMinute = (WORD)llTemp;
 
         if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == ':') {
-            Substring.LengthInChars -= CharsConsumed + 1;
+            Substring.LengthInChars = Substring.LengthInChars - (CharsConsumed + 1);
             Substring.StartOfString += CharsConsumed + 1;
 
             if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
@@ -1901,7 +1904,7 @@ YoriLibStringToDateTime(
     )
 {
     YORI_STRING Substring;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
 
     if (!YoriLibStringToDate(String, Date, &CharsConsumed)) {
         return FALSE;
@@ -1912,7 +1915,7 @@ YoriLibStringToDateTime(
 
     if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == ':') {
         Substring.StartOfString += CharsConsumed + 1;
-        Substring.LengthInChars -= CharsConsumed + 1;
+        Substring.LengthInChars = Substring.LengthInChars - (CharsConsumed + 1);
 
         if (!YoriLibStringToTime(&Substring, Date)) {
             return FALSE;
@@ -1955,11 +1958,11 @@ YoriLibSwapStrings(
 VOID
 YoriLibSortStringArray(
     __in_ecount(Count) PYORI_STRING StringArray,
-    __in DWORD Count
+    __in YORI_ALLOC_SIZE_T Count
     )
 {
-    DWORD FirstOffset;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T FirstOffset;
+    YORI_ALLOC_SIZE_T Index;
 
     if (Count <= 1) {
         return;
@@ -1968,8 +1971,8 @@ YoriLibSortStringArray(
     FirstOffset = 0;
 
     while (TRUE) {
-        DWORD BreakPoint;
-        DWORD LastOffset;
+        YORI_ALLOC_SIZE_T BreakPoint;
+        YORI_ALLOC_SIZE_T LastOffset;
         YORI_STRING MidPoint;
         volatile DWORD LastSwapFirst;
         volatile DWORD LastSwapLast;
@@ -2091,8 +2094,14 @@ YoriLibStringConcatenate(
     DWORD LengthRequired;
 
     LengthRequired = String->LengthInChars + AppendString->LengthInChars + 1;
+    if (!YoriLibIsSizeAllocatable(LengthRequired)) {
+        return FALSE;
+    }
     if (LengthRequired > String->LengthAllocated) {
-        if (!YoriLibReallocateString(String, LengthRequired + 0x100)) {
+        if (YoriLibIsSizeAllocatable(LengthRequired + 0x100)) {
+            LengthRequired = LengthRequired + 0x100;
+        }
+        if (!YoriLibReallocateString(String, (YORI_ALLOC_SIZE_T)LengthRequired)) {
             return FALSE;
         }
     }

@@ -223,8 +223,8 @@ MakeSubstituteNamedVariable(
     YORI_STRING ReplaceText;
     YORI_STRING RemainingText;
     PYORI_STRING FoundMatch;
-    DWORD FoundAt;
-    DWORD LengthNeeded;
+    YORI_ALLOC_SIZE_T FoundAt;
+    YORI_ALLOC_SIZE_T LengthNeeded;
     LPTSTR Ptr;
 
     if (YoriLibCompareStringWithLiteralCount(VariableName, _T("$"), 1) == 0) {
@@ -255,12 +255,12 @@ MakeSubstituteNamedVariable(
     Ptr = YoriLibFindLeftMostCharacter(&NameToFind, ':');
     if (Ptr != NULL) {
         SearchText.StartOfString = Ptr + 1;
-        SearchText.LengthInChars = NameToFind.LengthInChars - (DWORD)(Ptr - NameToFind.StartOfString) - 1;
+        SearchText.LengthInChars = NameToFind.LengthInChars - (YORI_ALLOC_SIZE_T)(Ptr - NameToFind.StartOfString) - 1;
 
         Ptr = YoriLibFindLeftMostCharacter(&SearchText, '=');
         if (Ptr != NULL) {
             ReplaceText.StartOfString = Ptr + 1;
-            ReplaceText.LengthInChars = SearchText.LengthInChars - (DWORD)(Ptr - SearchText.StartOfString) - 1;
+            ReplaceText.LengthInChars = SearchText.LengthInChars - (YORI_ALLOC_SIZE_T)(Ptr - SearchText.StartOfString) - 1;
             SearchText.LengthInChars = SearchText.LengthInChars - ReplaceText.LengthInChars - 1;
             NameToFind.LengthInChars = NameToFind.LengthInChars - SearchText.LengthInChars - ReplaceText.LengthInChars - 2;
         } else {
@@ -330,7 +330,7 @@ MakeSubstituteNamedVariable(
         memcpy(&VariableData->StartOfString[LengthNeeded], ReplaceText.StartOfString, ReplaceText.LengthInChars * sizeof(TCHAR));
         LengthNeeded = LengthNeeded + ReplaceText.LengthInChars;
         RemainingText.StartOfString += FoundAt + SearchText.LengthInChars;
-        RemainingText.LengthInChars -= FoundAt + SearchText.LengthInChars;
+        RemainingText.LengthInChars = RemainingText.LengthInChars - (FoundAt + SearchText.LengthInChars);
         FoundMatch = YoriLibFindFirstMatchingSubstring(&RemainingText, 1, &SearchText, &FoundAt);
     }
 
@@ -386,10 +386,10 @@ MakeExpandVariables(
     YORI_STRING VariableContents;
     BOOLEAN BraceDelimited;
 
-    DWORD StartVariableNameIndex;
-    DWORD ReadIndex;
-    DWORD WriteIndex;
-    DWORD LengthNeeded;
+    YORI_ALLOC_SIZE_T StartVariableNameIndex;
+    YORI_ALLOC_SIZE_T ReadIndex;
+    YORI_ALLOC_SIZE_T WriteIndex;
+    YORI_ALLOC_SIZE_T LengthNeeded;
 
     YoriLibInitEmptyString(&VariableName);
     YoriLibInitEmptyString(&VariableContents);
@@ -584,7 +584,7 @@ MakeSetVariable(
 
     } else {
         YORI_STRING VariableNameCopy;
-        DWORD LengthNeeded;
+        YORI_ALLOC_SIZE_T LengthNeeded;
 
         LengthNeeded = Variable->LengthInChars;
         if (Value != NULL) {
@@ -654,7 +654,7 @@ MakeExecuteSetVariable(
 {
     YORI_STRING Variable;
     YORI_STRING Value;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     YoriLibInitEmptyString(&Variable);
     YoriLibInitEmptyString(&Value);

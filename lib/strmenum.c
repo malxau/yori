@@ -110,7 +110,10 @@ YoriLibStreamEnumFileFoundCallback(
     }
     if (StreamContext->FullPathWithStream.LengthAllocated < LengthNeeded) {
         YoriLibFreeStringContents(&StreamContext->FullPathWithStream);
-        if (!YoriLibAllocateString(&StreamContext->FullPathWithStream, LengthNeeded + 200)) {
+        if (!YoriLibIsSizeAllocatable(LengthNeeded + 200)) {
+            return FALSE;
+        }
+        if (!YoriLibAllocateString(&StreamContext->FullPathWithStream, (YORI_ALLOC_SIZE_T)(LengthNeeded + 200))) {
             return FALSE;
         }
     }
@@ -176,7 +179,7 @@ YoriLibStreamEnumFileFoundCallback(
             YoriLibInitEmptyString(&FoundStreamName);
             do {
                 FoundStreamName.StartOfString = FindStreamData.cStreamName;
-                FoundStreamName.LengthInChars = (DWORD)_tcslen(FindStreamData.cStreamName);
+                FoundStreamName.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(FindStreamData.cStreamName);
 
                 //
                 //  Truncate any trailing :$DATA attribute name
@@ -328,7 +331,7 @@ YoriLibStreamEnumErrorCallback(
 BOOL
 YoriLibForEachStream(
     __in PYORI_STRING FileSpec,
-    __in DWORD MatchFlags,
+    __in WORD MatchFlags,
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
@@ -337,7 +340,7 @@ YoriLibForEachStream(
 {
     YORI_STRING FilePart;
     YORI_STRING FileSpecNoStream;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     BOOL Result;
     YORI_LIB_STREAM_ENUM_CONTEXT StreamContext;
 

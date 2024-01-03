@@ -26,6 +26,43 @@
  */
 
 /**
+ The data type that can describe a single memory allocation.  Note this value
+ is an implicit limit on string length (a string cannot exceed a single
+ allocation.)
+ */
+typedef DWORD                    YORI_ALLOC_SIZE_T;
+
+/**
+ Pointer to a type describing a memory allocation length.
+ */
+typedef YORI_ALLOC_SIZE_T        *PYORI_ALLOC_SIZE_T;
+
+/**
+ The maximum length of a memory allocation, in bytes.
+ */
+#define YORI_MAX_ALLOC_SIZE      ((YORI_ALLOC_SIZE_T)-1)
+
+/**
+ A signed value corresponding to memory allocation length.  This is used for
+ interfaces where the sign bit denotes an error.  The implication is this
+ may be larger than the unsigned value or shorter, depending on whether the
+ error bit is reducing the allowable allocation size or not.
+ */
+typedef LONG                     YORI_SIGNED_ALLOC_SIZE_T;
+
+/**
+ Pointer to a type describing a signed memory allocation length.
+ */
+typedef YORI_SIGNED_ALLOC_SIZE_T *PYORI_SIGNED_ALLOC_SIZE_T;
+
+/**
+ A type describing the largest describable integer in this environment.
+ This must implicitly be equal to or larger than the maximum allocation size
+ (we can't allocate a number of bytes that can't be represented.)
+ */
+typedef DWORDLONG                YORI_MAX_WORD_T;
+
+/**
  A yori list entry structure.
  */
 typedef struct _YORI_LIST_ENTRY {
@@ -62,12 +99,12 @@ typedef struct _YORI_STRING {
     /**
      The number of characters currently in the string.
      */
-    DWORD LengthInChars;
+    YORI_ALLOC_SIZE_T LengthInChars;
 
     /**
      The maximum number of characters that could be put into this allocation.
      */
-    DWORD LengthAllocated;
+    YORI_ALLOC_SIZE_T LengthAllocated;
 } YORI_STRING, *PYORI_STRING;
 
 /**
@@ -138,7 +175,7 @@ typedef struct _YORI_HASH_TABLE {
     /**
      The number of buckets in the hash table.
      */
-    DWORD NumberBuckets;
+    YORI_ALLOC_SIZE_T NumberBuckets;
 
     /**
      An array of hash buckets.
@@ -360,7 +397,7 @@ typedef struct _YORI_FILE_INFO {
     /**
      The number of characters in the file name.
      */
-    DWORD         FileNameLengthInChars;
+    YORI_ALLOC_SIZE_T FileNameLengthInChars;
 
     /**
      The short file name (8.3 compliant.)
@@ -417,7 +454,7 @@ typedef
 DWORD
 YORI_BUILTIN_FN
 YORI_CMD_BUILTIN (
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     );
 
@@ -665,7 +702,7 @@ YoriLibCheckIfArgNeedsQuotes(
 __success(return)
 BOOLEAN
 YoriLibArgArrayToVariableValue(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in PYORI_STRING ArgV,
     __out PYORI_STRING Variable,
     __out PBOOLEAN ValueSpecified,
@@ -675,7 +712,7 @@ YoriLibArgArrayToVariableValue(
 __success(return)
 BOOL
 YoriLibBuildCmdlineFromArgcArgv(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in BOOLEAN EncloseInQuotes,
     __in BOOLEAN ApplyChildProcessEscapes,
@@ -685,15 +722,15 @@ YoriLibBuildCmdlineFromArgcArgv(
 PYORI_STRING
 YoriLibCmdlineToArgcArgv(
     __in LPCTSTR szCmdLine,
-    __in DWORD MaxArgs,
+    __in YORI_ALLOC_SIZE_T MaxArgs,
     __in BOOLEAN ApplyCaretAsEscape,
-    __out PDWORD argc
+    __out PYORI_ALLOC_SIZE_T argc
     );
 
 /**
  A prototype for a callback function to invoke for variable expansion.
  */
-typedef DWORD YORILIB_VARIABLE_EXPAND_FN(PYORI_STRING OutputBuffer, PYORI_STRING VariableName, PVOID Context);
+typedef YORI_ALLOC_SIZE_T YORILIB_VARIABLE_EXPAND_FN(PYORI_STRING OutputBuffer, PYORI_STRING VariableName, PVOID Context);
 
 /**
  A pointer to a callback function to invoke for variable expansion.
@@ -843,8 +880,8 @@ YoriLibSetConsoleDisplayMode(
 
 VOID
 YoriLibQueryCpuCount(
-    __out PDWORD PerformanceLogicalProcessors,
-    __out PDWORD EfficiencyLogicalProcessors
+    __out PWORD PerformanceLogicalProcessors,
+    __out PWORD EfficiencyLogicalProcessors
     );
 
 // *** CSHOT.C ***
@@ -867,21 +904,21 @@ YoriLibGenerateVtStringFromConsoleBuffers(
 // *** CURDIR.C ***
 
 __success(return)
-BOOL
+BOOLEAN
 YoriLibGetOnDiskCaseForPath(
     __in PYORI_STRING Path,
     __out PYORI_STRING OnDiskCasePath
     );
 
 __success(return)
-BOOL
+BOOLEAN
 YoriLibGetCurrentDirectoryOnDrive(
     __in TCHAR Drive,
     __out PYORI_STRING DriveCurrentDirectory
     );
 
 __success(return)
-BOOL
+BOOLEAN
 YoriLibSetCurrentDirectoryOnDrive(
     __in TCHAR Drive,
     __in PYORI_STRING DriveCurrentDirectory
@@ -893,18 +930,18 @@ YoriLibSetCurrentDirectorySaveDriveCurrentDirectory(
     );
 
 __success(return)
-BOOL
+BOOLEAN
 YoriLibGetCurrentDirectory(
     __out PYORI_STRING CurrentDirectory
     );
 
 __success(return)
-BOOL
+BOOLEAN
 YoriLibGetCurrentDirectoryForDisplay(
     __out PYORI_STRING CurrentDirectory
     );
 
-BOOL
+BOOLEAN
 YoriLibSetCurrentDirectory(
     __in PYORI_STRING NewCurrentDirectory
     );
@@ -1001,7 +1038,7 @@ __success(return)
 BOOL
 YoriLibHtmlGenerateTextString(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in PCYORI_STRING SrcString
     );
 
@@ -1009,7 +1046,7 @@ __success(return)
 BOOL
 YoriLibHtmlGenerateEscapeString(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in PCYORI_STRING SrcString,
     __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     );
@@ -1042,7 +1079,7 @@ __success(return)
 BOOL
 YoriLibRtfGenerateTextString(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in PCYORI_STRING SrcString
     );
 
@@ -1050,7 +1087,7 @@ __success(return)
 BOOL
 YoriLibRtfGenerateEscapeString(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in PCYORI_STRING SrcString,
     __inout PBOOLEAN UnderlineState
     );
@@ -1182,7 +1219,7 @@ __success(return)
 BOOL
 YoriLibAreAnsiEnvironmentStringsValid(
     __in PUCHAR AnsiEnvStringBuffer,
-    __in DWORD BufferLength,
+    __in YORI_ALLOC_SIZE_T BufferLength,
     __out PYORI_STRING UnicodeStrings
     );
 
@@ -1313,18 +1350,18 @@ typedef struct _YORILIB_COMPRESS_CONTEXT {
      The maximum number of compress threads.  This corresponds to the size of
      the Threads array.
      */
-    DWORD MaxThreads;
+    YORI_ALLOC_SIZE_T MaxThreads;
 
     /**
      The number of threads allocated to compress file contents.  This is
      less than or equal to MaxThreads.
      */
-    DWORD ThreadsAllocated;
+    YORI_ALLOC_SIZE_T ThreadsAllocated;
 
     /**
      The number of items currently queued in the list.
      */
-    DWORD ItemsQueued;
+    YORI_ALLOC_SIZE_T ItemsQueued;
 
     /**
      If TRUE, output is generated describing thread creation and throttling.
@@ -1439,7 +1476,7 @@ __success(return)
 BOOL
 YoriLibForEachFile(
     __in PYORI_STRING FileSpec,
-    __in DWORD MatchFlags,
+    __in WORD MatchFlags,
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
@@ -1650,19 +1687,19 @@ typedef YORI_LIB_CHAR_TO_DWORD_FLAG CONST *PCYORI_LIB_CHAR_TO_DWORD_FLAG;
 
 VOID
 YoriLibGetFileAttrPairs(
-    __out PDWORD Count,
+    __out PYORI_ALLOC_SIZE_T Count,
     __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
     );
 
 VOID
 YoriLibGetDirectoryPairs(
-    __out PDWORD Count,
+    __out PYORI_ALLOC_SIZE_T Count,
     __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
     );
 
 VOID
 YoriLibGetFilePermissionPairs(
-    __out PDWORD Count,
+    __out PYORI_ALLOC_SIZE_T Count,
     __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
     );
 
@@ -2461,7 +2498,7 @@ YoriLibHashString32(
 
 PYORI_HASH_TABLE
 YoriLibAllocateHashTable(
-    __in DWORD NumberBuckets
+    __in YORI_ALLOC_SIZE_T NumberBuckets
     );
 
 VOID
@@ -2536,7 +2573,7 @@ BOOL
 YoriLibHexDump(
     __in LPCSTR Buffer,
     __in LONGLONG StartOfBufferOffset,
-    __in DWORD BufferLength,
+    __in YORI_ALLOC_SIZE_T BufferLength,
     __in DWORD BytesPerWord,
     __in DWORD DumpFlags
     );
@@ -2545,9 +2582,9 @@ BOOL
 YoriLibHexDiff(
     __in LONGLONG StartOfBufferOffset,
     __in LPCSTR Buffer1,
-    __in DWORD Buffer1Length,
+    __in YORI_ALLOC_SIZE_T Buffer1Length,
     __in LPCSTR Buffer2,
-    __in DWORD Buffer2Length,
+    __in YORI_ALLOC_SIZE_T Buffer2Length,
     __in DWORD BytesPerWord,
     __in DWORD DumpFlags
     );
@@ -2556,7 +2593,7 @@ VOID
 YoriLibHexLineToString(
     __in CONST UCHAR * Buffer,
     __in LONGLONG StartOfBufferOffset,
-    __in DWORD BufferLength,
+    __in YORI_ALLOC_SIZE_T BufferLength,
     __in DWORD BytesPerWord,
     __in DWORD DumpFlags,
     __in BOOLEAN MoreFollowing,
@@ -2656,32 +2693,32 @@ YoriLibSetMultibyteInputEncoding(
     __in DWORD Encoding
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibGetMultibyteOutputSizeNeeded(
     __in LPCTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in YORI_ALLOC_SIZE_T BufferLength
     );
 
 VOID
 YoriLibMultibyteOutput(
     __in_ecount(InputBufferLength) LPCTSTR InputStringBuffer,
-    __in DWORD InputBufferLength,
+    __in YORI_ALLOC_SIZE_T InputBufferLength,
     __out_ecount(OutputBufferLength) LPSTR OutputStringBuffer,
-    __in DWORD OutputBufferLength
+    __in YORI_ALLOC_SIZE_T OutputBufferLength
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibGetMultibyteInputSizeNeeded(
     __in LPCSTR StringBuffer,
-    __in DWORD BufferLength
+    __in YORI_ALLOC_SIZE_T BufferLength
     );
 
 VOID
 YoriLibMultibyteInput(
     __in_ecount(InputBufferLength) LPCSTR InputStringBuffer,
-    __in DWORD InputBufferLength,
+    __in YORI_ALLOC_SIZE_T InputBufferLength,
     __out_ecount(OutputBufferLength) LPTSTR OutputStringBuffer,
-    __in DWORD OutputBufferLength
+    __in YORI_ALLOC_SIZE_T OutputBufferLength
     );
 
 // *** JOBOBJ.C ***
@@ -2815,7 +2852,7 @@ YoriLibIsListEmpty(
 
 PVOID
 YoriLibMallocSpecialHeap(
-    __in DWORD Bytes,
+    __in YORI_ALLOC_SIZE_T Bytes,
     __in LPCSTR Function,
     __in LPCSTR File,
     __in DWORD Line
@@ -2823,7 +2860,7 @@ YoriLibMallocSpecialHeap(
 
 PVOID
 YoriLibReferencedMallocSpecialHeap(
-    __in DWORD Bytes,
+    __in YORI_ALLOC_SIZE_T Bytes,
     __in LPCSTR Function,
     __in LPCSTR File,
     __in DWORD Line
@@ -2842,12 +2879,12 @@ YoriLibReferencedMallocSpecialHeap(
 #else
 PVOID
 YoriLibMalloc(
-    __in DWORD Bytes
+    __in YORI_ALLOC_SIZE_T Bytes
     );
 
 PVOID
 YoriLibReferencedMalloc(
-    __in DWORD Bytes
+    __in YORI_ALLOC_SIZE_T Bytes
     );
 #endif
 
@@ -2868,6 +2905,24 @@ YoriLibReference(
 VOID
 YoriLibDereference(
     __in PVOID Allocation
+    );
+
+BOOLEAN
+YoriLibIsSizeAllocatable(
+    __in YORI_MAX_WORD_T Size
+    );
+
+YORI_ALLOC_SIZE_T
+YoriLibMaximumAllocationInRange(
+    __in YORI_MAX_WORD_T RequiredSize,
+    __in YORI_MAX_WORD_T DesiredSize
+    );
+
+YORI_ALLOC_SIZE_T
+YoriLibIsAllocationExtendable(
+    __in YORI_ALLOC_SIZE_T ExistingSize,
+    __in YORI_ALLOC_SIZE_T RequiredExtraSize,
+    __in YORI_ALLOC_SIZE_T DesiredExtraSize
     );
 
 // *** MOVEFILE.C ***
@@ -3005,7 +3060,7 @@ YoriLibResetSystemBackgroundColorSupport(VOID);
 BOOLEAN
 YoriLibIsRunningUnderSsh(VOID);
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibGetPageSize(VOID);
 
 BOOLEAN
@@ -3057,7 +3112,7 @@ YoriLibPathLocateUnknownExtensionUnknownLocation(
     );
 
 __success(return)
-BOOL
+BOOLEAN
 YoriLibLocateExecutableInPath(
     __in PYORI_STRING SearchFor,
     __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,
@@ -3067,39 +3122,39 @@ YoriLibLocateExecutableInPath(
 
 // *** PRINTF.C ***
 
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibSPrintf(
     __out LPTSTR szDest,
     __in LPCTSTR szFmt,
     ...
     );
 
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibSPrintfS(
     __out_ecount(len) LPTSTR szDest,
-    __in DWORD len,
+    __in YORI_ALLOC_SIZE_T len,
     __in LPCTSTR szFmt,
     ...
     );
 
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibSPrintfSize(
     __in LPCTSTR szFmt,
     ...
     );
 
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibSPrintfA(
     __out LPSTR szDest,
     __in LPCSTR szFmt,
     ...
     );
 
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibSPrintfSA(
     __out_ecount(len) LPSTR szDest,
-    __in  DWORD len,
-    __in  LPCSTR szFmt,
+    __in YORI_ALLOC_SIZE_T len,
+    __in LPCSTR szFmt,
     ...
     );
 
@@ -3115,7 +3170,7 @@ YoriLibSPrintfSA(
  @return The number of characters that the buffer would require, or -1 on
          error.
  */
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibVSPrintfSize(
     __in LPCTSTR szFmt,
     __in va_list marker
@@ -3137,16 +3192,16 @@ YoriLibVSPrintfSize(
  @return The number of characters successfully populated into the buffer, or
          -1 on error.
  */
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibVSPrintf(
     __out_ecount(len) LPTSTR szDest,
-    __in DWORD len,
+    __in YORI_ALLOC_SIZE_T len,
     __in LPCTSTR szFmt,
     __in va_list marker
     );
 
 __success(return >= 0)
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibYPrintf(
     __inout PYORI_STRING Dest,
     __in LPCTSTR szFmt,
@@ -3527,19 +3582,19 @@ YoriLibFreeStringContents(
 BOOL
 YoriLibAllocateString(
     __out PYORI_STRING String,
-    __in DWORD CharsToAllocate
+    __in YORI_ALLOC_SIZE_T CharsToAllocate
     );
 
 BOOL
 YoriLibReallocateString(
     __inout PYORI_STRING String,
-    __in DWORD CharsToAllocate
+    __in YORI_ALLOC_SIZE_T CharsToAllocate
     );
 
 BOOL
 YoriLibReallocateStringWithoutPreservingContents(
     __inout PYORI_STRING String,
-    __in DWORD CharsToAllocate
+    __in YORI_ALLOC_SIZE_T CharsToAllocate
     );
 
 VOID
@@ -3579,10 +3634,10 @@ __success(return)
 BOOL
 YoriLibStringToNumberSpecifyBase(
     __in PCYORI_STRING String,
-    __in DWORD Base,
+    __in WORD Base,
     __in BOOL IgnoreSeperators,
     __out PLONGLONG Number,
-    __out PDWORD CharsConsumed
+    __out PYORI_ALLOC_SIZE_T CharsConsumed
     );
 
 __success(return)
@@ -3591,7 +3646,7 @@ YoriLibStringToNumber(
     __in PCYORI_STRING String,
     __in BOOL IgnoreSeperators,
     __out PLONGLONG Number,
-    __out PDWORD CharsConsumed
+    __out PYORI_ALLOC_SIZE_T CharsConsumed
     );
 
 __success(return)
@@ -3599,8 +3654,8 @@ BOOL
 YoriLibNumberToString(
     __inout PYORI_STRING String,
     __in LONGLONG Number,
-    __in DWORD Base,
-    __in DWORD DigitsPerGroup,
+    __in WORD Base,
+    __in WORD DigitsPerGroup,
     __in TCHAR GroupSeperator
     );
 
@@ -3627,7 +3682,7 @@ YoriLibUpcaseChar(
 VOID
 YoriLibRightAlignString(
     __in PYORI_STRING String,
-    __in DWORD Align
+    __in YORI_ALLOC_SIZE_T Align
     );
 
 int
@@ -3640,7 +3695,7 @@ int
 YoriLibCompareStringWithLiteralCount(
     __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     );
 
 int
@@ -3653,7 +3708,7 @@ int
 YoriLibCompareStringWithLiteralInsensitiveCount(
     __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     );
 
 int
@@ -3672,41 +3727,41 @@ int
 YoriLibCompareStringInsensitiveCount(
     __in PCYORI_STRING Str1,
     __in PCYORI_STRING Str2,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     );
 
 int
 YoriLibCompareStringCount(
     __in PCYORI_STRING Str1,
     __in PCYORI_STRING Str2,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringMatchingChars(
     __in PYORI_STRING Str1,
     __in PYORI_STRING Str2
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringMatchingCharsInsensitive(
     __in PYORI_STRING Str1,
     __in PYORI_STRING Str2
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringContainingChars(
     __in PCYORI_STRING String,
     __in LPCTSTR chars
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringNotContainingChars(
     __in PCYORI_STRING String,
     __in LPCTSTR match
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibCountStringTrailingChars(
     __in PCYORI_STRING String,
     __in LPCTSTR chars
@@ -3715,33 +3770,33 @@ YoriLibCountStringTrailingChars(
 PYORI_STRING
 YoriLibFindFirstMatchingSubstring(
     __in PCYORI_STRING String,
-    __in DWORD NumberMatches,
+    __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
-    __out_opt PDWORD StringOffsetOfMatch
+    __out_opt PYORI_ALLOC_SIZE_T StringOffsetOfMatch
     );
 
 PYORI_STRING
 YoriLibFindFirstMatchingSubstringInsensitive(
     __in PCYORI_STRING String,
-    __in DWORD NumberMatches,
+    __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
-    __out_opt PDWORD StringOffsetOfMatch
+    __out_opt PYORI_ALLOC_SIZE_T StringOffsetOfMatch
     );
 
 PYORI_STRING
 YoriLibFindLastMatchingSubstring(
     __in PCYORI_STRING String,
-    __in DWORD NumberMatches,
+    __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
-    __out_opt PDWORD StringOffsetOfMatch
+    __out_opt PYORI_ALLOC_SIZE_T StringOffsetOfMatch
     );
 
 PYORI_STRING
 YoriLibFindLastMatchingSubstringInsensitive(
     __in PCYORI_STRING String,
-    __in DWORD NumberMatches,
+    __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
-    __out_opt PDWORD StringOffsetOfMatch
+    __out_opt PYORI_ALLOC_SIZE_T StringOffsetOfMatch
     );
 
 LPTSTR
@@ -3761,14 +3816,14 @@ BOOL
 YoriLibStringToHexBuffer(
     __in PYORI_STRING String,
     __out_ecount(BufferSize) PUCHAR Buffer,
-    __in DWORD BufferSize
+    __in YORI_ALLOC_SIZE_T BufferSize
     );
 
 __success(return)
 BOOL
 YoriLibHexBufferToString(
     __in PUCHAR Buffer,
-    __in DWORD BufferSize,
+    __in YORI_ALLOC_SIZE_T BufferSize,
     __in PYORI_STRING String
     );
 
@@ -3789,7 +3844,7 @@ BOOL
 YoriLibStringToDate(
     __in PCYORI_STRING String,
     __out LPSYSTEMTIME Date,
-    __out_opt PDWORD CharsConsumed
+    __out_opt PYORI_ALLOC_SIZE_T CharsConsumed
     );
 
 __success(return)
@@ -3809,7 +3864,7 @@ YoriLibStringToDateTime(
 VOID
 YoriLibSortStringArray(
     __in_ecount(Count) PYORI_STRING StringArray,
-    __in DWORD Count
+    __in YORI_ALLOC_SIZE_T Count
     );
 
 BOOLEAN
@@ -3847,7 +3902,7 @@ YoriLibStringConcatenateWithLiteral(
 BOOL
 YoriLibForEachStream(
     __in PYORI_STRING FileSpec,
-    __in DWORD MatchFlags,
+    __in WORD MatchFlags,
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
@@ -3868,7 +3923,7 @@ YoriLibGetTempFileName(
 BOOL
 YoriLibGetTempPath(
     __out PYORI_STRING TempPathName,
-    __in DWORD ExtraChars
+    __in YORI_ALLOC_SIZE_T ExtraChars
     );
 
 // *** UPDATE.C ***
@@ -4151,7 +4206,7 @@ YoriLibUtf8TextNoEscapesSetFunctions(
 BOOL
 YoriLibProcessVtEscapesOnOpenStream(
     __in LPTSTR String,
-    __in DWORD StringLength,
+    __in YORI_ALLOC_SIZE_T StringLength,
     __in HANDLE hOutput,
     __in PYORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks
     );
@@ -4232,8 +4287,8 @@ YoriLibStripVtEscapes(
 BOOL
 YoriLibGetWindowDimensions(
     __in HANDLE OutputHandle,
-    __out_opt PDWORD Width,
-    __out_opt PDWORD Height
+    __out_opt PWORD Width,
+    __out_opt PWORD Height
     );
 
 BOOL

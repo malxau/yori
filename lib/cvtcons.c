@@ -408,7 +408,14 @@ YoriLibAllocateConsoleVtConvertContext(
     Context->LineWrap = LineWrap;
 
     if (AllocateLines > 0) {
-        Context->Output = YoriLibReferencedMalloc(Columns * AllocateLines * sizeof(CHAR_INFO));
+        DWORD BytesNeeded;
+        BytesNeeded = Columns * AllocateLines * sizeof(CHAR_INFO);
+        if (!YoriLibIsSizeAllocatable(BytesNeeded)) {
+            YoriLibDereference(Context);
+            return NULL;
+        }
+
+        Context->Output = YoriLibReferencedMalloc((YORI_ALLOC_SIZE_T)BytesNeeded);
         if (Context->Output == NULL) {
             YoriLibDereference(Context);
             return NULL;

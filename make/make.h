@@ -793,7 +793,7 @@ typedef struct _MAKE_CONTEXT {
      to the number of logical processors, but is limited to 64 due to
      WaitForMultipleObjects.
      */
-    DWORD NumberProcesses;
+    YORI_ALLOC_SIZE_T NumberProcesses;
 
     /**
      The 32 bit hash of the environment block. This process does not modify
@@ -843,7 +843,7 @@ typedef struct _MAKE_CONTEXT {
 PVOID
 MakeSlabAlloc(
     __in PMAKE_SLAB_ALLOC Alloc,
-    __in DWORD SizeInBytes
+    __in YORI_ALLOC_SIZE_T SizeInBytes
     );
 
 VOID

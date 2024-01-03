@@ -317,7 +317,7 @@ AttribFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -390,14 +390,14 @@ AttribStringToFlags(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOLEAN ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
     DWORD Result;
     DWORD NewAttributes;
     BOOLEAN BasicEnumeration = FALSE;

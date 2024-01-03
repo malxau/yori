@@ -28,8 +28,8 @@ __success(return)
 BOOLEAN
 EditOpts(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
-    __in DWORD InitialTabWidth,
-    __out PDWORD NewTabWidth
+    __in YORI_ALLOC_SIZE_T InitialTabWidth,
+    __out PYORI_ALLOC_SIZE_T NewTabWidth
     );
 
 // vim:sw=4:ts=4:et:

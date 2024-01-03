@@ -75,8 +75,8 @@ CharMapHelp(VOID)
 BOOL
 CharMapDisplay(
     __in DWORD Encoding,
-    __in DWORD StartChar,
-    __in DWORD CharCount
+    __in YORI_ALLOC_SIZE_T StartChar,
+    __in YORI_ALLOC_SIZE_T CharCount
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO BufferInfo;
@@ -129,7 +129,7 @@ CharMapDisplay(
         }
 
         if (StartChar + CharCount > 0xffff) {
-            CharCount = 0x10000 - StartChar;
+            CharCount = (YORI_ALLOC_SIZE_T)(0x10000 - StartChar);
         }
         for (i = 0; i < CharCount; i++) {
             WideChars.StartOfString[i] = (TCHAR)(StartChar + i);
@@ -236,16 +236,16 @@ CharMapEncodingFromString(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     DWORD Encoding;
-    DWORD CharCount;
-    DWORD StartChar;
+    YORI_ALLOC_SIZE_T CharCount;
+    YORI_ALLOC_SIZE_T StartChar;
 
     Encoding = CP_OEMCP;
     StartChar = 0;
@@ -268,10 +268,10 @@ ENTRYPOINT(
 
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
                     LONGLONG llTemp;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                        CharCount = (DWORD)llTemp;
+                        CharCount = (YORI_ALLOC_SIZE_T)llTemp;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }
@@ -288,10 +288,10 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 if (ArgC > i + 1) {
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
                     LONGLONG llTemp;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                        StartChar = (DWORD)llTemp;
+                        StartChar = (YORI_ALLOC_SIZE_T)llTemp;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }

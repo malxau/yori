@@ -142,8 +142,8 @@ YoriShAddAlias(
     )
 {
     PYORI_ALIAS NewAlias;
-    DWORD AliasNameLengthInChars;
-    DWORD ValueNameLengthInChars;
+    YORI_ALLOC_SIZE_T AliasNameLengthInChars;
+    YORI_ALLOC_SIZE_T ValueNameLengthInChars;
 
     if (YoriShAliasesHash != NULL) {
         if (Internal) {
@@ -214,7 +214,7 @@ YoriShAddAlias(
  @return The number of characters populated or the number of characters
          required if the buffer is too small.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriShExpandAliasHelper(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
@@ -228,7 +228,7 @@ YoriShExpandAliasHelper(
 
     if (VariableName->LengthInChars == 1 && VariableName->StartOfString[0] == '*') {
         YORI_STRING CmdLine;
-        DWORD CmdLineLength;
+        YORI_ALLOC_SIZE_T CmdLineLength;
         YORI_LIBSH_CMD_CONTEXT ArgContext;
 
         ZeroMemory(&ArgContext, sizeof(ArgContext));
@@ -408,10 +408,10 @@ YoriShGetAliasStrings(
     __inout PYORI_STRING AliasStrings
     )
 {
-    DWORD CharsNeeded = 0;
+    YORI_ALLOC_SIZE_T CharsNeeded = 0;
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORI_ALIAS Alias;
-    DWORD StringOffset;
+    YORI_ALLOC_SIZE_T StringOffset;
     BOOLEAN IncludeThisEntry;
 
     if (YoriShAliasesList.Next != NULL) {
@@ -521,8 +521,8 @@ YoriShImportAliasValue(
     __out LPTSTR * YoriAliasValue
     )
 {
-    ULONG Index;
-    ULONG CharsNeeded;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     YORI_STRING NewString;
     YORI_STRING ExpandedString;
 
@@ -595,7 +595,7 @@ YoriShGetSystemAliasStrings(
     )
 {
     LPTSTR AppName;
-    DWORD LengthRequired;
+    YORI_ALLOC_SIZE_T LengthRequired;
 
     YoriLibInitEmptyString(AliasBuffer);
 
@@ -612,7 +612,7 @@ YoriShGetSystemAliasStrings(
         AppName = ALIAS_APP_NAME;
     }
 
-    LengthRequired = DllKernel32.pGetConsoleAliasesLengthW(AppName);
+    LengthRequired = (YORI_ALLOC_SIZE_T)DllKernel32.pGetConsoleAliasesLengthW(AppName);
     if (LengthRequired == 0) {
         return TRUE;
     }
@@ -621,7 +621,7 @@ YoriShGetSystemAliasStrings(
         return FALSE;
     }
 
-    AliasBuffer->LengthInChars = DllKernel32.pGetConsoleAliasesW(AliasBuffer->StartOfString, AliasBuffer->LengthAllocated * sizeof(TCHAR), AppName);
+    AliasBuffer->LengthInChars = (YORI_ALLOC_SIZE_T)DllKernel32.pGetConsoleAliasesW(AliasBuffer->StartOfString, AliasBuffer->LengthAllocated * sizeof(TCHAR), AppName);
     AliasBuffer->LengthInChars = AliasBuffer->LengthInChars / sizeof(TCHAR);
     if (AliasBuffer->LengthInChars == 0 || AliasBuffer->LengthInChars > AliasBuffer->LengthAllocated) {
         YoriLibFreeStringContents(AliasBuffer);

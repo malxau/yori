@@ -42,8 +42,8 @@
  */
 VOID
 YoriLibQueryCpuCount(
-    __out PDWORD PerformanceLogicalProcessors,
-    __out PDWORD EfficiencyLogicalProcessors
+    __out PWORD PerformanceLogicalProcessors,
+    __out PWORD EfficiencyLogicalProcessors
     )
 {
     YORI_SYSTEM_INFO SysInfo;
@@ -59,10 +59,10 @@ YoriLibQueryCpuCount(
         DWORD BytesInBuffer = 0;
         DWORD CurrentOffset = 0;
         DWORD GroupIndex;
-        DWORD LocalEfficiencyProcessorCount;
-        DWORD LocalPerformanceProcessorCount;
-        DWORD LogicalProcessorCount;
-        DWORD LogicalProcessorIndex;
+        WORD LocalEfficiencyProcessorCount;
+        WORD LocalPerformanceProcessorCount;
+        WORD LogicalProcessorCount;
+        WORD LogicalProcessorIndex;
         DWORD_PTR LogicalProcessorMask;
         PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX ProcInfo = NULL;
         PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX Entry;
@@ -87,8 +87,13 @@ YoriLibQueryCpuCount(
                     YoriLibFree(ProcInfo);
                     ProcInfo = NULL;
                 }
+
+                if (!YoriLibIsSizeAllocatable(BytesInBuffer)) {
+                    Err = ERROR_NOT_ENOUGH_MEMORY;
+                    break;
+                }
     
-                ProcInfo = YoriLibMalloc(BytesInBuffer);
+                ProcInfo = YoriLibMalloc((YORI_ALLOC_SIZE_T)BytesInBuffer);
                 if (ProcInfo == NULL) {
                     Err = ERROR_NOT_ENOUGH_MEMORY;
                     break;
@@ -122,9 +127,9 @@ YoriLibQueryCpuCount(
                         }
                     }
                     if (Entry->u.Processor.EfficiencyClass == 0) {
-                        LocalEfficiencyProcessorCount = LocalEfficiencyProcessorCount + LogicalProcessorCount;
+                        LocalEfficiencyProcessorCount = (WORD)(LocalEfficiencyProcessorCount + LogicalProcessorCount);
                     } else {
-                        LocalPerformanceProcessorCount = LocalPerformanceProcessorCount + LogicalProcessorCount;
+                        LocalPerformanceProcessorCount = (WORD)(LocalPerformanceProcessorCount + LogicalProcessorCount);
                     }
                 }
                 CurrentOffset += Entry->SizeInBytes;
@@ -169,7 +174,7 @@ YoriLibQueryCpuCount(
     //
 
     GetSystemInfo((LPSYSTEM_INFO)&SysInfo);
-    *PerformanceLogicalProcessors = SysInfo.dwNumberOfProcessors;
+    *PerformanceLogicalProcessors = (WORD)SysInfo.dwNumberOfProcessors;
     *EfficiencyLogicalProcessors = 0;
 }
 

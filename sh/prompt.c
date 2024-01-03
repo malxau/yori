@@ -70,14 +70,14 @@ YoriShPromptIsAdmin(VOID)
  @return The number of characters populated or the number of characters
          required if the buffer is too small.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriShExpandPrompt(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded = 0;
+    YORI_ALLOC_SIZE_T CharsNeeded = 0;
 
     UNREFERENCED_PARAMETER(Context);
 
@@ -161,7 +161,7 @@ YoriShExpandPrompt(
     } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("+")) == 0) {
         CharsNeeded = YoriShGlobal.PromptRecursionDepth;
         if (OutputString->LengthAllocated > YoriShGlobal.PromptRecursionDepth) {
-            DWORD Index;
+            YORI_ALLOC_SIZE_T Index;
             for (Index = 0; Index < YoriShGlobal.PromptRecursionDepth; Index++) {
                 OutputString->StartOfString[Index] = '+';
             }
@@ -179,7 +179,7 @@ YoriShExpandPrompt(
 BOOL
 YoriShDisplayPrompt(VOID)
 {
-    DWORD EnvVarLength;
+    YORI_ALLOC_SIZE_T EnvVarLength;
     YORI_STRING PromptVar;
     YORI_STRING PromptAfterBackquoteExpansion;
     YORI_STRING PromptAfterEnvExpansion;
@@ -316,7 +316,7 @@ YoriShDisplayPrompt(VOID)
     } else {
 
         LPTSTR PromptString;
-        EnvVarLength = GetCurrentDirectory(0, NULL);
+        EnvVarLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
 
         //
         //  If YORIPROMPT wasn't set, fall back to something generic.
@@ -440,7 +440,7 @@ YoriShDisplayPrompt(VOID)
 BOOL
 YoriShExecPreCommandString(VOID)
 {
-    DWORD EnvVarLength;
+    YORI_ALLOC_SIZE_T EnvVarLength;
     YORI_STRING EnvVar;
 
 

@@ -68,13 +68,13 @@ AliasHelp(VOID)
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_ALIAS(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     BOOLEAN SystemAlias = FALSE;
 
@@ -112,7 +112,7 @@ YoriCmd_ALIAS(
     if (StartArg == 0) {
         YORI_STRING AliasStrings;
         LPTSTR ThisVar;
-        DWORD VarLen;
+        YORI_ALLOC_SIZE_T VarLen;
         BOOL Result;
 
         if (SystemAlias) {
@@ -124,7 +124,7 @@ YoriCmd_ALIAS(
         if (Result) {
             ThisVar = AliasStrings.StartOfString;
             while (*ThisVar != '\0') {
-                VarLen = _tcslen(ThisVar);
+                VarLen = (YORI_ALLOC_SIZE_T)_tcslen(ThisVar);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
                 ThisVar += VarLen;
                 ThisVar++;

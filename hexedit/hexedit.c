@@ -108,7 +108,7 @@ typedef struct _HEXEDIT_CONTEXT {
     /**
      The length of the range of the currently edited data.
      */
-    DWORDLONG DataLength;
+    YORI_ALLOC_SIZE_T DataLength;
 
     /**
      The data that was most recently searched for.
@@ -118,7 +118,7 @@ typedef struct _HEXEDIT_CONTEXT {
     /**
      The length of the data that was most recently searched for.
      */
-    DWORDLONG SearchBufferLength;
+    YORI_ALLOC_SIZE_T SearchBufferLength;
 
     /**
      The index of the view menu.  This is used to check and uncheck menu
@@ -224,7 +224,7 @@ HexEditUpdateOpenedFileCaption(
     FinalSlash = YoriLibFindRightMostCharacter(&HexEditContext->OpenFileName, '\\');
     if (FinalSlash != NULL) {
         NewCaption.StartOfString = FinalSlash + 1;
-        NewCaption.LengthInChars = (DWORD)(HexEditContext->OpenFileName.LengthInChars - (FinalSlash - HexEditContext->OpenFileName.StartOfString + 1));
+        NewCaption.LengthInChars = (YORI_ALLOC_SIZE_T)(HexEditContext->OpenFileName.LengthInChars - (FinalSlash - HexEditContext->OpenFileName.StartOfString + 1));
     } else {
         NewCaption.StartOfString = HexEditContext->OpenFileName.StartOfString;
         NewCaption.LengthInChars = HexEditContext->OpenFileName.LengthInChars;
@@ -258,6 +258,7 @@ HexEditLoadFile(
     HANDLE hFile;
     LARGE_INTEGER FileSize;
     LARGE_INTEGER FileOffset;
+    YORI_ALLOC_SIZE_T ReadLength;
     PUCHAR Buffer;
     DWORD BytesRead;
     DWORD Err;
@@ -289,10 +290,12 @@ HexEditLoadFile(
         FileSize.QuadPart = DataLength;
     }
 
-    if (FileSize.HighPart != 0) {
+    if (!YoriLibIsSizeAllocatable(FileSize.QuadPart)) {
         CloseHandle(hFile);
         return ERROR_READ_FAULT;
     }
+
+    ReadLength = (YORI_ALLOC_SIZE_T)FileSize.QuadPart;
 
     FileOffset.QuadPart = DataOffset;
     if (FileOffset.QuadPart != 0) {
@@ -303,13 +306,13 @@ HexEditLoadFile(
         }
     }
 
-    Buffer = YoriLibReferencedMalloc(FileSize.LowPart);
+    Buffer = YoriLibReferencedMalloc(ReadLength);
     if (Buffer == NULL) {
         CloseHandle(hFile);
         return ERROR_NOT_ENOUGH_MEMORY;
     }
 
-    if (!ReadFile(hFile, Buffer, FileSize.LowPart, &BytesRead, NULL)) {
+    if (!ReadFile(hFile, Buffer, ReadLength, &BytesRead, NULL)) {
         Err = GetLastError();
         YoriLibDereference(Buffer);
         CloseHandle(hFile);
@@ -322,8 +325,8 @@ HexEditLoadFile(
     //  partition layer passes IOCTLs to the disk, sigh.
     //
 
-    if (BytesRead > FileSize.LowPart ||
-        (DataLength != 0 && BytesRead != FileSize.LowPart)) {
+    if (BytesRead > ReadLength ||
+        (DataLength != 0 && BytesRead != ReadLength)) {
 
         YoriLibDereference(Buffer);
         CloseHandle(hFile);
@@ -334,14 +337,14 @@ HexEditLoadFile(
 
     YoriWinHexEditClear(HexEditContext->HexEdit);
 
-    if (!YoriWinHexEditSetDataNoCopy(HexEditContext->HexEdit, Buffer, FileSize.LowPart, BytesRead)) {
+    if (!YoriWinHexEditSetDataNoCopy(HexEditContext->HexEdit, Buffer, ReadLength, (YORI_ALLOC_SIZE_T)BytesRead)) {
         YoriLibDereference(Buffer);
         return ERROR_NOT_ENOUGH_MEMORY;
     }
     YoriLibDereference(Buffer);
 
     HexEditContext->DataOffset = DataOffset;
-    HexEditContext->DataLength = DataLength;
+    HexEditContext->DataLength = ReadLength;
 
     return ERROR_SUCCESS;
 }
@@ -367,10 +370,10 @@ HexEditSaveFile(
     __in PHEXEDIT_CONTEXT HexEditContext,
     __in PYORI_STRING FileName,
     __in DWORDLONG DataOffset,
-    __in DWORDLONG DataLength
+    __in YORI_ALLOC_SIZE_T DataLength
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD Attributes;
     YORI_STRING ParentDirectory;
     YORI_STRING Prefix;
@@ -378,7 +381,7 @@ HexEditSaveFile(
     HANDLE TempHandle;
     BOOLEAN ReplaceSucceeded;
     PUCHAR Buffer;
-    DWORDLONG BufferLength;
+    YORI_ALLOC_SIZE_T BufferLength;
     DWORD BufferWritten;
 
     if (FileName->StartOfString == NULL) {
@@ -423,7 +426,7 @@ HexEditSaveFile(
 
     if (DataOffset != 0) {
         LARGE_INTEGER FileOffset;
-        FileOffset.QuadPart = HexEditContext->DataOffset;
+        FileOffset.QuadPart = DataOffset;
         if (!SetFilePointer(TempHandle, FileOffset.LowPart, &FileOffset.HighPart, FILE_BEGIN)) {
             CloseHandle(TempHandle);
             DeleteFile(TempFileName.StartOfString);
@@ -920,16 +923,16 @@ __success(return)
 BOOLEAN
 HexEditFindNextMemorySubset(
     __in PUCHAR Buffer,
-    __in DWORDLONG BufferLength,
-    __in DWORDLONG BufferOffset,
+    __in YORI_ALLOC_SIZE_T BufferLength,
+    __in YORI_ALLOC_SIZE_T BufferOffset,
     __in PUCHAR SearchBuffer,
-    __in DWORDLONG SearchBufferLength,
-    __out PDWORDLONG FoundOffset
+    __in YORI_ALLOC_SIZE_T SearchBufferLength,
+    __out PYORI_ALLOC_SIZE_T FoundOffset
     )
 {
-    DWORDLONG BufferIndex;
-    DWORDLONG SearchBufferIndex;
-    DWORDLONG EndIndex;
+    YORI_ALLOC_SIZE_T BufferIndex;
+    YORI_ALLOC_SIZE_T SearchBufferIndex;
+    YORI_ALLOC_SIZE_T EndIndex;
 
     if (BufferOffset > BufferLength ||
         BufferLength - BufferOffset < SearchBufferLength) {
@@ -979,15 +982,15 @@ __success(return)
 BOOLEAN
 HexEditFindPreviousMemorySubset(
     __in PUCHAR Buffer,
-    __in DWORDLONG BufferLength,
-    __in DWORDLONG BufferOffset,
+    __in YORI_ALLOC_SIZE_T BufferLength,
+    __in YORI_ALLOC_SIZE_T BufferOffset,
     __in PUCHAR SearchBuffer,
-    __in DWORDLONG SearchBufferLength,
-    __out PDWORDLONG FoundOffset
+    __in YORI_ALLOC_SIZE_T SearchBufferLength,
+    __out PYORI_ALLOC_SIZE_T FoundOffset
     )
 {
-    DWORDLONG BufferIndex;
-    DWORDLONG SearchBufferIndex;
+    YORI_ALLOC_SIZE_T BufferIndex;
+    YORI_ALLOC_SIZE_T SearchBufferIndex;
 
     if (BufferOffset > BufferLength ||
         BufferLength - BufferOffset < SearchBufferLength) {
@@ -1036,16 +1039,20 @@ HexEditFindPreviousMemorySubset(
 VOID
 HexEditByteOffsetToBufferOffsetAndShift(
     __in PHEXEDIT_CONTEXT HexEditContext,
-    __in DWORDLONG ByteOffset,
-    __out PDWORDLONG BufferOffset,
-    __out PDWORD BitShift
+    __in YORI_ALLOC_SIZE_T ByteOffset,
+    __out PYORI_ALLOC_SIZE_T BufferOffset,
+    __out PUCHAR BitShift
     )
 {
-    DWORDLONG LocalBufferOffset;
+    YORI_ALLOC_SIZE_T LocalBufferOffset;
+    YORI_ALLOC_SIZE_T BytesPerWord;
 
-    LocalBufferOffset = ByteOffset & ~(HexEditContext->BytesPerWord - 1);
+    BytesPerWord = HexEditContext->BytesPerWord;
+    BytesPerWord = (YORI_ALLOC_SIZE_T)(~(BytesPerWord - 1));
+
+    LocalBufferOffset = (YORI_ALLOC_SIZE_T)(ByteOffset & BytesPerWord);
     *BufferOffset = LocalBufferOffset;
-    *BitShift = (DWORD)((ByteOffset - LocalBufferOffset) * 8);
+    *BitShift = (UCHAR)((ByteOffset - LocalBufferOffset) * 8);
 }
 
 /**
@@ -1065,13 +1072,13 @@ __success(return)
 BOOLEAN
 HexEditFindNextFromPosition(
     __in PHEXEDIT_CONTEXT HexEditContext,
-    __in DWORDLONG StartOffset,
-    __out PDWORDLONG MatchOffset
+    __in YORI_ALLOC_SIZE_T StartOffset,
+    __out PYORI_ALLOC_SIZE_T MatchOffset
     )
 {
     PUCHAR Buffer;
-    DWORDLONG BufferLength;
-    DWORDLONG FindOffset;
+    YORI_ALLOC_SIZE_T BufferLength;
+    YORI_ALLOC_SIZE_T FindOffset;
 
     YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
 
@@ -1116,9 +1123,9 @@ HexEditFindNextFromCurrentPosition(
     __in BOOLEAN StartAtNextByte
     )
 {
-    DWORDLONG BufferOffset;
-    DWORDLONG FindOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T BufferOffset;
+    YORI_ALLOC_SIZE_T FindOffset;
+    UCHAR BitShift;
     BOOLEAN AsChar;
 
     if (!YoriWinHexEditGetCursorLocation(HexEditContext->HexEdit, &AsChar, &BufferOffset, &BitShift)) {
@@ -1154,11 +1161,11 @@ HexEditFindPreviousFromCurrentPosition(
     )
 {
     PUCHAR Buffer;
-    DWORDLONG BufferLength;
-    DWORDLONG BufferOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T BufferLength;
+    YORI_ALLOC_SIZE_T BufferOffset;
+    UCHAR BitShift;
     BOOLEAN AsChar;
-    DWORDLONG FindOffset;
+    YORI_ALLOC_SIZE_T FindOffset;
 
     YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
 
@@ -1211,7 +1218,7 @@ HexEditFindButtonClicked(
     PYORI_WIN_CTRL_HANDLE Parent;
     PHEXEDIT_CONTEXT HexEditContext;
     PUCHAR FindData;
-    DWORDLONG FindDataLength;
+    YORI_ALLOC_SIZE_T FindDataLength;
 
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
@@ -1351,7 +1358,7 @@ HexEditFindPreviousButtonClicked(
 VOID
 HexEditFreeDataBuffer(
     __in PVOID * Buffer,
-    __in PDWORDLONG BufferLength
+    __in PYORI_ALLOC_SIZE_T BufferLength
     )
 {
     PVOID Data;
@@ -1381,19 +1388,19 @@ HexEditChangeButtonClicked(
     BOOLEAN AsChar;
     PYORI_WIN_CTRL_HANDLE Parent;
     PHEXEDIT_CONTEXT HexEditContext;
-    DWORDLONG StartOffset;
-    DWORDLONG NextMatchOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T StartOffset;
+    YORI_ALLOC_SIZE_T NextMatchOffset;
+    UCHAR BitShift;
     WORD DialogTop;
 
     PUCHAR InitialOldData;
-    DWORDLONG InitialOldDataLength;
+    YORI_ALLOC_SIZE_T InitialOldDataLength;
     PUCHAR InitialNewData;
-    DWORDLONG InitialNewDataLength;
+    YORI_ALLOC_SIZE_T InitialNewDataLength;
     PUCHAR OldData;
-    DWORDLONG OldDataLength;
+    YORI_ALLOC_SIZE_T OldDataLength;
     PUCHAR NewData;
-    DWORDLONG NewDataLength;
+    YORI_ALLOC_SIZE_T NewDataLength;
 
     InitialOldData = NULL;
     InitialOldDataLength = 0;
@@ -1446,10 +1453,10 @@ HexEditChangeButtonClicked(
 
                 COORD WinMgrSize;
                 COORD ClientSize;
-                DWORD CursorLine;
-                DWORD CursorOffset;
-                DWORD ViewportLeft;
-                DWORD ViewportTop;
+                YORI_ALLOC_SIZE_T CursorLine;
+                YORI_ALLOC_SIZE_T CursorOffset;
+                YORI_ALLOC_SIZE_T ViewportLeft;
+                YORI_ALLOC_SIZE_T ViewportTop;
                 WORD DialogHeight;
                 WORD RemainingEditHeight;
 
@@ -1574,8 +1581,8 @@ HexEditGoToButtonClicked(
     YORI_STRING Text;
     PYORI_WIN_CTRL_HANDLE Parent;
     PHEXEDIT_CONTEXT HexEditContext;
-    LONGLONG NewOffset;
-    DWORD CharsConsumed;
+    DWORDLONG NewOffset;
+    YORI_ALLOC_SIZE_T CharsConsumed;
 
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
@@ -1600,7 +1607,7 @@ HexEditGoToButtonClicked(
             NewOffset = 0;
         }
 
-        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, NewOffset, 0);
+        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, (YORI_ALLOC_SIZE_T)NewOffset, 0);
     }
 
     YoriLibFreeStringContents(&Text);
@@ -1836,10 +1843,10 @@ HexEditCalculatePEChecksumButtonClicked(
     YORI_STRING ButtonText[1];
     PYORILIB_PE_HEADERS PeHeaders;
     PUCHAR Buffer;
-    DWORDLONG BufferLength;
+    YORI_ALLOC_SIZE_T BufferLength;
     DWORD CurrentChecksum;
     DWORD NewChecksum;
-    DWORD DataOffset;
+    YORI_ALLOC_SIZE_T DataOffset;
 
 
     Parent = YoriWinGetControlParent(Ctrl);
@@ -1867,7 +1874,7 @@ HexEditCalculatePEChecksumButtonClicked(
         return;
     }
 
-    PeHeaders = DllImageHlp.pCheckSumMappedFile(Buffer, (DWORD)BufferLength, &CurrentChecksum, &NewChecksum);
+    PeHeaders = DllImageHlp.pCheckSumMappedFile(Buffer, BufferLength, &CurrentChecksum, &NewChecksum);
     if (PeHeaders == NULL) {
         YoriLibDereference(Buffer);
         YoriLibConstantString(&Title, _T("Error"));
@@ -1885,7 +1892,7 @@ HexEditCalculatePEChecksumButtonClicked(
     }
 
 
-    DataOffset = (DWORD)((PUCHAR)PeHeaders - Buffer);
+    DataOffset = (YORI_ALLOC_SIZE_T)((PUCHAR)PeHeaders - Buffer);
     DataOffset = DataOffset + FIELD_OFFSET(YORILIB_PE_HEADERS, OptionalHeader.CheckSum);
     YoriLibDereference(Buffer);
     YoriWinHexEditReplaceData(HexEditContext->HexEdit, DataOffset, &NewChecksum, sizeof(NewChecksum));
@@ -1906,7 +1913,7 @@ HexEditAboutButtonClicked(
     YORI_STRING LeftText;
     YORI_STRING CenteredText;
     YORI_STRING ButtonTexts[2];
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD ButtonClicked;
 
     PYORI_WIN_CTRL_HANDLE Parent;
@@ -2079,8 +2086,8 @@ HexEditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
     PYORI_WIN_CTRL_HANDLE Ctrl;
-    DWORD MenuIndex;
-    DWORD FileMenuCount;
+    YORI_ALLOC_SIZE_T MenuIndex;
+    YORI_ALLOC_SIZE_T FileMenuCount;
 
     ZeroMemory(&FileMenuEntries, sizeof(FileMenuEntries));
     MenuIndex = 0;
@@ -2484,13 +2491,13 @@ HexEditCreateMainWindow(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     DWORD Result;
     YORI_STRING Arg;
 

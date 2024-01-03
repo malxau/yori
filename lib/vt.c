@@ -153,10 +153,10 @@ YoriLibOutputTextToMultibyteDevice(
 #ifdef UNICODE
     {
         CHAR AnsiStackBuf[64 + 1];
-        DWORD AnsiBytesNeeded;
+        YORI_ALLOC_SIZE_T AnsiBytesNeeded;
         LPSTR AnsiBuf;
 
-        AnsiBytesNeeded = YoriLibGetMultibyteOutputSizeNeeded(String->StartOfString, String->LengthInChars);
+        AnsiBytesNeeded = (YORI_ALLOC_SIZE_T)YoriLibGetMultibyteOutputSizeNeeded(String->StartOfString, String->LengthInChars);
 
         if (AnsiBytesNeeded > (int)sizeof(AnsiStackBuf)) {
             AnsiBuf = YoriLibMalloc(AnsiBytesNeeded);
@@ -208,8 +208,8 @@ YoriLibOutputTextToMultibyteNormalizeLineEnding(
 {
     YORI_STRING SearchString;
     YORI_STRING DisplayString;
-    DWORD NonLineEndLength;
-    DWORD CharsToIgnore;
+    YORI_ALLOC_SIZE_T NonLineEndLength;
+    YORI_ALLOC_SIZE_T CharsToIgnore;
     BOOL GenerateLineEnd;
 
     YoriLibInitEmptyString(&DisplayString);
@@ -259,7 +259,7 @@ YoriLibOutputTextToMultibyteNormalizeLineEnding(
             break;
         }
         SearchString.StartOfString = &SearchString.StartOfString[NonLineEndLength + CharsToIgnore];
-        SearchString.LengthInChars -= NonLineEndLength + CharsToIgnore;
+        SearchString.LengthInChars = SearchString.LengthInChars - (NonLineEndLength + CharsToIgnore);
     }
 
     return TRUE;
@@ -413,8 +413,8 @@ YoriLibVtFinalColorFromSequenceEx(
     )
 {
     LPTSTR CurrentPoint = EscapeSequence->StartOfString;
-    DWORD CurrentOffset = 0;
-    DWORD RemainingLength;
+    YORI_ALLOC_SIZE_T CurrentOffset = 0;
+    YORI_ALLOC_SIZE_T RemainingLength;
     WORD  ComponentsUsed = INITIAL_COMPONENT_FOREGROUND | INITIAL_COMPONENT_BACKGROUND | INITIAL_COMPONENT_UNDERLINE;
     WORD  NewColor;
     YORI_STRING SearchString;
@@ -505,7 +505,7 @@ YoriLibVtFinalColorFromSequenceEx(
             SearchString.LengthInChars = RemainingLength;
             CurrentOffset = YoriLibCountStringContainingChars(&SearchString, _T("0123456789"));
             CurrentPoint += CurrentOffset;
-            RemainingLength -= CurrentOffset;
+            RemainingLength = RemainingLength - CurrentOffset;
 
             if (RemainingLength == 0 ||
                 *CurrentPoint != ';') {
@@ -995,14 +995,14 @@ YoriLibDebuggerSetFunctions(
 BOOL
 YoriLibProcessVtEscapesOnOpenStream(
     __in LPTSTR String,
-    __in DWORD StringLength,
+    __in YORI_ALLOC_SIZE_T StringLength,
     __in HANDLE hOutput,
     __in PYORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks
     )
 {
     LPTSTR CurrentPoint;
-    DWORD CurrentOffset;
-    DWORD PreviouslyConsumed;
+    YORI_ALLOC_SIZE_T CurrentOffset;
+    YORI_ALLOC_SIZE_T PreviouslyConsumed;
     TCHAR VtEscape[] = {27, '\0'};
     YORI_STRING SearchString;
     YORI_STRING DisplayString;
@@ -1029,7 +1029,7 @@ YoriLibProcessVtEscapesOnOpenStream(
             }
 
             CurrentPoint = CurrentPoint + CurrentOffset;
-            PreviouslyConsumed += CurrentOffset;
+            PreviouslyConsumed = PreviouslyConsumed + CurrentOffset;
         }
 
         if (PreviouslyConsumed >= StringLength) {
@@ -1045,7 +1045,7 @@ YoriLibProcessVtEscapesOnOpenStream(
             if (PreviouslyConsumed + 2 < StringLength &&
                 CurrentPoint[1] == '[') {
 
-                DWORD EndOfEscape;
+                YORI_ALLOC_SIZE_T EndOfEscape;
                 SearchString.StartOfString = &CurrentPoint[2];
                 SearchString.LengthInChars = StringLength - PreviouslyConsumed - 2;
                 EndOfEscape = YoriLibCountStringContainingChars(&SearchString, _T("0123456789;"));
@@ -1076,7 +1076,7 @@ YoriLibProcessVtEscapesOnOpenStream(
                     return FALSE;
                 }
                 CurrentPoint = CurrentPoint + EndOfEscape + 3;
-                PreviouslyConsumed += EndOfEscape + 3;
+                PreviouslyConsumed = PreviouslyConsumed + EndOfEscape + 3;
             } else {
 
                 //
@@ -1126,7 +1126,7 @@ YoriLibProcessVtEscapesOnOpenStream(
 BOOL
 YoriLibProcessVtEscapesOnNewStream(
     __in LPTSTR String,
-    __in DWORD StringLength,
+    __in YORI_ALLOC_SIZE_T StringLength,
     __in HANDLE hOutput,
     __in PYORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks
     )
@@ -1167,7 +1167,7 @@ YoriLibOutputInternal(
 #else
     va_list savedmarker = marker;
 #endif
-    int len;
+    YORI_SIGNED_ALLOC_SIZE_T len;
     TCHAR stack_buf[64];
     TCHAR * buf;
     YORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks;
@@ -1201,7 +1201,7 @@ YoriLibOutputInternal(
 
     len = YoriLibVSPrintfSize(szFmt, marker);
 
-    if (len>(int)(sizeof(stack_buf)/sizeof(stack_buf[0]))) {
+    if (len>(YORI_SIGNED_ALLOC_SIZE_T)(sizeof(stack_buf)/sizeof(stack_buf[0]))) {
         buf = YoriLibMalloc(len * sizeof(TCHAR));
         if (buf == NULL) {
             return 0;
@@ -1493,10 +1493,10 @@ YoriLibStripVtEscapes(
     __inout PYORI_STRING PlainText
     )
 {
-    DWORD CharIndex;
-    DWORD DestIndex;
-    DWORD EscapeChars;
-    DWORD EndOfEscape;
+    YORI_ALLOC_SIZE_T CharIndex;
+    YORI_ALLOC_SIZE_T DestIndex;
+    YORI_ALLOC_SIZE_T EscapeChars;
+    YORI_ALLOC_SIZE_T EndOfEscape;
     YORI_STRING EscapeSubset;
 
     EscapeChars = 0;
@@ -1565,8 +1565,8 @@ YoriLibStripVtEscapes(
 BOOL
 YoriLibGetWindowDimensions(
     __in HANDLE OutputHandle,
-    __out_opt PDWORD Width,
-    __out_opt PDWORD Height
+    __out_opt PWORD Width,
+    __out_opt PWORD Height
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
@@ -1574,10 +1574,10 @@ YoriLibGetWindowDimensions(
 
     if (GetConsoleScreenBufferInfo(OutputHandle, &ConsoleInfo)) {
         if (Width != NULL) {
-            *Width = ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1;
+            *Width = (WORD)(ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1);
         }
         if (Height != NULL) {
-            *Height = ConsoleInfo.srWindow.Bottom - ConsoleInfo.srWindow.Top + 1;
+            *Height = (WORD)(ConsoleInfo.srWindow.Bottom - ConsoleInfo.srWindow.Top + 1);
         }
 
         return TRUE;
@@ -1587,7 +1587,7 @@ YoriLibGetWindowDimensions(
         if (!YoriLibGetEnvironmentVariableAsNumber(_T("COLUMNS"), &Temp)) {
             *Width = 80;
         } else {
-            *Width = (DWORD)Temp;
+            *Width = (WORD)Temp;
         }
     }
 
@@ -1595,7 +1595,7 @@ YoriLibGetWindowDimensions(
         if (!YoriLibGetEnvironmentVariableAsNumber(_T("LINES"), &Temp)) {
             *Height = 25;
         } else {
-            *Height = (DWORD)Temp;
+            *Height = (WORD)Temp;
         }
     }
 
@@ -1693,7 +1693,7 @@ YoriLibQueryConsoleCapabilities(
 
         NextSeperator = YoriLibFindLeftMostCharacter(&SubString, ';');
         if (NextSeperator != NULL) {
-            SubString.LengthInChars = (DWORD)(NextSeperator - SubString.StartOfString);
+            SubString.LengthInChars = (YORI_ALLOC_SIZE_T)(NextSeperator - SubString.StartOfString);
         }
 
         if (YoriLibCompareStringWithLiteralInsensitive(&SubString, _T("color")) == 0) {
@@ -1719,7 +1719,7 @@ YoriLibQueryConsoleCapabilities(
         }
 
         SubString.StartOfString = NextSeperator + 1;
-        SubString.LengthInChars = TermString.LengthInChars - (DWORD)(SubString.StartOfString - TermString.StartOfString);
+        SubString.LengthInChars = TermString.LengthInChars - (YORI_ALLOC_SIZE_T)(SubString.StartOfString - TermString.StartOfString);
     }
 
     YoriLibFreeStringContents(&TermString);

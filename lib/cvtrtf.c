@@ -123,9 +123,16 @@ YoriLibRtfGenerateInitialString(
                   sizeof(YoriLibRtfColorTableFooter)/sizeof(YoriLibRtfColorTableFooter[0]) +
                   sizeof(YoriLibRtfParagraphHeader)/sizeof(YoriLibRtfParagraphHeader[0]) + 10;
 
-    if (TextString->LengthAllocated < CharsNeeded) {
+    if (!YoriLibIsSizeAllocatable(CharsNeeded)) {
+        if (FreeColorTable) {
+            YoriLibDereference(ColorTableToUse);
+        }
+        return FALSE;
+    }
+
+    if (TextString->LengthAllocated < (YORI_ALLOC_SIZE_T)CharsNeeded) {
         YoriLibFreeStringContents(TextString);
-        if (!YoriLibAllocateString(TextString, CharsNeeded)) {
+        if (!YoriLibAllocateString(TextString, (YORI_ALLOC_SIZE_T)CharsNeeded)) {
             if (FreeColorTable) {
                 YoriLibDereference(ColorTableToUse);
             }
@@ -149,7 +156,7 @@ YoriLibRtfGenerateInitialString(
 
     Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString, YoriLibRtfColorTableHeader);
 
-    TextString->LengthInChars += Substring.LengthInChars;
+    TextString->LengthInChars = TextString->LengthInChars + Substring.LengthInChars;
 
     for (Index = 0; Index < 16; Index++) {
         Substring.StartOfString = &TextString->StartOfString[TextString->LengthInChars];
@@ -160,13 +167,13 @@ YoriLibRtfGenerateInitialString(
                                                  GetGValue(ColorTableToUse[Index]),
                                                  GetBValue(ColorTableToUse[Index]));
 
-        TextString->LengthInChars += Substring.LengthInChars;
+        TextString->LengthInChars = TextString->LengthInChars + Substring.LengthInChars;
     }
 
     Substring.StartOfString = &TextString->StartOfString[TextString->LengthInChars];
     Substring.LengthAllocated = TextString->LengthAllocated - TextString->LengthInChars;
     Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString, YoriLibRtfColorTableFooter);
-    TextString->LengthInChars += Substring.LengthInChars;
+    TextString->LengthInChars = TextString->LengthInChars + Substring.LengthInChars;
 
     Substring.StartOfString = &TextString->StartOfString[TextString->LengthInChars];
     Substring.LengthAllocated = TextString->LengthAllocated - TextString->LengthInChars;
@@ -184,7 +191,7 @@ YoriLibRtfGenerateInitialString(
                                              FontInfo.dwFontSize.Y * 15 / 10,
                                              ((CurrentAttributes >> 4) & 0xf) + 1,
                                              (FontInfo.FontWeight >= 600)?_T("\\b"):_T(""));
-    TextString->LengthInChars += Substring.LengthInChars;
+    TextString->LengthInChars = TextString->LengthInChars + Substring.LengthInChars;
 
     if (FreeColorTable) {
         YoriLibDereference(ColorTableToUse);
@@ -235,14 +242,14 @@ __success(return)
 BOOL
 YoriLibRtfGenerateTextString(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in PCYORI_STRING SrcString
     )
 {
 
     LPTSTR SrcPoint;
-    DWORD  SrcConsumed = 0;
-    DWORD  DestOffset = 0;
+    YORI_ALLOC_SIZE_T SrcConsumed = 0;
+    YORI_ALLOC_SIZE_T DestOffset = 0;
 
     //
     //  Scan through the string again looking for text that needs to be
@@ -298,7 +305,7 @@ YoriLibRtfGenerateTextString(
             SrcPoint++;
             SrcConsumed++;
         } else if (*SrcPoint >= 128) {
-            DWORD LengthNeeded;
+            YORI_ALLOC_SIZE_T LengthNeeded;
 
             //
             //  We need enough space for \u, the decimal char value, \',
@@ -323,7 +330,7 @@ YoriLibRtfGenerateTextString(
                 YoriLibSPrintf(&TextString->StartOfString[DestOffset], _T("\\u%i\\'3"), *SrcPoint);
                 TextString->StartOfString[DestOffset + LengthNeeded - 1] = 'f';
             }
-            DestOffset += LengthNeeded;
+            DestOffset = DestOffset + LengthNeeded;
             SrcPoint++;
             SrcConsumed++;
         } else {
@@ -372,16 +379,16 @@ __success(return)
 BOOL
 YoriLibRtfGenerateEscapeString(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in PCYORI_STRING SrcString,
     __inout PBOOLEAN UnderlineState
     )
 {
     LPTSTR SrcPoint;
-    DWORD  SrcOffset;
-    WORD   NewColor = CVTVT_DEFAULT_COLOR;
-    DWORD  RemainingLength;
-    DWORD  DestOffset;
+    YORI_ALLOC_SIZE_T SrcOffset;
+    WORD NewColor = CVTVT_DEFAULT_COLOR;
+    YORI_ALLOC_SIZE_T RemainingLength;
+    YORI_ALLOC_SIZE_T DestOffset;
     YORI_STRING SearchString;
     LPTSTR UnderlineString;
     BOOLEAN PreviousUnderlineOn;
@@ -462,7 +469,7 @@ YoriLibRtfGenerateEscapeString(
             SrcOffset = YoriLibCountStringContainingChars(&SearchString, _T("0123456789"));
 
             SrcPoint += SrcOffset;
-            RemainingLength -= SrcOffset;
+            RemainingLength = RemainingLength - SrcOffset;
 
             if (RemainingLength == 0 ||
                 *SrcPoint != ';') {
@@ -502,7 +509,7 @@ YoriLibRtfGenerateEscapeString(
         if (DestOffset + SrcOffset < TextString->LengthAllocated) {
             memcpy(&TextString->StartOfString[DestOffset], NewTag, SrcOffset * sizeof(TCHAR));
         }
-        DestOffset += SrcOffset;
+        DestOffset = DestOffset + SrcOffset;
     }
 
     if (DestOffset < TextString->LengthAllocated) {
@@ -562,14 +569,21 @@ YoriLibRtfCvtAppendWithReallocate(
     __in PYORI_STRING StringToAdd
     )
 {
-    if (StringToAppendTo->LengthInChars + StringToAdd->LengthInChars > StringToAppendTo->LengthAllocated) {
-        if (!YoriLibReallocateString(StringToAppendTo, (StringToAppendTo->LengthInChars + StringToAdd->LengthInChars) * 4)) {
+    DWORD LengthNeeded;
+    LengthNeeded = StringToAppendTo->LengthInChars + StringToAdd->LengthInChars;
+    if (!YoriLibIsSizeAllocatable(LengthNeeded)) {
+        return FALSE;
+    }
+    if (LengthNeeded > StringToAppendTo->LengthAllocated) {
+        YORI_ALLOC_SIZE_T AllocSize;
+        AllocSize = YoriLibMaximumAllocationInRange(LengthNeeded, LengthNeeded * 4);
+        if (!YoriLibReallocateString(StringToAppendTo, AllocSize)) {
             return FALSE;
         }
     }
 
     memcpy(&StringToAppendTo->StartOfString[StringToAppendTo->LengthInChars], StringToAdd->StartOfString, StringToAdd->LengthInChars * sizeof(TCHAR));
-    StringToAppendTo->LengthInChars += StringToAdd->LengthInChars;
+    StringToAppendTo->LengthInChars = StringToAppendTo->LengthInChars + StringToAdd->LengthInChars;
 
     return TRUE;
 }
@@ -668,7 +682,7 @@ YoriLibRtfCnvProcessAndOutputText(
 {
 
     YORI_STRING TextString;
-    DWORD BufferSizeNeeded;
+    YORI_ALLOC_SIZE_T BufferSizeNeeded;
     PYORI_LIB_RTF_CONVERT_CONTEXT RtfContext = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
 
     UNREFERENCED_PARAMETER(Context);
@@ -720,7 +734,7 @@ YoriLibRtfCnvProcessAndOutputEscape(
     )
 {
     YORI_STRING TextString;
-    DWORD BufferSizeNeeded;
+    YORI_ALLOC_SIZE_T BufferSizeNeeded;
     PYORI_LIB_RTF_CONVERT_CONTEXT RtfContext = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
     BOOLEAN DummyUnderlineState;
 

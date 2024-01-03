@@ -88,12 +88,12 @@ YoriDlgAbout(
     COORD WindowSize;
     SMALL_RECT TextArea;
     SMALL_RECT ButtonArea;
-    DWORD DisplayLength;
+    YORI_ALLOC_SIZE_T DisplayLength;
     DWORD TotalButtonWidth;
-    DWORD CenteredLabelLinesRequired;
-    DWORD CenteredLabelWidthRequired;
-    DWORD LeftLabelLinesRequired;
-    DWORD LeftLabelWidthRequired;
+    YORI_ALLOC_SIZE_T CenteredLabelLinesRequired;
+    YORI_ALLOC_SIZE_T CenteredLabelWidthRequired;
+    YORI_ALLOC_SIZE_T LeftLabelLinesRequired;
+    YORI_ALLOC_SIZE_T LeftLabelWidthRequired;
     DWORD Style;
     DWORD Index;
     WORD WindowWidth;

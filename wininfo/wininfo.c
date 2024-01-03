@@ -90,14 +90,14 @@ typedef struct _WININFO_CONTEXT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 WinInfoExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     PWININFO_CONTEXT WinInfoContext = (PWININFO_CONTEXT)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("left")) == 0) {
@@ -154,13 +154,13 @@ WinInfoExpandVariables(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD StartArg = 0;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     PYORI_STRING WindowTitle = NULL;
     YORI_STRING DisplayString;

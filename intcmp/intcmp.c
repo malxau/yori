@@ -120,21 +120,21 @@ IntCmpHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD StartArg = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING EntireExpression;
     YORI_STRING FirstPart;
     YORI_STRING SecondPart;
     YORI_STRING OperatorMatches[INTCMP_OPERATOR_BEYOND_MAX];
     YORI_STRING Arg;
     PYORI_STRING MatchingOperator;
-    DWORD OperatorIndex;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T OperatorIndex;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG FirstNumber;
     LONGLONG SecondNumber;
     int Result;

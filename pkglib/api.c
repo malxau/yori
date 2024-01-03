@@ -54,7 +54,7 @@ YoriPkgUpgradeInstalledPackages(
     YORI_STRING InstalledVersion;
     YORI_STRING UpgradePath;
     YORI_STRING RedirectedPath;
-    DWORD LineLength;
+    YORI_ALLOC_SIZE_T LineLength;
     DWORD Error;
     BOOL Result;
     BOOL UpgradeThisPackage;
@@ -90,7 +90,7 @@ YoriPkgUpgradeInstalledPackages(
         return FALSE;
     }
 
-    InstalledSection.LengthInChars =
+    InstalledSection.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileSectionW(_T("Installed"),
                                                InstalledSection.StartOfString,
                                                InstalledSection.LengthAllocated,
@@ -101,11 +101,11 @@ YoriPkgUpgradeInstalledPackages(
 
     Result = FALSE;
     while (*ThisLine != '\0') {
-        LineLength = _tcslen(ThisLine);
+        LineLength = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
             *Equals = '\0';
             YoriLibConstantString(&InstalledVersion, Equals + 1);
         } else {
@@ -115,7 +115,7 @@ YoriPkgUpgradeInstalledPackages(
 
         UpgradePath.LengthInChars = 0;
         if (Prefer == YoriPkgUpgradePreferStable) {
-            UpgradePath.LengthInChars =
+            UpgradePath.LengthInChars = (YORI_ALLOC_SIZE_T)
                 DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
                                                       _T("UpgradeToStablePath"),
                                                       _T(""),
@@ -123,7 +123,7 @@ YoriPkgUpgradeInstalledPackages(
                                                       UpgradePath.LengthAllocated,
                                                       PkgIniFile.StartOfString);
         } else if (Prefer == YoriPkgUpgradePreferDaily) {
-            UpgradePath.LengthInChars =
+            UpgradePath.LengthInChars = (YORI_ALLOC_SIZE_T)
                 DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
                                                       _T("UpgradeToDailyPath"),
                                                       _T(""),
@@ -133,7 +133,7 @@ YoriPkgUpgradeInstalledPackages(
         }
 
         if (UpgradePath.LengthInChars == 0) {
-            UpgradePath.LengthInChars =
+            UpgradePath.LengthInChars = (YORI_ALLOC_SIZE_T)
                 DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
                                                       _T("UpgradePath"),
                                                       _T(""),
@@ -247,7 +247,7 @@ YoriPkgUpgradeSinglePackage(
         return FALSE;
     }
 
-    IniValue.LengthInChars =
+    IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileStringW(_T("Installed"),
                                               PackageName->StartOfString,
                                               _T(""),
@@ -264,7 +264,7 @@ YoriPkgUpgradeSinglePackage(
 
     IniValue.LengthInChars = 0;
     if (Prefer == YoriPkgUpgradePreferStable) {
-        IniValue.LengthInChars =
+        IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
                                                   _T("UpgradeToStablePath"),
                                                   _T(""),
@@ -272,7 +272,7 @@ YoriPkgUpgradeSinglePackage(
                                                   IniValue.LengthAllocated,
                                                   PkgIniFile.StartOfString);
     } else if (Prefer == YoriPkgUpgradePreferDaily) {
-        IniValue.LengthInChars =
+        IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
                                                   _T("UpgradeToDailyPath"),
                                                   _T(""),
@@ -282,7 +282,7 @@ YoriPkgUpgradeSinglePackage(
     }
 
     if (IniValue.LengthInChars == 0) {
-        IniValue.LengthInChars =
+        IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
                                                   _T("UpgradePath"),
                                                   _T(""),
@@ -399,7 +399,7 @@ YoriPkgInstallSourceForInstalledPackages(VOID)
     LPTSTR Equals;
     YORI_STRING PkgNameOnly;
     YORI_STRING SourcePath;
-    DWORD LineLength;
+    YORI_ALLOC_SIZE_T LineLength;
     DWORD Error;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
@@ -434,7 +434,7 @@ YoriPkgInstallSourceForInstalledPackages(VOID)
         return FALSE;
     }
 
-    InstalledSection.LengthInChars =
+    InstalledSection.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileSectionW(_T("Installed"),
                                                InstalledSection.StartOfString,
                                                InstalledSection.LengthAllocated,
@@ -445,17 +445,17 @@ YoriPkgInstallSourceForInstalledPackages(VOID)
 
     Result = FALSE;
     while (*ThisLine != '\0') {
-        LineLength = _tcslen(ThisLine);
+        LineLength = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
             *Equals = '\0';
         } else {
             PkgNameOnly.LengthInChars = LineLength;
         }
 
-        SourcePath.LengthInChars =
+        SourcePath.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
                                                   _T("SourcePath"),
                                                   _T(""),
@@ -545,7 +545,7 @@ YoriPkgInstallSourceForSinglePackage(
         return FALSE;
     }
 
-    IniValue.LengthInChars =
+    IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileStringW(_T("Installed"),
                                               PackageName->StartOfString,
                                               _T(""),
@@ -560,7 +560,7 @@ YoriPkgInstallSourceForSinglePackage(
         return FALSE;
     }
 
-    IniValue.LengthInChars =
+    IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
                                               _T("SourcePath"),
                                               _T(""),
@@ -615,7 +615,7 @@ YoriPkgInstallSymbolsForInstalledPackages(VOID)
     LPTSTR Equals;
     YORI_STRING PkgNameOnly;
     YORI_STRING SymbolPath;
-    DWORD LineLength;
+    YORI_ALLOC_SIZE_T LineLength;
     DWORD TotalCount;
     DWORD Error;
     BOOL Result;
@@ -651,7 +651,7 @@ YoriPkgInstallSymbolsForInstalledPackages(VOID)
         return FALSE;
     }
 
-    InstalledSection.LengthInChars =
+    InstalledSection.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileSectionW(_T("Installed"),
                                                InstalledSection.StartOfString,
                                                InstalledSection.LengthAllocated,
@@ -663,17 +663,17 @@ YoriPkgInstallSymbolsForInstalledPackages(VOID)
     TotalCount = 0;
     Result = FALSE;
     while (*ThisLine != '\0') {
-        LineLength = _tcslen(ThisLine);
+        LineLength = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
             *Equals = '\0';
         } else {
             PkgNameOnly.LengthInChars = LineLength;
         }
 
-        SymbolPath.LengthInChars =
+        SymbolPath.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
                                                   _T("SymbolPath"),
                                                   _T(""),
@@ -764,7 +764,7 @@ YoriPkgInstallSymbolForSinglePackage(
         return FALSE;
     }
 
-    IniValue.LengthInChars =
+    IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileStringW(_T("Installed"),
                                               PackageName->StartOfString,
                                               _T(""),
@@ -779,7 +779,7 @@ YoriPkgInstallSymbolForSinglePackage(
         return FALSE;
     }
 
-    IniValue.LengthInChars =
+    IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
                                               _T("SymbolPath"),
                                               _T(""),
@@ -862,7 +862,7 @@ YoriPkgListInstalledPackages(
         return FALSE;
     }
 
-    InstalledSection.LengthInChars =
+    InstalledSection.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileSectionW(_T("Installed"),
                                                InstalledSection.StartOfString,
                                                InstalledSection.LengthAllocated,
@@ -876,11 +876,11 @@ YoriPkgListInstalledPackages(
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
             PkgVersion.StartOfString = Equals + 1;
-            PkgVersion.LengthInChars = _tcslen(Equals + 1);
+            PkgVersion.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(Equals + 1);
         } else {
-            PkgNameOnly.LengthInChars = _tcslen(ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
             PkgVersion.StartOfString = NULL;
             PkgVersion.LengthInChars = 0;
         }
@@ -890,7 +890,7 @@ YoriPkgListInstalledPackages(
 
         PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
 
-        PkgArch.LengthInChars =
+        PkgArch.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
                                                   _T("Architecture"),
                                                   _T(""),
@@ -954,7 +954,7 @@ YoriPkgDeletePackage(
         return FALSE;
     }
 
-    IniValue.LengthInChars =
+    IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileStringW(_T("Installed"),
                                               PackageName->StartOfString,
                                               _T(""),
@@ -1021,7 +1021,7 @@ YoriPkgDeleteAllPackages(VOID)
         return FALSE;
     }
 
-    InstalledSection.LengthInChars =
+    InstalledSection.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileSectionW(_T("Installed"),
                                                InstalledSection.StartOfString,
                                                InstalledSection.LengthAllocated,
@@ -1041,9 +1041,9 @@ YoriPkgDeleteAllPackages(VOID)
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
         } else {
-            PkgNameOnly.LengthInChars = _tcslen(ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
         }
 
         ThisLine += _tcslen(ThisLine);
@@ -1064,7 +1064,7 @@ YoriPkgDeleteAllPackages(VOID)
         return Result;
     }
 
-    InstalledSection.LengthInChars =
+    InstalledSection.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileSectionW(_T("Installed"),
                                                InstalledSection.StartOfString,
                                                InstalledSection.LengthAllocated,
@@ -1078,9 +1078,9 @@ YoriPkgDeleteAllPackages(VOID)
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
         } else {
-            PkgNameOnly.LengthInChars = _tcslen(ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
         }
 
         ThisLine += _tcslen(ThisLine);

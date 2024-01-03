@@ -1073,7 +1073,7 @@ YoriWinCreateWindowEx(
     )
 {
     PYORI_WIN_WINDOW Window;
-    DWORD CellCount;
+    YORI_ALLOC_SIZE_T CellCount;
 
     Window = YoriLibReferencedMalloc(sizeof(YORI_WIN_WINDOW));
     if (Window == NULL) {
@@ -1112,7 +1112,7 @@ YoriWinCreateWindowEx(
     //
 
     CellCount = Window->WindowSize.X;
-    CellCount *= Window->WindowSize.Y;
+    CellCount = CellCount * Window->WindowSize.Y;
 
     Window->Contents = YoriLibMalloc(CellCount * sizeof(CHAR_INFO));
     if (Window->Contents == NULL) {
@@ -1316,7 +1316,7 @@ YoriWinWindowReposition(
 {
     PCHAR_INFO NewContents;
     COORD NewWindowSize;
-    DWORD CellCount;
+    YORI_ALLOC_SIZE_T CellCount;
     PYORI_WIN_WINDOW Window;
 
     Window = (PYORI_WIN_WINDOW)WindowHandle;
@@ -1325,7 +1325,7 @@ YoriWinWindowReposition(
     NewWindowSize.Y = (SHORT)(WindowRect->Bottom - WindowRect->Top + 1);
 
     CellCount = NewWindowSize.X;
-    CellCount *= NewWindowSize.Y;
+    CellCount = CellCount * NewWindowSize.Y;
 
     NewContents = YoriLibMalloc(CellCount * sizeof(CHAR_INFO));
     if (NewContents == NULL) {

@@ -130,13 +130,13 @@ SdirAppInitialize(VOID)
         Opts->ConsoleBufferWidth = 
         Opts->ConsoleWidth = ScreenInfo.dwSize.X;
 
-        if (Opts->ConsoleWidth > (DWORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1)) {
-            Opts->ConsoleWidth = (DWORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1);
+        if (Opts->ConsoleWidth > (WORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1)) {
+            Opts->ConsoleWidth = (WORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1);
         }
 
         Opts->ConsoleHeight = ScreenInfo.dwSize.Y;
-        if (Opts->ConsoleHeight > (DWORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1)) {
-            Opts->ConsoleHeight = (DWORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1);
+        if (Opts->ConsoleHeight > (WORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1)) {
+            Opts->ConsoleHeight = (WORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1);
         }
 
         //
@@ -251,7 +251,7 @@ SdirOptInitialize(VOID)
         if ((Feature->Flags & SDIR_FEATURE_DISPLAY) &&
                SdirOptions[i].WidthFn) {
 
-            Opts->MetadataWidth += SdirOptions[i].WidthFn(NULL, Attr, NULL);
+            Opts->MetadataWidth = (WORD)(Opts->MetadataWidth + SdirOptions[i].WidthFn(NULL, Attr, NULL));
         }
     }
 
@@ -268,12 +268,12 @@ SdirOptInitialize(VOID)
  @return TRUE if the option was parsed successfully, FALSE if it was not
          understood or not processed successfully.
  */
-BOOL
+BOOLEAN
 SdirParseOpt (
     __in LPTSTR Opt
     )
 {
-    BOOL OptParsed = FALSE;
+    BOOLEAN OptParsed = FALSE;
     DWORD i, j;
 
     if (Opt[0] == 'b') {
@@ -287,10 +287,11 @@ SdirParseOpt (
         }
     } else if (Opt[0] == 'c') {
         if (Opt[1] == 'w') {
-            Opts->ConsoleWidth = SdirStringToNum32(&Opt[2], NULL);
-            if (Opts->ConsoleWidth > SDIR_MAX_WIDTH) {
-                Opts->ConsoleWidth = SDIR_MAX_WIDTH;
+            i = SdirStringToNum32(&Opt[2], NULL);
+            if (i > SDIR_MAX_WIDTH) {
+                i = SDIR_MAX_WIDTH;
             }
+            Opts->ConsoleWidth = (WORD)i;
             if (!Opts->OutputHasAutoLineWrap) {
                 Opts->ConsoleBufferWidth = Opts->ConsoleWidth;
             }
@@ -324,7 +325,7 @@ SdirParseOpt (
         }
     } else if (Opt[0] == 'f') {
         if (Opt[1] == 'c') {
-            DWORD Len = (DWORD)_tcslen(&Opt[2]);
+            YORI_ALLOC_SIZE_T Len = (YORI_ALLOC_SIZE_T)_tcslen(&Opt[2]);
             if (Len > 0) {
                 if (!YoriLibAllocateString(&Opts->CustomFileColor, Len + 1)) {
                     return FALSE;
@@ -333,7 +334,7 @@ SdirParseOpt (
                 OptParsed = TRUE;
             }
         } else if (Opt[1] == 'e') {
-            DWORD Len = (DWORD)_tcslen(&Opt[2]);
+            YORI_ALLOC_SIZE_T Len = (YORI_ALLOC_SIZE_T)_tcslen(&Opt[2]);
             if (Len > 0) {
                 if (!YoriLibAllocateString(&Opts->CustomFileFilter, Len + 1)) {
                     return FALSE;
@@ -447,13 +448,13 @@ SdirParseOpt (
  */
 BOOL
 SdirParseArgs (
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    ULONG  CurrentArg;
-    BOOL   OptParsed;
-    BOOL   DisplayUsage;
+    YORI_ALLOC_SIZE_T CurrentArg;
+    BOOLEAN OptParsed;
+    BOOLEAN DisplayUsage;
 
     TCHAR  EnvOpts[200];
     LPTSTR Opt;
@@ -554,7 +555,7 @@ SdirParseArgs (
  */
 BOOL
 SdirInit(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {

@@ -274,7 +274,7 @@ YoriLibFindEffectiveRootInternal(
                 return FALSE;
             }
 
-            Substring.LengthInChars = Substring.LengthInChars - (DWORD)(StringPtr - Substring.StartOfString) - 1;
+            Substring.LengthInChars = Substring.LengthInChars - (YORI_ALLOC_SIZE_T)(StringPtr - Substring.StartOfString) - 1;
             Substring.StartOfString = &StringPtr[1];
 
             StringPtr = YoriLibFindLeftMostCharacter(&Substring, '\\');
@@ -325,7 +325,7 @@ YoriLibFindEffectiveRootInternal(
                 return FALSE;
             }
 
-            Substring.LengthInChars = Substring.LengthInChars - (DWORD)(StringPtr - Substring.StartOfString) - 1;
+            Substring.LengthInChars = Substring.LengthInChars - (YORI_ALLOC_SIZE_T)(StringPtr - Substring.StartOfString) - 1;
             Substring.StartOfString = &StringPtr[1];
 
             StringPtr = YoriLibFindLeftMostCharacter(&Substring, '\\');
@@ -355,7 +355,7 @@ YoriLibFindEffectiveRootInternal(
         return TRUE;
     }
 
-    EffectiveRoot->LengthInChars = (DWORD)(StringPtr - EffectiveRoot->StartOfString);
+    EffectiveRoot->LengthInChars = (YORI_ALLOC_SIZE_T)(StringPtr - EffectiveRoot->StartOfString);
     return TRUE;
 }
 
@@ -611,7 +611,7 @@ YoriLibFullPathMergeRootWithRelative(
     )
 {
     YORI_STRING CurrentDirectory;
-    DWORD Result;
+    YORI_ALLOC_SIZE_T Result;
 
     //
     //  This function is likely to want a substring of the primary directory,
@@ -683,10 +683,10 @@ YoriLibFullPathMergeRootWithRelative(
                 Slash = YoriLibFindLeftMostCharacter(&CurrentDirectorySubstring, '\\');
                 if (Slash != NULL) {
                     CurrentDirectorySubstring.StartOfString = Slash + 1;
-                    CurrentDirectorySubstring.LengthInChars = CurrentDirectory.LengthInChars - (DWORD)(Slash - CurrentDirectory.StartOfString) - 1;
+                    CurrentDirectorySubstring.LengthInChars = CurrentDirectory.LengthInChars - (YORI_ALLOC_SIZE_T)(Slash - CurrentDirectory.StartOfString) - 1;
                     Slash = YoriLibFindLeftMostCharacter(&CurrentDirectorySubstring, '\\');
                     if (Slash != NULL) {
-                        CurrentDirectory.LengthInChars = (DWORD)(Slash - CurrentDirectory.StartOfString);
+                        CurrentDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)(Slash - CurrentDirectory.StartOfString);
                         CurrentDirectory.StartOfString[CurrentDirectory.LengthInChars] = '\0';
                     }
                 }
@@ -848,9 +848,8 @@ YoriLibFullPathNormalize(
     __inout PBOOLEAN FreeOnFailure
     )
 {
-    DWORD Result;
+    YORI_ALLOC_SIZE_T Result;
     YORI_STRING Subset;
-
 
     //
     //  Allocate a buffer for the "absolute" path so we can do compaction.
@@ -1182,7 +1181,7 @@ YoriLibGetFullPathSquashRelativeComponents(
     //
 
     *CurrentWriteChar = *CurrentReadChar;
-    Buffer->LengthInChars = (DWORD)(CurrentWriteChar - Buffer->StartOfString);
+    Buffer->LengthInChars = (YORI_ALLOC_SIZE_T)(CurrentWriteChar - Buffer->StartOfString);
     ASSERT(Buffer->StartOfString[Buffer->LengthInChars] == '\0');
 
     //
@@ -1285,9 +1284,9 @@ YoriLibGetFullPathNameReturnAllocation(
         PathType.Flags.AbsoluteWithoutDrive) {
 
         YORI_STRING CurrentDirectory;
-        DWORD CurrentDirectoryLength;
+        YORI_ALLOC_SIZE_T CurrentDirectoryLength;
 
-        CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+        CurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
         if (!YoriLibAllocateString(&CurrentDirectory, CurrentDirectoryLength)) {
             SetLastError(ERROR_NOT_ENOUGH_MEMORY);
             return FALSE;
@@ -1299,7 +1298,7 @@ YoriLibGetFullPathNameReturnAllocation(
             return FALSE;
         }
 
-        CurrentDirectory.LengthInChars = Result;
+        CurrentDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)Result;
 
         //
         //  If it's drive relative, and it's relative to a different drive,
@@ -1503,7 +1502,7 @@ YoriLibExpandShellDirectoryGuid(
     )
 {
     PWSTR ExpandedString;
-    DWORD LocationLength;
+    YORI_ALLOC_SIZE_T LocationLength;
 
     YoriLibLoadShell32Functions();
     YoriLibLoadOle32Functions();
@@ -1518,7 +1517,7 @@ YoriLibExpandShellDirectoryGuid(
         return FALSE;
     }
 
-    LocationLength = _tcslen(ExpandedString);
+    LocationLength = (YORI_ALLOC_SIZE_T)_tcslen(ExpandedString);
 
     if (!YoriLibAllocateString(ExpandedSymbol, LocationLength + 1)) {
         DllOle32.pCoTaskMemFree(ExpandedString);
@@ -1576,7 +1575,7 @@ YoriLibExpandShellDirectory(
         }
     }
 
-    ExpandedSymbol->LengthInChars = _tcslen(ExpandedSymbol->StartOfString);
+    ExpandedSymbol->LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(ExpandedSymbol->StartOfString);
 
     return TRUE;
 }
@@ -1677,14 +1676,21 @@ YoriLibExpandHomeSymbol(
     )
 {
     if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~")) == 0) {
-        if (!YoriLibAllocateString(ExpandedSymbol, GetEnvironmentVariable(_T("HOMEDRIVE"), NULL, 0) + GetEnvironmentVariable(_T("HOMEPATH"), NULL, 0))) {
+        DWORD BytesNeeded;
+        BytesNeeded = GetEnvironmentVariable(_T("HOMEDRIVE"), NULL, 0) + GetEnvironmentVariable(_T("HOMEPATH"), NULL, 0);
+        if (!YoriLibIsSizeAllocatable(BytesNeeded)) {
             return FALSE;
         }
 
-        ExpandedSymbol->LengthInChars = GetEnvironmentVariable(_T("HOMEDRIVE"), ExpandedSymbol->StartOfString, ExpandedSymbol->LengthAllocated);
-        ExpandedSymbol->LengthInChars += GetEnvironmentVariable(_T("HOMEPATH"),
-                                                                &ExpandedSymbol->StartOfString[ExpandedSymbol->LengthInChars],
-                                                                ExpandedSymbol->LengthAllocated - ExpandedSymbol->LengthInChars);
+        if (!YoriLibAllocateString(ExpandedSymbol, (YORI_ALLOC_SIZE_T)BytesNeeded)) {
+            return FALSE;
+        }
+
+        ExpandedSymbol->LengthInChars = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("HOMEDRIVE"), ExpandedSymbol->StartOfString, ExpandedSymbol->LengthAllocated);
+        ExpandedSymbol->LengthInChars = ExpandedSymbol->LengthInChars +
+                                        (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("HOMEPATH"),
+                                            &ExpandedSymbol->StartOfString[ExpandedSymbol->LengthInChars],
+                                            ExpandedSymbol->LengthAllocated - ExpandedSymbol->LengthInChars);
         return TRUE;
     } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~APPDIR")) == 0) {
         LPTSTR FinalSlash;
@@ -1699,14 +1705,14 @@ YoriLibExpandHomeSymbol(
             return FALSE;
         }
 
-        ExpandedSymbol->LengthInChars = GetModuleFileName(NULL, ExpandedSymbol->StartOfString, ExpandedSymbol->LengthAllocated);
+        ExpandedSymbol->LengthInChars = (YORI_ALLOC_SIZE_T)GetModuleFileName(NULL, ExpandedSymbol->StartOfString, ExpandedSymbol->LengthAllocated);
         FinalSlash = YoriLibFindRightMostCharacter(ExpandedSymbol, '\\');
         if (FinalSlash == NULL) {
             YoriLibFreeStringContents(ExpandedSymbol);
             return FALSE;
         }
 
-        ExpandedSymbol->LengthInChars = (DWORD)(FinalSlash - ExpandedSymbol->StartOfString);
+        ExpandedSymbol->LengthInChars = (YORI_ALLOC_SIZE_T)(FinalSlash - ExpandedSymbol->StartOfString);
         return TRUE;
     } else if (YoriLibExpandDirectoryFromMap(SymbolToExpand, ExpandedSymbol)) {
         return TRUE;
@@ -1738,7 +1744,7 @@ YoriLibExpandHomeDirectories(
     __out PYORI_STRING ExpandedString
     )
 {
-    DWORD CharIndex;
+    YORI_ALLOC_SIZE_T CharIndex;
     YORI_STRING BeforeSymbol;
     YORI_STRING AfterSymbol;
     YORI_STRING SymbolToExpand;
@@ -1809,7 +1815,7 @@ YoriLibIsFileNameDeviceName(
     )
 {
     YORI_STRING NameToCheck;
-    DWORD Offset;
+    YORI_ALLOC_SIZE_T Offset;
     BOOLEAN Prefixed;
 
     YoriLibInitEmptyString(&NameToCheck);
@@ -1967,7 +1973,7 @@ YoriLibUserStringToSingleFilePathOrDevice(
     )
 {
     if (YoriLibIsFileNameDeviceName(UserString)) {
-        DWORD CharsNeeded;
+        YORI_ALLOC_SIZE_T CharsNeeded;
         BOOL Prefixed;
 
         CharsNeeded = UserString->LengthInChars + 1;
@@ -2009,8 +2015,8 @@ YoriLibUnescapePath(
 {
     BOOLEAN HasEscape = FALSE;
     BOOLEAN UncPath = FALSE;
-    DWORD Offset;
-    DWORD BufferLength;
+    YORI_ALLOC_SIZE_T Offset;
+    YORI_ALLOC_SIZE_T BufferLength;
     YORI_STRING SubsetToCopy;
 
     Offset = 0;
@@ -2058,7 +2064,7 @@ YoriLibUnescapePath(
 
     memcpy(&SubsetToCopy, Path, sizeof(YORI_STRING));
     SubsetToCopy.StartOfString += Offset;
-    SubsetToCopy.LengthInChars -= Offset;
+    SubsetToCopy.LengthInChars = SubsetToCopy.LengthInChars - Offset;
 
     if (UncPath) {
         YoriLibSPrintfS(UnescapedPath->StartOfString, BufferLength, _T("\\%y"), &SubsetToCopy);
@@ -2133,7 +2139,7 @@ YoriLibGetVolumePathName(
             }
             return FALSE;
         }
-        VolumeName->LengthInChars = _tcslen(VolumeName->StartOfString);
+        VolumeName->LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(VolumeName->StartOfString);
 
         //
         //  If it ends in a backslash, truncate it
@@ -2165,7 +2171,7 @@ YoriLibGetVolumePathName(
         if (FileName->LengthInChars >= sizeof("\\\\?\\UNC\\")) {
             YORI_STRING Subset;
             LPTSTR Slash;
-            DWORD CharsToCopy;
+            YORI_ALLOC_SIZE_T CharsToCopy;
 
             YoriLibInitEmptyString(&Subset);
             Subset.StartOfString = FileName->StartOfString + sizeof("\\\\?\\UNC\\");
@@ -2173,7 +2179,7 @@ YoriLibGetVolumePathName(
 
             Slash = YoriLibFindLeftMostCharacter(&Subset, '\\');
             if (Slash != NULL) {
-                Subset.LengthInChars = Subset.LengthInChars - (DWORD)(Slash - Subset.StartOfString);
+                Subset.LengthInChars = Subset.LengthInChars - (YORI_ALLOC_SIZE_T)(Slash - Subset.StartOfString);
                 Subset.StartOfString = Slash;
 
                 if (Subset.LengthInChars > 0) {
@@ -2181,9 +2187,9 @@ YoriLibGetVolumePathName(
                     Subset.StartOfString++;
                     Slash = YoriLibFindLeftMostCharacter(&Subset, '\\');
                     if (Slash != NULL) {
-                        CharsToCopy = (DWORD)(Slash - FileName->StartOfString);
+                        CharsToCopy = (YORI_ALLOC_SIZE_T)(Slash - FileName->StartOfString);
                     } else {
-                        CharsToCopy = (DWORD)(Subset.StartOfString - FileName->StartOfString) + Subset.LengthInChars;
+                        CharsToCopy = (YORI_ALLOC_SIZE_T)(Subset.StartOfString - FileName->StartOfString) + Subset.LengthInChars;
                     }
 
                     memcpy(VolumeName->StartOfString, FileName->StartOfString, CharsToCopy * sizeof(TCHAR));

@@ -243,7 +243,7 @@ EraseFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -279,16 +279,16 @@ EraseFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD MatchFlags;
-    BOOL Recursive;
-    BOOL BasicEnumeration;
-    DWORD StartArg = 0;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    WORD MatchFlags;
+    BOOLEAN Recursive;
+    BOOLEAN BasicEnumeration;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     ERASE_CONTEXT Context;
     YORI_STRING Arg;
 

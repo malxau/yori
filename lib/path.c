@@ -157,8 +157,8 @@ YoriLibSearchEnv(
             Out->StartOfString[0] = '\0';
             return;
         }
-        Out->LengthInChars -= Out->LengthInChars - (DWORD)(fn - Out->StartOfString);
-        Out->LengthInChars += YoriLibSPrintfS(fn, Out->LengthAllocated - (DWORD)(fn-Out->StartOfString), _T("%s"), FindData.cFileName);
+        Out->LengthInChars -= Out->LengthInChars - (YORI_ALLOC_SIZE_T)(fn - Out->StartOfString);
+        Out->LengthInChars = Out->LengthInChars + YoriLibSPrintfS(fn, Out->LengthAllocated - (YORI_ALLOC_SIZE_T)(fn-Out->StartOfString), _T("%s"), FindData.cFileName);
         if (MatchAllCallback != NULL) {
             if (!MatchAllCallback(Out, MatchAllContext)) {
                 return;
@@ -176,7 +176,7 @@ YoriLibSearchEnv(
 
     while (*begin) {
 
-        DWORD componentlen;
+        YORI_ALLOC_SIZE_T componentlen;
 
         search = ';';
 
@@ -192,7 +192,7 @@ YoriLibSearchEnv(
             end = begin + _tcslen(begin);
         }
 
-        componentlen = (DWORD)(end - begin);
+        componentlen = (YORI_ALLOC_SIZE_T)(end - begin);
 
         if (componentlen != 0 && componentlen + 1 + FileName->LengthInChars < Out->LengthAllocated) {
 
@@ -210,8 +210,8 @@ YoriLibSearchEnv(
                     Out->StartOfString[0] = '\0';
                     return;
                 }
-                Out->LengthInChars -= Out->LengthInChars - (DWORD)(fn - Out->StartOfString);
-                Out->LengthInChars += YoriLibSPrintfS(fn, Out->LengthAllocated - (DWORD)(fn-Out->StartOfString), _T("%s"), FindData.cFileName);
+                Out->LengthInChars -= Out->LengthInChars - (YORI_ALLOC_SIZE_T)(fn - Out->StartOfString);
+                Out->LengthInChars = Out->LengthInChars + YoriLibSPrintfS(fn, Out->LengthAllocated - (YORI_ALLOC_SIZE_T)(fn-Out->StartOfString), _T("%s"), FindData.cFileName);
                 if (MatchAllCallback != NULL) {
                     if (!MatchAllCallback(Out, MatchAllContext)) {
                         return;
@@ -283,7 +283,7 @@ YoriLibLocateBuildFullName(
     YORI_STRING FoundPath;
     LPTSTR fn;
     BOOL NeedsSeperator;
-    DWORD FileNameLen = _tcslen(Match->cFileName);
+    YORI_ALLOC_SIZE_T FileNameLen = (YORI_ALLOC_SIZE_T)_tcslen(Match->cFileName);
 
     if (!YoriLibAllocateString(&FoundPath, SearchPath->LengthInChars + 1 + FileNameLen + 1)) {
         return FALSE;
@@ -315,7 +315,7 @@ YoriLibLocateBuildFullName(
     }
 
     memcpy(&FoundPath.StartOfString[FoundPath.LengthInChars], Match->cFileName, (FileNameLen + 1) * sizeof(TCHAR));
-    FoundPath.LengthInChars += FileNameLen;
+    FoundPath.LengthInChars = FoundPath.LengthInChars + FileNameLen;
 
     if (!YoriLibGetFullPathNameReturnAllocation(&FoundPath, FullPath, Out, &fn)) {
         YoriLibFreeStringContents(&FoundPath);
@@ -349,14 +349,14 @@ LPCTSTR YoriLibDefaultPathExt = _T(".com;.exe;.bat;.cmd");
 __success(return != NULL)
 PYORI_PATHEXT_COMPONENT
 YoriLibPathBuildPathExtComponentList(
-    __out PDWORD ComponentCount
+    __out PYORI_ALLOC_SIZE_T ComponentCount
     )
 {
     BOOLEAN UseDefaultPathExt = FALSE;
     TCHAR * PathExtString;
-    DWORD PathExtLength;
-    DWORD PathExtCount;
-    DWORD PathExtIndex;
+    YORI_ALLOC_SIZE_T PathExtLength;
+    YORI_ALLOC_SIZE_T PathExtCount;
+    YORI_ALLOC_SIZE_T PathExtIndex;
     TCHAR * ThisExt;
     TCHAR * TokCtx;
     PYORI_PATHEXT_COMPONENT PathExtComponents;
@@ -368,9 +368,9 @@ YoriLibPathBuildPathExtComponentList(
     //
 
     UseDefaultPathExt = FALSE;
-    PathExtLength = GetEnvironmentVariable(_T("PATHEXT"), NULL, 0);
+    PathExtLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("PATHEXT"), NULL, 0);
     if (PathExtLength == 0) {
-        PathExtLength = _tcslen(YoriLibDefaultPathExt) + sizeof(TCHAR);
+        PathExtLength = (YORI_ALLOC_SIZE_T)_tcslen(YoriLibDefaultPathExt) + sizeof(TCHAR);
         UseDefaultPathExt = TRUE;
     }
 
@@ -421,7 +421,7 @@ YoriLibPathBuildPathExtComponentList(
             YoriLibReference(PathExtString);
             PathExtComponents[PathExtIndex].Extension.MemoryToFree = PathExtString;
             PathExtComponents[PathExtIndex].Extension.StartOfString = ThisExt;
-            PathExtComponents[PathExtIndex].Extension.LengthInChars = _tcslen(ThisExt);
+            PathExtComponents[PathExtIndex].Extension.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(ThisExt);
             PathExtComponents[PathExtIndex].Extension.LengthAllocated = PathExtComponents[PathExtIndex].Extension.LengthInChars;
             PathExtIndex++;
         }
@@ -446,10 +446,10 @@ YoriLibPathBuildPathExtComponentList(
 VOID
 YoriLibPathFreePathExtComponents(
     __in PYORI_PATHEXT_COMPONENT PathExtComponents,
-    __in DWORD PathExtComponentCount
+    __in YORI_ALLOC_SIZE_T PathExtComponentCount
     )
 {
-    DWORD Count;
+    YORI_ALLOC_SIZE_T Count;
 
     for (Count = 0; Count < PathExtComponentCount; Count++) {
         if (PathExtComponents[Count].Extension.MemoryToFree != NULL) {
@@ -501,7 +501,7 @@ YoriLibLocateFileExtensionsInOnePath(
     __in PYORI_STRING SearchPath,
     __in PYORI_STRING ScratchArea,
     __inout PYORI_PATHEXT_COMPONENT PathExtData,
-    __in DWORD PathExtCount,
+    __in YORI_ALLOC_SIZE_T PathExtCount,
     __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,
     __in_opt PVOID MatchAllContext,
     __inout PYORI_STRING Out,
@@ -509,13 +509,13 @@ YoriLibLocateFileExtensionsInOnePath(
     )
 {
     HANDLE hFind;
-    DWORD FileNameLen;
+    YORI_ALLOC_SIZE_T FileNameLen;
     WIN32_FIND_DATA FindData;
     WIN32_FIND_DATA *PathExtMatches;
     YORI_STRING SearchName;
-    BOOL PartialMatchOkay;
-    BOOL NeedsSeperator;
-    DWORD Count;
+    BOOLEAN PartialMatchOkay;
+    BOOLEAN NeedsSeperator;
+    YORI_ALLOC_SIZE_T Count;
 
     //
     //  If we can't possibly do anything, stop.
@@ -603,7 +603,7 @@ YoriLibLocateFileExtensionsInOnePath(
 
     SearchName.StartOfString[SearchName.LengthInChars + FileName->LengthInChars] = '*';
     SearchName.StartOfString[SearchName.LengthInChars + FileName->LengthInChars + 1] = '\0';
-    SearchName.LengthInChars += FileName->LengthInChars;
+    SearchName.LengthInChars = SearchName.LengthInChars + FileName->LengthInChars;
     ASSERT(SearchName.LengthInChars < SearchName.LengthAllocated);
 
     //
@@ -628,7 +628,7 @@ YoriLibLocateFileExtensionsInOnePath(
     //
 
     do {
-        FileNameLen = _tcslen(FindData.cFileName);
+        FileNameLen = (YORI_ALLOC_SIZE_T)_tcslen(FindData.cFileName);
         for (Count = 0; Count < PathExtCount; Count++) {
             if (!PathExtData[Count].Found &&
                 FileNameLen > PathExtData[Count].Extension.LengthInChars) {
@@ -646,7 +646,7 @@ YoriLibLocateFileExtensionsInOnePath(
 
                     if (PartialMatchOkay && MatchAllCallback != NULL) {
                         PYORI_PATHEXT_COMPONENT ChildPathExtComponents;
-                        DWORD ChildPathExtCount;
+                        YORI_ALLOC_SIZE_T ChildPathExtCount;
                         YORI_STRING ChildFileName;
                         YORI_STRING ChildScratchArea;
 
@@ -775,7 +775,7 @@ YoriLibPathLocateUnknownExtensionUnknownLocation(
 {
     TCHAR * TokCtx;
     PYORI_PATHEXT_COMPONENT PathExtComponents;
-    DWORD PathExtCount;
+    YORI_ALLOC_SIZE_T PathExtCount;
     LPTSTR ThisPath;
     YORI_STRING SearchPath;
     YORI_STRING ScratchArea;
@@ -829,7 +829,7 @@ YoriLibPathLocateUnknownExtensionUnknownLocation(
             if (ThisPath[0] != '\0') {
                 SearchPath.MemoryToFree = NULL;
                 SearchPath.StartOfString = ThisPath;
-                SearchPath.LengthInChars = _tcslen(ThisPath);
+                SearchPath.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(ThisPath);
                 SearchPath.LengthAllocated = SearchPath.LengthInChars + 1;
 
                 FoundPath->LengthInChars = 0;
@@ -892,11 +892,11 @@ YoriLibPathLocateUnknownExtensionKnownLocation(
     )
 {
     PYORI_PATHEXT_COMPONENT PathExtComponents;
-    DWORD PathExtCount;
+    YORI_ALLOC_SIZE_T PathExtCount;
     YORI_STRING FileNameToFind;
     YORI_STRING DirectoryToSearch;
     YORI_STRING ScratchArea;
-    DWORD PathSeperator;
+    YORI_ALLOC_SIZE_T PathSeperator;
 
     PathExtComponents = YoriLibPathBuildPathExtComponentList(&PathExtCount);
     if (PathExtComponents == NULL) {
@@ -1037,7 +1037,7 @@ YoriLibPathLocateKnownExtensionUnknownLocation(
  @return TRUE to indicate a match was found, FALSE if it was not.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriLibLocateExecutableInPath(
     __in PYORI_STRING SearchFor,
     __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,
@@ -1049,8 +1049,8 @@ YoriLibLocateExecutableInPath(
     BOOL SearchPath = TRUE;
     YORI_STRING FoundPath;
     YORI_STRING PathData;
-    DWORD PathLength;
-    DWORD CurDirLength;
+    YORI_ALLOC_SIZE_T PathLength;
+    YORI_ALLOC_SIZE_T CurDirLength;
 
     ASSERT(YoriLibIsStringNullTerminated(SearchFor));
 
@@ -1098,7 +1098,7 @@ YoriLibLocateExecutableInPath(
     if (!SearchPath && !SearchPathExt) {
 
         HANDLE hFind;
-        DWORD Index;
+        YORI_ALLOC_SIZE_T Index;
         WIN32_FIND_DATA FindData;
         YORI_STRING SearchDirectory;
         YORI_STRING FoundFile;
@@ -1155,8 +1155,8 @@ YoriLibLocateExecutableInPath(
     //  possible file name component in Windows, which is 256.
     //
 
-    CurDirLength = GetCurrentDirectory(0, NULL);
-    PathLength = GetEnvironmentVariable(_T("PATH"), NULL, 0);
+    CurDirLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
+    PathLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("PATH"), NULL, 0);
     if (PathLength < CurDirLength + 1) {
         PathLength = CurDirLength + 1;
     }
@@ -1180,7 +1180,7 @@ YoriLibLocateExecutableInPath(
     }
 
     PathData.StartOfString[0] = '\0';
-    PathData.LengthInChars = GetEnvironmentVariable(_T("PATH"), PathData.StartOfString, PathData.LengthAllocated);
+    PathData.LengthInChars = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("PATH"), PathData.StartOfString, PathData.LengthAllocated);
 
     if (SearchPath && SearchPathExt) {
         if (!YoriLibPathLocateUnknownExtensionUnknownLocation(SearchFor, &PathData, TRUE, MatchAllCallback, MatchAllContext, &FoundPath)) {

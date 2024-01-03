@@ -57,8 +57,8 @@ SetupTuiUpdateStatus(
 
     YoriLibInitEmptyString(&DisplayText);
     DisplayText.StartOfString = Text->StartOfString;
-    if (Text->LengthInChars > (DWORD)ClientSize.X) {
-        DisplayText.LengthInChars = (DWORD)ClientSize.X;
+    if (Text->LengthInChars > (YORI_ALLOC_SIZE_T)ClientSize.X) {
+        DisplayText.LengthInChars = (YORI_ALLOC_SIZE_T)ClientSize.X;
     } else {
         DisplayText.LengthInChars = Text->LengthInChars;
     }
@@ -514,8 +514,8 @@ SetupTuiDisplayUi(VOID)
         //  checkbox part.
         //
 
-        if (Caption.LengthInChars > (DWORD)(Area.Right - Area.Left - 3)) {
-            Caption.LengthInChars = (DWORD)(Area.Right - Area.Left - 3);
+        if (Caption.LengthInChars > (YORI_ALLOC_SIZE_T)(Area.Right - Area.Left - 3)) {
+            Caption.LengthInChars = (YORI_ALLOC_SIZE_T)(Area.Right - Area.Left - 3);
         }
     
         Ctrl = YoriWinCheckboxCreate(Parent, &Area, &Caption, 0, NULL);

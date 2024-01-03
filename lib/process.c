@@ -44,7 +44,7 @@ YoriLibGetSystemProcessList(
 {
     PYORI_SYSTEM_PROCESS_INFORMATION LocalProcessInfo = NULL;
     DWORD BytesReturned;
-    DWORD BytesAllocated;
+    YORI_ALLOC_SIZE_T BytesAllocated;
     LONG Status;
 
     if (DllNtDll.pNtQuerySystemInformation == NULL) {
@@ -60,8 +60,8 @@ YoriLibGetSystemProcessList(
         }
 
         if (BytesAllocated == 0) {
-            BytesAllocated = 64 * 1024;
-        } else if (BytesAllocated <= 16 * 1024 * 1024) {
+            BytesAllocated = 60 * 1024;
+        } else if (BytesAllocated <= 15 * 1024 * 1024 && YoriLibIsSizeAllocatable(BytesAllocated * 4)) {
             BytesAllocated = BytesAllocated * 4;
         } else {
             return FALSE;
@@ -107,7 +107,7 @@ YoriLibGetSystemHandlesList(
 {
     PYORI_SYSTEM_HANDLE_INFORMATION_EX LocalHandlesInfo = NULL;
     DWORD BytesReturned;
-    DWORD BytesAllocated;
+    YORI_ALLOC_SIZE_T BytesAllocated;
     LONG Status;
 
     if (DllNtDll.pNtQuerySystemInformation == NULL) {
@@ -123,8 +123,8 @@ YoriLibGetSystemHandlesList(
         }
 
         if (BytesAllocated == 0) {
-            BytesAllocated = 64 * 1024;
-        } else if (BytesAllocated <= 16 * 1024 * 1024) {
+            BytesAllocated = 60 * 1024;
+        } else if (BytesAllocated <= 15 * 1024 * 1024 && YoriLibIsSizeAllocatable(BytesAllocated * 4)) {
             BytesAllocated = BytesAllocated * 4;
         } else {
             return FALSE;

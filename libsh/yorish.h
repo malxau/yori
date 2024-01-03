@@ -56,7 +56,7 @@ typedef struct _YORI_LIBSH_CMD_CONTEXT {
     /**
      The number of arguments.
      */
-    DWORD ArgC;
+    YORI_ALLOC_SIZE_T ArgC;
 
     /**
      An array of pointers to each argument.  Each of these arguments has been
@@ -77,14 +77,14 @@ typedef struct _YORI_LIBSH_CMD_CONTEXT {
      this value contains the argument that the string offset would correspond
      to.
      */
-    DWORD CurrentArg;
+    YORI_ALLOC_SIZE_T CurrentArg;
 
     /**
      When generating the command context, if a string offset is specified,
      this value contains the offset within the current argument that it would
      correspond to.
      */
-    DWORD CurrentArgOffset;
+    YORI_ALLOC_SIZE_T CurrentArgOffset;
 
     /**
      Memory to dereference when the context is torn down.  Typically this
@@ -97,7 +97,7 @@ typedef struct _YORI_LIBSH_CMD_CONTEXT {
      TRUE if there are characters in the string following the final argument.
      FALSE if the final character in the string is part of an argument.
      */
-    BOOL TrailingChars;
+    BOOLEAN TrailingChars;
 } YORI_LIBSH_CMD_CONTEXT, *PYORI_LIBSH_CMD_CONTEXT;
 
 /**
@@ -674,8 +674,8 @@ __success(return)
 BOOLEAN
 YoriLibShAllocateArgCount(
     __out PYORI_LIBSH_CMD_CONTEXT CmdContext,
-    __in DWORD ArgCount,
-    __in DWORD ExtraByteCount,
+    __in YORI_ALLOC_SIZE_T ArgCount,
+    __in YORI_ALLOC_SIZE_T ExtraByteCount,
     __out_opt PVOID *ExtraData
     );
 
@@ -685,14 +685,14 @@ YoriLibShBuildCmdlineFromCmdContext(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __inout PYORI_STRING CmdLine,
     __in BOOL RemoveEscapes,
-    __out_opt PDWORD BeginCurrentArg,
-    __out_opt PDWORD EndCurrentArg
+    __out_opt PYORI_ALLOC_SIZE_T BeginCurrentArg,
+    __out_opt PYORI_ALLOC_SIZE_T EndCurrentArg
     );
 
 VOID
 YoriLibShCheckIfArgNeedsQuotes(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
-    __in DWORD ArgIndex
+    __in YORI_ALLOC_SIZE_T ArgIndex
     );
 
 __success(return)
@@ -705,9 +705,9 @@ YoriLibShCopyCmdContext(
 VOID
 YoriLibShCopyArg(
     __in PYORI_LIBSH_CMD_CONTEXT SrcCmdContext,
-    __in DWORD SrcArgument,
+    __in YORI_ALLOC_SIZE_T SrcArgument,
     __in PYORI_LIBSH_CMD_CONTEXT DestCmdContext,
-    __in DWORD DestArgument
+    __in YORI_ALLOC_SIZE_T DestArgument
     );
 
 VOID
@@ -720,7 +720,7 @@ __success(return)
 BOOL
 YoriLibShFindBestBackquoteSubstringAtOffset(
     __in PYORI_STRING String,
-    __in DWORD StringOffset,
+    __in YORI_ALLOC_SIZE_T StringOffset,
     __out PYORI_STRING CurrentSubset
     );
 
@@ -729,7 +729,7 @@ BOOL
 YoriLibShFindNextBackquoteSubstring(
     __in PYORI_STRING String,
     __out PYORI_STRING CurrentSubset,
-    __out PDWORD CharsInPrefix
+    __out PYORI_ALLOC_SIZE_T CharsInPrefix
     );
 
 VOID
@@ -746,7 +746,7 @@ __success(return)
 BOOLEAN
 YoriLibShIsArgumentSeperator(
     __in PYORI_STRING String,
-    __out_opt PDWORD CharsToConsumeOut,
+    __out_opt PYORI_ALLOC_SIZE_T CharsToConsumeOut,
     __out_opt PBOOLEAN TerminateArgOut
     );
 
@@ -756,16 +756,16 @@ YoriLibShParseCmdContextToExecPlan(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __out PYORI_LIBSH_EXEC_PLAN ExecPlan,
     __out_opt PYORI_LIBSH_SINGLE_EXEC_CONTEXT* CurrentExecContext,
-    __out_opt PBOOL CurrentArgIsForProgram,
-    __out_opt PDWORD CurrentArgIndex,
-    __out_opt PDWORD CurrentArgOffset
+    __out_opt PBOOLEAN CurrentArgIsForProgram,
+    __out_opt PYORI_ALLOC_SIZE_T CurrentArgIndex,
+    __out_opt PYORI_ALLOC_SIZE_T CurrentArgOffset
     );
 
 __success(return)
 BOOLEAN
 YoriLibShParseCmdlineToCmdContext(
     __in PYORI_STRING CmdLine,
-    __in DWORD CurrentOffset,
+    __in YORI_ALLOC_SIZE_T CurrentOffset,
     __out PYORI_LIBSH_CMD_CONTEXT CmdContext
     );
 
@@ -777,7 +777,7 @@ YoriLibShReferenceExecContext(
 __success(return)
 BOOLEAN
 YoriLibShRemoveEscapesFromArgCArgV(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __inout PYORI_STRING ArgV
     );
 

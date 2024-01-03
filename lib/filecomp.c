@@ -81,7 +81,7 @@ YoriLibInitializeCompressContext(
     //  the threadpool to prevent bottlenecking the copy.
     //
 
-    CompressContext->MaxThreads = SystemInfo.dwNumberOfProcessors;
+    CompressContext->MaxThreads = (YORI_ALLOC_SIZE_T)SystemInfo.dwNumberOfProcessors;
     if (CompressContext->MaxThreads < 1) {
         CompressContext->MaxThreads = 1;
     }

@@ -77,9 +77,9 @@ YoriShSuckEnv(
     LONG Status;
     DWORD dwBytesReturned;
     SIZE_T BytesReturned;
-    DWORD EnvironmentBlockPageOffset;
-    DWORD EnvCharsToMask;
-    DWORD CurrentDirectoryCharsToRead;
+    YORI_ALLOC_SIZE_T EnvironmentBlockPageOffset;
+    YORI_ALLOC_SIZE_T EnvCharsToMask;
+    YORI_ALLOC_SIZE_T CurrentDirectoryCharsToRead;
     PVOID ProcessParamsBlockToRead;
     PVOID CurrentDirectoryToRead;
     PVOID EnvironmentBlockToRead;
@@ -158,9 +158,9 @@ YoriShSuckEnv(
 #endif
 
         CurrentDirectoryToRead = (PVOID)(ULONG_PTR)ProcessParameters.CurrentDirectory;
-        CurrentDirectoryCharsToRead = ProcessParameters.CurrentDirectoryLengthInBytes / sizeof(TCHAR);
+        CurrentDirectoryCharsToRead = (YORI_ALLOC_SIZE_T)ProcessParameters.CurrentDirectoryLengthInBytes / sizeof(TCHAR);
         EnvironmentBlockToRead = (PVOID)(ULONG_PTR)ProcessParameters.EnvironmentBlock;
-        EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (DWORD)ProcessParameters.EnvironmentBlock;
+        EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (YORI_ALLOC_SIZE_T)ProcessParameters.EnvironmentBlock;
     } else {
         YORI_LIB_PROCESS_PARAMETERS64 ProcessParameters;
 
@@ -169,9 +169,9 @@ YoriShSuckEnv(
         }
 
         CurrentDirectoryToRead = (PVOID)(ULONG_PTR)ProcessParameters.CurrentDirectory;
-        CurrentDirectoryCharsToRead = ProcessParameters.CurrentDirectoryLengthInBytes / sizeof(TCHAR);
+        CurrentDirectoryCharsToRead = (YORI_ALLOC_SIZE_T)ProcessParameters.CurrentDirectoryLengthInBytes / sizeof(TCHAR);
         EnvironmentBlockToRead = (PVOID)(ULONG_PTR)ProcessParameters.EnvironmentBlock;
-        EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (DWORD)ProcessParameters.EnvironmentBlock;
+        EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (YORI_ALLOC_SIZE_T)ProcessParameters.EnvironmentBlock;
     }
 
     EnvCharsToMask = EnvironmentBlockPageOffset / sizeof(TCHAR);
@@ -696,8 +696,15 @@ YoriShWaitForProcessOrInput(
             //
 
             RecordsNeeded += 10;
+            
+            if (!YoriLibIsSizeAllocatable(RecordsNeeded * sizeof(INPUT_RECORD))) {
+                WaitContext->RecordsAllocated = 0;
+                Sleep(50);
 
-            WaitContext->InputRecords = YoriLibMalloc(RecordsNeeded * sizeof(INPUT_RECORD));
+                continue;
+            }
+
+            WaitContext->InputRecords = YoriLibMalloc((YORI_ALLOC_SIZE_T)RecordsNeeded * sizeof(INPUT_RECORD));
             if (WaitContext->InputRecords == NULL) {
                 WaitContext->RecordsAllocated = 0;
                 Sleep(50);

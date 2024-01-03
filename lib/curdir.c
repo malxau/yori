@@ -49,14 +49,14 @@ YORI_STRING YoriLibCurrentDirectoryForDisplay;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriLibGetOnDiskCaseForPath(
     __in PYORI_STRING Path,
     __out PYORI_STRING OnDiskCasePath
     )
 {
-    DWORD Index;
-    DWORD LastSepOffset;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T LastSepOffset;
     HANDLE FindHandle;
     WIN32_FIND_DATA FindData;
     YORI_STRING SearchComponent;
@@ -133,28 +133,28 @@ YoriLibGetOnDiskCaseForPath(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriLibGetCurrentDirectoryOnDrive(
     __in TCHAR Drive,
     __out PYORI_STRING DriveCurrentDirectory
     )
 {
     TCHAR EnvVariableName[4];
-    DWORD DriveCurrentDirectoryLength;
+    YORI_ALLOC_SIZE_T DriveCurrentDirectoryLength;
 
     EnvVariableName[0] = '=';
     EnvVariableName[1] = Drive;
     EnvVariableName[2] = ':';
     EnvVariableName[3] = '\0';
 
-    DriveCurrentDirectoryLength = GetEnvironmentVariable(EnvVariableName, NULL, 0);
+    DriveCurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(EnvVariableName, NULL, 0);
 
     if (DriveCurrentDirectoryLength > 0) {
         if (!YoriLibAllocateString(DriveCurrentDirectory, DriveCurrentDirectoryLength)) {
             return FALSE;
         }
 
-        DriveCurrentDirectory->LengthInChars = GetEnvironmentVariable(EnvVariableName, DriveCurrentDirectory->StartOfString, DriveCurrentDirectory->LengthAllocated);
+        DriveCurrentDirectory->LengthInChars = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(EnvVariableName, DriveCurrentDirectory->StartOfString, DriveCurrentDirectory->LengthAllocated);
         if (DriveCurrentDirectory->LengthInChars == 0 || DriveCurrentDirectory->LengthInChars >= DriveCurrentDirectoryLength) {
             YoriLibFreeStringContents(DriveCurrentDirectory);
             return FALSE;
@@ -181,7 +181,7 @@ YoriLibGetCurrentDirectoryOnDrive(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriLibSetCurrentDirectoryOnDrive(
     __in TCHAR Drive,
     __in PYORI_STRING DriveCurrentDirectory
@@ -205,7 +205,10 @@ YoriLibSetCurrentDirectoryOnDrive(
 
     Result = SetEnvironmentVariable(EnvVariableName, szDriveCurrentDirectory);
     YoriLibFree(szDriveCurrentDirectory);
-    return Result;
+    if (Result) {
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /**
@@ -220,15 +223,15 @@ YoriLibSetCurrentDirectoryOnDrive(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriLibGetCurrentDirectory(
     __out PYORI_STRING CurrentDirectory
     )
 {
     YORI_STRING String;
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
 
-    CharsNeeded = GetCurrentDirectory(0, NULL);
+    CharsNeeded = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
 
     while(TRUE) {
 
@@ -237,7 +240,7 @@ YoriLibGetCurrentDirectory(
         }
     
     
-        String.LengthInChars = GetCurrentDirectory(String.LengthAllocated, String.StartOfString);
+        String.LengthInChars = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(String.LengthAllocated, String.StartOfString);
     
         if (String.LengthInChars == 0) {
             YoriLibFreeStringContents(&String);
@@ -268,7 +271,7 @@ YoriLibGetCurrentDirectory(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriLibGetCurrentDirectoryForDisplay(
     __out PYORI_STRING CurrentDirectory
     )
@@ -307,14 +310,14 @@ YoriLibGetCurrentDirectoryForDisplay(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
+BOOLEAN
 YoriLibSetCurrentDirectory(
     __in PYORI_STRING NewCurrentDirectory
     )
 {
     YORI_STRING NewDisplayString;
     LPTSTR NullTerminatedDirectory;
-    BOOL AllocatedDirectory;
+    BOOLEAN AllocatedDirectory;
     BOOL Result;
     DWORD LastErr;
 
@@ -348,7 +351,10 @@ YoriLibSetCurrentDirectory(
     }
     SetLastError(LastErr);
 
-    return Result;
+    if (Result) {
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /**
@@ -365,18 +371,18 @@ YoriLibSetCurrentDirectorySaveDriveCurrentDirectory(
     )
 {
     YORI_STRING OldCurrentDirectory;
-    DWORD OldCurrentDirectoryLength;
+    YORI_ALLOC_SIZE_T OldCurrentDirectoryLength;
     TCHAR NewDrive;
     TCHAR OldDrive;
 
     ASSERT(YoriLibIsStringNullTerminated(NewCurrentDirectory));
 
-    OldCurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    OldCurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
     if (!YoriLibAllocateString(&OldCurrentDirectory, OldCurrentDirectoryLength)) {
         return FALSE;
     }
 
-    OldCurrentDirectory.LengthInChars = GetCurrentDirectory(OldCurrentDirectory.LengthAllocated, OldCurrentDirectory.StartOfString);
+    OldCurrentDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(OldCurrentDirectory.LengthAllocated, OldCurrentDirectory.StartOfString);
 
     if (OldCurrentDirectory.LengthInChars == 0 ||
         OldCurrentDirectory.LengthInChars >= OldCurrentDirectory.LengthAllocated) {

@@ -61,11 +61,11 @@ __success(return)
 BOOLEAN
 YoriLibShIsArgumentSeperator(
     __in PYORI_STRING String,
-    __out_opt PDWORD CharsToConsumeOut,
+    __out_opt PYORI_ALLOC_SIZE_T CharsToConsumeOut,
     __out_opt PBOOLEAN TerminateArgOut
     )
 {
-    DWORD CharsToConsume = 0;
+    YORI_ALLOC_SIZE_T CharsToConsume = 0;
     BOOLEAN Terminate = FALSE;
 
     if (String->LengthInChars >= 1) {
@@ -158,8 +158,8 @@ __success(return)
 BOOLEAN
 YoriLibShAllocateArgCount(
     __out PYORI_LIBSH_CMD_CONTEXT CmdContext,
-    __in DWORD ArgCount,
-    __in DWORD ExtraByteCount,
+    __in YORI_ALLOC_SIZE_T ArgCount,
+    __in YORI_ALLOC_SIZE_T ExtraByteCount,
     __out_opt PVOID *ExtraData
     )
 {
@@ -282,15 +282,15 @@ YoriLibShCountCharsAtBackslash(
     __in BOOLEAN QuoteOpen,
     __in BOOLEAN LookingForFirstQuote,
     __in BOOLEAN QuoteImplicitlyAddedAtEnd,
-    __out PDWORD CharsToConsume,
-    __out PDWORD CharsToOutput
+    __out PYORI_ALLOC_SIZE_T CharsToConsume,
+    __out PYORI_ALLOC_SIZE_T CharsToOutput
     )
 {
     YORI_STRING Remaining;
-    DWORD ConsecutiveBackslashes;
-    DWORD LocalCharsToConsume;
-    DWORD LocalCharsToOutput;
-    DWORD CharsToIgnore;
+    YORI_ALLOC_SIZE_T ConsecutiveBackslashes;
+    YORI_ALLOC_SIZE_T LocalCharsToConsume;
+    YORI_ALLOC_SIZE_T LocalCharsToOutput;
+    YORI_ALLOC_SIZE_T CharsToIgnore;
     BOOLEAN TrailingQuote;
     BOOLEAN TerminateArg;
     BOOLEAN TerminateNextArg;
@@ -380,14 +380,14 @@ VOID
 YoriLibParseMoveToNextArgumentInitialScan(
     __inout PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __in BOOLEAN CurrentArgFound,
-    __inout PDWORD ArgCountPtr,
-    __inout PDWORD ArgOffsetPtr,
+    __inout PYORI_ALLOC_SIZE_T ArgCountPtr,
+    __inout PYORI_ALLOC_SIZE_T ArgOffsetPtr,
     __inout PBOOLEAN PreviousCharWasQuote,
     __out PBOOLEAN QuoteTerminated,
-    __inout PDWORD FirstQuoteEndOffsetPtr
+    __inout PYORI_ALLOC_SIZE_T FirstQuoteEndOffsetPtr
     )
 {
-    DWORD ArgCount;
+    YORI_ALLOC_SIZE_T ArgCount;
 
     ArgCount = *ArgCountPtr;
 
@@ -401,8 +401,8 @@ YoriLibParseMoveToNextArgumentInitialScan(
     //  CmdContext->CurrentArgOffset .
     //
 
-    if ((*FirstQuoteEndOffsetPtr) != (DWORD)-1) {
-        DWORD FirstQuoteEndOffset;
+    if ((*FirstQuoteEndOffsetPtr) != YORI_MAX_ALLOC_SIZE) {
+        YORI_ALLOC_SIZE_T FirstQuoteEndOffset;
         FirstQuoteEndOffset = *FirstQuoteEndOffsetPtr;
         ASSERT(FirstQuoteEndOffset < (*ArgOffsetPtr));
 
@@ -419,7 +419,7 @@ YoriLibParseMoveToNextArgumentInitialScan(
     (*ArgCountPtr)++;
     *ArgOffsetPtr = 0;
     *QuoteTerminated = FALSE;
-    *FirstQuoteEndOffsetPtr = (DWORD)-1;
+    *FirstQuoteEndOffsetPtr = YORI_MAX_ALLOC_SIZE;
     *PreviousCharWasQuote = FALSE;
 }
 
@@ -450,14 +450,14 @@ YoriLibParseTerminateCurrentArgument(
     __in LPTSTR* OutputStringPtr,
     __in PYORI_STRING Arg,
     __in BOOLEAN PreviousCharWasQuote,
-    __in DWORD FirstQuoteEndOffset
+    __in YORI_ALLOC_SIZE_T FirstQuoteEndOffset
     )
 {
     LPTSTR OutputString;
-    DWORD ArgLength;
+    YORI_ALLOC_SIZE_T ArgLength;
 
     OutputString = *OutputStringPtr;
-    ArgLength = (DWORD)(OutputString - Arg->StartOfString);
+    ArgLength = (YORI_ALLOC_SIZE_T)(OutputString - Arg->StartOfString);
 
     //
     //  If FirstQuoteEndOffsetPtr is in range, and
@@ -472,7 +472,7 @@ YoriLibParseTerminateCurrentArgument(
     //  written that needs to be removed here.)
     //
 
-    if (FirstQuoteEndOffset != (DWORD)-1) {
+    if (FirstQuoteEndOffset != YORI_MAX_ALLOC_SIZE) {
         ASSERT(FirstQuoteEndOffset < ArgLength);
         ASSERT(Arg->StartOfString[FirstQuoteEndOffset] == '"');
         if (PreviousCharWasQuote) {
@@ -542,16 +542,16 @@ YoriLibParseTerminateCurrentArgument(
 VOID
 YoriLibParseMoveToNextArgumentPopulate(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
-    __inout PDWORD ArgCountPtr,
+    __inout PYORI_ALLOC_SIZE_T ArgCountPtr,
     __in PYORI_STRING RemainingString,
     __in LPTSTR OutputString,
     __out PBOOLEAN PreviousCharWasQuote,
     __out PBOOLEAN LookingForFirstQuote,
-    __out PDWORD FirstQuoteEndOffset
+    __out PYORI_ALLOC_SIZE_T FirstQuoteEndOffset
     )
 {
     PYORI_STRING Arg;
-    DWORD ArgCount;
+    YORI_ALLOC_SIZE_T ArgCount;
 
     (*ArgCountPtr)++;
     ArgCount = (*ArgCountPtr);
@@ -576,7 +576,7 @@ YoriLibParseMoveToNextArgumentPopulate(
     CmdContext->ArgContexts[ArgCount].QuoteTerminated = FALSE;
     YoriLibReference(CmdContext->MemoryToFree);
     Arg->MemoryToFree = CmdContext->MemoryToFree;
-    *FirstQuoteEndOffset = (DWORD)-1;
+    *FirstQuoteEndOffset = YORI_MAX_ALLOC_SIZE;
     *PreviousCharWasQuote = FALSE;
 }
 
@@ -619,14 +619,14 @@ __success(return)
 BOOLEAN
 YoriLibShParseCmdlineToCmdContext(
     __in PYORI_STRING CmdLine,
-    __in DWORD CurrentOffset,
+    __in YORI_ALLOC_SIZE_T CurrentOffset,
     __out PYORI_LIBSH_CMD_CONTEXT CmdContext
     )
 {
-    DWORD ArgCount = 0;
-    DWORD ArgOffset = 0;
-    DWORD RequiredCharCount = 0;
-    DWORD CharsToConsume = 0;
+    YORI_ALLOC_SIZE_T ArgCount = 0;
+    YORI_ALLOC_SIZE_T ArgOffset = 0;
+    YORI_ALLOC_SIZE_T RequiredCharCount = 0;
+    YORI_ALLOC_SIZE_T CharsToConsume = 0;
     BOOLEAN TerminateArg;
     BOOLEAN TerminateNextArg = FALSE;
     BOOLEAN QuoteOpen = FALSE;
@@ -659,7 +659,7 @@ YoriLibShParseCmdlineToCmdContext(
     //  remove it afterwards.
     //
 
-    DWORD FirstQuoteEndOffset;
+    YORI_ALLOC_SIZE_T FirstQuoteEndOffset;
 
     CmdContext->ArgC = 0;
     CmdContext->ArgV = NULL;
@@ -682,7 +682,7 @@ YoriLibShParseCmdlineToCmdContext(
     } else {
         LookingForFirstQuote = FALSE;
     }
-    FirstQuoteEndOffset = (DWORD)-1;
+    FirstQuoteEndOffset = YORI_MAX_ALLOC_SIZE;
 
     while (Char.LengthInChars > 0) {
 
@@ -729,7 +729,7 @@ YoriLibShParseCmdlineToCmdContext(
 
         if (Char.StartOfString[0] == '\\') {
 
-            DWORD CharsToOutput;
+            YORI_ALLOC_SIZE_T CharsToOutput;
 
             PreviousCharWasQuote = FALSE;
 
@@ -740,10 +740,10 @@ YoriLibShParseCmdlineToCmdContext(
                                            &CharsToConsume,
                                            &CharsToOutput);
 
-            RequiredCharCount += CharsToOutput;
-            ArgOffset += CharsToOutput;
+            RequiredCharCount = RequiredCharCount + CharsToOutput;
+            ArgOffset = ArgOffset + CharsToOutput;
             Char.StartOfString += CharsToConsume;
-            Char.LengthInChars -= CharsToConsume;
+            Char.LengthInChars = Char.LengthInChars - CharsToConsume;
 
             if (!CurrentArgFound &&
                 (Char.StartOfString - CmdLine->StartOfString >= (LONG)CurrentOffset)) {
@@ -862,10 +862,10 @@ YoriLibShParseCmdlineToCmdContext(
                 YoriLibShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg);
             }
 
-            RequiredCharCount += CharsToConsume;
-            ArgOffset += CharsToConsume;
+            RequiredCharCount = RequiredCharCount + CharsToConsume;
+            ArgOffset = ArgOffset + CharsToConsume;
             Char.StartOfString += CharsToConsume;
-            Char.LengthInChars -= CharsToConsume;
+            Char.LengthInChars = Char.LengthInChars - CharsToConsume;
 
             if (Char.LengthInChars == 0) {
                 if (!CurrentArgFound) {
@@ -991,7 +991,7 @@ YoriLibShParseCmdlineToCmdContext(
     } else {
         LookingForFirstQuote = FALSE;
     }
-    FirstQuoteEndOffset = (DWORD)-1;
+    FirstQuoteEndOffset = YORI_MAX_ALLOC_SIZE;
     PreviousCharWasQuote = FALSE;
 
     while (Char.LengthInChars > 0) {
@@ -1025,7 +1025,7 @@ YoriLibShParseCmdlineToCmdContext(
 
         if (Char.StartOfString[0] == '\\') {
 
-            DWORD CharsToOutput;
+            YORI_ALLOC_SIZE_T CharsToOutput;
 
             PreviousCharWasQuote = FALSE;
 
@@ -1053,7 +1053,7 @@ YoriLibShParseCmdlineToCmdContext(
 
             OutputString += CharsToOutput;
             Char.StartOfString += CharsToOutput;
-            Char.LengthInChars -= CharsToOutput;
+            Char.LengthInChars = Char.LengthInChars - CharsToOutput;
 
             continue;
 
@@ -1072,7 +1072,7 @@ YoriLibShParseCmdlineToCmdContext(
                 LookingForFirstQuote = FALSE;
                 ASSERT(!CmdContext->ArgContexts[ArgCount].QuoteTerminated);
                 CmdContext->ArgContexts[ArgCount].QuoteTerminated = TRUE;
-                FirstQuoteEndOffset = (DWORD)(OutputString - CmdContext->ArgV[ArgCount].StartOfString);
+                FirstQuoteEndOffset = (YORI_ALLOC_SIZE_T)(OutputString - CmdContext->ArgV[ArgCount].StartOfString);
             } else {
 
                 //
@@ -1105,7 +1105,7 @@ YoriLibShParseCmdlineToCmdContext(
                 TerminateArg = TRUE;
                 TerminateNextArg = FALSE;
                 CharsToConsume = 0;
-            } else if ((ArgCount > 0 || (DWORD)(OutputString - CmdContext->ArgV[ArgCount].StartOfString) > 0) &&
+            } else if ((ArgCount > 0 || (YORI_ALLOC_SIZE_T)(OutputString - CmdContext->ArgV[ArgCount].StartOfString) > 0) &&
                        YoriLibShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg)) {
                 TerminateArg = TRUE;
             }
@@ -1136,7 +1136,7 @@ YoriLibShParseCmdlineToCmdContext(
                     memcpy(OutputString, Char.StartOfString, CharsToConsume * sizeof(TCHAR));
                     OutputString += CharsToConsume;
                     Char.StartOfString += CharsToConsume;
-                    Char.LengthInChars -= CharsToConsume;
+                    Char.LengthInChars = Char.LengthInChars - CharsToConsume;
 
                     //
                     //  Check for '>"file name"' type syntax.  This isn't a
@@ -1217,17 +1217,17 @@ YoriLibShBuildCmdlineFromCmdContext(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __inout PYORI_STRING CmdLine,
     __in BOOL RemoveEscapes,
-    __out_opt PDWORD BeginCurrentArg,
-    __out_opt PDWORD EndCurrentArg
+    __out_opt PYORI_ALLOC_SIZE_T BeginCurrentArg,
+    __out_opt PYORI_ALLOC_SIZE_T EndCurrentArg
     )
 {
-    DWORD count;
-    DWORD BufferLength = 0;
-    DWORD CmdLineOffset = 0;
+    YORI_ALLOC_SIZE_T count;
+    YORI_ALLOC_SIZE_T BufferLength = 0;
+    YORI_ALLOC_SIZE_T CmdLineOffset = 0;
     LPTSTR String;
     PYORI_STRING ThisArg;
-    DWORD SrcOffset;
-    DWORD DestOffset;
+    YORI_ALLOC_SIZE_T SrcOffset;
+    YORI_ALLOC_SIZE_T DestOffset;
 
     for (count = 0; count < CmdContext->ArgC; count++) {
         BufferLength += 1;
@@ -1235,7 +1235,7 @@ YoriLibShBuildCmdlineFromCmdContext(
             BufferLength += 2;
         }
         ThisArg = &CmdContext->ArgV[count];
-        BufferLength += ThisArg->LengthInChars;
+        BufferLength = BufferLength + ThisArg->LengthInChars;
     }
 
     BufferLength += 1;
@@ -1284,7 +1284,7 @@ YoriLibShBuildCmdlineFromCmdContext(
                 String[CmdLineOffset + DestOffset] = ThisArg->StartOfString[SrcOffset];
             }
         }
-        CmdLineOffset += DestOffset;
+        CmdLineOffset = CmdLineOffset + DestOffset;
 
         if (CmdContext->ArgContexts[count].Quoted) {
             if (CmdContext->ArgContexts[count].QuoteTerminated) {
@@ -1321,13 +1321,13 @@ YoriLibShBuildCmdlineFromCmdContext(
 __success(return)
 BOOLEAN
 YoriLibShRemoveEscapesFromArgCArgV(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __inout PYORI_STRING ArgV
     )
 {
-    DWORD ArgIndex;
-    DWORD CharIndex;
-    DWORD DestIndex;
+    YORI_ALLOC_SIZE_T ArgIndex;
+    YORI_ALLOC_SIZE_T CharIndex;
+    YORI_ALLOC_SIZE_T DestIndex;
     BOOLEAN EscapeFound;
     PYORI_STRING ThisArg;
 
@@ -1431,9 +1431,9 @@ YoriLibShRemoveEscapesFromCmdContext(
 VOID
 YoriLibShCopyArg(
     __in PYORI_LIBSH_CMD_CONTEXT SrcCmdContext,
-    __in DWORD SrcArgument,
+    __in YORI_ALLOC_SIZE_T SrcArgument,
     __in PYORI_LIBSH_CMD_CONTEXT DestCmdContext,
-    __in DWORD DestArgument
+    __in YORI_ALLOC_SIZE_T DestArgument
     )
 {
     DestCmdContext->ArgContexts[DestArgument].Quoted = SrcCmdContext->ArgContexts[SrcArgument].Quoted;
@@ -1463,7 +1463,7 @@ YoriLibShCopyCmdContext(
     __in PYORI_LIBSH_CMD_CONTEXT SrcCmdContext
     )
 {
-    DWORD Count;
+    YORI_ALLOC_SIZE_T Count;
 
     if (!YoriLibShAllocateArgCount(DestCmdContext, SrcCmdContext->ArgC, 0, NULL)) {
         return FALSE;
@@ -1494,7 +1494,7 @@ YoriLibShCopyCmdContext(
 VOID
 YoriLibShCheckIfArgNeedsQuotes(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
-    __in DWORD ArgIndex
+    __in YORI_ALLOC_SIZE_T ArgIndex
     )
 {
     BOOL HasWhiteSpace;
@@ -1518,7 +1518,7 @@ YoriLibShFreeCmdContext(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext
     )
 {
-    DWORD Count;
+    YORI_ALLOC_SIZE_T Count;
 
     if (CmdContext->ArgV != NULL) {
         for (Count = 0; Count < CmdContext->ArgC; Count++) {
@@ -1665,7 +1665,7 @@ __success(return)
 BOOL
 YoriLibShCheckForDeviceNameAndDuplicate(
     __inout PYORI_STRING UserString,
-    __in DWORD UserStringOffset,
+    __in YORI_ALLOC_SIZE_T UserStringOffset,
     __inout PYORI_STRING ResolvedName
     )
 {
@@ -1733,21 +1733,21 @@ YoriLibShCheckForDeviceNameAndDuplicate(
          how to execute a single program.
  */
 __success(return > 0)
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibShParseCmdContextToExecContext(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
-    __in DWORD InitialArgument,
+    __in YORI_ALLOC_SIZE_T InitialArgument,
     __out PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __out_opt PBOOL CurrentArgIsForProgram,
-    __out_opt PDWORD CurrentArgIndex,
-    __out_opt PDWORD CurrentArgOffset
+    __out_opt PBOOLEAN CurrentArgIsForProgram,
+    __out_opt PYORI_ALLOC_SIZE_T CurrentArgIndex,
+    __out_opt PYORI_ALLOC_SIZE_T CurrentArgOffset
     )
 {
-    DWORD Count;
-    BOOL RemoveThisArg;
-    BOOL EndOfExpression;
-    DWORD ArgumentsConsumed = 0;
-    DWORD CharOffset;
+    YORI_ALLOC_SIZE_T Count;
+    BOOLEAN RemoveThisArg;
+    BOOLEAN EndOfExpression;
+    YORI_ALLOC_SIZE_T ArgumentsConsumed = 0;
+    YORI_ALLOC_SIZE_T CharOffset;
     PYORI_STRING ThisArg;
     PYORI_STRING ExecContextRedirectString;
 
@@ -2110,20 +2110,20 @@ YoriLibShParseCmdContextToExecPlan(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __out PYORI_LIBSH_EXEC_PLAN ExecPlan,
     __out_opt PYORI_LIBSH_SINGLE_EXEC_CONTEXT* CurrentExecContext,
-    __out_opt PBOOL CurrentArgIsForProgram,
-    __out_opt PDWORD CurrentArgIndex,
-    __out_opt PDWORD CurrentArgOffset
+    __out_opt PBOOLEAN CurrentArgIsForProgram,
+    __out_opt PYORI_ALLOC_SIZE_T CurrentArgIndex,
+    __out_opt PYORI_ALLOC_SIZE_T CurrentArgOffset
     )
 {
-    DWORD CurrentArg = 0;
-    DWORD ArgsConsumed;
-    DWORD ArgOfLastOperatorIndex = 0;
+    YORI_ALLOC_SIZE_T CurrentArg = 0;
+    YORI_ALLOC_SIZE_T ArgsConsumed;
+    YORI_ALLOC_SIZE_T ArgOfLastOperatorIndex = 0;
     PYORI_LIBSH_SINGLE_EXEC_CONTEXT ThisProgram;
     PYORI_LIBSH_SINGLE_EXEC_CONTEXT PreviousProgram = NULL;
-    BOOL LocalCurrentArgIsForProgram;
-    BOOL FoundProgramMatch;
-    DWORD LocalCurrentArgIndex;
-    DWORD LocalCurrentArgOffset;
+    BOOLEAN LocalCurrentArgIsForProgram;
+    BOOLEAN FoundProgramMatch;
+    YORI_ALLOC_SIZE_T LocalCurrentArgIndex;
+    YORI_ALLOC_SIZE_T LocalCurrentArgOffset;
 
     if (CmdContext->ArgC == 0) {
         return FALSE;
@@ -2290,7 +2290,7 @@ YoriLibShParseCmdContextToExecPlan(
 
         ExecPlan->NumberCommands++;
         PreviousProgram = ThisProgram;
-        CurrentArg += ArgsConsumed;
+        CurrentArg = CurrentArg + ArgsConsumed;
 
         while (CurrentArg < CmdContext->ArgC &&
                YoriLibShIsArgumentProgramSeperator(&CmdContext->ArgV[CurrentArg], FALSE)) {
@@ -2381,26 +2381,26 @@ typedef struct _YORI_LIBSH_BACKQUOTE_ENTRY {
      member compared to the master string, but keeping it in integer form
      is convenient.
      */
-    DWORD StartingOffset;
+    YORI_ALLOC_SIZE_T StartingOffset;
 
     /**
      Indicates the level of nesting of this match.  Higher numbers indicate
      more nesting and should be executed earlier.
      */
-    DWORD TreeDepth;
+    YORI_ALLOC_SIZE_T TreeDepth;
 
     /**
      Set to TRUE if this is a new style entry, aka $(foo) form.  Matches
      such as `foo` will have this be FALSE.
      */
-    BOOL NewStyleMatch;
+    BOOLEAN NewStyleMatch;
 
     /**
      Set to TRUE to indicate this entry has found an opening and closing
      operator, and the string is updated to contain the contents in
      between.
      */
-    BOOL Terminated;
+    BOOLEAN Terminated;
 
     /**
      Set to TRUE if this entry has been closed implicitly by encountering
@@ -2408,7 +2408,7 @@ typedef struct _YORI_LIBSH_BACKQUOTE_ENTRY {
      something that can be executed, but it is recorded for the benefit
      of tab completion.
      */
-    BOOL Abandoned;
+    BOOLEAN Abandoned;
 } YORI_LIBSH_BACKQUOTE_ENTRY, *PYORI_LIBSH_BACKQUOTE_ENTRY;
 
 
@@ -2429,17 +2429,17 @@ typedef struct _YORI_LIBSH_BACKQUOTE_CONTEXT {
     /**
      The number of elements within the tree.
      */
-    DWORD MatchCount;
+    YORI_ALLOC_SIZE_T MatchCount;
 
     /**
      The maximum depth of any entry within the tree.
      */
-    DWORD MaxDepth;
+    YORI_ALLOC_SIZE_T MaxDepth;
 
     /**
      The current depth of the tree (number of opens minus number of closes)
      */
-    DWORD CurrentDepth;
+    YORI_ALLOC_SIZE_T CurrentDepth;
 } YORI_LIBSH_BACKQUOTE_CONTEXT, *PYORI_LIBSH_BACKQUOTE_CONTEXT;
 
 /**
@@ -2497,8 +2497,8 @@ PYORI_LIBSH_BACKQUOTE_ENTRY
 YoriLibShAllocateBackquoteEntry(
     __in PYORI_LIBSH_BACKQUOTE_CONTEXT BackquoteContext,
     __in PYORI_STRING CompleteString,
-    __in DWORD Offset,
-    __in BOOL NewStyleMatch
+    __in YORI_ALLOC_SIZE_T Offset,
+    __in BOOLEAN NewStyleMatch
     )
 {
     PYORI_LIBSH_BACKQUOTE_ENTRY BackquoteEntry;
@@ -2553,8 +2553,8 @@ YoriLibShAllocateBackquoteEntry(
 PYORI_LIBSH_BACKQUOTE_ENTRY
 YoriLibShTerminateMatchingBackquoteEntry(
     __in PYORI_LIBSH_BACKQUOTE_CONTEXT BackquoteContext,
-    __in DWORD Offset,
-    __in BOOL NewStyleMatch
+    __in YORI_ALLOC_SIZE_T Offset,
+    __in BOOLEAN NewStyleMatch
     )
 {
 
@@ -2642,7 +2642,7 @@ YoriLibShParseBackquoteSubstrings(
     )
 {
     PYORI_LIBSH_BACKQUOTE_ENTRY Entry;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     BOOLEAN QuoteOpen;
 
     YoriLibInitializeListHead(&BackquoteContext->MatchList);
@@ -2732,13 +2732,13 @@ BOOL
 YoriLibShFindNextBackquoteSubstring(
     __in PYORI_STRING String,
     __out PYORI_STRING CurrentSubset,
-    __out PDWORD CharsInPrefix
+    __out PYORI_ALLOC_SIZE_T CharsInPrefix
     )
 {
     YORI_LIBSH_BACKQUOTE_CONTEXT BackquoteContext;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_LIBSH_BACKQUOTE_ENTRY BackquoteEntry;
-    DWORD SeekingDepth;
+    YORI_ALLOC_SIZE_T SeekingDepth;
     if (!YoriLibShParseBackquoteSubstrings(String, &BackquoteContext)) {
         return FALSE;
     }
@@ -2785,14 +2785,14 @@ __success(return)
 BOOL
 YoriLibShFindBestBackquoteSubstringAtOffset(
     __in PYORI_STRING String,
-    __in DWORD StringOffset,
+    __in YORI_ALLOC_SIZE_T StringOffset,
     __out PYORI_STRING CurrentSubset
     )
 {
     YORI_LIBSH_BACKQUOTE_CONTEXT BackquoteContext;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_LIBSH_BACKQUOTE_ENTRY BackquoteEntry;
-    DWORD SeekingDepth;
+    YORI_ALLOC_SIZE_T SeekingDepth;
 
     if (!YoriLibShParseBackquoteSubstrings(String, &BackquoteContext)) {
         return FALSE;

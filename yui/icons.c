@@ -172,7 +172,7 @@ YuiIconCacheCreateOrReference(
     PYUI_MENU_SHARED_ICON Icon;
     DWORD IconHeight;
     DWORD IconWidth;
-    DWORD FileNameLength;
+    YORI_ALLOC_SIZE_T FileNameLength;
 
     Icon = YuiIconCacheLookupAndReference(FileName, IconIndex, LargeIcon);
     if (Icon != NULL) {

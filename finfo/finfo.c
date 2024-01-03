@@ -90,7 +90,7 @@ typedef BOOL (* PFINFO_COLLECT_FN)(PYORI_FILE_INFO, PWIN32_FIND_DATA, PYORI_STRI
  Specifies a pointer to a function which can output a particular piece of file
  information.
  */
-typedef DWORD (* PFINFO_OUTPUT_FN)(PFINFO_CONTEXT, PYORI_STRING);
+typedef YORI_ALLOC_SIZE_T (* PFINFO_OUTPUT_FN)(PFINFO_CONTEXT, PYORI_STRING);
 
 /**
  Output a 64 bit integer.
@@ -107,10 +107,10 @@ typedef DWORD (* PFINFO_OUTPUT_FN)(PFINFO_CONTEXT, PYORI_STRING);
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputLargeInteger(
     __in LARGE_INTEGER LargeInt,
-    __in DWORD NumberBase,
+    __in WORD NumberBase,
     __inout PYORI_STRING OutputString
     )
 {
@@ -143,7 +143,7 @@ FInfoOutputLargeInteger(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAccessDateYear(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -168,7 +168,7 @@ FInfoOutputAccessDateYear(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAccessDateMon(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -193,7 +193,7 @@ FInfoOutputAccessDateMon(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAccessDateDay(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -218,7 +218,7 @@ FInfoOutputAccessDateDay(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAccessTimeHour(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -243,7 +243,7 @@ FInfoOutputAccessTimeHour(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAccessTimeMin(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -268,7 +268,7 @@ FInfoOutputAccessTimeMin(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAccessTimeSec(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -294,7 +294,7 @@ FInfoOutputAccessTimeSec(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAllocatedRangeCount(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -316,7 +316,7 @@ FInfoOutputAllocatedRangeCount(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAllocationSize(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -338,7 +338,7 @@ FInfoOutputAllocationSize(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputAllocationSizeHex(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -360,7 +360,7 @@ FInfoOutputAllocationSizeHex(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCaseSensitivity(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -385,7 +385,7 @@ FInfoOutputCaseSensitivity(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCompressedSize(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -407,7 +407,7 @@ FInfoOutputCompressedSize(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCompressedSizeHex(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -429,7 +429,7 @@ FInfoOutputCompressedSizeHex(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCreateDateYear(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -454,7 +454,7 @@ FInfoOutputCreateDateYear(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCreateDateMon(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -479,7 +479,7 @@ FInfoOutputCreateDateMon(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCreateDateDay(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -504,7 +504,7 @@ FInfoOutputCreateDateDay(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCreateTimeHour(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -529,7 +529,7 @@ FInfoOutputCreateTimeHour(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCreateTimeMin(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -554,7 +554,7 @@ FInfoOutputCreateTimeMin(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputCreateTimeSec(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -579,13 +579,13 @@ FInfoOutputCreateTimeSec(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputDescription(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
     )
 {
-    DWORD DescriptionLength = _tcslen(Context->Entry.Description);
+    YORI_ALLOC_SIZE_T DescriptionLength = (YORI_ALLOC_SIZE_T)_tcslen(Context->Entry.Description);
     if (OutputString->LengthAllocated >= DescriptionLength) {
         memcpy(OutputString->StartOfString, Context->Entry.Description, DescriptionLength * sizeof(TCHAR));
         OutputString->LengthInChars = DescriptionLength;
@@ -606,16 +606,16 @@ FInfoOutputDescription(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputExt(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
     )
 {
-    DWORD ExtLen = 0;
+    YORI_ALLOC_SIZE_T ExtLen = 0;
 
     if (Context->Entry.Extension != NULL) {
-        ExtLen = _tcslen(Context->Entry.Extension);
+        ExtLen = (YORI_ALLOC_SIZE_T)_tcslen(Context->Entry.Extension);
 
         if (OutputString->LengthAllocated >= ExtLen) {
             memcpy(OutputString->StartOfString, Context->Entry.Extension, ExtLen * sizeof(TCHAR));
@@ -638,7 +638,7 @@ FInfoOutputExt(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputFileId(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -660,7 +660,7 @@ FInfoOutputFileId(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputFileIdHex(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -682,13 +682,13 @@ FInfoOutputFileIdHex(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputFileVersionString(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
     )
 {
-    DWORD FileVersionLength = _tcslen(Context->Entry.FileVersionString);
+    YORI_ALLOC_SIZE_T FileVersionLength = (YORI_ALLOC_SIZE_T)_tcslen(Context->Entry.FileVersionString);
     if (OutputString->LengthAllocated >= FileVersionLength) {
         memcpy(OutputString->StartOfString, Context->Entry.FileVersionString, FileVersionLength * sizeof(TCHAR));
         OutputString->LengthInChars = FileVersionLength;
@@ -709,7 +709,7 @@ FInfoOutputFileVersionString(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputFragmentCount(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -731,7 +731,7 @@ FInfoOutputFragmentCount(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputLinkCount(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -756,7 +756,7 @@ FInfoOutputLinkCount(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputName(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -782,7 +782,7 @@ FInfoOutputName(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputOsVerMajor(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -807,7 +807,7 @@ FInfoOutputOsVerMajor(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputOsVerMinor(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -832,13 +832,13 @@ FInfoOutputOsVerMinor(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputOwner(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
     )
 {
-    DWORD OwnerLength = _tcslen(Context->Entry.Owner);
+    YORI_ALLOC_SIZE_T OwnerLength = (YORI_ALLOC_SIZE_T)_tcslen(Context->Entry.Owner);
     if (OutputString->LengthAllocated >= OwnerLength) {
         memcpy(OutputString->StartOfString, Context->Entry.Owner, OwnerLength * sizeof(TCHAR));
         OutputString->LengthInChars = OwnerLength;
@@ -859,7 +859,7 @@ FInfoOutputOwner(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputReparseTag(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -884,7 +884,7 @@ FInfoOutputReparseTag(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputReparseTagHex(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -909,13 +909,13 @@ FInfoOutputReparseTagHex(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputShortName(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
     )
 {
-    DWORD NameLength = _tcslen(Context->Entry.ShortFileName);
+    YORI_ALLOC_SIZE_T NameLength = (YORI_ALLOC_SIZE_T)_tcslen(Context->Entry.ShortFileName);
     if (OutputString->LengthAllocated >= NameLength) {
         memcpy(OutputString->StartOfString, Context->Entry.FileName, NameLength * sizeof(TCHAR));
         OutputString->LengthInChars = NameLength;
@@ -936,7 +936,7 @@ FInfoOutputShortName(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputSize(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -958,7 +958,7 @@ FInfoOutputSize(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputSizeHex(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -980,7 +980,7 @@ FInfoOutputSizeHex(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputStreamCount(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1005,7 +1005,7 @@ FInfoOutputStreamCount(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputUsn(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1027,7 +1027,7 @@ FInfoOutputUsn(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputUsnHex(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1049,7 +1049,7 @@ FInfoOutputUsnHex(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputWriteDateYear(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1074,7 +1074,7 @@ FInfoOutputWriteDateYear(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputWriteDateMon(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1099,7 +1099,7 @@ FInfoOutputWriteDateMon(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputWriteDateDay(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1124,7 +1124,7 @@ FInfoOutputWriteDateDay(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputWriteTimeHour(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1149,7 +1149,7 @@ FInfoOutputWriteTimeHour(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputWriteTimeMin(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1174,7 +1174,7 @@ FInfoOutputWriteTimeMin(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoOutputWriteTimeSec(
     __in PFINFO_CONTEXT Context,
     __inout PYORI_STRING OutputString
@@ -1354,7 +1354,7 @@ FINFO_KNOWN_VARIABLE FInfoKnownVariables[] = {
 BOOL
 FInfoHelp(VOID)
 {
-    DWORD Count;
+    YORI_ALLOC_SIZE_T Count;
     TCHAR NameWithQualifiers[32];
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FInfo %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
@@ -1385,15 +1385,15 @@ FInfoHelp(VOID)
  @return The number of characters populated or number of characters required
          to successfully populate the variable contents.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 FInfoExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD Index;
-    DWORD CharsNeeded = 0;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T CharsNeeded = 0;
     PFINFO_CONTEXT FInfoContext = (PFINFO_CONTEXT)Context;
 
     for (Index = 0; Index < sizeof(FInfoKnownVariables)/sizeof(FInfoKnownVariables[0]); Index++) {
@@ -1516,17 +1516,17 @@ TCHAR FInfoDefaultFormatString[] =
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL Recursive = FALSE;
-    BOOL BasicEnumeration = FALSE;
-    BOOL ReturnDirectories = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN Recursive = FALSE;
+    BOOLEAN BasicEnumeration = FALSE;
+    BOOLEAN ReturnDirectories = FALSE;
     FINFO_CONTEXT FInfoContext;
     YORI_STRING Arg;
 

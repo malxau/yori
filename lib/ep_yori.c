@@ -42,7 +42,7 @@
  The entrypoint function that YoriLib based applications commence execution
  from.
  */
-DWORD CONSOLE_USER_ENTRYPOINT(DWORD ArgC, YORI_STRING ArgV[]);
+DWORD CONSOLE_USER_ENTRYPOINT(YORI_ALLOC_SIZE_T ArgC, YORI_STRING ArgV[]);
 
 /**
  The entrypoint function that the Windows loader will commence execution from.
@@ -50,14 +50,14 @@ DWORD CONSOLE_USER_ENTRYPOINT(DWORD ArgC, YORI_STRING ArgV[]);
 VOID __cdecl CONSOLE_CRT_ENTRYPOINT(VOID)
 {
     PYORI_STRING ArgV;
-    DWORD ArgC;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T ArgC;
+    YORI_ALLOC_SIZE_T Index;
     DWORD ExitCode;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
 
-    ArgV = YoriLibCmdlineToArgcArgv(GetCommandLine(), (DWORD)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(GetCommandLine(), YORI_MAX_ALLOC_SIZE, FALSE, &ArgC);
     if (ArgV == NULL) {
         ExitProcess(EXIT_FAILURE);
     }

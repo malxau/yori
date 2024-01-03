@@ -98,7 +98,7 @@ SdirCollectSummary(
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileAccessDate (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -124,7 +124,7 @@ SdirDisplayFileAccessDate (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileAccessTime (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -150,7 +150,7 @@ SdirDisplayFileAccessTime (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayAllocatedRangeCount (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -193,7 +193,7 @@ SdirDisplayAllocatedRangeCount (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayAllocationSize (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -219,7 +219,7 @@ SdirDisplayAllocationSize (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayArch (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -287,7 +287,7 @@ SdirDisplayArch (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayCompressionAlgorithm (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -355,7 +355,7 @@ SdirDisplayCompressionAlgorithm (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayCaseSensitivity (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -393,7 +393,7 @@ SdirDisplayCaseSensitivity (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayCompressedFileSize (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -419,15 +419,15 @@ SdirDisplayCompressedFileSize (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayDescription (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in PYORI_FILE_INFO Entry
     )
 {
-    ULONG CurrentChar = 0;
-    DWORD ShortLength;
+    YORI_ALLOC_SIZE_T CurrentChar = 0;
+    YORI_ALLOC_SIZE_T ShortLength;
 
     if (Buffer) {
         SdirPasteStrAndPad(&Buffer[CurrentChar], NULL, Attributes, 0, 1);
@@ -435,7 +435,7 @@ SdirDisplayDescription (
     CurrentChar++;
 
     if (Buffer) {
-        ShortLength = (DWORD)_tcslen(Entry->Description);
+        ShortLength = (YORI_ALLOC_SIZE_T)_tcslen(Entry->Description);
 
         SdirPasteStrAndPad(&Buffer[CurrentChar], Entry->Description, Attributes, ShortLength, sizeof(Entry->Description)/sizeof(Entry->Description[0]) - 1);
     }
@@ -459,7 +459,7 @@ SdirDisplayDescription (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayEffectivePermissions (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -467,10 +467,10 @@ SdirDisplayEffectivePermissions (
     )
 {
     TCHAR StrAtts[32];
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
 
     PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
-    DWORD PairCount;
+    YORI_ALLOC_SIZE_T PairCount;
 
     YoriLibGetFilePermissionPairs(&PairCount, &Pairs);
 
@@ -507,7 +507,7 @@ SdirDisplayEffectivePermissions (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileCreateDate (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -533,7 +533,7 @@ SdirDisplayFileCreateDate (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileCreateTime (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -559,7 +559,7 @@ SdirDisplayFileCreateTime (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileAttributes (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -567,9 +567,9 @@ SdirDisplayFileAttributes (
     )
 {
     TCHAR StrAtts[32];
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
-    DWORD PairCount;
+    YORI_ALLOC_SIZE_T PairCount;
 
     YoriLibGetFileAttrPairs(&PairCount, &Pairs);
 
@@ -606,7 +606,7 @@ SdirDisplayFileAttributes (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileId (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -632,7 +632,7 @@ SdirDisplayFileId (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileSize (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -677,15 +677,15 @@ SdirDisplayFileSize (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileVersionString (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in PYORI_FILE_INFO Entry
     )
 {
-    ULONG CurrentChar = 0;
-    DWORD ShortLength;
+    YORI_ALLOC_SIZE_T CurrentChar = 0;
+    YORI_ALLOC_SIZE_T ShortLength;
 
     if (Buffer) {
         SdirPasteStrAndPad(&Buffer[CurrentChar], NULL, Attributes, 0, 1);
@@ -693,7 +693,7 @@ SdirDisplayFileVersionString (
     CurrentChar++;
 
     if (Buffer) {
-        ShortLength = (DWORD)_tcslen(Entry->FileVersionString);
+        ShortLength = (YORI_ALLOC_SIZE_T)_tcslen(Entry->FileVersionString);
 
         SdirPasteStrAndPad(&Buffer[CurrentChar], Entry->FileVersionString, Attributes, ShortLength, sizeof(Entry->FileVersionString)/sizeof(Entry->FileVersionString[0]) - 1);
     }
@@ -718,7 +718,7 @@ SdirDisplayFileVersionString (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFragmentCount (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -761,7 +761,7 @@ SdirDisplayFragmentCount (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayLinkCount (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -797,7 +797,7 @@ SdirDisplayLinkCount (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayObjectId (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -827,7 +827,7 @@ SdirDisplayObjectId (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayOsVersion (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -868,15 +868,15 @@ SdirDisplayOsVersion (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayOwner (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in PYORI_FILE_INFO Entry
     )
 {
-    ULONG CurrentChar = 0;
-    DWORD ShortLength;
+    YORI_ALLOC_SIZE_T CurrentChar = 0;
+    YORI_ALLOC_SIZE_T ShortLength;
 
     if (Buffer) {
         SdirPasteStrAndPad(&Buffer[CurrentChar], NULL, Attributes, 0, 1);
@@ -884,7 +884,7 @@ SdirDisplayOwner (
     CurrentChar++;
 
     if (Buffer) {
-        ShortLength = (DWORD)_tcslen(Entry->Owner);
+        ShortLength = (YORI_ALLOC_SIZE_T)_tcslen(Entry->Owner);
 
         SdirPasteStrAndPad(&Buffer[CurrentChar], Entry->Owner, Attributes, ShortLength, sizeof(Entry->Owner)/sizeof(Entry->Owner[0]) - 1);
     }
@@ -908,7 +908,7 @@ SdirDisplayOwner (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayReparseTag (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -938,15 +938,15 @@ SdirDisplayReparseTag (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayShortName (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in PYORI_FILE_INFO Entry
     )
 {
-    ULONG CurrentChar = 0;
-    DWORD ShortLength;
+    YORI_ALLOC_SIZE_T CurrentChar = 0;
+    YORI_ALLOC_SIZE_T ShortLength;
 
     //
     //  Just because we like special cases, add a space only if both
@@ -961,7 +961,7 @@ SdirDisplayShortName (
     }
 
     if (Buffer) {
-        ShortLength = (DWORD)_tcslen(Entry->ShortFileName);
+        ShortLength = (YORI_ALLOC_SIZE_T)_tcslen(Entry->ShortFileName);
 
         SdirPasteStrAndPad(&Buffer[CurrentChar], Entry->ShortFileName, Attributes, ShortLength, 12);
     }
@@ -985,7 +985,7 @@ SdirDisplayShortName (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplaySubsystem (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -1068,7 +1068,7 @@ SdirDisplaySubsystem (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayStreamCount (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -1104,7 +1104,7 @@ SdirDisplayStreamCount (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayUsn(
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -1130,7 +1130,7 @@ SdirDisplayUsn(
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayVersion(
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -1164,56 +1164,54 @@ SdirDisplayVersion(
 
  @return The number of characters written to the output device.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplaySummary(
     __in YORILIB_COLOR_ATTRIBUTES DefaultAttributes
     )
 {
     SDIR_FMTCHAR Buffer[200];
     TCHAR Str[100];
-    DWORD Len;
+    YORI_ALLOC_SIZE_T Len;
     LARGE_INTEGER Size;
-    ULONG CurrentChar = 0;
+    YORI_ALLOC_SIZE_T CurrentChar = 0;
 
-    YoriLibSPrintfS(Str, sizeof(Str)/sizeof(Str[0]), _T(" %i "), (int)Summary->NumFiles);
-    Len = (DWORD)_tcslen(Str);
+    Len = YoriLibSPrintfS(Str, sizeof(Str)/sizeof(Str[0]), _T(" %i "), (int)Summary->NumFiles);
     SdirPasteStr(&Buffer[CurrentChar], Str, Opts->FtNumberFiles.HighlightColor, Len);
-    CurrentChar += Len;
+    CurrentChar = CurrentChar + Len;
 
     SdirPasteStr(&Buffer[CurrentChar], _T("files,"), DefaultAttributes, 6);
-    CurrentChar += 6;
+    CurrentChar = CurrentChar + 6;
 
-    YoriLibSPrintfS(Str, sizeof(Str)/sizeof(Str[0]), _T(" %i "), (int)Summary->NumDirs);
-    Len = (DWORD)_tcslen(Str);
+    Len = YoriLibSPrintfS(Str, sizeof(Str)/sizeof(Str[0]), _T(" %i "), (int)Summary->NumDirs);
     SdirPasteStr(&Buffer[CurrentChar], Str, Opts->FtNumberFiles.HighlightColor, Len);
-    CurrentChar += Len;
+    CurrentChar = CurrentChar + Len;
 
     SdirPasteStr(&Buffer[CurrentChar], _T("dirs,"), DefaultAttributes, 5);
-    CurrentChar += 5;
+    CurrentChar = CurrentChar + 5;
 
     Size.HighPart = 0;
     SdirFileSizeFromLargeInt(&Size) = Summary->TotalSize;
 
-    CurrentChar += SdirDisplayGenericSize(&Buffer[CurrentChar], Opts->FtFileSize.HighlightColor, &Size);
+    CurrentChar = CurrentChar + SdirDisplayGenericSize(&Buffer[CurrentChar], Opts->FtFileSize.HighlightColor, &Size);
     SdirPasteStr(&Buffer[CurrentChar], _T(" used,"), DefaultAttributes, 6);
-    CurrentChar += 6;
+    CurrentChar = CurrentChar + 6;
 
     if (Opts->FtCompressedFileSize.Flags & SDIR_FEATURE_DISPLAY) {
         Size.HighPart = 0;
         SdirFileSizeFromLargeInt(&Size) = Summary->CompressedSize;
 
-        CurrentChar += SdirDisplayGenericSize(&Buffer[CurrentChar], Opts->FtCompressedFileSize.HighlightColor, &Size);
+        CurrentChar = CurrentChar + SdirDisplayGenericSize(&Buffer[CurrentChar], Opts->FtCompressedFileSize.HighlightColor, &Size);
         SdirPasteStr(&Buffer[CurrentChar], _T(" compressed,"), DefaultAttributes, 12);
-        CurrentChar += 12;
+        CurrentChar = CurrentChar + 12;
     }
 
-    CurrentChar += SdirDisplayGenericSize(&Buffer[CurrentChar], Opts->FtFileSize.HighlightColor, &Summary->VolumeSize);
+    CurrentChar = CurrentChar + SdirDisplayGenericSize(&Buffer[CurrentChar], Opts->FtFileSize.HighlightColor, &Summary->VolumeSize);
     SdirPasteStr(&Buffer[CurrentChar], _T(" vol size,"), DefaultAttributes, 10);
-    CurrentChar += 10;
+    CurrentChar = CurrentChar + 10;
 
-    CurrentChar += SdirDisplayGenericSize(&Buffer[CurrentChar], Opts->FtFileSize.HighlightColor, &Summary->FreeSize);
+    CurrentChar = CurrentChar + SdirDisplayGenericSize(&Buffer[CurrentChar], Opts->FtFileSize.HighlightColor, &Summary->FreeSize);
     SdirPasteStr(&Buffer[CurrentChar], _T(" vol free"), DefaultAttributes, 9);
-    CurrentChar += 9;
+    CurrentChar = CurrentChar + 9;
 
     SdirWrite(Buffer, CurrentChar);
 
@@ -1236,7 +1234,7 @@ SdirDisplaySummary(
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileWriteDate (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -1262,7 +1260,7 @@ SdirDisplayFileWriteDate (
  @return The number of characters written to the buffer, or the number of
          characters required to hold the data if the buffer is not present.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileWriteTime (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -1527,7 +1525,7 @@ SdirOptions[] = {
  This exists so other modules can know about how many things there are
  without having access to know what all of the things are.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 SdirGetNumSdirOptions(VOID)
 {
     return sizeof(SdirOptions)/sizeof(SdirOptions[0]);
@@ -1575,7 +1573,7 @@ SdirExec[] = {
  This exists so other modules can know about how many things there are to do
  without having access to know what all of the things are.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 SdirGetNumSdirExec(VOID)
 {
     return sizeof(SdirExec)/sizeof(SdirExec[0]);

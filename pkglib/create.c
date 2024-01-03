@@ -104,7 +104,7 @@ YoriPkgCreateBinaryPackage(
     YORI_STRING FileNameInCab;
     PVOID LineContext = NULL;
     HANDLE FileListSource;
-    DWORD Count;
+    YORI_ALLOC_SIZE_T Count;
 
     PVOID CabHandle;
 
@@ -137,7 +137,7 @@ YoriPkgCreateBinaryPackage(
         return FALSE;
     }
 
-    TempFile.LengthInChars = _tcslen(TempFile.StartOfString);
+    TempFile.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(TempFile.StartOfString);
     YoriLibFreeStringContents(&TempPath);
 
     DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);
@@ -441,8 +441,8 @@ YoriPkgCreateSourceFileFoundCallback(
     PYORIPKG_CREATE_SOURCE_CONTEXT CreateSourceContext = (PYORIPKG_CREATE_SOURCE_CONTEXT)Context;
     YORI_STRING RelativePathFromSource;
     YORI_STRING PathInCab;
-    DWORD SlashesFound;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T SlashesFound;
+    YORI_ALLOC_SIZE_T Index;
 
     UNREFERENCED_PARAMETER(FileInfo);
 
@@ -538,7 +538,7 @@ YoriPkgCreateSourceEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -605,7 +605,7 @@ YoriPkgCreateSourcePackage(
         return FALSE;
     }
 
-    TempFile.LengthInChars = _tcslen(TempFile.StartOfString);
+    TempFile.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(TempFile.StartOfString);
     YoriLibFreeStringContents(&TempPath);
 
     DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);

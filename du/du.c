@@ -140,13 +140,13 @@ typedef struct _DU_CONTEXT {
      Index of the last element in the directory stack that has been operated
      on.
      */
-    DWORD StackIndex;
+    YORI_ALLOC_SIZE_T StackIndex;
 
     /**
      The number of allocated elements in the DirStack array.  Will be zero
      if the array has not been allocated yet.
      */
-    DWORD StackAllocated;
+    YORI_ALLOC_SIZE_T StackAllocated;
 
     /**
      The maximum depth to display.  This is a user specified value allowing
@@ -158,28 +158,28 @@ typedef struct _DU_CONTEXT {
     /**
      Round file size up to allocation unit
      */
-    BOOL AllocationSize;
+    BOOLEAN AllocationSize;
 
     /**
      Display compressed file size, as opposed to logical file size.
      */
-    BOOL CompressedFileSize;
+    BOOLEAN CompressedFileSize;
 
     /**
      Average size across multiple hard links.
      */
-    BOOL AverageHardLinkSize;
+    BOOLEAN AverageHardLinkSize;
 
     /**
      Count space used by alternate data streams on the file.
      */
-    BOOL IncludeNamedStreams;
+    BOOLEAN IncludeNamedStreams;
 
     /**
      Count WIM backed files as zero size, because the space is accounted for
      as the WIM file itself.
      */
-    BOOL WimBackedFilesAsZero;
+    BOOLEAN WimBackedFilesAsZero;
 
     /**
      The color to display file sizes in.
@@ -219,7 +219,7 @@ DuCleanupContext(
     __in PDU_CONTEXT DuContext
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     for (Index = 0; Index < DuContext->StackAllocated; Index++) {
         YoriLibFreeStringContents(&DuContext->DirStack[Index].DirectoryName);
@@ -375,7 +375,7 @@ DuReportAndCloseAllActiveStacks(
     __in DWORD MinDepthToDisplay
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     Index = DuContext->StackIndex;
     if (Index >= DuContext->StackAllocated) {
         ASSERT(Index == 0);
@@ -655,11 +655,25 @@ DuFileFoundCallback(
 {
     PDU_CONTEXT DuContext = (PDU_CONTEXT)Context;
     LPTSTR FilePart;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
+
+    //
+    //  Depth can only describe the number of path seperators in a single
+    //  string, so cannot exceed the allocation granularity of the system
+    //
+
+    ASSERT(Depth < YORI_MAX_ALLOC_SIZE);
 
     if (Depth >= DuContext->StackAllocated) {
         PDU_DIRECTORY_STACK NewStack;
-        NewStack = YoriLibMalloc((Depth + 8) * sizeof(DU_DIRECTORY_STACK));
+        DWORD BytesRequested;
+        YORI_ALLOC_SIZE_T BytesToAllocate;
+        BytesRequested = (Depth + 8) * sizeof(DU_DIRECTORY_STACK);
+        BytesToAllocate = YoriLibMaximumAllocationInRange(BytesRequested, BytesRequested);
+        if (BytesToAllocate == 0) {
+            return FALSE;
+        }
+        NewStack = YoriLibMalloc(BytesToAllocate);
         if (NewStack == NULL) {
             return FALSE;
         }
@@ -677,7 +691,7 @@ DuFileFoundCallback(
         }
 
         DuContext->DirStack = NewStack;
-        DuContext->StackAllocated = Depth + 8;
+        DuContext->StackAllocated = (YORI_ALLOC_SIZE_T)Depth + 8;
     }
 
     //
@@ -688,7 +702,7 @@ DuFileFoundCallback(
     if (DuContext->StackIndex > 0 || DuContext->DirStack[0].DirectoryName.LengthInChars > 0) {
         Index = DuContext->StackIndex;
         while (TRUE) {
-            DWORD StackDirLength;
+            YORI_ALLOC_SIZE_T StackDirLength;
             StackDirLength = DuContext->DirStack[Index].DirectoryName.LengthInChars;
             if (Depth >= Index &&
                 YoriLibCompareStringCount(FilePath, &DuContext->DirStack[Index].DirectoryName, StackDirLength) == 0 &&
@@ -719,7 +733,7 @@ DuFileFoundCallback(
         YORI_STRING ThisDirName;
         YoriLibInitEmptyString(&ThisDirName);
         ThisDirName.StartOfString = FilePath->StartOfString;
-        ThisDirName.LengthInChars = (DWORD)(FilePart - FilePath->StartOfString);
+        ThisDirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - FilePath->StartOfString);
         if (ThisDirName.LengthInChars == 6) {
             ThisDirName.LengthInChars++;
             if (!YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ThisDirName)) {
@@ -727,7 +741,7 @@ DuFileFoundCallback(
             }
         }
 
-        Index = Depth;
+        Index = (YORI_ALLOC_SIZE_T)Depth;
         while (TRUE) {
             if (DuContext->DirStack[Index].DirectoryName.LengthInChars > 0) {
 
@@ -747,7 +761,7 @@ DuFileFoundCallback(
             Index--;
             FilePart = YoriLibFindRightMostCharacter(&ThisDirName, '\\');
             ASSERT(FilePart != NULL);
-            ThisDirName.LengthInChars = (DWORD)(FilePart - ThisDirName.StartOfString);
+            ThisDirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - ThisDirName.StartOfString);
             if (ThisDirName.LengthInChars == 6) {
                 ThisDirName.LengthInChars++;
                 if (!YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ThisDirName)) {
@@ -757,7 +771,7 @@ DuFileFoundCallback(
         }
     }
 
-    DuContext->StackIndex = Depth;
+    DuContext->StackIndex = (YORI_ALLOC_SIZE_T)Depth;
     DuContext->DirStack[Depth].ObjectsFoundThisDirectory++;
 
     if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
@@ -823,15 +837,15 @@ DuFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL BasicEnumeration = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN BasicEnumeration = FALSE;
     DU_CONTEXT DuContext;
     YORI_STRING Combined;
     YORI_STRING Arg;
@@ -873,7 +887,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 if (i + 1 < ArgC) {
                     LONGLONG Depth;
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Depth, &CharsConsumed);
                     if (CharsConsumed > 0) {
                         DuContext.MaximumDepthToDisplay = (DWORD)Depth;

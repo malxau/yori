@@ -356,7 +356,7 @@ YoriPkgBackupPackage(
     for (FileIndex = 1; FileIndex <= Context->FileCount; FileIndex++) {
         YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
 
-        IniValue.LengthInChars =
+        IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(Context->PackageName.StartOfString,
                                                   FileIndexString,
                                                   _T(""),
@@ -624,7 +624,7 @@ YoriPkgAddExistingFilesToPendingPackages(
     LPTSTR Equals;
     YORI_STRING PkgNameOnly;
     YORI_STRING IniValue;
-    DWORD LineLength;
+    YORI_ALLOC_SIZE_T LineLength;
     DWORD FileCount;
     DWORD FileIndex;
     TCHAR FileIndexString[16];
@@ -644,7 +644,11 @@ YoriPkgAddExistingFilesToPendingPackages(
         return FALSE;
     }
 
-    InstalledSection.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile->StartOfString);
+    InstalledSection.LengthInChars = (YORI_ALLOC_SIZE_T)
+        DllKernel32.pGetPrivateProfileSectionW(_T("Installed"),
+                                               InstalledSection.StartOfString,
+                                               InstalledSection.LengthAllocated,
+                                               PkgIniFile->StartOfString);
 
     YoriLibInitEmptyString(&PkgNameOnly);
     ThisLine = InstalledSection.StartOfString;
@@ -652,9 +656,9 @@ YoriPkgAddExistingFilesToPendingPackages(
     while (*ThisLine != '\0') {
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
-        LineLength = _tcslen(ThisLine);
+        LineLength = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
         if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
         } else {
             PkgNameOnly.LengthInChars = LineLength;
         }
@@ -667,7 +671,7 @@ YoriPkgAddExistingFilesToPendingPackages(
         for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
             YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
 
-            IniValue.LengthInChars =
+            IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
                 DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
                                                       FileIndexString,
                                                       _T(""),
@@ -836,9 +840,9 @@ YoriPkgPreparePackageForInstall(
     YORI_STRING ReplacesList;
     YORI_STRING PkgInstalled;
     YORI_STRING PkgToReplace;
-    DWORD LineLength;
+    YORI_ALLOC_SIZE_T LineLength;
     LONGLONG RequiredBuildNumber;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LPTSTR ThisLine;
     LPTSTR Equals;
     PYORIPKG_BACKUP_PACKAGE BackupPackage;
@@ -912,7 +916,7 @@ YoriPkgPreparePackageForInstall(
     //
 
     YoriLibSPrintf(&TempPath.StartOfString[TempPath.LengthInChars], _T("%y"), &PkgInfoFile);
-    TempPath.LengthInChars += PkgInfoFile.LengthInChars;
+    TempPath.LengthInChars = TempPath.LengthInChars + PkgInfoFile.LengthInChars;
 
     if (!YoriPkgGetPackageInfo(&TempPath,
                                &PendingPackage->PackageName,
@@ -939,7 +943,7 @@ YoriPkgPreparePackageForInstall(
         goto Exit;
     }
 
-    PkgInstalled.LengthInChars =
+    PkgInstalled.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileStringW(_T("Installed"),
                                               PendingPackage->PackageName.StartOfString,
                                               _T(""),
@@ -1009,15 +1013,19 @@ YoriPkgPreparePackageForInstall(
     }
 
     YoriLibInitEmptyString(&PkgToReplace);
-    ReplacesList.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("Replaces"), ReplacesList.StartOfString, ReplacesList.LengthAllocated, TempPath.StartOfString);
+    ReplacesList.LengthInChars = (YORI_ALLOC_SIZE_T)
+        DllKernel32.pGetPrivateProfileSectionW(_T("Replaces"),
+                                               ReplacesList.StartOfString,
+                                               ReplacesList.LengthAllocated,
+                                               TempPath.StartOfString);
     ThisLine = ReplacesList.StartOfString;
 
     while (*ThisLine != '\0') {
-        LineLength = _tcslen(ThisLine);
+        LineLength = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
         PkgToReplace.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
-            PkgToReplace.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgToReplace.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
         } else {
             PkgToReplace.LengthInChars = LineLength;
         }
@@ -1028,7 +1036,7 @@ YoriPkgPreparePackageForInstall(
         //  is installed, and if so, back it up too
         //
 
-        PkgInstalled.LengthInChars =
+        PkgInstalled.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(_T("Installed"),
                                                   PkgToReplace.StartOfString,
                                                   _T(""),

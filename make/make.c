@@ -192,18 +192,18 @@ typedef enum _MAKE_PRIORITY {
 __success(return)
 BOOLEAN
 MakeBuildVariableValueString(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
-    __in DWORD StartIndex,
+    __in YORI_ALLOC_SIZE_T StartIndex,
     __out PYORI_STRING VariableName,
     __out_opt PYORI_STRING Value,
-    __out PDWORD EndIndex
+    __out PYORI_ALLOC_SIZE_T EndIndex
     )
 {
     PYORI_STRING ThisArg;
     LPTSTR Equals;
     YORI_STRING LocalValue;
-    DWORD EndArgIndex;
+    YORI_ALLOC_SIZE_T EndArgIndex;
 
     //
     //  Check if this argument is a variable=value pair
@@ -223,7 +223,7 @@ MakeBuildVariableValueString(
     YoriLibInitEmptyString(VariableName);
     YoriLibInitEmptyString(&LocalValue);
     VariableName->StartOfString = ThisArg->StartOfString;
-    VariableName->LengthInChars = (DWORD)(Equals - VariableName->StartOfString);
+    VariableName->LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - VariableName->StartOfString);
 
     LocalValue.StartOfString = Equals + 1;
     LocalValue.LengthInChars = ThisArg->LengthInChars - VariableName->LengthInChars - 1;
@@ -253,10 +253,10 @@ MakeBuildVariableValueString(
         EndQuote = YoriLibFindLeftMostCharacter(&Substring, '"');
         if (EndQuote != NULL) {
             LocalValue.StartOfString = Substring.StartOfString;
-            LocalValue.LengthInChars = (DWORD)(EndQuote - LocalValue.StartOfString);
+            LocalValue.LengthInChars = (YORI_ALLOC_SIZE_T)(EndQuote - LocalValue.StartOfString);
         } else {
-            DWORD ArgIndex;
-            DWORD CharsNeeded;
+            YORI_ALLOC_SIZE_T ArgIndex;
+            YORI_ALLOC_SIZE_T CharsNeeded;
 
             //
             //  Loop through the arguments looking for one with a quote.
@@ -278,7 +278,7 @@ MakeBuildVariableValueString(
                 for (ArgIndex = StartIndex + 1; ArgIndex < EndArgIndex; ArgIndex++) {
                     CharsNeeded = CharsNeeded + ArgV[ArgIndex].LengthInChars + 1;
                 }
-                CharsNeeded = CharsNeeded + (DWORD)(EndQuote - ThisArg->StartOfString) + 1;
+                CharsNeeded = CharsNeeded + (YORI_ALLOC_SIZE_T)(EndQuote - ThisArg->StartOfString) + 1;
 
                 if (Value != NULL) {
 
@@ -298,7 +298,7 @@ MakeBuildVariableValueString(
                     }
 
                     Substring.StartOfString = ThisArg->StartOfString;
-                    Substring.LengthInChars = (DWORD)(EndQuote - ThisArg->StartOfString);
+                    Substring.LengthInChars = (YORI_ALLOC_SIZE_T)(EndQuote - ThisArg->StartOfString);
 
                     memcpy(&LocalValue.StartOfString[LocalValue.LengthInChars], Substring.StartOfString, Substring.LengthInChars * sizeof(TCHAR));
                     LocalValue.LengthInChars = LocalValue.LengthInChars + Substring.LengthInChars;
@@ -346,13 +346,13 @@ MakeBuildVariableValueString(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i, j;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i, j;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     MAKE_CONTEXT MakeContext;
     PYORI_STRING FileName;
     PMAKE_TARGET RootTarget;
@@ -364,11 +364,11 @@ ENTRYPOINT(
     YORI_STRING RootDir;
     LONGLONG llTemp;
     DWORD Result;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     MAKE_PRIORITY Priority;
     BOOLEAN ExplicitTargetFound;
-    DWORD PerformanceProcessors;
-    DWORD EfficiencyProcessors;
+    WORD PerformanceProcessors;
+    WORD EfficiencyProcessors;
 
     FileName = NULL;
     RootTarget = NULL;
@@ -400,7 +400,7 @@ ENTRYPOINT(
         }
     }
 
-    CharsConsumed = GetCurrentDirectory(0, NULL);
+    CharsConsumed = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
     if (CharsConsumed == 0) {
         Result = EXIT_FAILURE;
         goto Cleanup;
@@ -411,7 +411,9 @@ ENTRYPOINT(
         goto Cleanup;
     }
 
-    MakeContext.ProcessCurrentDirectory.LengthInChars = GetCurrentDirectory(MakeContext.ProcessCurrentDirectory.LengthAllocated, MakeContext.ProcessCurrentDirectory.StartOfString);
+    MakeContext.ProcessCurrentDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)
+        GetCurrentDirectory(MakeContext.ProcessCurrentDirectory.LengthAllocated,
+                            MakeContext.ProcessCurrentDirectory.StartOfString);
     if (MakeContext.ProcessCurrentDirectory.LengthInChars == 0) {
         Result = EXIT_FAILURE;
         goto Cleanup;
@@ -469,7 +471,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("j")) == 0) {
                 if (i + 1 < ArgC) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], FALSE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                        MakeContext.NumberProcesses = (DWORD)llTemp;
+                        MakeContext.NumberProcesses = (YORI_ALLOC_SIZE_T)llTemp;
                         ArgumentUnderstood = TRUE;
                     }
                 }
@@ -549,7 +551,7 @@ ENTRYPOINT(
         YoriLibInitEmptyString(&JobCount);
         if (YoriLibAllocateAndGetEnvironmentVariable(_T("YMAKE_JOB_COUNT"), &JobCount)) {
             if (YoriLibStringToNumber(&JobCount, FALSE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                MakeContext.NumberProcesses = (DWORD)llTemp;
+                MakeContext.NumberProcesses = (WORD)llTemp;
             }
             YoriLibFreeStringContents(&JobCount);
         }

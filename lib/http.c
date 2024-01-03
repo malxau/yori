@@ -178,7 +178,7 @@ YoriLibInternetOpen(
 {
     PYORI_LIB_INTERNET_HANDLE Handle;
     WSADATA WSAData;
-    DWORD Length;
+    YORI_ALLOC_SIZE_T Length;
 
     //
     //  This library is super minimal.  Fail if the request is for anything
@@ -223,7 +223,7 @@ YoriLibInternetOpen(
     Handle->HandleType = YoriLibInternetHandle;
 
     if (UserAgent != NULL) {
-        Length = _tcslen(UserAgent);
+        Length = (YORI_ALLOC_SIZE_T)_tcslen(UserAgent);
         if (!YoriLibAllocateString(&Handle->u.Internet.UserAgent, Length + 1)) {
             YoriLibFree(Handle);
             return NULL;
@@ -367,8 +367,8 @@ YoriLibHttpProcessResponseHeaders(
     UCHAR * LineStart;
     DWORD Index;
     DWORD CharIndex;
-    DWORD LineLengthInChars;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T LineLengthInChars;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG llTemp;
     PYORI_LIB_HTTP_HEADER_LINE ResponseLine;
     PYORI_LIST_ENTRY ListEntry;
@@ -442,7 +442,7 @@ YoriLibHttpProcessResponseHeaders(
             Colon = YoriLibFindLeftMostCharacter(&ResponseLine->EntireLine, ':');
 
             if (Colon != NULL) {
-                ResponseLine->Variable.LengthInChars = (DWORD)(Colon - ResponseLine->Variable.StartOfString);
+                ResponseLine->Variable.LengthInChars = (YORI_ALLOC_SIZE_T)(Colon - ResponseLine->Variable.StartOfString);
                 YoriLibTrimSpaces(&ResponseLine->Variable);
 
                 ResponseLine->Value.StartOfString = Colon + 1;
@@ -596,7 +596,7 @@ YoriLibHttpProcessUrlRequest(
     HostSubset.LengthInChars = UrlRequest->u.Url.Url.LengthInChars - sizeof("http://") + 1;
     EndOfHost = YoriLibFindLeftMostCharacter(&HostSubset, '/');
     if (EndOfHost != NULL) {
-        HostSubset.LengthInChars = (DWORD)(EndOfHost - HostSubset.StartOfString);
+        HostSubset.LengthInChars = (YORI_ALLOC_SIZE_T)(EndOfHost - HostSubset.StartOfString);
     } else {
         return FALSE;
     }
@@ -710,9 +710,9 @@ YoriLibHttpMergeRedirectUrl(
     )
 {
     YORI_STRING CombinedString;
-    DWORD EffectiveRoot;
-    DWORD CurrentReadIndex;
-    DWORD CurrentWriteIndex;
+    YORI_ALLOC_SIZE_T EffectiveRoot;
+    YORI_ALLOC_SIZE_T CurrentReadIndex;
+    YORI_ALLOC_SIZE_T CurrentWriteIndex;
     BOOLEAN PreviousWasSeperator;
 
     //
@@ -889,7 +889,7 @@ YoriLibInternetOpenUrl(
     PYORI_LIB_INTERNET_HANDLE Handle;
     YORI_STRING RedirectUrl;
     YORI_STRING LocationHeader;
-    DWORD Length;
+    YORI_ALLOC_SIZE_T Length;
 
     if (hInternet == NULL || Flags != 0 || Context != 0) {
         return NULL;
@@ -908,7 +908,7 @@ YoriLibInternetOpenUrl(
     UrlHandle->HandleType = YoriLibUrlHandle;
     YoriLibInitializeListHead(&UrlHandle->u.Url.HttpResponseHeaders);
 
-    Length = _tcslen(Url);
+    Length = (YORI_ALLOC_SIZE_T)_tcslen(Url);
     if (!YoriLibAllocateString(&UrlHandle->u.Url.Url, Length + 1)) {
         YoriLibInternetCloseHandle(UrlHandle);
         return NULL;
@@ -920,9 +920,9 @@ YoriLibInternetOpenUrl(
 
     UrlHandle->u.Url.UserRequestHeaders.StartOfString = (LPTSTR)Headers;
     if (HeadersLength == (DWORD)-1 && Headers != NULL) {
-        UrlHandle->u.Url.UserRequestHeaders.LengthInChars = _tcslen(Headers);
+        UrlHandle->u.Url.UserRequestHeaders.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(Headers);
     } else {
-        UrlHandle->u.Url.UserRequestHeaders.LengthInChars = HeadersLength;
+        UrlHandle->u.Url.UserRequestHeaders.LengthInChars = (YORI_ALLOC_SIZE_T)HeadersLength;
     }
 
     YoriLibTrimTrailingNewlines(&UrlHandle->u.Url.UserRequestHeaders);

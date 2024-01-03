@@ -432,6 +432,7 @@ CopyAsLink(
     HANDLE DestFileHandle;
     DWORD LastError;
     DWORD BytesReturned;
+    DWORD BytesToAllocate;
     LPTSTR ErrText;
 
     SourceFileHandle = CreateFile(SourceFileName,
@@ -498,7 +499,11 @@ CopyAsLink(
         }
     }
 
-    ReparseData = YoriLibMalloc(64 * 1024);
+    BytesToAllocate = 64 * 1024;
+    if (!YoriLibIsSizeAllocatable(BytesToAllocate)) {
+        BytesToAllocate = 32 * 1024;
+    }
+    ReparseData = YoriLibMalloc((YORI_ALLOC_SIZE_T)BytesToAllocate);
     if (ReparseData == NULL) {
         CloseHandle(DestFileHandle);
         CloseHandle(SourceFileHandle);
@@ -626,7 +631,10 @@ CopyAsDumbDataMove(
     SectorSize = YoriLibGetHandleSectorSize(DestHandle);
 
     BufferSize = 64 * 1024;
-    Buffer = YoriLibMalloc(BufferSize);
+    if (!YoriLibIsSizeAllocatable(BufferSize)) {
+        BufferSize = 32 * 1024;
+    }
+    Buffer = YoriLibMalloc((YORI_ALLOC_SIZE_T)BufferSize);
     if (Buffer == NULL) {
         CloseHandle(SourceHandle);
         CloseHandle(DestHandle);
@@ -774,8 +782,8 @@ CopyFileFoundCallback(
     YORI_STRING HumanDestPath;
     PYORI_STRING SourceNameToDisplay;
     PYORI_STRING DestNameToDisplay;
-    DWORD SlashesFound;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T SlashesFound;
+    YORI_ALLOC_SIZE_T Index;
     DWORD LastError;
 
     CopyContext->FilesFoundThisArg++;
@@ -962,19 +970,19 @@ CopyFreeCopyContext(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     DWORD FilesProcessed;
     DWORD FileCount;
-    DWORD LastFileArg = 0;
-    DWORD FirstFileArg = 0;
-    DWORD MatchFlags;
-    BOOL BasicEnumeration;
-    BOOL Recursive;
-    DWORD i;
+    YORI_ALLOC_SIZE_T LastFileArg = 0;
+    YORI_ALLOC_SIZE_T FirstFileArg = 0;
+    WORD MatchFlags;
+    BOOLEAN BasicEnumeration;
+    BOOLEAN Recursive;
+    YORI_ALLOC_SIZE_T i;
     DWORD Result;
     COPY_CONTEXT CopyContext;
     YORILIB_COMPRESS_ALGORITHM CompressionAlgorithm;

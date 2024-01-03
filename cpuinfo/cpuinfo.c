@@ -83,10 +83,10 @@ CpuInfoHelp(VOID)
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 CpuInfoOutputLargeInteger(
     __in LARGE_INTEGER LargeInt,
-    __in DWORD NumberBase,
+    __in WORD NumberBase,
     __inout PYORI_STRING OutputString
     )
 {
@@ -115,7 +115,7 @@ typedef struct _CPUINFO_CONTEXT {
     /**
      The number of bytes in the ProcInfo allocation.
      */
-    DWORD BytesInBuffer;
+    YORI_ALLOC_SIZE_T BytesInBuffer;
 
     /**
      The time to wait when measuring CPU utilization.
@@ -229,7 +229,7 @@ CpuInfoCaptureProcessorIdleTime(
             for (TargetInstance = 0; TargetInstance < (DWORD)PerfObject->NumInstances; TargetInstance++) {
 
                 InstanceString.StartOfString = YoriLibAddToPointer(PerfInstance, PerfInstance->NameOffset);
-                InstanceString.LengthInChars = PerfInstance->NameLength / sizeof(TCHAR);
+                InstanceString.LengthInChars = (YORI_ALLOC_SIZE_T)PerfInstance->NameLength / sizeof(TCHAR);
                 if (InstanceString.LengthInChars > 0) {
                     InstanceString.LengthInChars--;
                 }
@@ -307,7 +307,10 @@ CpuInfoLoadProcessorUtilization(
     }
 
     BufferSize = 64 * 1024;
-    PerfData = YoriLibMalloc(BufferSize);
+    if (!YoriLibIsSizeAllocatable(BufferSize)) {
+        BufferSize = 32 * 1024;
+    }
+    PerfData = YoriLibMalloc((YORI_ALLOC_SIZE_T)BufferSize);
     if (PerfData == NULL) {
         return FALSE;
     }
@@ -326,12 +329,18 @@ CpuInfoLoadProcessorUtilization(
                 break;
             }
 
+            YoriLibFree(PerfData);
             if (BufferSize <= 16 * 1024 * 1024) {
-                BufferSize = BufferSize * 4;
+                if (YoriLibIsSizeAllocatable(BufferSize * 4)) {
+                    BufferSize = BufferSize * 4;
+                } else if (BufferSize < YORI_MAX_ALLOC_SIZE) {
+                    BufferSize = YORI_MAX_ALLOC_SIZE;
+                } else {
+                    return FALSE;
+                }
             }
 
-            YoriLibFree(PerfData);
-            PerfData = YoriLibMalloc(BufferSize);
+            PerfData = YoriLibMalloc((YORI_ALLOC_SIZE_T)BufferSize);
             if (PerfData == NULL) {
                 return FALSE;
             }
@@ -392,14 +401,14 @@ CpuInfoLoadProcessorUtilization(
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 CpuInfoExpandVariables(
     __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     PCPUINFO_CONTEXT CpuInfoContext = (PCPUINFO_CONTEXT)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("CORECOUNT")) == 0) {
@@ -746,6 +755,7 @@ CpuInfoLoadProcessorInfo(
     )
 {
     DWORD Err;
+    DWORD BytesInBuffer;
 
     //
     //  Query processor information from the system.  This needs to allocate
@@ -754,8 +764,10 @@ CpuInfoLoadProcessorInfo(
     //
 
     Err = ERROR_SUCCESS;
+    BytesInBuffer = 0;
     while(TRUE) {
-        if (DllKernel32.pGetLogicalProcessorInformationEx(YoriProcessorRelationAll, CpuInfoContext->ProcInfo, &CpuInfoContext->BytesInBuffer)) {
+        if (DllKernel32.pGetLogicalProcessorInformationEx(YoriProcessorRelationAll, CpuInfoContext->ProcInfo, &BytesInBuffer)) {
+            CpuInfoContext->BytesInBuffer = (YORI_ALLOC_SIZE_T)BytesInBuffer;
             Err = ERROR_SUCCESS;
             break;
         }
@@ -767,6 +779,12 @@ CpuInfoLoadProcessorInfo(
                 CpuInfoContext->ProcInfo = NULL;
             }
 
+            if (!YoriLibIsSizeAllocatable(BytesInBuffer)) {
+                Err = ERROR_NOT_ENOUGH_MEMORY;
+                break;
+            }
+
+            CpuInfoContext->BytesInBuffer = (YORI_ALLOC_SIZE_T)BytesInBuffer;
             CpuInfoContext->ProcInfo = YoriLibMalloc(CpuInfoContext->BytesInBuffer);
             if (CpuInfoContext->ProcInfo == NULL) {
                 Err = ERROR_NOT_ENOUGH_MEMORY;
@@ -842,8 +860,13 @@ CpuInfoLoadAndUpconvertProcessorInfo(
                 YoriLibFree(ProcInfo);
                 ProcInfo = NULL;
             }
+            
+            if (!YoriLibIsSizeAllocatable(BytesInBuffer)) {
+                Err = ERROR_NOT_ENOUGH_MEMORY;
+                break;
+            }
 
-            ProcInfo = YoriLibMalloc(BytesInBuffer);
+            ProcInfo = YoriLibMalloc((YORI_ALLOC_SIZE_T)BytesInBuffer);
             if (ProcInfo == NULL) {
                 Err = ERROR_NOT_ENOUGH_MEMORY;
                 break;
@@ -906,8 +929,13 @@ CpuInfoLoadAndUpconvertProcessorInfo(
 
     BytesRequired += sizeof(YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX);
 
-    CpuInfoContext->BytesInBuffer = BytesRequired;
-    CpuInfoContext->ProcInfo = YoriLibMalloc(BytesRequired);
+    if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+        YoriLibFree(ProcInfo);
+        return FALSE;
+    }
+
+    CpuInfoContext->BytesInBuffer = (YORI_ALLOC_SIZE_T)BytesRequired;
+    CpuInfoContext->ProcInfo = YoriLibMalloc((YORI_ALLOC_SIZE_T)BytesRequired);
     if (CpuInfoContext->ProcInfo == NULL) {
         YoriLibFree(ProcInfo);
         return FALSE;
@@ -1021,13 +1049,13 @@ CpuInfoLoadAndUpconvertProcessorInfo(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     BOOLEAN DisplayCores = FALSE;
     BOOLEAN DisplayGroups = FALSE;
     BOOLEAN DisplayNuma = FALSE;
@@ -1087,7 +1115,7 @@ ENTRYPOINT(
                        i + 1 < ArgC) {
 
                 LONGLONG llTemp;
-                DWORD CharsConsumed;
+                YORI_ALLOC_SIZE_T CharsConsumed;
 
                 llTemp = 0;
                 if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&

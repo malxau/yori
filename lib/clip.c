@@ -161,6 +161,9 @@ YoriLibBuildHtmlClipboardBuffer(
     }
 
     BytesNeeded = UserBytes + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + HTMLCLIP_FRAGEND_SIZE + 2;
+    if (!YoriLibIsSizeAllocatable(BytesNeeded)) {
+        return FALSE;
+    }
 
     //
     //  Allocate space to copy the text contents.
@@ -185,7 +188,7 @@ YoriLibBuildHtmlClipboardBuffer(
     //
 
     YoriLibSPrintfSA((PCHAR)pMem,
-                     BytesNeeded,
+                     (YORI_ALLOC_SIZE_T)BytesNeeded,
                      "Version:0.9\n"
                      "StartHTML:%08i\n"
                      "EndHTML:%08i\n"
@@ -237,7 +240,7 @@ YoriLibPasteText(
 {
     HANDLE hMem;
     LPWSTR pMem;
-    DWORD StringLength;
+    YORI_ALLOC_SIZE_T StringLength;
 
     YoriLibLoadUser32Functions();
 
@@ -269,10 +272,10 @@ YoriLibPasteText(
         DllUser32.pCloseClipboard();
         return FALSE;
     }
-    StringLength = _tcslen(pMem);
+    StringLength = (YORI_ALLOC_SIZE_T)_tcslen(pMem);
 
     if (StringLength >= Buffer->LengthAllocated) {
-        if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, StringLength + 1)) {
+        if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, (YORI_ALLOC_SIZE_T)(StringLength + 1))) {
             DllKernel32.pGlobalUnlock(hMem);
             DllUser32.pCloseClipboard();
             return FALSE;
@@ -635,7 +638,7 @@ YoriLibPasteTextWithProcessFallback(
     }
 
     if (YoriLibProcessClipboard.LengthInChars + 1 > Buffer->LengthAllocated) {
-        if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, YoriLibProcessClipboard.LengthInChars + 1)) {
+        if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, (YORI_ALLOC_SIZE_T)(YoriLibProcessClipboard.LengthInChars + 1))) {
             return FALSE;
         }
     }

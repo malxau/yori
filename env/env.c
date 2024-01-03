@@ -65,12 +65,12 @@ typedef struct _ENV_BUFFER {
     /**
      The number of bytes currently allocated to this buffer.
      */
-    DWORD BytesAllocated;
+    YORI_ALLOC_SIZE_T BytesAllocated;
 
     /**
      The number of bytes populated with data in this buffer.
      */
-    DWORD BytesPopulated;
+    YORI_ALLOC_SIZE_T BytesPopulated;
 
     /**
      A handle to a pipe which is the source of data for this buffer.
@@ -148,13 +148,13 @@ EnvBufferPump(
                 break;
             }
 
-            ThisBuffer->BytesPopulated += BytesRead;
+            ThisBuffer->BytesPopulated = ThisBuffer->BytesPopulated + (YORI_ALLOC_SIZE_T)BytesRead;
             ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
             if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
-                DWORD NewBytesAllocated;
+                YORI_ALLOC_SIZE_T NewBytesAllocated;
                 PCHAR NewBuffer;
 
-                if (ThisBuffer->BytesAllocated >= ((DWORD)-1) / 4) {
+                if (ThisBuffer->BytesAllocated >= (YORI_MAX_ALLOC_SIZE / 4)) {
                     break;
                 }
 
@@ -204,19 +204,19 @@ EnvBufferPump(
  */
 BOOL
 EnvModifyEnvironment(
-    __in DWORD StartEnvArg,
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T StartEnvArg,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in_opt PYORI_STRING StdinVariableName,
     __in PENV_BUFFER Stdin,
-    __out PDWORD StartCmdArg
+    __out PYORI_ALLOC_SIZE_T StartCmdArg
     )
 {
     YORI_STRING Variable;
     YORI_STRING Value;
     LPTSTR Equals;
-    DWORD i;
-    DWORD StdinLength;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StdinLength;
     YORI_STRING StdinString;
 
     *StartCmdArg = 0;
@@ -230,12 +230,12 @@ EnvModifyEnvironment(
         }
 
         Variable.StartOfString = ArgV[i].StartOfString;
-        Variable.LengthInChars = (DWORD)(Equals - ArgV[i].StartOfString);
+        Variable.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ArgV[i].StartOfString);
         Variable.LengthAllocated = Variable.LengthInChars + 1;
         Variable.StartOfString[Variable.LengthInChars] = '\0';
 
         Value.StartOfString = &Equals[1];
-        Value.LengthInChars = (DWORD)(ArgV[i].LengthInChars - Variable.LengthAllocated);
+        Value.LengthInChars = ArgV[i].LengthInChars - Variable.LengthAllocated;
         Value.LengthAllocated = Value.LengthInChars + 1;
 
 #ifdef YORI_BUILTIN
@@ -317,17 +317,17 @@ EnvModifyEnvironment(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     YORI_STRING CmdLine;
     PYORI_STRING StdinVariableName;
     DWORD ExitCode;
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartEnvArg = 0;
-    DWORD StartCmdArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartEnvArg = 0;
+    YORI_ALLOC_SIZE_T StartCmdArg = 0;
     YORI_STRING Arg;
     BOOLEAN LoadStdin;
     ENV_BUFFER Stdin;
@@ -378,7 +378,9 @@ ENTRYPOINT(
     }
 
     if (LoadStdin) {
-        if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &i)) {
+        DWORD ConsoleMode;
+
+        if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &ConsoleMode)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("env: no file or pipe for input\n"));
             return EXIT_FAILURE;
         }

@@ -50,7 +50,7 @@ BOOL
 SdirWriteRawStringToOutputDevice(
     __in HANDLE hConsole,
     __in LPCTSTR OutputString,
-    __in DWORD Length
+    __in YORI_ALLOC_SIZE_T Length
     )
 {
     YORI_STRING String;
@@ -106,11 +106,11 @@ SdirSetConsoleTextAttribute(
 BOOL
 SdirWrite (
     __in_ecount(count) PSDIR_FMTCHAR str,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     )
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD i, j;
+    YORI_ALLOC_SIZE_T i, j;
 
     YORILIB_COLOR_ATTRIBUTES CacheAttr;
     TCHAR CharCache[64];
@@ -159,7 +159,7 @@ SdirWrite (
  Count of the number of lines written by this application.  Used to determine
  when "Press any key" should be displayed.
  */
-DWORD SdirWriteStringLinesDisplayed = 0;
+WORD SdirWriteStringLinesDisplayed = 0;
 
 /**
  Write a NULL terminated string with a single color attribute to the output
@@ -178,8 +178,8 @@ SdirWriteStringWithAttribute (
     )
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD LinesInBuffer = 0;
-    DWORD TCharsInBuffer = 0;
+    YORI_ALLOC_SIZE_T LinesInBuffer = 0;
+    YORI_ALLOC_SIZE_T TCharsInBuffer = 0;
     DWORD OffsetOfLastLineBreak;
     BOOLEAN HitLineLimit = FALSE;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
@@ -202,13 +202,13 @@ SdirWriteStringWithAttribute (
                     OffsetOfLastLineBreak = TCharsInBuffer;
                 }
                 TCharsInBuffer++;
-                if (SdirWriteStringLinesDisplayed + LinesInBuffer >= Opts->ConsoleHeight - 1) {
+                if (SdirWriteStringLinesDisplayed + LinesInBuffer >= (WORD)(Opts->ConsoleHeight - 1)) {
                     HitLineLimit = TRUE;
                     break;
                 }
             }
 
-            SdirWriteStringLinesDisplayed += LinesInBuffer;
+            SdirWriteStringLinesDisplayed = (WORD)(SdirWriteStringLinesDisplayed + LinesInBuffer);
 
             SdirWriteRawStringToOutputDevice(hConsole, str, TCharsInBuffer);
 
@@ -236,7 +236,7 @@ SdirWriteStringWithAttribute (
     } else {
 
         SdirSetConsoleTextAttribute(hConsole, DefaultAttribute);
-        SdirWriteRawStringToOutputDevice(hConsole, str, (DWORD)_tcslen(str));
+        SdirWriteRawStringToOutputDevice(hConsole, str, (YORI_ALLOC_SIZE_T)_tcslen(str));
     }
 
     return TRUE;
@@ -255,7 +255,7 @@ SdirRowDisplayed(VOID)
     if (Opts->EnablePause) {
         SdirWriteStringLinesDisplayed++;
 
-        if (SdirWriteStringLinesDisplayed >= Opts->ConsoleHeight - 1) {
+        if (SdirWriteStringLinesDisplayed >= (WORD)(Opts->ConsoleHeight - 1)) {
 
             SdirWriteStringLinesDisplayed = 0;
             if (!SdirPressAnyKey()) {
@@ -294,11 +294,11 @@ SdirPasteStrAndPad (
     __out_ecount(padsize) PSDIR_FMTCHAR str,
     __in_ecount_opt(count) LPTSTR src,
     __in YORILIB_COLOR_ATTRIBUTES attr,
-    __in DWORD count,
-    __in DWORD padsize
+    __in YORI_ALLOC_SIZE_T count,
+    __in YORI_ALLOC_SIZE_T padsize
     )
 {
-    ULONG i;
+    YORI_ALLOC_SIZE_T i;
 
     __analysis_assume(count == 0 || src != NULL);
 

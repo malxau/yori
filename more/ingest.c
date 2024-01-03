@@ -41,12 +41,12 @@ typedef struct _MORE_LINE_ALLOC_CONTEXT {
     /**
      The currently used number of bytes in the buffer above.
      */
-    DWORD BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
 
     /**
      The number of bytes remaining in the buffer above.
      */
-    DWORD BytesRemainingInBuffer;
+    YORI_ALLOC_SIZE_T BytesRemainingInBuffer;
 
     /**
      The color that the next physical line should start with.  This is
@@ -78,12 +78,12 @@ MoreAddPhysicalLineToBuffer(
     )
 {
     PMORE_PHYSICAL_LINE NewLine;
-    DWORD TabCount;
-    DWORD CharIndex;
-    DWORD DestIndex;
-    DWORD TabIndex;
-    DWORD Alignment;
-    DWORD BytesRequired;
+    YORI_ALLOC_SIZE_T TabCount;
+    YORI_ALLOC_SIZE_T CharIndex;
+    YORI_ALLOC_SIZE_T DestIndex;
+    YORI_ALLOC_SIZE_T TabIndex;
+    YORI_ALLOC_SIZE_T Alignment;
+    YORI_ALLOC_SIZE_T BytesRequired;
 
     //
     //  Count the number of tabs.  These are replaced at ingestion time, 
@@ -117,7 +117,7 @@ MoreAddPhysicalLineToBuffer(
         if (AllocContext->Buffer != NULL) {
             YoriLibDereference(AllocContext->Buffer);
         }
-        AllocContext->BytesRemainingInBuffer = 64 * 1024;
+        AllocContext->BytesRemainingInBuffer = YoriLibMaximumAllocationInRange(16 * 1024, 64 * 1024);
         if (BytesRequired > AllocContext->BytesRemainingInBuffer) {
             AllocContext->BytesRemainingInBuffer = BytesRequired;
         }
@@ -158,7 +158,7 @@ MoreAddPhysicalLineToBuffer(
             LineString->StartOfString[CharIndex + 1] == '[') {
 
             YORI_STRING EscapeSubset;
-            DWORD EndOfEscape;
+            YORI_ALLOC_SIZE_T EndOfEscape;
 
             YoriLibInitEmptyString(&EscapeSubset);
             EscapeSubset.StartOfString = &LineString->StartOfString[CharIndex + 2];
@@ -190,8 +190,8 @@ MoreAddPhysicalLineToBuffer(
     NewLine->LineContents.LengthInChars = DestIndex;
     NewLine->LineContents.LengthAllocated = DestIndex + 1;
 
-    AllocContext->BufferOffset += BytesRequired;
-    AllocContext->BytesRemainingInBuffer -= BytesRequired;
+    AllocContext->BufferOffset = AllocContext->BufferOffset + BytesRequired;
+    AllocContext->BytesRemainingInBuffer = AllocContext->BytesRemainingInBuffer - BytesRequired;
 
     //
     //  Align the buffer to 8 bytes.  There's no length checking because
@@ -201,8 +201,8 @@ MoreAddPhysicalLineToBuffer(
     Alignment = AllocContext->BufferOffset % 8;
     if (Alignment > 0) {
         Alignment = 8 - Alignment;
-        AllocContext->BufferOffset += Alignment;
-        AllocContext->BytesRemainingInBuffer -= Alignment;
+        AllocContext->BufferOffset = AllocContext->BufferOffset + Alignment;
+        AllocContext->BytesRemainingInBuffer = AllocContext->BytesRemainingInBuffer - Alignment;
     }
 
     //
@@ -417,7 +417,7 @@ MoreIngestThread(
     )
 {
     PMORE_CONTEXT MoreContext = (PMORE_CONTEXT)Context;
-    DWORD MatchFlags;
+    WORD MatchFlags;
     DWORD i;
 
     //

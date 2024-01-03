@@ -61,14 +61,14 @@ typedef struct _YORI_WIN_EDIT_SELECT {
     /**
      Specifies the character offset containing the beginning of the selection.
      */
-    DWORD FirstCharOffset;
+    YORI_ALLOC_SIZE_T FirstCharOffset;
 
     /**
      Specifies the index after the final character selected on the final line.
      This value can therefore be zero through to the length of string
      inclusive.
      */
-    DWORD LastCharOffset;
+    YORI_ALLOC_SIZE_T LastCharOffset;
 
 } YORI_WIN_EDIT_SELECT, *PYORI_WIN_EDIT_SELECT;
 
@@ -107,13 +107,13 @@ typedef struct _YORI_WIN_CTRL_EDIT_UNDO {
              The first offset of the range that was inserted and should be
              deleted on undo.
              */
-            DWORD FirstCharOffsetToDelete;
+            YORI_ALLOC_SIZE_T FirstCharOffsetToDelete;
 
             /**
              The last offset of the range that was inserted and should be
              deleted on undo.
              */
-            DWORD LastCharOffsetToDelete;
+            YORI_ALLOC_SIZE_T LastCharOffsetToDelete;
         } InsertText;
 
         struct {
@@ -122,7 +122,7 @@ typedef struct _YORI_WIN_CTRL_EDIT_UNDO {
              The first character of the range that was deleted and needs to be
              reinserted.
              */
-            DWORD FirstCharOffset;
+            YORI_ALLOC_SIZE_T FirstCharOffset;
 
             /**
              The text to reinsert on undo.
@@ -136,19 +136,19 @@ typedef struct _YORI_WIN_CTRL_EDIT_UNDO {
              The first offset of the range that was overwritten and should be
              deleted on undo.
              */
-            DWORD FirstCharOffsetToDelete;
+            YORI_ALLOC_SIZE_T FirstCharOffsetToDelete;
 
             /**
              The last offset of the range that was overwritten and should be
              deleted on undo.
              */
-            DWORD LastCharOffsetToDelete;
+            YORI_ALLOC_SIZE_T LastCharOffsetToDelete;
 
             /**
              The first character of the range that should be inserted to replace
              the overwritten text.
              */
-            DWORD FirstCharOffset;
+            YORI_ALLOC_SIZE_T FirstCharOffset;
 
             /**
              The offset of the first character that the user changed.  This
@@ -156,7 +156,7 @@ typedef struct _YORI_WIN_CTRL_EDIT_UNDO {
              larger than the range that the user modified.  This value is
              used to determine the cursor location on undo.
              */
-            DWORD FirstCharOffsetModified;
+            YORI_ALLOC_SIZE_T FirstCharOffsetModified;
 
             /**
              The offset of the last character that the user changed.  This
@@ -165,7 +165,7 @@ typedef struct _YORI_WIN_CTRL_EDIT_UNDO {
              used to determine if a later modification should be part of an
              earlier undo record.
              */
-            DWORD LastCharOffsetModified;
+            YORI_ALLOC_SIZE_T LastCharOffsetModified;
 
             /**
              The text to reinsert on undo.
@@ -206,12 +206,12 @@ typedef struct _YORI_WIN_CTRL_EDIT {
     /**
      Specifies the offset within the text string to display.
      */
-    DWORD DisplayOffset;
+    YORI_ALLOC_SIZE_T DisplayOffset;
 
     /**
      Specifies the offset within the text string to insert text.
      */
-    DWORD CursorOffset;
+    YORI_ALLOC_SIZE_T CursorOffset;
 
     /**
      A stack of changes which can be undone.
@@ -331,8 +331,8 @@ YoriWinEditEnsureCursorVisible(
     //
 
     if (YoriWinEditSelectionActive(Edit)) {
-        DWORD StartSelection;
-        DWORD EndSelection;
+        YORI_ALLOC_SIZE_T StartSelection;
+        YORI_ALLOC_SIZE_T EndSelection;
 
         StartSelection = Edit->Selection.FirstCharOffset;
         EndSelection = Edit->Selection.LastCharOffset;
@@ -697,8 +697,8 @@ PYORI_WIN_CTRL_EDIT_UNDO
 YoriWinEditGetUndoRecordForOperation(
     __in PYORI_WIN_CTRL_EDIT Edit,
     __in YORI_WIN_CTRL_EDIT_UNDO_OPERATION Op,
-    __in DWORD FirstCharOffset,
-    __in DWORD LastCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T LastCharOffset,
     __out PBOOLEAN NewRangeBeforeExistingRange
     )
 {
@@ -807,17 +807,17 @@ __success(return)
 BOOLEAN
 YoriWinEditEnsureSpaceBeforeOrAfterString(
     __in PYORI_STRING CombinedString,
-    __in DWORD CharsNeeded,
+    __in YORI_ALLOC_SIZE_T CharsNeeded,
     __in BOOLEAN CharsBefore,
     __out PYORI_STRING Substring
     )
 {
-    DWORD CurrentCharsBefore;
-    DWORD CurrentCharsAfter;
-    DWORD LengthNeeded;
+    YORI_ALLOC_SIZE_T CurrentCharsBefore;
+    YORI_ALLOC_SIZE_T CurrentCharsAfter;
+    YORI_ALLOC_SIZE_T LengthNeeded;
     YORI_STRING Temp;
 
-    CurrentCharsBefore = (DWORD)(CombinedString->StartOfString - (LPTSTR)CombinedString->MemoryToFree);
+    CurrentCharsBefore = (YORI_ALLOC_SIZE_T)(CombinedString->StartOfString - (LPTSTR)CombinedString->MemoryToFree);
     CurrentCharsAfter = CombinedString->LengthAllocated - CurrentCharsBefore - CombinedString->LengthInChars;
 
     while(TRUE) {
@@ -928,23 +928,23 @@ BOOLEAN
 YoriWinEditDeleteTextRange(
     __in PYORI_WIN_CTRL_EDIT Edit,
     __in BOOLEAN ProcessingUndo,
-    __in DWORD FirstCharOffset,
-    __in DWORD LastCharOffset
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T LastCharOffset
     );
 
 BOOLEAN
 YoriWinEditInsertTextRange(
     __in PYORI_WIN_CTRL_EDIT Edit,
     __in BOOLEAN ProcessingUndo,
-    __in DWORD FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
     __in PYORI_STRING Text
     );
 
 BOOLEAN
 YoriWinEditGetTextRange(
     __in PYORI_WIN_CTRL_EDIT Edit,
-    __in DWORD FirstCharOffset,
-    __in DWORD LastCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T LastCharOffset,
     __out PYORI_STRING SelectedText
     );
 
@@ -1049,8 +1049,8 @@ YoriWinEditApplyUndoRecord(
     )
 {
     BOOLEAN Success;
-    DWORD NewLastLine;
-    DWORD NewLastCharOffset;
+    YORI_ALLOC_SIZE_T NewLastLine;
+    YORI_ALLOC_SIZE_T NewLastCharOffset;
 
     Success = FALSE;
     switch(Undo->Op) {
@@ -1193,12 +1193,12 @@ YoriWinEditRedo(
 VOID
 YoriWinEditPopulateTextRange(
     __in PYORI_WIN_CTRL_EDIT Edit,
-    __in DWORD FirstCharOffset,
-    __in DWORD LastCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T LastCharOffset,
     __inout PYORI_STRING SelectedText
     )
 {
-    DWORD CharsInRange;
+    YORI_ALLOC_SIZE_T CharsInRange;
     PYORI_STRING Line;
 
     Line = &Edit->Text;
@@ -1234,12 +1234,12 @@ YoriWinEditPopulateTextRange(
 BOOLEAN
 YoriWinEditGetTextRange(
     __in PYORI_WIN_CTRL_EDIT Edit,
-    __in DWORD FirstCharOffset,
-    __in DWORD LastCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T LastCharOffset,
     __out PYORI_STRING SelectedText
     )
 {
-    DWORD CharsInRange;
+    YORI_ALLOC_SIZE_T CharsInRange;
     PYORI_STRING Line;
 
     Line = &Edit->Text;
@@ -1285,8 +1285,8 @@ YoriWinEditGetTextRange(
 BOOLEAN
 YoriWinEditIsValidNumericInput(
     __in PYORI_WIN_CTRL_EDIT Edit,
-    __in DWORD FirstCharOffset,
-    __in DWORD LastCharToDelete,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T LastCharToDelete,
     __in_opt _When_(LastCharToDelete == 0, __in) PYORI_STRING Text,
     __in BOOLEAN InsertMode
     )
@@ -1294,8 +1294,8 @@ YoriWinEditIsValidNumericInput(
     YORI_STRING TempString;
     TCHAR StringBuffer[32];
     LONGLONG llTemp;
-    DWORD CharsConsumed;
-    DWORD LengthNeeded;
+    YORI_ALLOC_SIZE_T CharsConsumed;
+    YORI_ALLOC_SIZE_T LengthNeeded;
 
     //
     //  Either we're removing a range of text (LastCharToDelete says which)
@@ -1405,13 +1405,13 @@ BOOLEAN
 YoriWinEditDeleteTextRange(
     __in PYORI_WIN_CTRL_EDIT Edit,
     __in BOOLEAN ProcessingUndo,
-    __in DWORD FirstCharOffset,
-    __in DWORD LastCharOffset
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T LastCharOffset
     )
 {
     PYORI_WIN_CTRL_EDIT_UNDO Undo = NULL;
-    DWORD CharsToCopy;
-    DWORD CharsToDelete;
+    YORI_ALLOC_SIZE_T CharsToCopy;
+    YORI_ALLOC_SIZE_T CharsToDelete;
     PYORI_STRING Line;
 
     //
@@ -1438,7 +1438,7 @@ YoriWinEditDeleteTextRange(
         Undo = YoriWinEditGetUndoRecordForOperation(Edit, YoriWinEditUndoDeleteText, FirstCharOffset, LastCharOffset, &RangeBeforeExistingRange);
         if (Undo != NULL) {
             YORI_STRING Text;
-            DWORD CharsNeeded;
+            YORI_ALLOC_SIZE_T CharsNeeded;
 
             CharsNeeded = LastCharOffset - FirstCharOffset;
 
@@ -1467,7 +1467,7 @@ YoriWinEditDeleteTextRange(
                 CharsToCopy * sizeof(TCHAR));
     }
 
-    Line->LengthInChars -= CharsToDelete;
+    Line->LengthInChars = Line->LengthInChars - CharsToDelete;
     return TRUE;
 }
 
@@ -1491,7 +1491,7 @@ BOOLEAN
 YoriWinEditInsertTextRange(
     __in PYORI_WIN_CTRL_EDIT Edit,
     __in BOOLEAN ProcessingUndo,
-    __in DWORD FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
     __in PYORI_STRING Text
     )
 {
@@ -1512,13 +1512,20 @@ YoriWinEditInsertTextRange(
 
     ASSERT(FirstCharOffset <= Edit->Text.LengthInChars);
 
-    LengthNeeded = Edit->Text.LengthInChars + Text->LengthInChars;
+    LengthNeeded = Edit->Text.LengthInChars;
+    LengthNeeded = LengthNeeded + Text->LengthInChars + 1;
 
-    if (LengthNeeded + 1 >= Edit->Text.LengthAllocated) {
-        DWORD LengthToAllocate;
-        LengthToAllocate = Edit->Text.LengthAllocated * 2 + 80;
-        if (LengthNeeded >= LengthToAllocate) {
-            LengthToAllocate = LengthNeeded + 1;
+    if (LengthNeeded >= Edit->Text.LengthAllocated) {
+        DWORD LengthDesired;
+        YORI_ALLOC_SIZE_T LengthToAllocate;
+        LengthDesired = Edit->Text.LengthAllocated;
+        LengthDesired = LengthDesired * 2 + 80;
+        if (LengthNeeded > LengthDesired) {
+            LengthDesired = LengthNeeded;
+        }
+        LengthToAllocate = YoriLibMaximumAllocationInRange(LengthNeeded, LengthDesired);
+        if (LengthToAllocate == 0) {
+            return 0;
         }
         if (!YoriLibReallocateString(&Edit->Text, LengthToAllocate)) {
             return FALSE;
@@ -1569,7 +1576,7 @@ BOOLEAN
 YoriWinEditOverwriteTextRange(
     __in PYORI_WIN_CTRL_EDIT Edit,
     __in BOOLEAN ProcessingUndo,
-    __in DWORD FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
     __in PYORI_STRING Text
     )
 {
@@ -1620,13 +1627,21 @@ YoriWinEditOverwriteTextRange(
         }
     }
 
-    LengthNeeded = FirstCharOffset + Text->LengthInChars - 1;
+    LengthNeeded = FirstCharOffset;
+    LengthNeeded = LengthNeeded + Text->LengthInChars;
 
-    if (LengthNeeded + 1 >= Edit->Text.LengthAllocated) {
-        DWORD LengthToAllocate;
-        LengthToAllocate = Edit->Text.LengthAllocated * 2 + 80;
-        if (LengthNeeded >= LengthToAllocate) {
-            LengthToAllocate = LengthNeeded + 1;
+    if (LengthNeeded >= Edit->Text.LengthAllocated) {
+        DWORD LengthDesired;
+        YORI_ALLOC_SIZE_T LengthToAllocate;
+        LengthDesired = Edit->Text.LengthAllocated;
+        LengthDesired = LengthDesired * 2 + 80;
+        if (LengthNeeded >= LengthDesired) {
+            LengthDesired = LengthNeeded;
+        }
+
+        LengthToAllocate = YoriLibMaximumAllocationInRange(LengthNeeded, LengthDesired);
+        if (LengthToAllocate == 0) {
+            return FALSE;
         }
         if (!YoriLibReallocateString(&Edit->Text, LengthToAllocate)) {
             return FALSE;
@@ -1771,7 +1786,7 @@ YoriWinEditStartSelectionAtCursor(
     //
 
     if (Selection->Active == YoriWinEditSelectNotActive) {
-        DWORD EffectiveCursorOffset;
+        YORI_ALLOC_SIZE_T EffectiveCursorOffset;
         EffectiveCursorOffset = Edit->CursorOffset;
         if (EffectiveCursorOffset > Edit->Text.LengthInChars) {
             EffectiveCursorOffset = Edit->Text.LengthInChars;
@@ -1799,8 +1814,8 @@ YoriWinEditExtendSelectionToCursor(
     __in PYORI_WIN_CTRL_EDIT Edit
     )
 {
-    DWORD AnchorOffset;
-    DWORD EffectiveCursorOffset;
+    YORI_ALLOC_SIZE_T AnchorOffset;
+    YORI_ALLOC_SIZE_T EffectiveCursorOffset;
     BOOLEAN MouseSelection = FALSE;
 
     PYORI_WIN_EDIT_SELECT Selection;
@@ -1883,8 +1898,8 @@ YoriWinEditExtendSelectionToCursor(
 VOID
 YoriWinEditSetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD StartOffset,
-    __in DWORD EndOffset
+    __in YORI_ALLOC_SIZE_T StartOffset,
+    __in YORI_ALLOC_SIZE_T EndOffset
     )
 {
     PYORI_WIN_CTRL_EDIT Edit;
@@ -2324,16 +2339,16 @@ YoriWinEditNotifyDoubleClick(
     __in DWORD ViewportX
     )
 {
-    DWORD NewCursorChar;
+    YORI_ALLOC_SIZE_T NewCursorChar;
     YORI_STRING BreakChars;
-    DWORD BeginRangeOffset;
-    DWORD EndRangeOffset;
+    YORI_ALLOC_SIZE_T BeginRangeOffset;
+    YORI_ALLOC_SIZE_T EndRangeOffset;
 
     //
     //  Translate the viewport location into a buffer location.
     //
 
-    NewCursorChar = Edit->DisplayOffset + ViewportX;
+    NewCursorChar = Edit->DisplayOffset + (YORI_ALLOC_SIZE_T)ViewportX;
 
     //
     //  If it's beyond the end of the line, there's nothing to select.
@@ -2401,8 +2416,8 @@ YoriWinEditScrollForMouseSelect(
     )
 {
     COORD ClientSize;
-    DWORD NewCursorOffset;
-    DWORD NewViewportLeft;
+    YORI_ALLOC_SIZE_T NewCursorOffset;
+    YORI_ALLOC_SIZE_T NewViewportLeft;
 
     YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
 
@@ -2693,7 +2708,7 @@ YoriWinEditEventHandler(
             break;
         case YoriWinEventMouseDownInClient:
             {
-                DWORD ClickOffset;
+                YORI_ALLOC_SIZE_T ClickOffset;
                 ClickOffset = Edit->DisplayOffset + Event->MouseDown.Location.X;
                 if (ClickOffset > Edit->Text.LengthInChars) {
                     ClickOffset = Edit->Text.LengthInChars;

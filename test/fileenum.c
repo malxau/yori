@@ -76,7 +76,7 @@ TestEnumFileFoundCallback(
     )
 {
     PTEST_ENUM_CONTEXT TestContext = (PTEST_ENUM_CONTEXT)Context;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     UNREFERENCED_PARAMETER(FileInfo);
     UNREFERENCED_PARAMETER(Depth);

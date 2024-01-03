@@ -98,19 +98,19 @@ typedef struct _MORE_LOGICAL_LINE {
      The zero based index of this logical line from within the corresponding
      physical line.
      */
-    DWORD LogicalLineIndex;
+    YORI_ALLOC_SIZE_T LogicalLineIndex;
 
     /**
      The offset in characters from the PhysicalLine to the beginning of the
      string represented by this logical line.
      */
-    DWORD PhysicalLineCharacterOffset;
+    YORI_ALLOC_SIZE_T PhysicalLineCharacterOffset;
 
     /**
      Characters remaining in any search match, if a search match commenced
      on a previous logical line from the same physical line.
      */
-    DWORD CharactersRemainingInMatch;
+    YORI_ALLOC_SIZE_T CharactersRemainingInMatch;
 
     /**
      The color attribute to display at the beginning of the line.
@@ -189,7 +189,7 @@ typedef struct _MORE_LINE_END_CONTEXT {
      contents.  When RequiresGeneration is TRUE this number may not match
      the number of characters needing to be consumed from the physical line.
      */
-    DWORD CharactersNeededInAllocation;
+    YORI_ALLOC_SIZE_T CharactersNeededInAllocation;
 
     /**
      Indicates the number of characters remaining in a search match.  This is
@@ -198,7 +198,7 @@ typedef struct _MORE_LINE_END_CONTEXT {
      line contains a highlighted region that is for fewer characters than the
      match string, does not match the match string, etc.
      */
-    DWORD CharactersRemainingInMatch;
+    YORI_ALLOC_SIZE_T CharactersRemainingInMatch;
 } MORE_LINE_END_CONTEXT, *PMORE_LINE_END_CONTEXT;
 
 /**
@@ -253,14 +253,14 @@ typedef struct _MORE_CONTEXT {
     /**
      The current width of the window, in characters.
      */
-    DWORD ViewportWidth;
+    YORI_ALLOC_SIZE_T ViewportWidth;
 
     /**
      The current height of the window, in lines.  Note this corresponds to the
      number of elements in ViewportLines so updating it implies a
      reallocation.
      */
-    DWORD ViewportHeight;
+    YORI_ALLOC_SIZE_T ViewportHeight;
 
     /**
      Description of the current selected region.
@@ -291,25 +291,25 @@ typedef struct _MORE_CONTEXT {
      currently populated with data.  Since population is a process, this
      starts at zero and counts up to ViewportHeight.
      */
-    DWORD LinesInViewport;
+    YORI_ALLOC_SIZE_T LinesInViewport;
 
     /**
      The number of lines that have been displayed as part of a single page.
      If the user hits space or similar, this value is reset such that
      another ViewportHeight number of lines is processed.
      */
-    DWORD LinesInPage;
+    YORI_ALLOC_SIZE_T LinesInPage;
 
     /**
      The number of command line arguments to use as input.  This can be zero
      if input is coming from a pipe.
      */
-    DWORD InputSourceCount;
+    YORI_ALLOC_SIZE_T InputSourceCount;
 
     /**
      The number of spaces to display for every tab.
      */
-    DWORD TabWidth;
+    YORI_ALLOC_SIZE_T TabWidth;
 
     /**
      The color attribute to display at the beginning of the application.
@@ -445,23 +445,23 @@ typedef struct _MORE_CONTEXT {
 VOID
 MoreGetViewportDimensions(
     __in PCONSOLE_SCREEN_BUFFER_INFO ScreenInfo,
-    __out PDWORD ViewportWidth,
-    __out PDWORD ViewportHeight
+    __out PYORI_ALLOC_SIZE_T ViewportWidth,
+    __out PYORI_ALLOC_SIZE_T ViewportHeight
     );
 
 __success(return)
-BOOL
+BOOLEAN
 MoreAllocateViewportStructures(
-    __in DWORD ViewportWidth,
-    __in DWORD ViewportHeight,
+    __in YORI_ALLOC_SIZE_T ViewportWidth,
+    __in YORI_ALLOC_SIZE_T ViewportHeight,
     __out PMORE_LOGICAL_LINE * DisplayViewportLines,
     __out PMORE_LOGICAL_LINE * StagingViewportLines
     );
 
-BOOL
+BOOLEAN
 MoreInitContext(
     __inout PMORE_CONTEXT MoreContext,
-    __in DWORD ArgCount,
+    __in YORI_ALLOC_SIZE_T ArgCount,
     __in_opt PYORI_STRING ArgStrings,
     __in BOOLEAN Recursive,
     __in BOOLEAN BasicEnumeration,
@@ -512,14 +512,14 @@ BOOLEAN
 MoreFindNextSearchMatch(
     __in PMORE_CONTEXT MoreContext,
     __in PCYORI_STRING StringToSearch,
-    __out_opt PDWORD MatchOffset,
+    __out_opt PYORI_ALLOC_SIZE_T MatchOffset,
     __out_opt PUCHAR MatchIndex
     );
 
 VOID
 MoreTruncateStringToVisibleChars(
     __in PYORI_STRING String,
-    __in DWORD VisibleChars
+    __in YORI_ALLOC_SIZE_T VisibleChars
     );
 
 VOID
@@ -534,36 +534,36 @@ MoreCloneLogicalLine(
     __in PMORE_LOGICAL_LINE Src
     );
 
-DWORD
+YORI_ALLOC_SIZE_T
 MoreGetLogicalLineLength(
     __in PMORE_CONTEXT MoreContext,
     __in PYORI_STRING PhysicalLineSubset,
-    __in DWORD MaximumVisibleCharacters,
+    __in YORI_ALLOC_SIZE_T MaximumVisibleCharacters,
     __in WORD InitialDisplayColor,
     __in WORD InitialUserColor,
-    __in DWORD CharactersRemainingInMatch,
+    __in YORI_ALLOC_SIZE_T CharactersRemainingInMatch,
     __out_opt PMORE_LINE_END_CONTEXT LineEndContext
     );
 
 __success(return)
-DWORD
+BOOLEAN
 MoreGetNextLogicalLines(
     __inout PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE CurrentLine,
-    __in BOOL StartFromNextLine,
-    __in DWORD LinesToOutput,
+    __in BOOLEAN StartFromNextLine,
+    __in YORI_ALLOC_SIZE_T LinesToOutput,
     __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
-    __out PDWORD NumberLinesGenerated
+    __out PYORI_ALLOC_SIZE_T NumberLinesGenerated
     );
 
 __success(return)
-BOOL
+BOOLEAN
 MoreGetPreviousLogicalLines(
     __inout PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE CurrentLine,
-    __in DWORD LinesToOutput,
+    __in YORI_ALLOC_SIZE_T LinesToOutput,
     __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
-    __out PDWORD NumberLinesGenerated
+    __out PYORI_ALLOC_SIZE_T NumberLinesGenerated
     );
 
 __success(return != NULL)
@@ -572,8 +572,8 @@ MoreFindNextLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
     __in BOOLEAN MatchAny,
-    __in DWORD MaxLogicalLinesMoved,
-    __out_opt PDWORD LogicalLinesMoved
+    __in YORI_ALLOC_SIZE_T MaxLogicalLinesMoved,
+    __out_opt PYORI_ALLOC_SIZE_T LogicalLinesMoved
     );
 
 __success(return != NULL)
@@ -582,8 +582,8 @@ MoreFindPreviousLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
     __in BOOLEAN MatchAny,
-    __in DWORD MaxLogicalLinesMoved,
-    __out_opt PDWORD LogicalLinesMoved
+    __in YORI_ALLOC_SIZE_T MaxLogicalLinesMoved,
+    __out_opt PYORI_ALLOC_SIZE_T LogicalLinesMoved
     );
 
 PMORE_PHYSICAL_LINE

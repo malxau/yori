@@ -335,7 +335,7 @@ YoriWinMgrSavePreviousContents(
     COORD BufferSize;
     SMALL_RECT LineReadWindow;
     COORD LineReadBufferSize;
-    DWORD CellCount;
+    YORI_ALLOC_SIZE_T CellCount;
     WORD LineIndex;
     WORD LineCount;
     PCHAR_INFO SavedBuffer;
@@ -531,8 +531,8 @@ YoriWinOpenWindowManager(
 {
     PYORI_WIN_WINDOW_MANAGER WinMgr;
     COORD BufferSize;
-    DWORD CellCount;
-    DWORD CellIndex;
+    YORI_ALLOC_SIZE_T CellCount;
+    YORI_ALLOC_SIZE_T CellIndex;
 
     WinMgr = YoriLibMalloc(sizeof(YORI_WIN_WINDOW_MANAGER));
     if (WinMgr == NULL) {
@@ -2956,7 +2956,7 @@ YoriWinMgrProcessBufferSizeEvent(
     PCHAR_INFO NewAllocation;
     PSMALL_RECT Rect;
     SMALL_RECT NewRect;
-    DWORD CellCount;
+    YORI_ALLOC_SIZE_T CellCount;
     COORD NewSize;
     COORD OldSize;
     HANDLE hConOut;

@@ -133,14 +133,14 @@ typedef struct _YORI_PATH_COMPONENTS {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 PathExpandVariables(
    __inout PYORI_STRING OutputString,
    __in PYORI_STRING VariableName,
    __in PVOID Context
    )
 {
-    DWORD CharsNeeded = 0;
+    YORI_ALLOC_SIZE_T CharsNeeded = 0;
     PYORI_PATH_COMPONENTS PathComponents = (PYORI_PATH_COMPONENTS)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("PATH")) == 0) {
@@ -217,18 +217,18 @@ PathExpandVariables(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T ArgumentUnderstood;
     YORI_PATH_COMPONENTS PathComponents;
     LPTSTR FormatString = _T("$PATH$");
     YORI_STRING YsFormatString;
     YORI_STRING DisplayString;
-    BOOL UseLongPath = FALSE;
-    DWORD StartArg = 0;
-    DWORD i;
+    BOOLEAN UseLongPath = FALSE;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
 
     YoriLibInitEmptyString(&YsFormatString);
@@ -285,10 +285,10 @@ ENTRYPOINT(
     ZeroMemory(&PathComponents, sizeof(PathComponents));
 
     if (YoriLibUserStringToSingleFilePath(&ArgV[StartArg], UseLongPath, &PathComponents.EntireNaturalPath)) {
-        DWORD CharIndex;
-        BOOL ExtensionFound = FALSE;
-        BOOL FileComponentFound = FALSE;
-        DWORD KeepTrailingSlashesBefore;
+        YORI_ALLOC_SIZE_T CharIndex;
+        BOOLEAN ExtensionFound = FALSE;
+        BOOLEAN FileComponentFound = FALSE;
+        YORI_ALLOC_SIZE_T KeepTrailingSlashesBefore;
 
         //
         //  Find the location where a natural path should retain trailing

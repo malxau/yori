@@ -118,7 +118,7 @@ VhdToolCloneIso(
     YORI_STRING FullPath;
     YORI_STRING FullSourcePath;
     PVOID Buffer;
-    DWORD BufferSize;
+    YORI_ALLOC_SIZE_T BufferSize;
     DWORD BytesRead;
     DWORD SectorsPerCluster;
     DWORD BytesPerSector;
@@ -179,7 +179,7 @@ VhdToolCloneIso(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("BytesPerSector could not be detected, using default %i\n"), BytesPerSector);
     }
 
-    BufferSize = 1024 * 1024;
+    BufferSize = YoriLibMaximumAllocationInRange(32 * 1024, 1024 * 1024);
     Buffer = YoriLibMalloc(BufferSize);
     if (Buffer == NULL) {
         YoriLibFreeStringContents(&FullPath);
@@ -199,7 +199,7 @@ VhdToolCloneIso(
             Err = GetLastError();
             if (Err == ERROR_INVALID_FUNCTION) {
                 if (BufferSize != BytesPerSector) {
-                    BufferSize = BytesPerSector;
+                    BufferSize = (YORI_ALLOC_SIZE_T)BytesPerSector;
                     continue;
                 }
             }
@@ -978,13 +978,13 @@ typedef enum _VHDTOOL_OP {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg;
     YORI_STRING Arg;
     PYORI_STRING FileName = NULL;
     PYORI_STRING FileParent = NULL;
@@ -1106,7 +1106,7 @@ ENTRYPOINT(
         if (Period != NULL) {
             YoriLibInitEmptyString(&Ext);
             Ext.StartOfString = Period + 1;
-            Ext.LengthInChars = FileName->LengthInChars - (DWORD)(Period - FileName->StartOfString) - 1;
+            Ext.LengthInChars = FileName->LengthInChars - (YORI_ALLOC_SIZE_T)(Period - FileName->StartOfString) - 1;
             if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("vhdx")) == 0) {
                 ExtType = VhdToolExtVhdx;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("vhd")) == 0) {

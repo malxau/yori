@@ -114,7 +114,7 @@ CvtvtRtfProcessAndOutputText(
 {
 
     YORI_STRING TextString;
-    DWORD BufferSizeNeeded;
+    YORI_ALLOC_SIZE_T BufferSizeNeeded;
 
     UNREFERENCED_PARAMETER(Context);
 
@@ -161,7 +161,7 @@ CvtvtRtfProcessAndOutputEscape(
     )
 {
     YORI_STRING TextString;
-    DWORD BufferSizeNeeded;
+    YORI_ALLOC_SIZE_T BufferSizeNeeded;
     BOOLEAN DummyUnderlineState;
 
     UNREFERENCED_PARAMETER(Context);

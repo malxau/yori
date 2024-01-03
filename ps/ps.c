@@ -128,6 +128,7 @@ PsDisplayProcessCommandLine(
     PVOID ProcessParamsBlockToRead;
     PVOID CommandLineToRead;
     DWORD CommandLineBytes;
+    YORI_ALLOC_SIZE_T BytesToAllocate;
     YORI_STRING CommandLine;
 
     ProcessHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, (DWORD)ProcessId);
@@ -205,7 +206,13 @@ PsDisplayProcessCommandLine(
     //  Try to read the command line.
     //
 
-    if (!YoriLibAllocateString(&CommandLine, CommandLineBytes / sizeof(TCHAR))) {
+    if (!YoriLibIsSizeAllocatable(CommandLineBytes / sizeof(TCHAR))) {
+        CloseHandle(ProcessHandle);
+        return FALSE;
+    }
+
+    BytesToAllocate = (YORI_ALLOC_SIZE_T)(CommandLineBytes / sizeof(TCHAR));
+    if (!YoriLibAllocateString(&CommandLine, BytesToAllocate)) {
         CloseHandle(ProcessHandle);
         return FALSE;
     }
@@ -216,7 +223,7 @@ PsDisplayProcessCommandLine(
         return FALSE;
     }
 
-    CommandLine.LengthInChars = (DWORD)BytesReturned / sizeof(TCHAR);
+    CommandLine.LengthInChars = (YORI_ALLOC_SIZE_T)(BytesReturned / sizeof(TCHAR));
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" | %y"), &CommandLine);
     YoriLibFreeStringContents(&CommandLine);
@@ -431,7 +438,7 @@ PsDisplayConsoleProcesses(
 {
     PYORI_SYSTEM_PROCESS_INFORMATION ProcessInfo = NULL;
     LPDWORD PidList = NULL;
-    DWORD PidListSize = 0;
+    YORI_ALLOC_SIZE_T PidListSize = 0;
     DWORD PidCountReturned;
     DWORD Index;
 
@@ -467,7 +474,15 @@ PsDisplayConsoleProcesses(
             YoriLibFree(PidList);
         }
 
-        PidListSize = PidCountReturned + 4;
+        if (!YoriLibIsSizeAllocatable((PidListSize + 4) * sizeof(DWORD))) {
+            YoriLibFree(ProcessInfo);
+            if (PidList) {
+                YoriLibFree(PidList);
+            }
+            return FALSE;
+        }
+
+        PidListSize = (YORI_ALLOC_SIZE_T)(PidCountReturned + 4);
         PidList = YoriLibMalloc(PidListSize * sizeof(DWORD));
         if (PidList == NULL) {
             YoriLibFree(ProcessInfo);
@@ -510,15 +525,15 @@ PsDisplayConsoleProcesses(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
-    BOOL DisplayAll;
+    BOOLEAN DisplayAll;
     PS_CONTEXT PsContext;
 
     ZeroMemory(&PsContext, sizeof(PsContext));

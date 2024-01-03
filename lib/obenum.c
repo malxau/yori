@@ -117,8 +117,8 @@ YoriLibForEachObjectEnum(
     YORI_OBJECT_ATTRIBUTES ObjectAttributes;
     PYORI_OBJECT_DIRECTORY_INFORMATION Buffer;
     PYORI_OBJECT_DIRECTORY_INFORMATION Entry;
-    DWORD NameOnlyOffset;
-    DWORD BufferSize;
+    YORI_ALLOC_SIZE_T NameOnlyOffset;
+    YORI_ALLOC_SIZE_T BufferSize;
     DWORD EnumContext;
     DWORD BytesReturned;
     BOOLEAN Restart;
@@ -153,7 +153,7 @@ YoriLibForEachObjectEnum(
 
     __analysis_assume(DirHandle != NULL);
 
-    BufferSize = 64 * 1024;
+    BufferSize = 60 * 1024;
     Buffer = YoriLibMalloc(BufferSize);
     if (Buffer == NULL) {
         CloseHandle(DirHandle);

@@ -33,7 +33,7 @@
 /**
  Specifies the number of directory entries that are currently allocated.
  */
-DWORD SdirAllocatedDirents;
+YORI_ALLOC_SIZE_T SdirAllocatedDirents;
 
 /**
  Pointer to an array of directory entries.  This corresponds to files in
@@ -52,13 +52,13 @@ PYORI_FILE_INFO * SdirDirSorted;
  Specifies the number of allocated directory entries that have been
  populated with files returned from directory enumerate.
  */
-ULONG SdirDirCollectionCurrent;
+YORI_ALLOC_SIZE_T SdirDirCollectionCurrent;
 
 /**
  Specifies the longest file name found so far when enumerating through a
  single directory.  This length in in characters.
  */
-ULONG SdirDirCollectionLongest;
+YORI_ALLOC_SIZE_T SdirDirCollectionLongest;
 
 /**
  Specifies the total length of characters stored in file names during
@@ -110,7 +110,7 @@ SdirCaptureFoundItemIntoDirent (
     __in BOOL ForceDisplay
     ) 
 {
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
 
     memset(CurrentEntry, 0, sizeof(*CurrentEntry));
 
@@ -207,11 +207,11 @@ SdirAddToCollection (
     ) 
 {
     PYORI_FILE_INFO CurrentEntry;
-    DWORD i, j;
+    YORI_ALLOC_SIZE_T i, j;
     DWORD CompareResult = 0;
 
     if (SdirDirCollectionCurrent >= SdirAllocatedDirents) {
-        if (SdirDirCollectionCurrent < UINT_MAX) {
+        if (SdirDirCollectionCurrent < ((YORI_ALLOC_SIZE_T)-1)) {
             SdirDirCollectionCurrent++;
         }
         return FALSE;
@@ -424,7 +424,7 @@ SdirItemFoundCallback(
 
                 if (_tcscmp(FindStreamData.cStreamName, L"::$DATA") != 0) {
 
-                    DWORD StreamLength = (DWORD)_tcslen(FindStreamData.cStreamName);
+                    YORI_ALLOC_SIZE_T StreamLength = (YORI_ALLOC_SIZE_T)_tcslen(FindStreamData.cStreamName);
 
                     if (StreamLength > 6 && _tcscmp(FindStreamData.cStreamName + StreamLength - 6, L":$DATA") == 0) {
                         FindStreamData.cStreamName[StreamLength - 6] = '\0';
@@ -511,14 +511,14 @@ VOID
 SdirMoveSortedEntries(
     __in PYORI_FILE_INFO OldCollection,
     __in PYORI_FILE_INFO NewCollection,
-    __in DWORD NumberEntriesToCopy,
+    __in YORI_ALLOC_SIZE_T NumberEntriesToCopy,
     __in_ecount(NumberSortedEntries) PYORI_FILE_INFO* OldSorted,
     __out_ecount(NumberEntriesToCopy) PYORI_FILE_INFO* NewSorted,
-    __in DWORD NumberSortedEntries
+    __in YORI_ALLOC_SIZE_T NumberSortedEntries
     )
 {
-    DWORD SrcIndex;
-    DWORD DestIndex;
+    YORI_ALLOC_SIZE_T SrcIndex;
+    YORI_ALLOC_SIZE_T DestIndex;
     PYORI_FILE_INFO ThisEntry;
 
     DestIndex = 0;
@@ -558,12 +558,12 @@ SdirEnumeratePathWithDepth (
     )
 {
     LPTSTR FinalPart;
-    ULONG DirEntsToPreserve;
+    YORI_ALLOC_SIZE_T DirEntsToPreserve;
     SDIR_SUMMARY SummaryToPreserve;
     PYORI_FILE_INFO NewSdirDirCollection;
     PYORI_FILE_INFO * NewSdirDirSorted;
     SDIR_ITEM_FOUND_CONTEXT ItemFoundContext;
-    DWORD MatchFlags;
+    WORD MatchFlags;
 
     //
     //  At this point we should have a directory and an enumeration criteria.
@@ -580,7 +580,7 @@ SdirEnumeratePathWithDepth (
     }
 
     if (FinalPart) {
-        Opts->ParentName.LengthInChars = (DWORD)(FinalPart - Opts->ParentName.StartOfString);
+        Opts->ParentName.LengthInChars = (YORI_ALLOC_SIZE_T)(FinalPart - Opts->ParentName.StartOfString);
         *FinalPart = '\0';
     }
 
@@ -608,7 +608,7 @@ SdirEnumeratePathWithDepth (
                 //
 
                 TCHAR BackupChar;
-                DWORD VolumeRootLength = 0;
+                YORI_ALLOC_SIZE_T VolumeRootLength = 0;
 
                 if (VolumeRootLength == 0) {
 
@@ -657,18 +657,27 @@ SdirEnumeratePathWithDepth (
 
         //
         //  If this is a subsequent pass and we didn't allocate a big enough
-        //  buffer, reallocate our buffers.  Add an extra 100 just in case
+        //  buffer, reallocate our buffers.  Add an extra 64 just in case
         //  we're still adding files in real time.
         //
 
         if (SdirDirCollectionCurrent >= SdirAllocatedDirents || SdirDirCollection == NULL) {
-            DWORD PreviousAllocatedDirents = SdirAllocatedDirents;
+            YORI_ALLOC_SIZE_T PreviousAllocatedDirents = SdirAllocatedDirents;
+            DWORD BytesRequired;
 
             if (SdirDirCollectionCurrent >= SdirAllocatedDirents) {
                 SdirAllocatedDirents = SdirDirCollectionCurrent + 1;
             }
-            if (SdirAllocatedDirents < UINT_MAX - 100) {
-                SdirAllocatedDirents += 100;
+            if (SdirAllocatedDirents < UINT_MAX - 64) {
+                SdirAllocatedDirents += 64;
+            }
+
+            BytesRequired = SdirAllocatedDirents;
+            BytesRequired = BytesRequired * sizeof(YORI_FILE_INFO);
+            if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+                SdirAllocatedDirents = SdirDirCollectionCurrent;
+                SdirWriteStringWithAttribute(_T("Too many files for a single memory allocation\n"), Opts->FtError.HighlightColor);
+                return FALSE;
             }
 
             NewSdirDirCollection = YoriLibMalloc(SdirAllocatedDirents * sizeof(YORI_FILE_INFO));
@@ -898,16 +907,16 @@ BOOL
 SdirDisplayCollection(VOID)
 {
     PYORI_FILE_INFO CurrentEntry;
-    DWORD Index, Ext;
+    YORI_ALLOC_SIZE_T Index, Ext;
     YORILIB_COLOR_ATTRIBUTES Attributes;
     YORILIB_COLOR_ATTRIBUTES FeatureColor;
-    DWORD Columns;
-    DWORD ColumnWidth;
-    DWORD ActiveColumn = 0;
+    YORI_ALLOC_SIZE_T Columns;
+    YORI_ALLOC_SIZE_T ColumnWidth;
+    YORI_ALLOC_SIZE_T ActiveColumn = 0;
     SDIR_FMTCHAR Line[SDIR_MAX_WIDTH];
-    DWORD CurrentChar = 0;
-    DWORD BufferRows;
-    DWORD LongestDisplayedFileName = SdirDirCollectionLongest;
+    YORI_ALLOC_SIZE_T CurrentChar = 0;
+    YORI_ALLOC_SIZE_T BufferRows;
+    YORI_ALLOC_SIZE_T LongestDisplayedFileName = SdirDirCollectionLongest;
     LPTSTR LineElements = SdirLineElementsText;
     PSDIR_FEATURE Feature;
 
@@ -926,9 +935,9 @@ SdirDisplayCollection(VOID)
     //
 
     if (Opts->EnableNameTruncation) {
-        ULONG AverageNameLength;
+        YORI_ALLOC_SIZE_T AverageNameLength;
 
-        AverageNameLength = SdirDirCollectionTotalNameLength / SdirDirCollectionCurrent;
+        AverageNameLength = (YORI_ALLOC_SIZE_T)(SdirDirCollectionTotalNameLength / SdirDirCollectionCurrent);
         if (LongestDisplayedFileName > 2 * AverageNameLength) {
             LongestDisplayedFileName = 2 * AverageNameLength;
             if (LongestDisplayedFileName < 10) {
@@ -961,7 +970,7 @@ SdirDisplayCollection(VOID)
         Columns = 1;
         ColumnWidth = Opts->MetadataWidth;
         if (Opts->FtFileName.Flags & SDIR_FEATURE_DISPLAY) {
-            ColumnWidth += LongestDisplayedFileName;
+            ColumnWidth = ColumnWidth + LongestDisplayedFileName;
         }
     }
 
@@ -1039,10 +1048,10 @@ SdirDisplayCollection(VOID)
             if (Opts->FtFileName.Flags & SDIR_FEATURE_DISPLAY) {
                 SdirFeatureColor(&Opts->FtFileName, Attributes, &FeatureColor);
                 if (CurrentEntry->FileNameLengthInChars > LongestDisplayedFileName) {
-                    ULONG ExtractedLength = (LongestDisplayedFileName - 3) / 2;
+                    YORI_ALLOC_SIZE_T ExtractedLength = (LongestDisplayedFileName - 3) / 2;
 
                     SdirPasteStr(&Line[CurrentChar], CurrentEntry->FileName, Attributes, ExtractedLength);
-                    CurrentChar += ExtractedLength;
+                    CurrentChar = CurrentChar + ExtractedLength;
 
                     SdirPasteStr(&Line[CurrentChar], _T("..."), Attributes, ExtractedLength);
                     CurrentChar += 3;
@@ -1066,7 +1075,7 @@ SdirDisplayCollection(VOID)
 
             if (Opts->FtShortName.Flags & SDIR_FEATURE_DISPLAY) {
                 SdirFeatureColor(&Opts->FtShortName, Attributes, &FeatureColor);
-                CurrentChar += SdirDisplayShortName(&Line[CurrentChar], FeatureColor, CurrentEntry);
+                CurrentChar = CurrentChar + SdirDisplayShortName(&Line[CurrentChar], FeatureColor, CurrentEntry);
 
                 if (!(Opts->FtFileName.Flags & SDIR_FEATURE_DISPLAY)) {
 
@@ -1103,7 +1112,7 @@ SdirDisplayCollection(VOID)
                 Feature = (PSDIR_FEATURE)((PUCHAR)Opts + SdirExec[Ext].FtOffset);
                 if (Feature->Flags & SDIR_FEATURE_DISPLAY) {
                     SdirFeatureColor(Feature, Attributes, &FeatureColor);
-                    CurrentChar += SdirExec[Ext].Function(&Line[CurrentChar], FeatureColor, CurrentEntry);
+                    CurrentChar = CurrentChar + SdirExec[Ext].Function(&Line[CurrentChar], FeatureColor, CurrentEntry);
                 }
             }
         }
@@ -1188,12 +1197,12 @@ typedef BOOL (* SDIR_FOR_EACH_PATHSPEC_FN)(PYORI_STRING);
  */
 BOOL
 SdirForEachPathSpec (
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in SDIR_FOR_EACH_PATHSPEC_FN Callback
     )
 {
-    ULONG  CurrentArg;
+    YORI_ALLOC_SIZE_T CurrentArg;
     BOOLEAN EnumerateUserSpecified = FALSE;
     YORI_STRING FindStr;
     YORI_STRING Arg;
@@ -1250,7 +1259,7 @@ SdirForEachPathSpec (
                 if (HandleInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                     LPTSTR FindStrWithWild;
                     LPTSTR szFormatStr;
-                    DWORD FindStrWithWildLength = (DWORD)FindStr.LengthInChars + 3;
+                    YORI_ALLOC_SIZE_T FindStrWithWildLength = FindStr.LengthInChars + 3;
 
                     FindStrWithWild = YoriLibReferencedMalloc(FindStrWithWildLength * sizeof(TCHAR));
                     if (FindStrWithWild == NULL) {
@@ -1303,7 +1312,7 @@ SdirForEachPathSpec (
  */
 BOOL
 SdirEnumerateAndDisplay (
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -1367,7 +1376,7 @@ SdirEnumerateAndDisplaySubtree (
     FinalBackslash = YoriLibFindRightMostCharacter(FileSpec, '\\');
     if (FinalBackslash != NULL) {
         ParentDirectory.StartOfString = FileSpec->StartOfString;
-        ParentDirectory.LengthInChars = (DWORD)(FinalBackslash - FileSpec->StartOfString);
+        ParentDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)(FinalBackslash - FileSpec->StartOfString);
         ParentDirectory.LengthAllocated = ParentDirectory.LengthInChars + 1;
 
         FinalBackslash[0] = '\0';
@@ -1547,12 +1556,12 @@ SdirEnumerateAndDisplaySubtree (
  */
 BOOL
 SdirEnumerateAndDisplayRecursive (
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOLEAN EnumerateUserSpecified = FALSE;
-    ULONG CurrentArg;
+    YORI_ALLOC_SIZE_T CurrentArg;
     YORI_STRING Arg;
     YORI_STRING FindStr;
 
@@ -1612,7 +1621,7 @@ SdirEnumerateAndDisplayRecursive (
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {

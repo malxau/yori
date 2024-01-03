@@ -714,12 +714,12 @@ SdirUsageMetaColor(VOID)
  */
 BOOL
 SdirUsage(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     YORI_STRING Arg;
-    ULONG CurrentArg;
+    YORI_ALLOC_SIZE_T CurrentArg;
     BOOLEAN DisplayOptionsHelp = FALSE;
     BOOLEAN DisplayDisplayHelp = FALSE;
     BOOLEAN DisplaySortHelp = FALSE;

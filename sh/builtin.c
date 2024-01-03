@@ -42,20 +42,20 @@
 DWORD
 YoriShBuckPass (
     __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __in DWORD ExtraArgCount,
+    __in YORI_ALLOC_SIZE_T ExtraArgCount,
     ...
     )
 {
     YORI_LIBSH_CMD_CONTEXT OldCmdContext;
     DWORD ExitCode = 1;
-    DWORD count;
+    YORI_ALLOC_SIZE_T count;
     BOOL ExecAsBuiltin = FALSE;
     va_list marker;
 
     memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_LIBSH_CMD_CONTEXT));
 
-    ExecContext->CmdToExec.ArgC += ExtraArgCount;
-    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
+    ExecContext->CmdToExec.ArgC = ExecContext->CmdToExec.ArgC + ExtraArgCount;
+    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc((YORI_ALLOC_SIZE_T)ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
     if (ExecContext->CmdToExec.MemoryToFree == NULL) {
         memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_LIBSH_CMD_CONTEXT));
         return ExitCode;
@@ -181,7 +181,7 @@ int
 YoriShExecuteInProc(
     __in PYORI_CMD_BUILTIN Fn,
     __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in PYORI_STRING EscapedArgV
     )
 {
@@ -189,8 +189,8 @@ YoriShExecuteInProc(
     BOOLEAN WasPipe = FALSE;
     PYORI_STRING NoEscapedArgV;
     PYORI_STRING SavedEscapedArgV;
-    DWORD SavedEscapedArgC;
-    DWORD Count;
+    YORI_ALLOC_SIZE_T SavedEscapedArgC;
+    YORI_ALLOC_SIZE_T Count;
     DWORD ExitCode = 0;
 
     NoEscapedArgV = NULL;
@@ -200,7 +200,7 @@ YoriShExecuteInProc(
     //  have access to the escaped form if required.
     //
 
-    NoEscapedArgV = YoriLibReferencedMalloc(ArgC * sizeof(YORI_STRING));
+    NoEscapedArgV = YoriLibReferencedMalloc((YORI_ALLOC_SIZE_T)ArgC * sizeof(YORI_STRING));
     if (NoEscapedArgV == NULL) {
         ExitCode = ERROR_OUTOFMEMORY;
         goto Cleanup;
@@ -338,8 +338,8 @@ YoriShExecuteNamedModuleInProc(
     if (Main) {
         PYORI_LIBSH_LOADED_MODULE PreviousModule;
         YORI_STRING CmdLine;
-        DWORD ArgC;
-        DWORD Count;
+        YORI_ALLOC_SIZE_T ArgC;
+        YORI_ALLOC_SIZE_T Count;
         PYORI_STRING EscapedArgV;
 
         //
@@ -399,8 +399,8 @@ YoriShBuiltIn (
     PYORI_CMD_BUILTIN BuiltInCmd = NULL;
     PYORI_LIBSH_BUILTIN_CALLBACK CallbackEntry = NULL;
     YORI_STRING CmdLine;
-    DWORD ArgC;
-    DWORD Count;
+    YORI_ALLOC_SIZE_T ArgC;
+    YORI_ALLOC_SIZE_T Count;
     PYORI_STRING EscapedArgV;
 
     //

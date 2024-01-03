@@ -66,13 +66,13 @@ IfHelp(VOID)
  @return TRUE to indicate a component was found, FALSE if it was not.
  */
 __success(return)
-BOOL
+BOOLEAN
 IfFindOffsetOfNextComponent(
     __in PYORI_STRING String,
-    __out PDWORD Offset
+    __out PYORI_ALLOC_SIZE_T Offset
     )
 {
-    DWORD CharIndex;
+    YORI_ALLOC_SIZE_T CharIndex;
     for (CharIndex = 0; CharIndex < String->LengthInChars; CharIndex++) {
         if (YoriLibIsEscapeChar(String->StartOfString[CharIndex])) {
             CharIndex++;
@@ -83,7 +83,7 @@ IfFindOffsetOfNextComponent(
             String->StartOfString[CharIndex + 1] == '[') {
 
             YORI_STRING EscapeSubset;
-            DWORD EndOfEscape;
+            YORI_ALLOC_SIZE_T EndOfEscape;
 
             YoriLibInitEmptyString(&EscapeSubset);
             EscapeSubset.StartOfString = &String->StartOfString[CharIndex + 2];
@@ -112,35 +112,38 @@ IfFindOffsetOfNextComponent(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_IF(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     BOOL Result;
     YORI_STRING CmdLine;
     YORI_STRING EscapedCmdLine;
     DWORD ErrorLevel;
-    DWORD CharIndex;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD EscapedStartArg = 0;
+    YORI_ALLOC_SIZE_T CharIndex;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T EscapedStartArg = 0;
     YORI_STRING TestCommand;
     YORI_STRING TrueCommand;
     YORI_STRING FalseCommand;
     YORI_STRING Arg;
     DWORD SavedErrorLevel;
 
-    DWORD EscapedArgC;
+    DWORD TempArgC;
+    YORI_ALLOC_SIZE_T EscapedArgC;
     PYORI_STRING EscapedArgV;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
     SavedErrorLevel = YoriCallGetErrorLevel();
 
-    if (!YoriCallGetEscapedArguments(&EscapedArgC, &EscapedArgV)) {
+    if (!YoriCallGetEscapedArguments(&TempArgC, &EscapedArgV)) {
         EscapedArgC = ArgC;
         EscapedArgV = ArgV;
+    } else {
+        EscapedArgC = (YORI_ALLOC_SIZE_T)TempArgC;
     }
 
     for (i = 1; i < ArgC; i++) {
@@ -217,7 +220,7 @@ YoriCmd_IF(
     }
 
     Arg.StartOfString += CharIndex;
-    Arg.LengthInChars -= CharIndex;
+    Arg.LengthInChars = Arg.LengthInChars - CharIndex;
 
     if (Arg.LengthInChars > 0) {
         Arg.StartOfString++;
@@ -228,7 +231,7 @@ YoriCmd_IF(
             TrueCommand.LengthInChars = CharIndex;
         }
         Arg.StartOfString += TrueCommand.LengthInChars;
-        Arg.LengthInChars -= TrueCommand.LengthInChars;
+        Arg.LengthInChars = Arg.LengthInChars - TrueCommand.LengthInChars;
     }
 
     if (Arg.LengthInChars > 0) {

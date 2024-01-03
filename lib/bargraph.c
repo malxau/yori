@@ -59,7 +59,8 @@ YoriLibDisplayBarGraph(
     YORI_STRING Subset;
     YORI_STRING Line;
     WORD Background;
-    DWORD TotalBarSize;
+    YORI_ALLOC_SIZE_T TotalBarSize;
+    YORI_ALLOC_SIZE_T CharsRequired;
     DWORD WholeBarsSet;
     DWORD PartialBarsSet;
     DWORD Index;
@@ -68,7 +69,7 @@ YoriLibDisplayBarGraph(
     BOOLEAN LowerIsBetter;
     BOOL SupportsColor;
     BOOL SupportsExtendedChars;
-    DWORD Width;
+    WORD Width;
 
     Width = 0;
     YoriLibGetWindowDimensions(hOutput, &Width, NULL);
@@ -91,7 +92,8 @@ YoriLibDisplayBarGraph(
         SupportsExtendedChars = FALSE;
     }
 
-    if (!YoriLibAllocateString(&Line, Width + YORI_MAX_INTERNAL_VT_ESCAPE_CHARS * 2)) {
+    CharsRequired = (YORI_ALLOC_SIZE_T)(Width + YORI_MAX_INTERNAL_VT_ESCAPE_CHARS * 2);
+    if (!YoriLibAllocateString(&Line, CharsRequired)) {
         return FALSE;
     }
 
@@ -100,7 +102,7 @@ YoriLibDisplayBarGraph(
 
     YoriLibInitEmptyString(&Subset);
     Subset.StartOfString = &Line.StartOfString[2];
-    Subset.LengthAllocated = Line.LengthAllocated - 2;
+    Subset.LengthAllocated = (YORI_ALLOC_SIZE_T)(Line.LengthAllocated - 2);
 
     Ctrl = YORILIB_ATTRCTRL_WINDOW_BG;
     Background = (USHORT)(YoriLibVtGetDefaultColor() & 0xF0);
@@ -132,9 +134,9 @@ YoriLibDisplayBarGraph(
         YoriLibVtStringForTextAttribute(&Subset, Ctrl, Color);
     }
 
-    Line.LengthInChars = 2 + Subset.LengthInChars;
+    Line.LengthInChars = (YORI_ALLOC_SIZE_T)(2 + Subset.LengthInChars);
 
-    TotalBarSize = Width - 4;
+    TotalBarSize = (YORI_ALLOC_SIZE_T)(Width - 4);
     PartialBarsSet = TotalBarSize * TenthsOfPercent / 500;
     WholeBarsSet = PartialBarsSet / 2;
     PartialBarsSet = PartialBarsSet % 2;
@@ -155,14 +157,14 @@ YoriLibDisplayBarGraph(
     for (; Index < TotalBarSize; Index++) {
         Line.StartOfString[Index + Line.LengthInChars] = ' ';
     }
-    Line.LengthInChars += TotalBarSize;
+    Line.LengthInChars = (YORI_ALLOC_SIZE_T)(Line.LengthInChars + TotalBarSize);
 
     Subset.StartOfString = &Line.StartOfString[Line.LengthInChars];
-    Subset.LengthAllocated = Line.LengthAllocated - Line.LengthInChars;
+    Subset.LengthAllocated = (YORI_ALLOC_SIZE_T)(Line.LengthAllocated - Line.LengthInChars);
 
     if (SupportsColor) {
-        Subset.LengthInChars = YoriLibSPrintf(Subset.StartOfString, _T("%c[0m]\n"), 27);
-        Line.LengthInChars += Subset.LengthInChars;
+        Subset.LengthInChars = (YORI_ALLOC_SIZE_T)YoriLibSPrintf(Subset.StartOfString, _T("%c[0m]\n"), 27);
+        Line.LengthInChars = (YORI_ALLOC_SIZE_T)(Line.LengthInChars + Subset.LengthInChars);
     }
 
     YoriLibOutputToDevice(hOutput, 0, _T("%y"), &Line);

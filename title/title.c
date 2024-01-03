@@ -74,16 +74,16 @@ TitleHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     YORI_STRING CmdLine;
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 1;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 1;
     YORI_STRING Arg;
-    BOOL GetTitleMode = FALSE;
+    BOOLEAN GetTitleMode = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -115,17 +115,19 @@ ENTRYPOINT(
 
     if (GetTitleMode) {
         YORI_STRING PreviousTitle;
+        YORI_ALLOC_SIZE_T BufferLength;
 
         //
         //  MSDN implies there's no way to know how big the buffer needs to be,
         //  but it needs to be less than 64Kb, so we use that.
         //
 
-        if (!YoriLibAllocateString(&PreviousTitle, 64 * 1024)) {
+        BufferLength = YoriLibMaximumAllocationInRange(32 * 1024, 64 * 1024);
+        if (!YoriLibAllocateString(&PreviousTitle, BufferLength)) {
             return EXIT_FAILURE;
         }
 
-        PreviousTitle.LengthInChars = GetConsoleTitle(PreviousTitle.StartOfString, PreviousTitle.LengthAllocated);
+        PreviousTitle.LengthInChars = (YORI_ALLOC_SIZE_T)GetConsoleTitle(PreviousTitle.StartOfString, PreviousTitle.LengthAllocated);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &PreviousTitle);
         YoriLibFreeStringContents(&PreviousTitle);
 

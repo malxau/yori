@@ -92,7 +92,7 @@ YoriLibCheckIfArgNeedsQuotes(
     )
 {
     BOOLEAN HasWhiteSpace;
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
 
     if (Arg->LengthInChars > 0 &&
         Arg->StartOfString[0] == '"') {
@@ -144,22 +144,22 @@ YoriLibCheckIfArgNeedsQuotes(
 __success(return)
 BOOL
 YoriLibBuildCmdlineFromArgcArgv(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in BOOLEAN EncloseInQuotes,
     __in BOOLEAN ApplyChildProcessEscapes,
     __out PYORI_STRING CmdLine
     )
 {
-    DWORD count;
+    YORI_ALLOC_SIZE_T count;
     PYORI_STRING ThisArg;
-    DWORD BufferLength;
-    DWORD SlashesToWrite;
-    DWORD SrcOffset;
-    DWORD SlashCount;
-    DWORD DestOffset;
-    DWORD CmdLineOffset;
-    DWORD WriteSlashCount;
+    YORI_ALLOC_SIZE_T BufferLength;
+    YORI_ALLOC_SIZE_T SlashesToWrite;
+    YORI_ALLOC_SIZE_T SrcOffset;
+    YORI_ALLOC_SIZE_T SlashCount;
+    YORI_ALLOC_SIZE_T DestOffset;
+    YORI_ALLOC_SIZE_T CmdLineOffset;
+    YORI_ALLOC_SIZE_T WriteSlashCount;
     BOOLEAN Quoted;
     BOOLEAN AddQuote;
 
@@ -184,24 +184,24 @@ YoriLibBuildCmdlineFromArgcArgv(
 
                 for (SlashCount = 0; SrcOffset + SlashCount < ThisArg->LengthInChars && ThisArg->StartOfString[SrcOffset + SlashCount] == '\\'; SlashCount++);
                 if (SrcOffset + SlashCount < ThisArg->LengthInChars && ThisArg->StartOfString[SrcOffset + SlashCount] == '"') {
-                    SlashesToWrite = SlashCount * 2 + 1;
-                    SrcOffset += SlashCount;
+                    SlashesToWrite = (YORI_ALLOC_SIZE_T)(SlashCount * 2 + 1);
+                    SrcOffset = (YORI_ALLOC_SIZE_T)(SrcOffset + SlashCount);
                     BufferLength += 1;
                 } else if (SrcOffset + SlashCount == ThisArg->LengthInChars && Quoted) {
-                    SlashesToWrite = SlashCount * 2;
-                    SrcOffset += SlashCount - 1;
+                    SlashesToWrite = (YORI_ALLOC_SIZE_T)(SlashCount * 2);
+                    SrcOffset = (YORI_ALLOC_SIZE_T)(SrcOffset + SlashCount - 1);
                 } else {
                     SlashesToWrite = SlashCount;
-                    SrcOffset += SlashCount - 1;
+                    SrcOffset = (YORI_ALLOC_SIZE_T)(SrcOffset + SlashCount - 1);
                 }
-                BufferLength += SlashesToWrite;
+                BufferLength = (YORI_ALLOC_SIZE_T)(BufferLength + SlashesToWrite);
             } else {
-                BufferLength += 1;
+                BufferLength = (YORI_ALLOC_SIZE_T)(BufferLength + 1);
             }
         }
     }
 
-    BufferLength += 1;
+    BufferLength = (YORI_ALLOC_SIZE_T)(BufferLength + 1);
 
     if (!YoriLibAllocateString(CmdLine, BufferLength)) {
         return FALSE;
@@ -235,11 +235,11 @@ YoriLibBuildCmdlineFromArgcArgv(
                 for (SlashCount = 0; SrcOffset + SlashCount < ThisArg->LengthInChars && ThisArg->StartOfString[SrcOffset + SlashCount] == '\\'; SlashCount++);
                 if (SrcOffset + SlashCount < ThisArg->LengthInChars && ThisArg->StartOfString[SrcOffset + SlashCount] == '"') {
                     // Escape the escapes and the quote
-                    SlashesToWrite = SlashCount * 2 + 1;
+                    SlashesToWrite = (YORI_ALLOC_SIZE_T)(SlashCount * 2 + 1);
                     AddQuote = TRUE;
                 } else if (SrcOffset + SlashCount == ThisArg->LengthInChars && Quoted) {
                     // Escape the escapes but not the quote
-                    SlashesToWrite = SlashCount * 2;
+                    SlashesToWrite = (YORI_ALLOC_SIZE_T)(SlashCount * 2);
                     AddQuote = FALSE;
                 } else {
                     // No escapes, just copy verbatim
@@ -251,17 +251,17 @@ YoriLibBuildCmdlineFromArgcArgv(
                 }
                 if (AddQuote) {
                     CmdLine->StartOfString[CmdLineOffset + DestOffset + WriteSlashCount] = '"';
-                    SrcOffset += SlashCount;
-                    DestOffset += WriteSlashCount;
+                    SrcOffset = (YORI_ALLOC_SIZE_T)(SrcOffset + SlashCount);
+                    DestOffset = (YORI_ALLOC_SIZE_T)(DestOffset + WriteSlashCount);
                 } else {
-                    SrcOffset += SlashCount - 1;
-                    DestOffset += WriteSlashCount - 1;
+                    SrcOffset = (YORI_ALLOC_SIZE_T)(SrcOffset + SlashCount - 1);
+                    DestOffset = (YORI_ALLOC_SIZE_T)(DestOffset + WriteSlashCount - 1);
                 }
             } else {
                 CmdLine->StartOfString[CmdLineOffset + DestOffset] = ThisArg->StartOfString[SrcOffset];
             }
         }
-        CmdLineOffset += DestOffset;
+        CmdLineOffset = (YORI_ALLOC_SIZE_T)(CmdLineOffset + DestOffset);
 
         if (EncloseInQuotes) {
             if (Quoted) {
@@ -310,14 +310,14 @@ YoriLibExpandCommandVariables(
     __inout PYORI_STRING ExpandedString
     )
 {
-    DWORD DestIndex;
-    DWORD Index;
-    DWORD FinalIndex;
+    YORI_ALLOC_SIZE_T DestIndex;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T FinalIndex;
     BOOL Processed;
     YORI_STRING CmdString;
     YORI_STRING DestString;
-    DWORD LengthNeeded;
-    DWORD IgnoreUntil;
+    YORI_ALLOC_SIZE_T LengthNeeded;
+    YORI_ALLOC_SIZE_T IgnoreUntil;
 
     if (ExpandedString->LengthAllocated < 256) {
         YoriLibFreeStringContents(ExpandedString);
@@ -332,14 +332,14 @@ YoriLibExpandCommandVariables(
         Processed = FALSE;
 
         if (Index >= IgnoreUntil && YoriLibIsEscapeChar(String->StartOfString[Index])) {
-            IgnoreUntil = Index + 2;
+            IgnoreUntil = (YORI_ALLOC_SIZE_T)(Index + 2);
             if (!PreserveEscapes) {
                 continue;
             }
         }
 
         if (Index >= IgnoreUntil && String->StartOfString[Index] == MatchChar) {
-            FinalIndex = Index + 1;
+            FinalIndex = (YORI_ALLOC_SIZE_T)(Index + 1);
             while (FinalIndex < String->LengthInChars && String->StartOfString[FinalIndex] != MatchChar) {
                 FinalIndex++;
             }
@@ -347,18 +347,18 @@ YoriLibExpandCommandVariables(
             YoriLibInitEmptyString(&CmdString);
             CmdString.StartOfString = &String->StartOfString[Index + 1];
             CmdString.LengthAllocated = 
-            CmdString.LengthInChars = FinalIndex - Index - 1;
+            CmdString.LengthInChars = (YORI_ALLOC_SIZE_T)(FinalIndex - Index - 1);
 
             while (TRUE) {
                 YoriLibInitEmptyString(&DestString);
                 DestString.StartOfString = &ExpandedString->StartOfString[DestIndex];
-                DestString.LengthAllocated = ExpandedString->LengthAllocated - DestIndex - 1;
+                DestString.LengthAllocated = (YORI_ALLOC_SIZE_T)(ExpandedString->LengthAllocated - DestIndex - 1);
 
                 LengthNeeded = Function(&DestString, &CmdString, Context);
 
                 if (LengthNeeded <= (ExpandedString->LengthAllocated - DestIndex - 1)) {
                     Processed = TRUE;
-                    DestIndex += LengthNeeded;
+                    DestIndex = (YORI_ALLOC_SIZE_T)(DestIndex + LengthNeeded);
                     Index = FinalIndex;
                     break;
                 } else {
@@ -418,18 +418,18 @@ YoriLibExpandCommandVariables(
 __success(return)
 BOOLEAN
 YoriLibArgArrayToVariableValue(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in PYORI_STRING ArgV,
     __out PYORI_STRING Variable,
     __out PBOOLEAN ValueSpecified,
     __out PYORI_STRING Value
     )
 {
-    DWORD ArgWithEquals;
-    DWORD EqualsOffset;
+    YORI_ALLOC_SIZE_T ArgWithEquals;
+    YORI_ALLOC_SIZE_T EqualsOffset;
     LPTSTR Equals;
     YORI_STRING SavedArg;
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
 
     Equals = NULL;
     ArgWithEquals = 0;
@@ -439,7 +439,7 @@ YoriLibArgArrayToVariableValue(
         Equals = YoriLibFindLeftMostCharacter(&ArgV[i], '=');
         if (Equals != NULL) {
             ArgWithEquals = i;
-            EqualsOffset = (DWORD)(Equals - ArgV[i].StartOfString);
+            EqualsOffset = (YORI_ALLOC_SIZE_T)(Equals - ArgV[i].StartOfString);
             break;
         }
     }
@@ -493,7 +493,7 @@ YoriLibArgArrayToVariableValue(
 
     if (SavedArg.LengthInChars - EqualsOffset - 1 > 0) {
         ArgV[ArgWithEquals].StartOfString = ArgV[ArgWithEquals].StartOfString + EqualsOffset + 1;
-        ArgV[ArgWithEquals].LengthInChars = SavedArg.LengthInChars - EqualsOffset - 1;
+        ArgV[ArgWithEquals].LengthInChars = (YORI_ALLOC_SIZE_T)(SavedArg.LengthInChars - EqualsOffset - 1);
     } else {
         ArgV[ArgWithEquals].LengthInChars = SavedArg.LengthInChars;
         ArgWithEquals++;
@@ -549,14 +549,14 @@ YoriLibArgArrayToVariableValue(
 PYORI_STRING
 YoriLibCmdlineToArgcArgv(
     __in LPCTSTR CmdLine,
-    __in DWORD MaxArgs,
+    __in YORI_ALLOC_SIZE_T MaxArgs,
     __in BOOLEAN ApplyCaretAsEscape,
-    __out PDWORD argc
+    __out PYORI_ALLOC_SIZE_T argc
     )
 {
-    DWORD ArgCount = 0;
-    DWORD CharCount = 0;
-    DWORD SlashCount;
+    YORI_ALLOC_SIZE_T ArgCount = 0;
+    YORI_ALLOC_SIZE_T CharCount = 0;
+    YORI_ALLOC_SIZE_T SlashCount;
     TCHAR CONST * c;
     PYORI_STRING ArgvArray;
     LPTSTR ReturnStrings;
@@ -694,7 +694,7 @@ YoriLibCmdlineToArgcArgv(
             c++;
             if (*c == '\0') {
                 *ReturnStrings = '\0';
-                ArgvArray[ArgCount].LengthAllocated = ArgvArray[ArgCount].LengthInChars + 1;
+                ArgvArray[ArgCount].LengthAllocated = (YORI_ALLOC_SIZE_T)(ArgvArray[ArgCount].LengthInChars + 1);
             }
             continue;
         } else if (!QuoteOpen && *c == ' ') {
@@ -704,7 +704,7 @@ YoriLibCmdlineToArgcArgv(
         if (ArgCount + 1 < MaxArgs && EndArg) {
             *ReturnStrings = '\0';
             ReturnStrings++;
-            ArgvArray[ArgCount].LengthAllocated = ArgvArray[ArgCount].LengthInChars + 1;
+            ArgvArray[ArgCount].LengthAllocated = (YORI_ALLOC_SIZE_T)(ArgvArray[ArgCount].LengthInChars + 1);
 
             c++;
             while (*c == ' ') c++;
@@ -731,7 +731,7 @@ YoriLibCmdlineToArgcArgv(
 
             if (*c == '\0') {
                 *ReturnStrings = '\0';
-                ArgvArray[ArgCount].LengthAllocated = ArgvArray[ArgCount].LengthInChars + 1;
+                ArgvArray[ArgCount].LengthAllocated = (YORI_ALLOC_SIZE_T)(ArgvArray[ArgCount].LengthInChars + 1);
             }
         }
     }

@@ -90,10 +90,10 @@ ProcInfoHelp(VOID)
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 ProcInfoOutputLargeInteger(
     __in LARGE_INTEGER LargeInt,
-    __in DWORD NumberBase,
+    __in WORD NumberBase,
     __inout PYORI_STRING OutputString
     )
 {
@@ -125,7 +125,7 @@ ProcInfoOutputLargeInteger(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 ProcInfoOutputTimestamp(
     __in LARGE_INTEGER LargeInt,
     __inout PYORI_STRING OutputString
@@ -134,19 +134,19 @@ ProcInfoOutputTimestamp(
     YORI_STRING String;
     TCHAR StringBuffer[32];
     LARGE_INTEGER Remainder;
-    DWORD Milliseconds;
-    DWORD Seconds;
-    DWORD Minutes;
-    DWORD Hours;
+    WORD Milliseconds;
+    WORD Seconds;
+    WORD Minutes;
+    WORD Hours;
 
     Remainder.QuadPart = LargeInt.QuadPart;
-    Milliseconds = Remainder.LowPart % 1000;
+    Milliseconds = (WORD)(Remainder.LowPart % 1000);
     Remainder.QuadPart = Remainder.QuadPart / 1000;
-    Seconds = Remainder.LowPart % 60;
+    Seconds = (WORD)(Remainder.LowPart % 60);
     Remainder.QuadPart = Remainder.QuadPart / 60;
-    Minutes = Remainder.LowPart % 60;
+    Minutes = (WORD)(Remainder.LowPart % 60);
     Remainder.QuadPart = Remainder.QuadPart / 60;
-    Hours = Remainder.LowPart;
+    Hours = (WORD)Remainder.LowPart;
 
     YoriLibInitEmptyString(&String);
     String.StartOfString = StringBuffer;
@@ -212,7 +212,7 @@ typedef struct _PROCINFO_CONTEXT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 ProcInfoExpandVariables(
     __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
@@ -293,8 +293,8 @@ ProcInfoDumpHandles(
     PYORI_OBJECT_TYPE_INFORMATION ObjectType;
     YORI_STRING ObjectNameString;
     YORI_STRING ObjectTypeString;
-    DWORD ObjectNameLength;
-    DWORD ObjectTypeLength;
+    YORI_ALLOC_SIZE_T ObjectNameLength;
+    YORI_ALLOC_SIZE_T ObjectTypeLength;
     DWORD LengthReturned;
 
     if (!YoriLibGetSystemHandlesList(&Handles)) {
@@ -302,7 +302,7 @@ ProcInfoDumpHandles(
         return FALSE;
     }
 
-    ObjectNameLength = 0x10000;
+    ObjectNameLength = YoriLibMaximumAllocationInRange(0x8000, 0x10000);
     ObjectName = YoriLibMalloc(ObjectNameLength);
     if (ObjectName == NULL) {
         YoriLibFree(Handles);
@@ -390,16 +390,16 @@ ProcInfoDumpHandles(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
     DWORD StartArg = 1;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD Pid;
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     YORI_STRING DisplayString;
     YORI_STRING AllocatedFormatString;

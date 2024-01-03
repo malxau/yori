@@ -180,7 +180,7 @@ YoriPkgCheckIfPackageDeleteable(
     for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
         YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
 
-        IniValue.LengthInChars =
+        IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
                                                   FileIndexString,
                                                   _T(""),
@@ -395,7 +395,7 @@ YoriPkgDeletePackageInternal(
     for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
         YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
 
-        IniValue.LengthInChars =
+        IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
                                                   FileIndexString,
                                                   _T(""),
@@ -678,7 +678,7 @@ YoriPkgInstallPackage(
             goto Exit;
         }
 
-        PkgToDelete.LengthInChars =
+        PkgToDelete.LengthInChars = (YORI_ALLOC_SIZE_T)
             DllKernel32.pGetPrivateProfileStringW(_T("Installed"),
                                                   Package->PackageName.StartOfString,
                                                   _T(""),
@@ -877,7 +877,7 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
         return FALSE;
     }
 
-    IniValue.LengthInChars =
+    IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
         DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
                                               _T("Architecture"),
                                               _T(""),

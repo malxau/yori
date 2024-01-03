@@ -216,7 +216,7 @@ BOOLEAN
 YoriShCloseWindow(VOID)
 {
     LPDWORD PidList = NULL;
-    DWORD PidListSize = 0;
+    YORI_ALLOC_SIZE_T PidListSize = 0;
     DWORD PidCountReturned;
     DWORD Index;
     DWORD CurrentPid;
@@ -248,8 +248,12 @@ YoriShCloseWindow(VOID)
         if (PidList) {
             YoriLibFree(PidList);
         }
+        
+        if (!YoriLibIsSizeAllocatable(PidCountReturned + 4)) {
+            return FALSE;
+        }
 
-        PidListSize = PidCountReturned + 4;
+        PidListSize = (YORI_ALLOC_SIZE_T)PidCountReturned + 4;
         PidList = YoriLibMalloc(PidListSize * sizeof(DWORD));
         if (PidList == NULL) {
             return FALSE;

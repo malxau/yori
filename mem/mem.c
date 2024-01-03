@@ -87,10 +87,10 @@ MemHelp(VOID)
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MemOutputLargeInteger(
     __in LARGE_INTEGER LargeInt,
-    __in DWORD NumberBase,
+    __in WORD NumberBase,
     __inout PYORI_STRING OutputString
     )
 {
@@ -174,14 +174,14 @@ typedef struct _MEM_CONTEXT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MemExpandVariables(
     __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     PMEM_CONTEXT MemContext = (PMEM_CONTEXT)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("TOTALMEM")) == 0) {
@@ -246,13 +246,13 @@ MemExpandVariables(
 BOOL
 MemGroupProcessNames(
     __inout PYORI_SYSTEM_PROCESS_INFORMATION ProcessInfo,
-    __inout PDWORD NumberOfProcesses
+    __inout PYORI_ALLOC_SIZE_T NumberOfProcesses
     )
 {
     PYORI_SYSTEM_PROCESS_INFORMATION FirstEntryWithName;
     PYORI_SYSTEM_PROCESS_INFORMATION CurrentEntry;
     PYORI_SYSTEM_PROCESS_INFORMATION PreviousEntry;
-    DWORD ProcessCount;
+    YORI_ALLOC_SIZE_T ProcessCount;
     YORI_STRING PrimaryName;
     YORI_STRING FoundName;
 
@@ -318,8 +318,8 @@ MemDisplayProcessMemoryUsage(
     PYORI_SYSTEM_PROCESS_INFORMATION ProcessInfo = NULL;
     PYORI_SYSTEM_PROCESS_INFORMATION CurrentEntry;
     DWORD BytesReturned;
-    DWORD BytesAllocated;
-    DWORD NumberOfProcesses;
+    YORI_ALLOC_SIZE_T BytesAllocated;
+    YORI_ALLOC_SIZE_T NumberOfProcesses;
     DWORD CurrentProcessIndex;
     PYORI_SYSTEM_PROCESS_INFORMATION *SortedProcesses;
     LONG Status;
@@ -355,10 +355,14 @@ MemDisplayProcessMemoryUsage(
         }
 
         if (BytesAllocated == 0) {
-            BytesAllocated = 64 * 1024;
+            BytesAllocated = YoriLibMaximumAllocationInRange(16 * 1024, 64 * 1024);
         } else if (BytesAllocated <= 1024 * 1024) {
-            BytesAllocated = BytesAllocated * 4;
+            BytesAllocated = YoriLibMaximumAllocationInRange(BytesAllocated * 2, BytesAllocated * 4);
         } else {
+            return FALSE;
+        }
+
+        if (BytesAllocated == 0) {
             return FALSE;
         }
 
@@ -505,13 +509,13 @@ MemDisplayProcessMemoryUsage(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     BOOLEAN DisplayProcesses = FALSE;
     BOOLEAN GroupProcesses = FALSE;
     BOOLEAN DisplayGraph = TRUE;

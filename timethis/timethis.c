@@ -85,10 +85,10 @@ TimeThisHelp(VOID)
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 TimeThisOutputLargeInteger(
     __in LARGE_INTEGER LargeInt,
-    __in DWORD NumberBase,
+    __in WORD NumberBase,
     __inout PYORI_STRING OutputString
     )
 {
@@ -120,7 +120,7 @@ TimeThisOutputLargeInteger(
          of characters required to successfully populate the contents into
          the variable.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 TimeThisOutputTimestamp(
     __in LARGE_INTEGER LargeInt,
     __inout PYORI_STRING OutputString
@@ -129,19 +129,19 @@ TimeThisOutputTimestamp(
     YORI_STRING String;
     TCHAR StringBuffer[32];
     LARGE_INTEGER Remainder;
-    DWORD Milliseconds;
-    DWORD Seconds;
-    DWORD Minutes;
-    DWORD Hours;
+    WORD Milliseconds;
+    WORD Seconds;
+    WORD Minutes;
+    WORD Hours;
 
     Remainder.QuadPart = LargeInt.QuadPart;
-    Milliseconds = Remainder.LowPart % 1000;
+    Milliseconds = (WORD)(Remainder.LowPart % 1000);
     Remainder.QuadPart = Remainder.QuadPart / 1000;
-    Seconds = Remainder.LowPart % 60;
+    Seconds = (WORD)(Remainder.LowPart % 60);
     Remainder.QuadPart = Remainder.QuadPart / 60;
-    Minutes = Remainder.LowPart % 60;
+    Minutes = (WORD)(Remainder.LowPart % 60);
     Remainder.QuadPart = Remainder.QuadPart / 60;
-    Hours = Remainder.LowPart;
+    Hours = (WORD)Remainder.LowPart;
 
     YoriLibInitEmptyString(&String);
     String.StartOfString = StringBuffer;
@@ -208,7 +208,7 @@ typedef struct _TIMETHIS_CONTEXT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 TimeThisExpandVariables(
     __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
@@ -278,15 +278,15 @@ TimeThisExpandVariables(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     YORI_STRING CmdLine;
     DWORD ExitCode;
-    BOOL ArgumentUnderstood;
-    DWORD StartArg = 0;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     YORI_STRING DisplayString;
     YORI_STRING AllocatedFormatString;
@@ -370,7 +370,7 @@ ENTRYPOINT(
 
 
     memcpy(&ChildArgs[0], &Executable, sizeof(YORI_STRING));
-    if (StartArg + 1 < ArgC) {
+    if (StartArg + 1 < (YORI_ALLOC_SIZE_T)ArgC) {
         memcpy(&ChildArgs[1], &ArgV[StartArg + 1], (ArgC - StartArg - 1) * sizeof(YORI_STRING));
     }
 

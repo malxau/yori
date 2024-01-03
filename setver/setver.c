@@ -716,7 +716,7 @@ SetVerPumpDebugEvents(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -726,14 +726,14 @@ ENTRYPOINT(
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
     DWORD ExitCode;
-    BOOL ArgumentUnderstood;
-    DWORD StartArg = 0;
-    DWORD AppArg;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T AppArg;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     YORI_STRING WinVer;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     SETVER_CONTEXT Context;
 
     for (i = 1; i < ArgC; i++) {
@@ -784,14 +784,14 @@ ENTRYPOINT(
 
     if (YoriLibStringToNumber(&WinVer, FALSE, &llTemp, &CharsConsumed)) {
         Context.AppVerMajor = (DWORD)llTemp;
-        WinVer.LengthInChars -= CharsConsumed;
+        WinVer.LengthInChars = WinVer.LengthInChars - CharsConsumed;
         WinVer.StartOfString += CharsConsumed;
         if (WinVer.LengthInChars > 0) {
             WinVer.LengthInChars -= 1;
             WinVer.StartOfString += 1;
             if (YoriLibStringToNumber(&WinVer, FALSE, &llTemp, &CharsConsumed)) {
                 Context.AppVerMinor = (DWORD)llTemp;
-                WinVer.LengthInChars -= CharsConsumed;
+                WinVer.LengthInChars = WinVer.LengthInChars - CharsConsumed;
                 WinVer.StartOfString += CharsConsumed;
                 if (WinVer.LengthInChars > 0) {
                     WinVer.LengthInChars -= 1;

@@ -99,7 +99,7 @@ SdirStringToNum32(
 
  @return The number of characters written to the buffer (6.)
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayGenericSize(
     __out_ecount(6) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -136,7 +136,7 @@ SdirDisplayGenericSize(
 
  @return The number of characters written to the buffer (18.)
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayHex64 (
     __out_ecount(18) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -165,7 +165,7 @@ SdirDisplayHex64 (
 
  @return The number of characters written to the buffer (9.)
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayHex32 (
     __out_ecount(9) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -197,16 +197,16 @@ SdirDisplayHex32 (
 
  @return The number of characters written to the buffer.
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayGenericHexBuffer (
     __out_ecount(Size * 2 + 1) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in PUCHAR InputBuffer,
-    __in DWORD Size
+    __in YORI_ALLOC_SIZE_T Size
     )
 {
     TCHAR Str[3];
-    DWORD Offset;
+    YORI_ALLOC_SIZE_T Offset;
 
     if (Buffer) {
         SdirPasteStr(Buffer, _T(" "), Attributes, 1);
@@ -233,7 +233,7 @@ SdirDisplayGenericHexBuffer (
 
  @return The number of characters written to the buffer (11.)
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileDate (
     __out_ecount(11) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -269,7 +269,7 @@ SdirDisplayFileDate (
 
  @return The number of characters written to the buffer (9.)
  */
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileTime (
     __out_ecount(9) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,

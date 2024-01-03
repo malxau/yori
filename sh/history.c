@@ -68,7 +68,7 @@ YoriShAddToHistory(
     __in BOOLEAN IgnoreIfRepeat
     )
 {
-    DWORD LengthToAllocate;
+    YORI_ALLOC_SIZE_T LengthToAllocate;
     PYORI_SH_HISTORY_ENTRY NewHistoryEntry;
 
     if (NewCmd->LengthInChars == 0) {
@@ -180,7 +180,7 @@ __success(return)
 BOOL
 YoriShInitHistory(VOID)
 {
-    DWORD EnvVarLength;
+    YORI_ALLOC_SIZE_T EnvVarLength;
 
     if (YoriShHistoryInitialized) {
         return FALSE;
@@ -211,7 +211,7 @@ YoriShInitHistory(VOID)
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTSIZE"), NULL, 0, NULL);
     if (EnvVarLength != 0) {
         YORI_STRING HistSizeString;
-        DWORD CharsConsumed;
+        YORI_ALLOC_SIZE_T CharsConsumed;
         LONGLONG HistSize;
 
         if (!YoriLibAllocateString(&HistSizeString, EnvVarLength)) {
@@ -245,7 +245,7 @@ __success(return)
 BOOL
 YoriShLoadHistoryFromFile(VOID)
 {
-    DWORD EnvVarLength;
+    YORI_ALLOC_SIZE_T EnvVarLength;
     YORI_STRING UserHistFileName;
     YORI_STRING FilePath;
     HANDLE FileHandle;
@@ -344,7 +344,7 @@ __success(return)
 BOOL
 YoriShSaveHistoryToFile(VOID)
 {
-    DWORD FileNameLength;
+    YORI_ALLOC_SIZE_T FileNameLength;
     YORI_STRING UserHistFileName;
     YORI_STRING FilePath;
     HANDLE FileHandle;
@@ -440,8 +440,8 @@ YoriShGetHistoryStrings(
     __inout PYORI_STRING HistoryStrings
     )
 {
-    DWORD CharsNeeded = 0;
-    DWORD StringOffset;
+    YORI_ALLOC_SIZE_T CharsNeeded = 0;
+    YORI_ALLOC_SIZE_T StringOffset;
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORI_SH_HISTORY_ENTRY HistoryEntry;
     PYORI_LIST_ENTRY StartReturningFrom = NULL;
@@ -482,7 +482,7 @@ YoriShGetHistoryStrings(
         while (ListEntry != NULL) {
             HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
             memcpy(&HistoryStrings->StartOfString[StringOffset], HistoryEntry->CmdLine.StartOfString, HistoryEntry->CmdLine.LengthInChars * sizeof(TCHAR));
-            StringOffset += HistoryEntry->CmdLine.LengthInChars;
+            StringOffset = StringOffset + HistoryEntry->CmdLine.LengthInChars;
             HistoryStrings->StartOfString[StringOffset] = '\0';
             StringOffset++;
             ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, ListEntry);

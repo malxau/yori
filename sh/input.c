@@ -188,13 +188,13 @@ BOOL
 YoriShStringOffsetFromCoordinates(
     __in PYORI_SH_INPUT_BUFFER Buffer,
     __in COORD TargetCoordinates,
-    __out PDWORD StringOffset
+    __out PYORI_ALLOC_SIZE_T StringOffset
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    DWORD StartOfString;
-    DWORD CursorPosition;
-    DWORD TargetPosition;
+    YORI_ALLOC_SIZE_T StartOfString;
+    YORI_ALLOC_SIZE_T CursorPosition;
+    YORI_ALLOC_SIZE_T TargetPosition;
 
     UNREFERENCED_PARAMETER(TargetCoordinates);
 
@@ -564,8 +564,8 @@ YoriShDisplayAfterKeyPress(
 VOID
 YoriShExtendDirtyRangeToCover(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
-    __in DWORD FirstChar,
-    __in DWORD Length
+    __in YORI_ALLOC_SIZE_T FirstChar,
+    __in YORI_ALLOC_SIZE_T Length
     )
 {
     ASSERT(Length != 0);
@@ -600,13 +600,13 @@ YoriShExtendDirtyRangeToCover(
          successfully reallocated, FALSE to indicate allocation failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriShEnsureStringHasEnoughCharacters(
     __inout PYORI_STRING String,
-    __in DWORD CharactersNeeded
+    __in YORI_ALLOC_SIZE_T CharactersNeeded
     )
 {
-    DWORD NewLength;
+    YORI_ALLOC_SIZE_T NewLength;
 
     if (CharactersNeeded + 1 > String->LengthAllocated) {
 
@@ -840,7 +840,7 @@ YoriShUpdateSelectionWithSearchResult(
     __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    DWORD StringOffsetOfMatch;
+    YORI_ALLOC_SIZE_T StringOffsetOfMatch;
 
     //
     //  MSFIX Would like to do something with selection for this, but that
@@ -977,11 +977,11 @@ YoriShCompletionListAllMatches(
 VOID
 YoriShBackspace(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
-    __in DWORD Count
+    __in YORI_ALLOC_SIZE_T Count
     )
 {
-    DWORD CountToUse;
-    DWORD StartPosition;
+    YORI_ALLOC_SIZE_T CountToUse;
+    YORI_ALLOC_SIZE_T StartPosition;
 
     CountToUse = Count;
 
@@ -995,7 +995,7 @@ YoriShBackspace(
             CountToUse = Buffer->SearchString.LengthInChars;
         }
 
-        Buffer->SearchString.LengthInChars -= CountToUse;
+        Buffer->SearchString.LengthInChars = Buffer->SearchString.LengthInChars - CountToUse;
 
         YoriShUpdateSelectionWithSearchResult(Buffer);
         return;
@@ -1026,8 +1026,8 @@ YoriShBackspace(
 
     YoriShExtendDirtyRangeToCover(Buffer, StartPosition, Buffer->String.LengthInChars - StartPosition);
 
-    Buffer->CurrentOffset -= CountToUse;
-    Buffer->String.LengthInChars -= CountToUse;
+    Buffer->CurrentOffset = Buffer->CurrentOffset - CountToUse;
+    Buffer->String.LengthInChars = Buffer->String.LengthInChars - CountToUse;
 
     Buffer->SuggestionPopulated = FALSE;
     Buffer->SuggestionDirty = TRUE;
@@ -1044,7 +1044,7 @@ YoriShBackspace(
 VOID
 YoriShDelete(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
-    __in DWORD Count
+    __in YORI_ALLOC_SIZE_T Count
     )
 {
     if (Count + Buffer->CurrentOffset > Buffer->String.LengthInChars) {
@@ -1054,7 +1054,7 @@ YoriShDelete(
         }
     }
 
-    Buffer->CurrentOffset += Count;
+    Buffer->CurrentOffset = Buffer->CurrentOffset + Count;
     YoriShBackspace(Buffer, Count);
 }
 
@@ -1075,9 +1075,9 @@ YoriShOverwriteSelectionIfInInput(
     )
 {
 
-    DWORD StartStringOffset;
-    DWORD EndStringOffset;
-    DWORD Length;
+    YORI_ALLOC_SIZE_T StartStringOffset;
+    YORI_ALLOC_SIZE_T EndStringOffset;
+    YORI_ALLOC_SIZE_T Length;
     COORD StartOfSelection;
 
     //
@@ -1192,7 +1192,7 @@ YoriShAddYoriStringToInput(
         }
 
         memcpy(&Buffer->SearchString.StartOfString[Buffer->SearchString.LengthInChars], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
-        Buffer->SearchString.LengthInChars += String->LengthInChars;
+        Buffer->SearchString.LengthInChars = Buffer->SearchString.LengthInChars + String->LengthInChars;
 
         YoriShUpdateSelectionWithSearchResult(Buffer);
 
@@ -1218,16 +1218,16 @@ YoriShAddYoriStringToInput(
                     &Buffer->String.StartOfString[Buffer->CurrentOffset],
                     (Buffer->String.LengthInChars - Buffer->CurrentOffset) * sizeof(TCHAR));
         }
-        Buffer->String.LengthInChars += String->LengthInChars;
+        Buffer->String.LengthInChars = Buffer->String.LengthInChars + String->LengthInChars;
         memcpy(&Buffer->String.StartOfString[Buffer->CurrentOffset], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
         YoriShExtendDirtyRangeToCover(Buffer, Buffer->CurrentOffset, Buffer->String.LengthInChars - Buffer->CurrentOffset);
-        Buffer->CurrentOffset += String->LengthInChars;
+        Buffer->CurrentOffset = Buffer->CurrentOffset + String->LengthInChars;
     } else {
         if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, Buffer->CurrentOffset + String->LengthInChars)) {
             return;
         }
         memcpy(&Buffer->String.StartOfString[Buffer->CurrentOffset], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
-        Buffer->CurrentOffset += String->LengthInChars;
+        Buffer->CurrentOffset = Buffer->CurrentOffset + String->LengthInChars;
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->String.LengthInChars = Buffer->CurrentOffset;
         }
@@ -1279,9 +1279,9 @@ YoriShReplaceInputBufferTrackDirtyRange(
     __in PYORI_STRING NewString
     )
 {
-    DWORD FirstChangedCharOffset;
-    DWORD LastChangedCharOffset;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T FirstChangedCharOffset;
+    YORI_ALLOC_SIZE_T LastChangedCharOffset;
+    YORI_ALLOC_SIZE_T Index;
 
     //
     //  Make sure the destination buffer is large enough.
@@ -1341,8 +1341,8 @@ YoriShMoveCursorToPriorArgument(
 {
     YORI_LIBSH_CMD_CONTEXT CmdContext;
     YORI_STRING NewString;
-    DWORD BeginCurrentArg = 0;
-    DWORD EndCurrentArg = 0;
+    YORI_ALLOC_SIZE_T BeginCurrentArg = 0;
+    YORI_ALLOC_SIZE_T EndCurrentArg = 0;
 
     if (!YoriLibShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
         return;
@@ -1415,8 +1415,8 @@ YoriShMoveCursorToNextArgument(
 {
     YORI_LIBSH_CMD_CONTEXT CmdContext;
     YORI_STRING NewString;
-    DWORD BeginCurrentArg;
-    DWORD EndCurrentArg;
+    YORI_ALLOC_SIZE_T BeginCurrentArg;
+    YORI_ALLOC_SIZE_T EndCurrentArg;
     BOOL MoveToEnd = FALSE;
 
     if (!YoriLibShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
@@ -1428,7 +1428,7 @@ YoriShMoveCursorToNextArgument(
         return;
     }
 
-    if (CmdContext.CurrentArg + 1 < (DWORD)CmdContext.ArgC) {
+    if (CmdContext.CurrentArg + 1 < CmdContext.ArgC) {
         CmdContext.CurrentArg++;
     } else {
         MoveToEnd = TRUE;
@@ -1467,11 +1467,11 @@ YoriShDeleteArgument(
 {
     YORI_LIBSH_CMD_CONTEXT CmdContext;
     YORI_LIBSH_CMD_CONTEXT NewCmdContext;
-    DWORD SrcArg;
-    DWORD DestArg;
+    YORI_ALLOC_SIZE_T SrcArg;
+    YORI_ALLOC_SIZE_T DestArg;
     YORI_STRING NewString;
-    DWORD BeginCurrentArg;
-    DWORD EndCurrentArg;
+    YORI_ALLOC_SIZE_T BeginCurrentArg;
+    YORI_ALLOC_SIZE_T EndCurrentArg;
 
     if (!YoriLibShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
         return;
@@ -1615,10 +1615,10 @@ YoriShHotkey(
 VOID
 YoriShConfigureInputSettings(VOID)
 {
-    DWORD EnvVarLength;
+    YORI_ALLOC_SIZE_T EnvVarLength;
     YORI_STRING EnvVar;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     TCHAR EnvVarBuffer[10];
     YORI_STRING MouseoverColorString;
     YORILIB_COLOR_ATTRIBUTES MouseoverColor;
@@ -1674,7 +1674,7 @@ YoriShConfigureInputSettings(VOID)
             if (EnvVarLength <= EnvVar.LengthAllocated) {
                 EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), EnvVar.StartOfString, EnvVar.LengthAllocated, NULL);
                 if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                    YoriShGlobal.MinimumCharsInArgBeforeSuggesting = (ULONG)llTemp;
+                    YoriShGlobal.MinimumCharsInArgBeforeSuggesting = (YORI_ALLOC_SIZE_T)llTemp;
                 }
             }
         }
@@ -1870,10 +1870,10 @@ YoriShClearScreen(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriShSelectToBufferOffset(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
-    __in DWORD NewEndSelectionOffset
+    __in YORI_ALLOC_SIZE_T NewEndSelectionOffset
     )
 {
     COORD StartCoord;
@@ -2326,7 +2326,7 @@ YoriShProcessKeyDown(
             //
 
             if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
-                DWORD TailLength = Buffer->String.LengthInChars - Buffer->CurrentOffset;
+                YORI_ALLOC_SIZE_T TailLength = Buffer->String.LengthInChars - Buffer->CurrentOffset;
                 if (!YoriShEnsureStringHasEnoughCharacters(&YoriShGlobal.YankBuffer, TailLength)) {
                     return FALSE;
                 }
@@ -2573,7 +2573,7 @@ YoriShFindAutoBreakSelectionRange(
         YoriLibFreeStringContents(&LineBuffer);
         return FALSE;
     }
-    LineBuffer.LengthInChars = CharsRead;
+    LineBuffer.LengthInChars = (YORI_ALLOC_SIZE_T)CharsRead;
 
     //
     //  If the user double clicked on a break char, do nothing.
@@ -2664,7 +2664,7 @@ YoriShProcessMouseButtonDown(
         if (YoriShFindAutoBreakSelectionRange(ConsoleHandle, InputRecord->Event.MouseEvent.dwMousePosition, &BeginRange, &EndRange) && BeginRange.Y == EndRange.Y) {
 
             YORI_STRING StringToCopy;
-            DWORD LengthToCopy;
+            YORI_ALLOC_SIZE_T LengthToCopy;
             DWORD CharsRead;
 
             LengthToCopy = EndRange.X - BeginRange.X + 1;
@@ -2681,7 +2681,7 @@ YoriShProcessMouseButtonDown(
         }
 
     } else if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
-        DWORD StringOffset;
+        YORI_ALLOC_SIZE_T StringOffset;
 
         BufferChanged = YoriShClearMouseoverSelection(Buffer);
 

@@ -76,19 +76,19 @@ GetHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 1;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 1;
     YORI_STRING NewFileName;
     PYORI_STRING ExistingUrlName;
     YORI_LIB_UPDATE_ERROR Error;
     YORI_STRING Agent;
     YORI_STRING Arg;
-    BOOL NewerOnly = FALSE;
+    BOOLEAN NewerOnly = FALSE;
     SYSTEMTIME ExistingFileTime;
 
     for (i = 1; i < ArgC; i++) {

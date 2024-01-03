@@ -194,10 +194,11 @@ RegeditPopulateKeyValueList(
     __in_opt PYORI_STRING SelectValue
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     PYORI_WIN_CTRL_HANDLE Parent;
-    DWORD ArrayCount;
-    DWORD ArrayElementSize;
+    YORI_ALLOC_SIZE_T ArrayCount;
+    DWORD BytesRequired;
+    YORI_ALLOC_SIZE_T ArrayElementSize;
     DWORD SubKeyCount;
     DWORD ValueCount;
     DWORD MaxValueNameLength;
@@ -215,8 +216,8 @@ RegeditPopulateKeyValueList(
     } else {
         YORI_STRING Text;
         DWORD Err;
-        DWORD StringSize;
-        DWORD SelectIndex;
+        YORI_ALLOC_SIZE_T SelectIndex;
+        DWORD ValueSize;
         DWORD MaxClassLength;
         DWORD MaxValueData;
         DWORD SecurityDescriptorLength;
@@ -254,7 +255,12 @@ RegeditPopulateKeyValueList(
         //
 
         if (Err == ERROR_MORE_DATA || Err == ERROR_INSUFFICIENT_BUFFER) {
-            if (!YoriLibAllocateString(&Text, ClassLength + 1)) {
+            if (!YoriLibIsSizeAllocatable(ClassLength + 1)) {
+                RegeditDisplayWin32Error(Parent, ERROR_OUTOFMEMORY);
+                DllAdvApi32.pRegCloseKey(Key);
+                return;
+            }
+            if (!YoriLibAllocateString(&Text, (YORI_ALLOC_SIZE_T)(ClassLength + 1))) {
                 RegeditDisplayWin32Error(Parent, GetLastError());
                 DllAdvApi32.pRegCloseKey(Key);
                 return;
@@ -278,6 +284,7 @@ RegeditPopulateKeyValueList(
 
         if (Err != ERROR_SUCCESS) {
             RegeditDisplayWin32Error(Parent, Err);
+            DllAdvApi32.pRegCloseKey(Key);
             return;
         }
 
@@ -286,17 +293,34 @@ RegeditPopulateKeyValueList(
         //  allocations need to be for the larger of the two.
         //
 
-        ArrayCount = SubKeyCount;
+        if (!YoriLibIsSizeAllocatable(SubKeyCount) ||
+            !YoriLibIsSizeAllocatable(ValueCount) ||
+            !YoriLibIsSizeAllocatable(MaxSubKeyLength + 1) ||
+            !YoriLibIsSizeAllocatable(MaxValueNameLength + 1)) {
+
+            RegeditDisplayWin32Error(Parent, ERROR_NOT_ENOUGH_MEMORY);
+            DllAdvApi32.pRegCloseKey(Key);
+            return;
+        }
+        ArrayCount = (YORI_ALLOC_SIZE_T)SubKeyCount;
         if (ValueCount > ArrayCount) {
-            ArrayCount = ValueCount;
+            ArrayCount = (YORI_ALLOC_SIZE_T)ValueCount;
         }
 
-        ArrayElementSize = MaxSubKeyLength + 1;
+        ArrayElementSize = (YORI_ALLOC_SIZE_T)(MaxSubKeyLength + 1);
         if (MaxValueNameLength + 1 > ArrayElementSize) {
-            ArrayElementSize = MaxValueNameLength + 1;
+            ArrayElementSize = (YORI_ALLOC_SIZE_T)(MaxValueNameLength + 1);
         }
 
-        StringArray = YoriLibMalloc(sizeof(YORI_STRING) * ArrayCount);
+        BytesRequired = ArrayCount;
+        BytesRequired = BytesRequired * sizeof(YORI_STRING);
+        if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+            RegeditDisplayWin32Error(Parent, ERROR_NOT_ENOUGH_MEMORY);
+            DllAdvApi32.pRegCloseKey(Key);
+            return;
+        }
+
+        StringArray = YoriLibMalloc((YORI_ALLOC_SIZE_T)BytesRequired);
         if (StringArray == NULL) {
             RegeditDisplayWin32Error(Parent, GetLastError());
             DllAdvApi32.pRegCloseKey(Key);
@@ -316,8 +340,8 @@ RegeditPopulateKeyValueList(
                 Err = ERROR_OUTOFMEMORY;
                 break;
             }
-            StringSize = ArrayElementSize;
-            Err = DllAdvApi32.pRegEnumKeyExW(Key, Index, StringArray[Index].StartOfString, &StringSize, NULL, NULL, NULL, &LastWriteTime);
+            ValueSize = ArrayElementSize;
+            Err = DllAdvApi32.pRegEnumKeyExW(Key, Index, StringArray[Index].StartOfString, &ValueSize, NULL, NULL, NULL, &LastWriteTime);
 
             //
             //  MSFIX Possibly reallocate
@@ -330,7 +354,12 @@ RegeditPopulateKeyValueList(
                 break;
             }
 
-            StringArray[Index].LengthInChars = StringSize;
+            if (!YoriLibIsSizeAllocatable(ValueSize)) {
+                Err = ERROR_NOT_ENOUGH_MEMORY;
+                break;
+            }
+
+            StringArray[Index].LengthInChars = (YORI_ALLOC_SIZE_T)ValueSize;
         }
 
         //
@@ -372,13 +401,13 @@ RegeditPopulateKeyValueList(
 
         for (Index = 0; Index < ValueCount; Index++) {
             if (StringArray[Index].LengthAllocated == 0) {
-                if (!YoriLibAllocateString(&StringArray[Index], MaxValueNameLength + 1)) {
+                if (!YoriLibAllocateString(&StringArray[Index], (YORI_ALLOC_SIZE_T)(MaxValueNameLength + 1))) {
                     Err = ERROR_OUTOFMEMORY;
                     break;
                 }
             }
-            StringSize = StringArray[Index].LengthAllocated;
-            Err = DllAdvApi32.pRegEnumValueW(Key, Index, StringArray[Index].StartOfString, &StringSize, NULL, NULL, NULL, NULL);
+            ValueSize = StringArray[Index].LengthAllocated;
+            Err = DllAdvApi32.pRegEnumValueW(Key, Index, StringArray[Index].StartOfString, &ValueSize, NULL, NULL, NULL, NULL);
 
             //
             //  MSFIX Possibly reallocate
@@ -390,7 +419,12 @@ RegeditPopulateKeyValueList(
                 break;
             }
 
-            StringArray[Index].LengthInChars = StringSize;
+            if (!YoriLibIsSizeAllocatable(ValueSize)) {
+                Err = ERROR_NOT_ENOUGH_MEMORY;
+                break;
+            }
+
+            StringArray[Index].LengthInChars = (YORI_ALLOC_SIZE_T)ValueSize;
         }
 
         if (Err != ERROR_SUCCESS) {
@@ -442,7 +476,7 @@ RegeditRefreshView(
     YORI_STRING PreviouslySelectedValue;
     PYORI_STRING SelectKey;
     PYORI_STRING SelectValue;
-    DWORD ActiveOption;
+    YORI_ALLOC_SIZE_T ActiveOption;
 
     //
     //  Find the controls.
@@ -510,7 +544,7 @@ RegeditDeleteSelectedKey(
     __in PYORI_WIN_CTRL_HANDLE Parent,
     __in PYORI_WIN_CTRL_HANDLE KeyList,
     __in PYORI_WIN_CTRL_HANDLE ValueList,
-    __in DWORD SelectedKeyIndex
+    __in YORI_ALLOC_SIZE_T SelectedKeyIndex
     )
 {
     YORI_STRING KeyName;
@@ -567,7 +601,7 @@ RegeditDeleteSelectedValue(
     __in PYORI_WIN_CTRL_HANDLE Parent,
     __in PYORI_WIN_CTRL_HANDLE KeyList,
     __in PYORI_WIN_CTRL_HANDLE ValueList,
-    __in DWORD SelectedValueIndex
+    __in YORI_ALLOC_SIZE_T SelectedValueIndex
     )
 {
     YORI_STRING ValueName;
@@ -620,7 +654,7 @@ RegeditEditSelectedValue(
     __in PYORI_WIN_CTRL_HANDLE Parent,
     __in PYORI_WIN_CTRL_HANDLE KeyList,
     __in PYORI_WIN_CTRL_HANDLE ValueList,
-    __in DWORD SelectedValueIndex
+    __in YORI_ALLOC_SIZE_T SelectedValueIndex
     )
 {
     YORI_STRING ValueName;
@@ -629,6 +663,8 @@ RegeditEditSelectedValue(
     YORI_STRING ButtonText[1];
     DWORD Err;
     DWORD DataType;
+    YORI_ALLOC_SIZE_T NativeDataSize;
+    DWORD CharsRequired;
     DWORD DataSize;
     HKEY Key;
     PVOID DataPtr;
@@ -666,6 +702,14 @@ RegeditEditSelectedValue(
         Err = DllAdvApi32.pRegQueryValueExW(Key, ValueName.StartOfString, NULL, &DataType, DataPtr, &DataSize);
         if (Err != ERROR_SUCCESS && Err != ERROR_MORE_DATA) {
             RegeditDisplayWin32Error(Parent, Err);
+            DllAdvApi32.pRegCloseKey(Key);
+            YoriLibFreeStringContents(&ValueName);
+            YoriLibFreeStringContents(&Value);
+            return;
+        }
+
+        if (!YoriLibIsSizeAllocatable(DataSize)) {
+            RegeditDisplayWin32Error(Parent, ERROR_NOT_ENOUGH_MEMORY);
             DllAdvApi32.pRegCloseKey(Key);
             YoriLibFreeStringContents(&ValueName);
             YoriLibFreeStringContents(&Value);
@@ -717,7 +761,7 @@ RegeditEditSelectedValue(
             DataSize <= Value.LengthAllocated * sizeof(TCHAR)) {
 
             if (DataType == REG_SZ || DataType == REG_EXPAND_SZ) {
-                Value.LengthInChars = DataSize / sizeof(TCHAR);
+                Value.LengthInChars = (YORI_ALLOC_SIZE_T)(DataSize / sizeof(TCHAR));
                 while (Value.LengthInChars > 0 &&
                        Value.StartOfString[Value.LengthInChars - 1] == '\0') {
 
@@ -785,12 +829,13 @@ RegeditEditSelectedValue(
             } else if (DataType == REG_BINARY) {
                 PUCHAR Data;
                 Data = (PUCHAR)Value.StartOfString;
+                NativeDataSize = (YORI_ALLOC_SIZE_T)DataSize;
                 if (RegeditEditBinaryValue(RegeditContext,
                                            YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
                                            &ValueName,
                                            TRUE,
                                            &Data,
-                                           &DataSize,
+                                           &NativeDataSize,
                                            ReadOnly)) {
 
                     //
@@ -801,6 +846,7 @@ RegeditEditSelectedValue(
 
                     Value.MemoryToFree =
                     Value.StartOfString = (LPTSTR)Data;
+                    DataSize = NativeDataSize;
 
                     Err = DllAdvApi32.pRegSetValueExW(Key, ValueName.StartOfString, 0, DataType, (LPBYTE)Data, DataSize);
                     if (Err != ERROR_SUCCESS) {
@@ -819,7 +865,13 @@ RegeditEditSelectedValue(
         //  here may be byte aligned
         //
 
-        if (!YoriLibAllocateString(&Value, (DataSize + sizeof(TCHAR) - 1) / sizeof(TCHAR))) {
+        CharsRequired = (DataSize + sizeof(TCHAR) - 1) / sizeof(TCHAR);
+        if (!YoriLibIsSizeAllocatable(CharsRequired)) {
+            DllAdvApi32.pRegCloseKey(Key);
+            YoriLibFreeStringContents(&ValueName);
+            return;
+        }
+        if (!YoriLibAllocateString(&Value, (YORI_ALLOC_SIZE_T)CharsRequired)) {
             DllAdvApi32.pRegCloseKey(Key);
             YoriLibFreeStringContents(&ValueName);
             return;
@@ -857,7 +909,7 @@ RegeditNavigateToSelectedKey(
     __in PYORI_WIN_CTRL_HANDLE Parent,
     __in PYORI_WIN_CTRL_HANDLE KeyList,
     __in PYORI_WIN_CTRL_HANDLE ValueList,
-    __in DWORD SelectedKeyIndex
+    __in YORI_ALLOC_SIZE_T SelectedKeyIndex
     )
 {
     PYORI_WIN_CTRL_HANDLE KeyCaption;
@@ -875,7 +927,7 @@ RegeditNavigateToSelectedKey(
         LPTSTR FinalSlash;
         FinalSlash = YoriLibFindRightMostCharacter(&RegeditContext->Subkey, '\\');
         if (FinalSlash != NULL) {
-            RegeditContext->Subkey.LengthInChars = (DWORD)(FinalSlash - RegeditContext->Subkey.StartOfString);
+            RegeditContext->Subkey.LengthInChars = (YORI_ALLOC_SIZE_T)(FinalSlash - RegeditContext->Subkey.StartOfString);
         } else {
             RegeditContext->Subkey.LengthInChars = 0;
         }
@@ -1303,6 +1355,7 @@ RegeditNewBinaryButtonClicked(
     PREGEDIT_CONTEXT RegeditContext;
     YORI_STRING ValueName;
     PUCHAR Value;
+    YORI_ALLOC_SIZE_T NativeValueLength;
     DWORD ValueLength;
     DWORD Err;
     HKEY Key;
@@ -1326,15 +1379,17 @@ RegeditNewBinaryButtonClicked(
     }
 
     Value = NULL;
-    ValueLength = 0;
+    NativeValueLength = 0;
 
     if (RegeditEditBinaryValue(RegeditContext,
                                YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
                                &ValueName,
                                FALSE,
                                &Value,
-                               &ValueLength,
+                               &NativeValueLength,
                                FALSE)) {
+
+        ValueLength = NativeValueLength;
 
         Err = DllAdvApi32.pRegSetValueExW(Key, ValueName.StartOfString, 0, REG_BINARY, (LPBYTE)Value, ValueLength);
         if (Err != ERROR_SUCCESS) {
@@ -1362,7 +1417,7 @@ RegeditDeleteButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD ActiveOption;
+    YORI_ALLOC_SIZE_T ActiveOption;
     PYORI_WIN_CTRL_HANDLE Parent;
     PREGEDIT_CONTEXT RegeditContext;
     PYORI_WIN_CTRL_HANDLE KeyList;
@@ -1481,7 +1536,7 @@ RegeditAboutButtonClicked(
     YORI_STRING CenteredText;
     YORI_STRING ButtonTexts[2];
     PYORI_WIN_WINDOW_HANDLE Parent;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD ButtonClicked;
 
     Parent = YoriWinGetControlParent(Ctrl);
@@ -1594,7 +1649,7 @@ RegeditGoButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD ActiveOption;
+    YORI_ALLOC_SIZE_T ActiveOption;
     PYORI_WIN_CTRL_HANDLE Parent;
     PREGEDIT_CONTEXT RegeditContext;
     PYORI_WIN_CTRL_HANDLE KeyList;
@@ -1648,7 +1703,7 @@ RegeditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY MenuEntries[4];
     YORI_WIN_MENU MenuBarItems;
     PYORI_WIN_CTRL_HANDLE Ctrl;
-    DWORD MenuIndex;
+    YORI_ALLOC_SIZE_T MenuIndex;
 
     ZeroMemory(&NewMenuEntries, sizeof(NewMenuEntries));
     MenuIndex = 0;
@@ -2107,13 +2162,13 @@ RegeditCreateMainWindow(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     REGEDIT_CONTEXT RegeditContext;
 

@@ -64,14 +64,14 @@ WaitHelp(VOID)
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_WAIT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     DWORD JobId = 0;
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
 
     YoriLibLoadNtDllFunctions();
@@ -111,7 +111,7 @@ YoriCmd_WAIT(
 
     } else {
         LONGLONG llTemp;
-        DWORD CharsConsumed;
+        YORI_ALLOC_SIZE_T CharsConsumed;
 
         if (!YoriLibStringToNumber(&ArgV[StartArg], TRUE, &llTemp, &CharsConsumed)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is not a valid job.\n"), &ArgV[StartArg]);

@@ -558,7 +558,7 @@ YoriShGetJobInformation(
 {
     PYORI_JOB ThisJob;
     PYORI_LIST_ENTRY ListEntry;
-    DWORD CmdLength;
+    YORI_ALLOC_SIZE_T CmdLength;
 
     if (YoriShGlobal.PreviousJobId == 0) {
         return FALSE;

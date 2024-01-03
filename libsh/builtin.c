@@ -102,7 +102,7 @@ YoriLibShLoadDll(
 {
     PYORI_LIBSH_LOADED_MODULE FoundEntry = NULL;
     PYORI_LIST_ENTRY ListEntry;
-    DWORD DllNameLength;
+    YORI_ALLOC_SIZE_T DllNameLength;
     DWORD OldErrorMode;
 
     if (YoriLibShBuiltinGlobal.LoadedModules.Next != NULL) {
@@ -118,7 +118,7 @@ YoriLibShLoadDll(
         }
     }
 
-    DllNameLength = _tcslen(DllName);
+    DllNameLength = (YORI_ALLOC_SIZE_T)_tcslen(DllName);
     FoundEntry = YoriLibMalloc(sizeof(YORI_LIBSH_LOADED_MODULE) + (DllNameLength + 1) * sizeof(TCHAR));
     if (FoundEntry == NULL) {
         return NULL;

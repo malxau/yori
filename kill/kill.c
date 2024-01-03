@@ -110,8 +110,8 @@ KillTerminateProcessByName(
     PYORI_SYSTEM_PROCESS_INFORMATION CurrentEntry;
     YORI_STRING BaseName;
     YORI_STRING NameToCompare;
-    DWORD CharsToCompare;
-    DWORD KillCount;
+    YORI_ALLOC_SIZE_T CharsToCompare;
+    YORI_ALLOC_SIZE_T KillCount;
 
     //
     //  If the process name ends in '*', only compare the characters up to
@@ -183,17 +183,17 @@ KillTerminateProcessByName(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 1;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 1;
     YORI_STRING Arg;
     DWORD ProcessPid = 0;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD KillCount;
     PYORI_SYSTEM_PROCESS_INFORMATION ProcessInfo = NULL;
 

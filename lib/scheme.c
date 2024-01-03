@@ -73,7 +73,7 @@ YoriLibParseSchemeColorString(
 {
     LONGLONG Temp;
     YORI_STRING SubString;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     UCHAR Red;
     UCHAR Green;
     UCHAR Blue;
@@ -273,13 +273,23 @@ YoriLibLoadSectionColorFromScheme(
     StringValue.StartOfString = Value;
     StringValue.LengthAllocated = sizeof(Value)/sizeof(Value[0]);
 
-    StringValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(SectionName, _T("Foreground"), _T(""), Value, sizeof(Value)/sizeof(Value[0]), IniFileName->StartOfString);
+    StringValue.LengthInChars = (YORI_ALLOC_SIZE_T)DllKernel32.pGetPrivateProfileStringW(SectionName,
+            _T("Foreground"),
+            _T(""),
+            Value,
+            sizeof(Value)/sizeof(Value[0]),
+            IniFileName->StartOfString);
 
     if (!YoriLibLoadColorFromSchemeString(&StringValue, &Foreground)) {
         return FALSE;
     }
 
-    StringValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(SectionName, _T("Background"), _T(""), Value, sizeof(Value)/sizeof(Value[0]), IniFileName->StartOfString);
+    StringValue.LengthInChars = (YORI_ALLOC_SIZE_T)DllKernel32.pGetPrivateProfileStringW(SectionName,
+            _T("Background"),
+            _T(""),
+            Value,
+            sizeof(Value)/sizeof(Value[0]),
+            IniFileName->StartOfString);
 
     if (!YoriLibLoadColorFromSchemeString(&StringValue, &Background)) {
         return FALSE;

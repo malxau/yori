@@ -306,16 +306,17 @@ __success(return)
 BOOL
 YoriLibHtmlGenerateTextString(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in PCYORI_STRING SrcString
     )
 {
 
     TCHAR  LookFor[] = {'<', '>', ' ', '\n', '\r', '\0'};
     LPTSTR SrcPoint;
-    DWORD  SrcOffset = 0;
-    DWORD  SrcConsumed = 0;
-    DWORD  DestOffset = 0;
+    YORI_ALLOC_SIZE_T SrcOffset = 0;
+    YORI_ALLOC_SIZE_T SrcConsumed = 0;
+    YORI_ALLOC_SIZE_T DestOffset = 0;
+    YORI_ALLOC_SIZE_T AddToDestOffset;
     YORI_STRING SearchString;
 
     //
@@ -328,6 +329,7 @@ YoriLibHtmlGenerateTextString(
     SrcPoint = SrcString->StartOfString;
 
     do {
+        AddToDestOffset = 0;
         SearchString.StartOfString = SrcPoint;
         SearchString.LengthInChars = SrcString->LengthInChars - SrcConsumed;
         SrcOffset = YoriLibCountStringNotContainingChars(&SearchString, LookFor);
@@ -336,10 +338,10 @@ YoriLibHtmlGenerateTextString(
                 memcpy(&TextString->StartOfString[DestOffset], SrcPoint, SrcOffset * sizeof(TCHAR));
             }
 
-            DestOffset += SrcOffset;
+            AddToDestOffset = SrcOffset;
 
             SrcPoint = SrcPoint + SrcOffset;
-            SrcConsumed += SrcOffset;
+            SrcConsumed = SrcConsumed + SrcOffset;
         }
 
         if (SrcConsumed < SrcString->LengthInChars) {
@@ -353,33 +355,40 @@ YoriLibHtmlGenerateTextString(
                 if (DestOffset + sizeof("&lt;") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("&lt;"), sizeof(_T("&lt;")) - sizeof(TCHAR));
                 }
-                DestOffset += sizeof("&lt;") - 1;
+                AddToDestOffset = sizeof("&lt;") - 1;
                 SrcPoint++;
                 SrcConsumed++;
             } else if (*SrcPoint == '>') {
                 if (DestOffset + sizeof("&gt;") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("&gt;"), sizeof(_T("&gt;")) - sizeof(TCHAR));
                 }
-                DestOffset += sizeof("&gt;") - 1;
+                AddToDestOffset = sizeof("&gt;") - 1;
                 SrcPoint++;
                 SrcConsumed++;
             } else if (*SrcPoint == '\n') {
                 if (DestOffset + sizeof("<BR>") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("<BR>"), sizeof(_T("<BR>")) - sizeof(TCHAR));
                 }
-                DestOffset += sizeof("<BR>") - 1;
+                AddToDestOffset = sizeof("<BR>") - 1;
                 SrcPoint++;
                 SrcConsumed++;
             } else if (*SrcPoint == ' ') {
                 if (DestOffset + sizeof("&nbsp;") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("&nbsp;"), sizeof(_T("&nbsp;")) - sizeof(TCHAR));
                 }
-                DestOffset += sizeof("&nbsp;") - 1;
+                AddToDestOffset = sizeof("&nbsp;") - 1;
                 SrcPoint++;
                 SrcConsumed++;
             } else if (*SrcPoint == '\r') {
                 SrcPoint++;
                 SrcConsumed++;
+            }
+        }
+
+        if (AddToDestOffset != 0) {
+            DestOffset = YoriLibIsAllocationExtendable(DestOffset, AddToDestOffset, AddToDestOffset);
+            if (DestOffset == 0) {
+                return FALSE;
             }
         }
 
@@ -390,8 +399,12 @@ YoriLibHtmlGenerateTextString(
         TextString->LengthInChars = DestOffset;
     }
 
-    *BufferSizeNeeded = DestOffset + 1;
+    DestOffset = YoriLibIsAllocationExtendable(DestOffset, 1, 1);
+    if (DestOffset == 0) {
+        return FALSE;
+    }
 
+    *BufferSizeNeeded = DestOffset;
     return TRUE;
 }
 
@@ -421,17 +434,18 @@ __success(return)
 BOOL
 YoriLibHtmlGenerateEscapeStringInternal(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in_opt PDWORD ColorTable,
     __in PCYORI_STRING SrcString,
     __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     )
 {
     LPTSTR SrcPoint;
-    DWORD  SrcOffset;
-    WORD   NewColor = CVTVT_DEFAULT_COLOR;
-    DWORD  RemainingLength;
-    DWORD  DestOffset;
+    YORI_ALLOC_SIZE_T SrcOffset;
+    WORD NewColor = CVTVT_DEFAULT_COLOR;
+    YORI_ALLOC_SIZE_T RemainingLength;
+    YORI_ALLOC_SIZE_T DestOffset;
+    YORI_ALLOC_SIZE_T AddToDestOffset;
     YORI_STRING SearchString;
 
     SrcPoint = SrcString->StartOfString;
@@ -458,6 +472,8 @@ YoriLibHtmlGenerateEscapeStringInternal(
         if (ColorTableToUse == NULL) {
             ColorTableToUse = YoriLibDefaultColorTable;
         }
+
+        AddToDestOffset = 0;
 
         SrcPoint++;
         RemainingLength--;
@@ -515,7 +531,7 @@ YoriLibHtmlGenerateEscapeStringInternal(
             SrcOffset = YoriLibCountStringContainingChars(&SearchString, _T("0123456789"));
 
             SrcPoint += SrcOffset;
-            RemainingLength -= SrcOffset;
+            RemainingLength = RemainingLength - SrcOffset;
 
             if (RemainingLength == 0 ||
                 *SrcPoint != ';') {
@@ -529,18 +545,25 @@ YoriLibHtmlGenerateEscapeStringInternal(
                 if (DestOffset + sizeof("</U>") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("</U>"), sizeof(_T("</U>")) - sizeof(TCHAR));
                 }
-                DestOffset += sizeof("</U>") - 1;
+                AddToDestOffset = sizeof("</U>") - 1;
             }
             if (GenerateContext->HtmlVersion == 4) {
                 if (DestOffset + sizeof("</FONT>") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("</FONT>"), sizeof(_T("</FONT>")) - sizeof(TCHAR));
                 }
-                DestOffset += sizeof("</FONT>") - 1;
+                AddToDestOffset = sizeof("</FONT>") - 1;
             } else {
                 if (DestOffset + sizeof("</SPAN>") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("</SPAN>"), sizeof(_T("</SPAN>")) - sizeof(TCHAR));
                 }
-                DestOffset += sizeof("</SPAN>") - 1;
+                AddToDestOffset = sizeof("</SPAN>") - 1;
+            }
+
+            if (AddToDestOffset != 0) {
+                DestOffset = YoriLibIsAllocationExtendable(DestOffset, AddToDestOffset, AddToDestOffset);
+                if (DestOffset == 0) {
+                    return FALSE;
+                }
             }
         }
 
@@ -572,16 +595,27 @@ YoriLibHtmlGenerateEscapeStringInternal(
                                        GetBValue(ColorTableToUse[(NewColor & 0xf0) >> 4]));
         }
 
+
         if (DestOffset + SrcOffset < TextString->LengthAllocated) {
             memcpy(&TextString->StartOfString[DestOffset], NewTag, SrcOffset * sizeof(TCHAR));
         }
-        DestOffset += SrcOffset;
+
+        if (SrcOffset > 0) {
+            DestOffset = YoriLibIsAllocationExtendable(DestOffset, SrcOffset, SrcOffset);
+            if (DestOffset == 0) {
+                return FALSE;
+            }
+        }
 
         if (NewUnderline) {
             if (DestOffset + sizeof("<U>") - 1 < TextString->LengthAllocated) {
                 memcpy(&TextString->StartOfString[DestOffset], _T("<U>"), sizeof(_T("<U>")) - sizeof(TCHAR));
             }
-            DestOffset += sizeof("<U>") - 1;
+            AddToDestOffset = sizeof("<U>") - 1;
+            DestOffset = YoriLibIsAllocationExtendable(DestOffset, AddToDestOffset, AddToDestOffset);
+            if (DestOffset == 0) {
+                return FALSE;
+            }
         }
 
         GenerateContext->UnderlineOn = NewUnderline;
@@ -595,6 +629,10 @@ YoriLibHtmlGenerateEscapeStringInternal(
 #endif
         TextString->StartOfString[DestOffset] = '\0';
         TextString->LengthInChars = DestOffset;
+    }
+    DestOffset = YoriLibIsAllocationExtendable(DestOffset, 1, 1);
+    if (DestOffset == 0) {
+        return FALSE;
     }
 
     *BufferSizeNeeded = DestOffset + 1;
@@ -625,7 +663,7 @@ __success(return)
 BOOL
 YoriLibHtmlGenerateEscapeString(
     __inout PYORI_STRING TextString,
-    __out PDWORD BufferSizeNeeded,
+    __out PYORI_ALLOC_SIZE_T BufferSizeNeeded,
     __in PCYORI_STRING SrcString,
     __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     )
@@ -676,14 +714,22 @@ YoriLibHtmlCvtAppendWithReallocate(
     __in PYORI_STRING StringToAdd
     )
 {
-    if (StringToAppendTo->LengthInChars + StringToAdd->LengthInChars > StringToAppendTo->LengthAllocated) {
-        if (!YoriLibReallocateString(StringToAppendTo, (StringToAppendTo->LengthInChars + StringToAdd->LengthInChars) * 4)) {
+    DWORD LengthNeeded;
+
+    LengthNeeded = StringToAppendTo->LengthInChars + StringToAdd->LengthInChars;
+    if (!YoriLibIsSizeAllocatable(LengthNeeded)) {
+        return FALSE;
+    }
+    if (LengthNeeded > StringToAppendTo->LengthAllocated) {
+        YORI_ALLOC_SIZE_T AllocSize;
+        AllocSize = YoriLibMaximumAllocationInRange(LengthNeeded, LengthNeeded * 4);
+        if (!YoriLibReallocateString(StringToAppendTo, AllocSize)) {
             return FALSE;
         }
     }
 
     memcpy(&StringToAppendTo->StartOfString[StringToAppendTo->LengthInChars], StringToAdd->StartOfString, StringToAdd->LengthInChars * sizeof(TCHAR));
-    StringToAppendTo->LengthInChars += StringToAdd->LengthInChars;
+    StringToAppendTo->LengthInChars = StringToAppendTo->LengthInChars + StringToAdd->LengthInChars;
 
     return TRUE;
 }
@@ -783,7 +829,7 @@ YoriLibHtmlCnvProcessAndOutputText(
 {
 
     YORI_STRING TextString;
-    DWORD BufferSizeNeeded;
+    YORI_ALLOC_SIZE_T BufferSizeNeeded;
     PYORI_LIB_HTML_CONVERT_CONTEXT HtmlContext = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
 
     UNREFERENCED_PARAMETER(Context);
@@ -836,7 +882,7 @@ YoriLibHtmlCnvProcessAndOutputEscape(
     )
 {
     YORI_STRING TextString;
-    DWORD BufferSizeNeeded;
+    YORI_ALLOC_SIZE_T BufferSizeNeeded;
     PYORI_LIB_HTML_CONVERT_CONTEXT HtmlContext = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
     YORILIB_HTML_GENERATE_CONTEXT DummyGenerateContext;
 

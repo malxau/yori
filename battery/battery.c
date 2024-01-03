@@ -116,14 +116,14 @@ typedef struct _BATTERY_CONTEXT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 BatteryExpandVariables(
     __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     PBATTERY_CONTEXT BatteryContext = (PBATTERY_CONTEXT)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("CHARGING")) == 0) {
@@ -274,13 +274,13 @@ BatteryExpandVariables(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     BATTERY_CONTEXT BatteryContext;
     YORI_STRING DisplayString;

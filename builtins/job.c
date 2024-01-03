@@ -69,17 +69,17 @@ JobHelp(VOID)
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_JOB(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
     DWORD JobId = 0;
-    DWORD i;
-    DWORD StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();

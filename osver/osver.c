@@ -189,12 +189,12 @@ OsVerGetBuildDescriptionString(
  @return The number of characters in the human readable string describing the
          build.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 OsVerLengthOfBuildDescription(
     __in DWORD BuildNumber
     )
 {
-    return strlen(OsVerGetBuildDescriptionString(BuildNumber));
+    return (YORI_ALLOC_SIZE_T)strlen(OsVerGetBuildDescriptionString(BuildNumber));
 }
 
 /**
@@ -246,9 +246,9 @@ OsVerDisplayMatchingBuilds(
 {
     LONGLONG llTemp;
     YORI_STRING DisplayString;
-    DWORD CharsConsumed;
-    DWORD CharsNeeded;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsNeeded;
+    YORI_ALLOC_SIZE_T Index;
 
     //
     //  If the argument is a number, look up a string by build number.
@@ -266,7 +266,7 @@ OsVerDisplayMatchingBuilds(
     //
     CharsNeeded = 0;
     for (Index = 0; Index < sizeof(OsVerBuildDescriptions)/sizeof(OsVerBuildDescriptions[0]); Index++) {
-        CharsConsumed = strlen(OsVerBuildDescriptions[Index].BuildDescription);
+        CharsConsumed = (YORI_ALLOC_SIZE_T)strlen(OsVerBuildDescriptions[Index].BuildDescription);
         if (CharsConsumed > CharsNeeded) {
             CharsNeeded = CharsConsumed;
         }
@@ -324,12 +324,12 @@ OsVerGetArchitectureDescriptionString(
  @return The number of characters in the human readable string describing the
          architecture.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 OsVerLengthOfArchitectureDescription(
     __in DWORD Architecture
     )
 {
-    return strlen(OsVerGetArchitectureDescriptionString(Architecture));
+    return (YORI_ALLOC_SIZE_T)strlen(OsVerGetArchitectureDescriptionString(Architecture));
 }
 
 /**
@@ -349,14 +349,14 @@ OsVerLengthOfArchitectureDescription(
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 OsVerExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     POSVER_VERSION_RESULT OsVerContext = (POSVER_VERSION_RESULT)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("arch")) == 0) {
@@ -462,19 +462,19 @@ OsVerGetArchitecture(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     OSVER_VERSION_RESULT VersionResult;
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     LPTSTR FormatString = _T("\x1b[41;34;1m\x2584\x1b[42;33;1m\x2584\x1b[0m Windows version: $major$.$minor$.$build$ ($desc$), $arch$\n");
     YORI_STRING DisplayString;
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     YORI_STRING YsFormatString;
     PYORI_STRING SearchString;
-    DWORD StartArg = 0;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     BOOLEAN ListAllBuilds = FALSE;
 
     ZeroMemory(&VersionResult, sizeof(VersionResult));

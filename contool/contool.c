@@ -128,14 +128,14 @@ typedef struct _CONTOOL_RESULT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 ConToolExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
 {
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     PCONTOOL_RESULT ConToolContext = (PCONTOOL_RESULT)Context;
 
     if (ConToolContext->Have.ScreenBufferInfo &&
@@ -362,16 +362,16 @@ ConToolSetFullscreen(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     CONTOOL_RESULT ConToolResult;
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     YORI_STRING DisplayString;
     YORI_STRING YsFormatString;
-    DWORD StartArg = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     HANDLE hConsole;
     BOOLEAN Fullscreen;

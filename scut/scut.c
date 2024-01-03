@@ -134,7 +134,7 @@ typedef struct _SCUT_EXPAND_CONTEXT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 ScutExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
@@ -142,11 +142,11 @@ ScutExpandVariables(
     )
 {
     TCHAR szDisplay[MAX_PATH];
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     DWORD dwDisplay = 0;
     int iTemp;
-    BOOL  Numeric = FALSE;
-    DWORD HexDigits = 0;
+    BOOLEAN Numeric = FALSE;
+    YORI_ALLOC_SIZE_T HexDigits = 0;
     PSCUT_EXPAND_CONTEXT ExpandContext;
     IShellLinkW * scut;
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps;
@@ -445,7 +445,7 @@ ScutExpandVariables(
     } else if (Numeric) {
         CharsNeeded = YoriLibSPrintf(szDisplay, _T("%i"), dwDisplay);
     } else {
-        CharsNeeded = _tcslen(szDisplay);
+        CharsNeeded = (YORI_ALLOC_SIZE_T)_tcslen(szDisplay);
     }
     if (OutputString->LengthAllocated < CharsNeeded) {
         return CharsNeeded;
@@ -475,7 +475,7 @@ ScutStringToCoord(
     )
 {
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     YORI_STRING Substring;
     SHORT LocalCoordX;
 
@@ -603,7 +603,7 @@ LPCTSTR ScutConsoleFormatString2 = _T("Color Black:           $COLOR_BLACK$\n")
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -626,7 +626,7 @@ ENTRYPOINT(
     IShellLinkDataList *ShortcutDataList = NULL;
     YORI_STRING Arg;
     LONGLONG llTemp;
-    DWORD   CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD   ExitCode;
     COORD   BufferSize;
     COORD   WindowSize;
@@ -636,7 +636,7 @@ ENTRYPOINT(
     HRESULT hRes;
     BOOL    ArgumentUnderstood;
     BOOL    DeleteConsoleSettings = FALSE;
-    DWORD   i;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING FormatString;
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps = NULL;
     BOOLEAN FreeConsolePropsWithLocalFree = FALSE;
@@ -1064,8 +1064,8 @@ ENTRYPOINT(
         }
 
         if (szFont != NULL) {
-            DWORD CharsCopied;
-            DWORD FaceNameSizeInChars;
+            YORI_SIGNED_ALLOC_SIZE_T CharsCopied;
+            YORI_ALLOC_SIZE_T FaceNameSizeInChars;
 
             FaceNameSizeInChars = sizeof(ConsoleProps->FaceName)/sizeof(ConsoleProps->FaceName[0]);
 

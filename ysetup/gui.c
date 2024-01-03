@@ -514,8 +514,8 @@ SetupGuiConstAnsiToUserUnicode(
     __out PYORI_STRING UnicodeString
     )
 {
-    DWORD Length;
-    Length = strlen(ConstString);
+    YORI_ALLOC_SIZE_T Length;
+    Length = (YORI_ALLOC_SIZE_T)strlen(ConstString);
     YoriLibInitEmptyString(UnicodeString);
 
     //
@@ -553,7 +553,7 @@ SetupGuiInstallSelectedFromDialog(
     __in HWND hDlg
     )
 {
-    DWORD LengthNeeded;
+    YORI_ALLOC_SIZE_T LengthNeeded;
     YORI_STRING InstallDir;
     BOOL Result = FALSE;
     YSETUP_INSTALL_TYPE InstallType;
@@ -568,12 +568,13 @@ SetupGuiInstallSelectedFromDialog(
     //  Query the install directory
     //
 
-    LengthNeeded = (DWORD)DllYsetupGui.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, IDC_INSTALLDIR), WM_GETTEXTLENGTH, 0, 0);
+    LengthNeeded = (YORI_ALLOC_SIZE_T)DllYsetupGui.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, IDC_INSTALLDIR), WM_GETTEXTLENGTH, 0, 0);
     if (!YoriLibAllocateString(&InstallDir, LengthNeeded + 1)) {
         DllYsetupGui.pMessageBoxW(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
         return FALSE;
     }
-    InstallDir.LengthInChars = SetupGuiGetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString, InstallDir.LengthAllocated);
+    InstallDir.LengthInChars = (YORI_ALLOC_SIZE_T)
+        SetupGuiGetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString, InstallDir.LengthAllocated);
 
 
     //

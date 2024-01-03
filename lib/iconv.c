@@ -145,10 +145,10 @@ YoriLibSetMultibyteInputEncoding(
 
  @return The number of bytes needed to store the output form.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibGetMultibyteOutputSizeNeeded(
     __in LPCTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in YORI_ALLOC_SIZE_T BufferLength
     )
 {
     DWORD Return;
@@ -158,7 +158,8 @@ YoriLibGetMultibyteOutputSizeNeeded(
     }
     Return = WideCharToMultiByte(Encoding, 0, StringBuffer, BufferLength, NULL, 0, NULL, NULL);
     ASSERT(Return > 0 || BufferLength == 0);
-    return Return;
+    ASSERT(YoriLibIsSizeAllocatable(Return));
+    return (YORI_ALLOC_SIZE_T)Return;
 }
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
@@ -183,9 +184,9 @@ YoriLibGetMultibyteOutputSizeNeeded(
 VOID
 YoriLibMultibyteOutput(
     __in_ecount(InputBufferLength) LPCTSTR InputStringBuffer,
-    __in DWORD InputBufferLength,
+    __in YORI_ALLOC_SIZE_T InputBufferLength,
     __out_ecount(OutputBufferLength) LPSTR OutputStringBuffer,
-    __in DWORD OutputBufferLength
+    __in YORI_ALLOC_SIZE_T OutputBufferLength
     )
 {
     DWORD Return;
@@ -222,17 +223,20 @@ YoriLibMultibyteOutput(
 
  @return The number of bytes needed to store the UTF16 form.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibGetMultibyteInputSizeNeeded(
     __in LPCSTR StringBuffer,
-    __in DWORD BufferLength
+    __in YORI_ALLOC_SIZE_T BufferLength
     )
 {
     DWORD Encoding = YoriLibGetMultibyteInputEncoding();
+    DWORD Return;
     if (Encoding == CP_UTF16) {
         return BufferLength;
     }
-    return MultiByteToWideChar(Encoding, 0, StringBuffer, BufferLength, NULL, 0);
+    Return = MultiByteToWideChar(Encoding, 0, StringBuffer, BufferLength, NULL, 0);
+    ASSERT(YoriLibIsSizeAllocatable(Return));
+    return (YORI_ALLOC_SIZE_T)Return;
 }
 
 /**
@@ -250,9 +254,9 @@ YoriLibGetMultibyteInputSizeNeeded(
 VOID
 YoriLibMultibyteInput(
     __in_ecount(InputBufferLength) LPCSTR InputStringBuffer,
-    __in DWORD InputBufferLength,
+    __in YORI_ALLOC_SIZE_T InputBufferLength,
     __out_ecount(OutputBufferLength) LPTSTR OutputStringBuffer,
-    __in DWORD OutputBufferLength
+    __in YORI_ALLOC_SIZE_T OutputBufferLength
     )
 {
     DWORD Return;

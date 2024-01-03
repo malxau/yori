@@ -105,8 +105,8 @@ MakeShExecuteInProc(
     YORI_STRING CmdLine;
     PYORI_STRING EscapedArgV;
     PYORI_STRING NoEscapedArgV;
-    DWORD ArgC;
-    DWORD Count;
+    YORI_ALLOC_SIZE_T ArgC;
+    YORI_ALLOC_SIZE_T Count;
     DWORD ExitCode = 0;
 
     EscapedArgV = NULL;
@@ -128,7 +128,7 @@ MakeShExecuteInProc(
     //
 
     ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
-    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, TRUE, &ArgC);
+    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (YORI_ALLOC_SIZE_T)-1, TRUE, &ArgC);
     YoriLibFreeStringContents(&CmdLine);
 
     if (EscapedArgV == NULL) {

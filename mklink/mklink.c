@@ -266,13 +266,13 @@ typedef MKLINK_LINK_TYPE *PMKLINK_LINK_TYPE;
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 1;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 1;
     MKLINK_LINK_TYPE LinkType = MklinkLinkTypeHard;
     YORI_STRING NewLinkName;
     YORI_STRING ExistingFileName;

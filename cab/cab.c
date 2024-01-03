@@ -311,8 +311,8 @@ CabCreateFileFoundCallback(
 {
     PCAB_CREATE_CONTEXT CreateContext = (PCAB_CREATE_CONTEXT)Context;
     YORI_STRING RelativePathFrom;
-    DWORD SlashesFound;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T SlashesFound;
+    YORI_ALLOC_SIZE_T Index;
 
     UNREFERENCED_PARAMETER(FileInfo);
 
@@ -440,7 +440,7 @@ CabCreateFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -500,7 +500,7 @@ CabExpandFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -536,19 +536,19 @@ CabExpandFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    BOOL Compress = FALSE;
-    BOOL CompressEachFile = FALSE;
-    BOOL Uncompress = FALSE;
-    BOOL Recursive = FALSE;
-    BOOL BasicEnumeration = FALSE;
-    DWORD i;
-    DWORD StartArg = 1;
-    DWORD MatchFlags;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN Compress = FALSE;
+    BOOLEAN CompressEachFile = FALSE;
+    BOOLEAN Uncompress = FALSE;
+    BOOLEAN Recursive = FALSE;
+    BOOLEAN BasicEnumeration = FALSE;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 1;
+    WORD MatchFlags;
     YORI_STRING Arg;
     PYORI_STRING CabFileName;
 

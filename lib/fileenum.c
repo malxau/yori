@@ -60,7 +60,7 @@ typedef struct _YORILIB_FOREACHFILE_CONTEXT {
      a phase to operate on the current directory and a phase to recurse into
      any subdirectories.
      */
-    DWORD NumberPhases;
+    WORD NumberPhases;
 
     /**
      Indicates the current phase number being used.  Note that for recursive
@@ -68,14 +68,14 @@ typedef struct _YORILIB_FOREACHFILE_CONTEXT {
      processed, so this number does not by itself indicate the operation
      being performed.
      */
-    DWORD CurrentPhase;
+    WORD CurrentPhase;
 
     /**
      The number of characters in EffectiveFileSpec to the final slash. A
      seperator may not be specified in EffectiveFileSpec, so this is only
      meaningful if the local FinalSlashFound is set.
      */
-    DWORD CharsToFinalSlash;
+    YORI_ALLOC_SIZE_T CharsToFinalSlash;
 
     /**
      Specifies an enumeration criteria to use if recursively invoking one of
@@ -157,7 +157,7 @@ __success(return)
 BOOL
 YoriLibForEachFileEnum(
     __in PYORI_STRING FileSpec,
-    __in DWORD MatchFlags,
+    __in WORD MatchFlags,
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
@@ -526,8 +526,8 @@ YoriLibForEachFileEnum(
                     RecursePhase &&
                     !IsLink) {
 
-                    DWORD FileNameLen = _tcslen(ForEachContext->FileInfo.cFileName);
-                    DWORD WildLength = 2;
+                    YORI_ALLOC_SIZE_T FileNameLen = (YORI_ALLOC_SIZE_T)_tcslen(ForEachContext->FileInfo.cFileName);
+                    YORI_ALLOC_SIZE_T WildLength = 2;
 
                     if ((MatchFlags & YORILIB_FILEENUM_RECURSE_PRESERVE_WILD) != 0) {
 
@@ -549,7 +549,7 @@ YoriLibForEachFileEnum(
                     memcpy(&ForEachContext->RecurseCriteria.StartOfString[ForEachContext->RecurseCriteria.LengthInChars],
                            ForEachContext->FileInfo.cFileName,
                            FileNameLen * sizeof(TCHAR));
-                    ForEachContext->RecurseCriteria.LengthInChars += FileNameLen;
+                    ForEachContext->RecurseCriteria.LengthInChars = ForEachContext->RecurseCriteria.LengthInChars + FileNameLen;
                     ForEachContext->RecurseCriteria.StartOfString[ForEachContext->RecurseCriteria.LengthInChars] = '\\';
                     ForEachContext->RecurseCriteria.LengthInChars++;
 
@@ -567,7 +567,7 @@ YoriLibForEachFileEnum(
                             _tcscpy(&ForEachContext->RecurseCriteria.StartOfString[ForEachContext->RecurseCriteria.LengthInChars],
                                     ForEachContext->EffectiveFileSpec.StartOfString);
                         }
-                        ForEachContext->RecurseCriteria.LengthInChars += WildLength;
+                        ForEachContext->RecurseCriteria.LengthInChars = ForEachContext->RecurseCriteria.LengthInChars + WildLength;
                     } else {
                         ForEachContext->RecurseCriteria.StartOfString[ForEachContext->RecurseCriteria.LengthInChars] = '*';
                         ForEachContext->RecurseCriteria.LengthInChars++;
@@ -678,7 +678,7 @@ __success(return)
 BOOL
 YoriLibForEachFile(
     __in PYORI_STRING FileSpec,
-    __in DWORD MatchFlags,
+    __in WORD MatchFlags,
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
@@ -690,7 +690,7 @@ YoriLibForEachFile(
     YORI_STRING SubstituteValues;
     YORI_STRING MatchValue;
     YORI_STRING NewFileSpec;
-    DWORD CharsToOperator;
+    YORI_ALLOC_SIZE_T CharsToOperator;
     BOOL SingleCharMode;
 
     if (MatchFlags & YORILIB_FILEENUM_BASIC_EXPANSION) {

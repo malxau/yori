@@ -176,7 +176,7 @@ typedef struct _EDIT_CONTEXT {
      is temporarily initialized to -1 to indicate the edit control should
      use a default value.
      */
-    DWORD TabWidth;
+    YORI_ALLOC_SIZE_T TabWidth;
 
     /**
      TRUE if a BOM should be written to the output stream, FALSE if not.
@@ -289,7 +289,7 @@ EditLoadDefaults(
     ValueSize = sizeof(Value);
     Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("TabWidth"), NULL, &Type, (LPBYTE)&Value, &ValueSize);
     if (Err == ERROR_SUCCESS && Type == REG_DWORD && ValueSize == sizeof(DWORD)) {
-        EditContext->TabWidth = Value;
+        EditContext->TabWidth = (YORI_ALLOC_SIZE_T)Value;
     }
 
     ValueSize = sizeof(Value);
@@ -353,7 +353,7 @@ EditUpdateOpenedFileCaption(
     FinalSlash = YoriLibFindRightMostCharacter(&EditContext->OpenFileName, '\\');
     if (FinalSlash != NULL) {
         NewCaption.StartOfString = FinalSlash + 1;
-        NewCaption.LengthInChars = (DWORD)(EditContext->OpenFileName.LengthInChars - (FinalSlash - EditContext->OpenFileName.StartOfString + 1));
+        NewCaption.LengthInChars = (EditContext->OpenFileName.LengthInChars - (YORI_ALLOC_SIZE_T)(FinalSlash - EditContext->OpenFileName.StartOfString + 1));
     } else {
         NewCaption.StartOfString = EditContext->OpenFileName.StartOfString;
         NewCaption.LengthInChars = EditContext->OpenFileName.LengthInChars;
@@ -381,15 +381,16 @@ EditPopulateFromStream(
     PVOID LineContext = NULL;
     YORI_STRING LineString;
     PTCHAR NewLine;
-    DWORD BytesRequired;
-    DWORD BytesAfterAlignment;
+    YORI_ALLOC_SIZE_T BytesRequired;
+    YORI_ALLOC_SIZE_T BytesAfterAlignment;
     PUCHAR Buffer = NULL;
-    DWORD BytesRemainingInBuffer = 0;
-    DWORD BufferOffset = 0;
-    DWORD Alignment;
+    YORI_ALLOC_SIZE_T BytesRemainingInBuffer = 0;
+    YORI_ALLOC_SIZE_T BufferOffset = 0;
+    YORI_ALLOC_SIZE_T Alignment;
     BOOLEAN Result;
-    DWORD LinesAllocated;
-    DWORD LinesPopulated;
+    YORI_ALLOC_SIZE_T LinesAllocated;
+    YORI_ALLOC_SIZE_T LinesPopulated;
+    DWORD BytesDesired;
     PYORI_STRING LineArray;
     YORI_LIB_LINE_ENDING FirstLineEnding;
     YORI_LIB_LINE_ENDING LineEnding;
@@ -435,10 +436,11 @@ EditPopulateFromStream(
             if (Buffer != NULL) {
                 YoriLibDereference(Buffer);
             }
-            BytesRemainingInBuffer = 64 * 1024;
-            if (BytesAfterAlignment > BytesRemainingInBuffer) {
-                BytesRemainingInBuffer = BytesAfterAlignment;
+            BytesDesired = 64 * 1024;
+            if (BytesAfterAlignment > BytesDesired) {
+                BytesDesired = BytesAfterAlignment;
             }
+            BytesRemainingInBuffer = YoriLibMaximumAllocationInRange(BytesAfterAlignment, BytesDesired);
             BufferOffset = 0;
 
             Buffer = YoriLibReferencedMalloc(BytesRemainingInBuffer);
@@ -454,14 +456,28 @@ EditPopulateFromStream(
 
         if (LinesPopulated == LinesAllocated) {
             PYORI_STRING NewLineArray;
-            DWORD NewLineCount;
+            YORI_ALLOC_SIZE_T BytesToAllocate;
+            DWORD RequiredBytes;
+            DWORD DesiredBytes;
 
-            NewLineCount = LinesAllocated * 2;
-            if (NewLineCount < 0x1000) {
-                NewLineCount = 0x1000;
+            RequiredBytes = LinesAllocated;
+            RequiredBytes = RequiredBytes + 1;
+            RequiredBytes = RequiredBytes * sizeof(YORI_STRING);
+
+            DesiredBytes = LinesAllocated;
+            DesiredBytes = DesiredBytes * 2;
+            if (DesiredBytes < 0x1000) {
+                DesiredBytes = 0x1000;
+            }
+            DesiredBytes = DesiredBytes * sizeof(YORI_STRING);
+
+            BytesToAllocate = YoriLibMaximumAllocationInRange(RequiredBytes, DesiredBytes);
+            if (BytesToAllocate == 0) {
+                Result = FALSE;
+                break;
             }
 
-            NewLineArray = YoriLibReferencedMalloc(NewLineCount * sizeof(YORI_STRING));
+            NewLineArray = YoriLibReferencedMalloc(BytesToAllocate);
             if (NewLineArray == NULL) {
                 Result = FALSE;
                 break;
@@ -475,7 +491,7 @@ EditPopulateFromStream(
                 YoriLibDereference(LineArray);
             }
             LineArray = NewLineArray;
-            LinesAllocated = NewLineCount;
+            LinesAllocated = BytesToAllocate / sizeof(YORI_STRING);
         }
 
         //
@@ -499,8 +515,8 @@ EditPopulateFromStream(
         //  Align to 8 bytes for the next line.
         //
 
-        BufferOffset += BytesAfterAlignment;
-        BytesRemainingInBuffer -= BytesAfterAlignment;
+        BufferOffset = BufferOffset + BytesAfterAlignment;
+        BytesRemainingInBuffer = BytesRemainingInBuffer - BytesAfterAlignment;
     }
 
     if (Buffer != NULL) {
@@ -624,10 +640,10 @@ EditSaveFile(
     __in PYORI_STRING FileName
     )
 {
-    DWORD LineIndex;
-    DWORD LineCount;
+    YORI_ALLOC_SIZE_T LineIndex;
+    YORI_ALLOC_SIZE_T LineCount;
     DWORD SavedEncoding;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD Attributes;
     PYORI_STRING Line;
     YORI_STRING ParentDirectory;
@@ -910,13 +926,13 @@ EditNewButtonClicked(
 
  @return The number of elements populated into the array.
  */
-DWORD
+WORD
 EditPopulateEncodingArray(
     __out_ecount(6) PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues,
     __in BOOLEAN EncodingsForOpen
     )
 {
-    DWORD EncodingIndex;
+    WORD EncodingIndex;
 
     EncodingIndex = 0;
     if (EncodingsForOpen) {
@@ -1050,14 +1066,14 @@ EditEncodingFromArrayIndex(
  @return The index into the array of Save As encodings.  If an unrecognized
          value is found, zero is used to select the default encoding.
  */
-DWORD
+WORD
 EditArrayIndexFromEncoding(
     __in DWORD Encoding,
     __in BOOLEAN HasBom
     )
 {
-    DWORD Index = 0;
-    DWORD Offset = 0;
+    WORD Index = 0;
+    WORD Offset = 0;
 
     if (YoriLibIsUtf8Supported()) {
         if (Encoding == CP_UTF8) {
@@ -1073,16 +1089,16 @@ EditArrayIndexFromEncoding(
 
     switch(Encoding) {
         case CP_ACP:
-            Index = 0 + Offset;
+            Index = (WORD)(0 + Offset);
             break;
         case CP_OEMCP:
-            Index = 1 + Offset;
+            Index = (WORD)(1 + Offset);
             break;
         case CP_UTF16:
             if (HasBom) {
-                Index = 3 + Offset;
+                Index = (WORD)(3 + Offset);
             } else {
-                Index = 2 + Offset;
+                Index = (WORD)(2 + Offset);
             }
             break;
     }
@@ -1108,7 +1124,7 @@ EditOpenButtonClicked(
     YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[6];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[2];
     DWORD Encoding;
-    DWORD EncodingCount;
+    YORI_ALLOC_SIZE_T EncodingCount;
     BOOLEAN HasBom;
 
     PYORI_WIN_CTRL_HANDLE Parent;
@@ -1265,7 +1281,7 @@ EditSaveAsButtonClicked(
     YORI_DLG_FILE_CUSTOM_VALUE LineEndingValues[3];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[2];
     DWORD Encoding;
-    DWORD EncodingCount;
+    YORI_ALLOC_SIZE_T EncodingCount;
     BOOLEAN HasBom;
 
     PYORI_WIN_CTRL_HANDLE Parent;
@@ -1591,15 +1607,15 @@ __success(return)
 BOOLEAN
 EditFindNextMatchingString(
     __in PEDIT_CONTEXT EditContext,
-    __in DWORD StartLine,
-    __in DWORD StartOffset,
-    __out PDWORD NextMatchLine,
-    __out PDWORD NextMatchOffset
+    __in YORI_ALLOC_SIZE_T StartLine,
+    __in YORI_ALLOC_SIZE_T StartOffset,
+    __out PYORI_ALLOC_SIZE_T NextMatchLine,
+    __out PYORI_ALLOC_SIZE_T NextMatchOffset
     )
 {
-    DWORD LineCount;
-    DWORD LineIndex;
-    DWORD Offset;
+    YORI_ALLOC_SIZE_T LineCount;
+    YORI_ALLOC_SIZE_T LineIndex;
+    YORI_ALLOC_SIZE_T Offset;
     YORI_STRING Substring;
     PYORI_STRING Line;
     PYORI_STRING Match;
@@ -1684,15 +1700,15 @@ __success(return)
 BOOLEAN
 EditFindPreviousMatchingString(
     __in PEDIT_CONTEXT EditContext,
-    __in DWORD StartLine,
-    __in DWORD StartOffset,
-    __out PDWORD NextMatchLine,
-    __out PDWORD NextMatchOffset
+    __in YORI_ALLOC_SIZE_T StartLine,
+    __in YORI_ALLOC_SIZE_T StartOffset,
+    __out PYORI_ALLOC_SIZE_T NextMatchLine,
+    __out PYORI_ALLOC_SIZE_T NextMatchOffset
     )
 {
-    DWORD LineCount;
-    DWORD LineIndex;
-    DWORD Offset;
+    YORI_ALLOC_SIZE_T LineCount;
+    YORI_ALLOC_SIZE_T LineIndex;
+    YORI_ALLOC_SIZE_T Offset;
     YORI_STRING Substring;
     PYORI_STRING Line;
     PYORI_STRING Match;
@@ -1768,13 +1784,13 @@ EditFindNextFromCurrentPosition(
     __in PEDIT_CONTEXT EditContext
     )
 {
-    DWORD CursorOffset;
-    DWORD CursorLine;
-    DWORD NextMatchLine;
-    DWORD NextMatchOffset;
+    YORI_ALLOC_SIZE_T CursorOffset;
+    YORI_ALLOC_SIZE_T CursorLine;
+    YORI_ALLOC_SIZE_T NextMatchLine;
+    YORI_ALLOC_SIZE_T NextMatchOffset;
 
-    DWORD SelectionEndLine;
-    DWORD SelectionEndOffset;
+    YORI_ALLOC_SIZE_T SelectionEndLine;
+    YORI_ALLOC_SIZE_T SelectionEndOffset;
 
     //
     //  If a selection is active, start from the second character in the
@@ -1924,15 +1940,15 @@ EditFindPreviousButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD CursorOffset;
-    DWORD CursorLine;
-    DWORD NextMatchLine;
-    DWORD NextMatchOffset;
+    YORI_ALLOC_SIZE_T CursorOffset;
+    YORI_ALLOC_SIZE_T CursorLine;
+    YORI_ALLOC_SIZE_T NextMatchLine;
+    YORI_ALLOC_SIZE_T NextMatchOffset;
     PYORI_WIN_CTRL_HANDLE Parent;
     PEDIT_CONTEXT EditContext;
 
-    DWORD SelectionEndLine;
-    DWORD SelectionEndOffset;
+    YORI_ALLOC_SIZE_T SelectionEndLine;
+    YORI_ALLOC_SIZE_T SelectionEndOffset;
 
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
@@ -2004,10 +2020,10 @@ EditChangeButtonClicked(
     BOOLEAN MatchFound;
     PYORI_WIN_CTRL_HANDLE Parent;
     PEDIT_CONTEXT EditContext;
-    DWORD StartLine;
-    DWORD StartOffset;
-    DWORD NextMatchLine;
-    DWORD NextMatchOffset;
+    YORI_ALLOC_SIZE_T StartLine;
+    YORI_ALLOC_SIZE_T StartOffset;
+    YORI_ALLOC_SIZE_T NextMatchLine;
+    YORI_ALLOC_SIZE_T NextMatchOffset;
     WORD DialogTop;
 
     Parent = YoriWinGetControlParent(Ctrl);
@@ -2058,10 +2074,10 @@ EditChangeButtonClicked(
 
                 COORD WinMgrSize;
                 COORD ClientSize;
-                DWORD CursorLine;
-                DWORD CursorOffset;
-                DWORD ViewportLeft;
-                DWORD ViewportTop;
+                YORI_ALLOC_SIZE_T CursorLine;
+                YORI_ALLOC_SIZE_T CursorOffset;
+                YORI_ALLOC_SIZE_T ViewportLeft;
+                YORI_ALLOC_SIZE_T ViewportTop;
                 WORD DialogHeight;
                 WORD RemainingEditHeight;
 
@@ -2080,7 +2096,7 @@ EditChangeButtonClicked(
 
                 if (CursorLine > (DWORD)(ViewportTop + RemainingEditHeight - 1)) {
                     ViewportTop = CursorLine - (RemainingEditHeight / 2);
-                    if (CursorOffset + EditContext->SearchString.LengthInChars < (DWORD)ClientSize.X) {
+                    if (CursorOffset + EditContext->SearchString.LengthInChars < (YORI_ALLOC_SIZE_T)ClientSize.X) {
                         ViewportLeft = 0;
                     }
 
@@ -2180,7 +2196,7 @@ EditGoToLineButtonClicked(
     PYORI_WIN_CTRL_HANDLE Parent;
     PEDIT_CONTEXT EditContext;
     LONGLONG llNewLine;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
 
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
@@ -2201,8 +2217,8 @@ EditGoToLineButtonClicked(
     if (YoriLibStringToNumber(&Text, FALSE, &llNewLine, &CharsConsumed) &&
         CharsConsumed > 0) {
 
-        DWORD NewLine;
-        NewLine = (DWORD)llNewLine;
+        YORI_ALLOC_SIZE_T NewLine;
+        NewLine = (YORI_ALLOC_SIZE_T)llNewLine;
         if (NewLine > 0) {
             NewLine--;
         }
@@ -2225,7 +2241,7 @@ EditDisplayOptionsButtonClicked(
 {
     PYORI_WIN_CTRL_HANDLE Parent;
     PEDIT_CONTEXT EditContext;
-    DWORD NewTabWidth;
+    YORI_ALLOC_SIZE_T NewTabWidth;
 
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
@@ -2521,7 +2537,7 @@ EditAboutButtonClicked(
     YORI_STRING LeftText;
     YORI_STRING CenteredText;
     YORI_STRING ButtonTexts[2];
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD ButtonClicked;
 
     PYORI_WIN_CTRL_HANDLE Parent;
@@ -3142,13 +3158,13 @@ EditEncodingFromString(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     DWORD Result;
     YORI_STRING Arg;
 

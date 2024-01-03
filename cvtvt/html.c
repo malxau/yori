@@ -114,7 +114,7 @@ CvtvtHtmlProcessAndOutputText(
     )
 {
     YORI_STRING TextString;
-    DWORD BufferSizeNeeded;
+    YORI_ALLOC_SIZE_T BufferSizeNeeded;
 
     UNREFERENCED_PARAMETER(Context);
 
@@ -162,7 +162,7 @@ CvtvtHtmlProcessAndOutputEscape(
     )
 {
     YORI_STRING TextString;
-    DWORD BufferSizeNeeded;
+    YORI_ALLOC_SIZE_T BufferSizeNeeded;
     YORILIB_HTML_GENERATE_CONTEXT DummyGenerateContext;
 
     UNREFERENCED_PARAMETER(Context);

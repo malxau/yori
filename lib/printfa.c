@@ -45,16 +45,16 @@
  @return The number of characters successfully populated into the buffer, or
          -1 on error.
  */
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibSPrintfSA(
     __out_ecount(len) LPSTR szDest,
-    __in  DWORD len,
-    __in  LPCSTR szFmt,
+    __in YORI_ALLOC_SIZE_T len,
+    __in LPCSTR szFmt,
     ...
     )
 {
     va_list marker;
-    int out_len;
+    YORI_SIGNED_ALLOC_SIZE_T out_len;
 
     va_start( marker, szFmt );
     out_len = YoriLibVSPrintfA(szDest, len, szFmt, marker);
@@ -78,7 +78,7 @@ YoriLibSPrintfSA(
  @return The number of characters successfully populated into the buffer, or
          -1 on error.
  */
-int
+YORI_SIGNED_ALLOC_SIZE_T
 YoriLibSPrintfA(
     __out LPSTR szDest,
     __in LPCSTR szFmt,
@@ -86,10 +86,10 @@ YoriLibSPrintfA(
     )
 {
     va_list marker;
-    int out_len;
+    YORI_SIGNED_ALLOC_SIZE_T out_len;
 
     va_start( marker, szFmt );
-    out_len = YoriLibVSPrintfA(szDest, (DWORD)-1, szFmt, marker);
+    out_len = YoriLibVSPrintfA(szDest, YORI_MAX_ALLOC_SIZE, szFmt, marker);
     va_end( marker );
     return out_len;
 }

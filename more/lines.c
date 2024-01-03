@@ -102,7 +102,7 @@ BOOLEAN
 MoreFindNextSearchMatch(
     __in PMORE_CONTEXT MoreContext,
     __in PCYORI_STRING StringToSearch,
-    __out_opt PDWORD MatchOffset,
+    __out_opt PYORI_ALLOC_SIZE_T MatchOffset,
     __out_opt PUCHAR MatchIndex
     )
 {
@@ -254,13 +254,13 @@ MoreSearchIndexFree(
 VOID
 MoreTruncateStringToVisibleChars(
     __in PYORI_STRING String,
-    __in DWORD VisibleChars
+    __in YORI_ALLOC_SIZE_T VisibleChars
     )
 {
     YORI_STRING EscapeSubset;
-    DWORD EndOfEscape;
-    DWORD VisibleCharsFound;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T EndOfEscape;
+    YORI_ALLOC_SIZE_T VisibleCharsFound;
+    YORI_ALLOC_SIZE_T Index;
 
     VisibleCharsFound = 0;
 
@@ -516,28 +516,28 @@ MoreUpdateFilteredLines(
          logical line, which may contain extra information if
          RequiresGeneration is set.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MoreGetLogicalLineLength(
     __in PMORE_CONTEXT MoreContext,
     __in PYORI_STRING PhysicalLineSubset,
-    __in DWORD MaximumVisibleCharacters,
+    __in YORI_ALLOC_SIZE_T MaximumVisibleCharacters,
     __in WORD InitialDisplayColor,
     __in WORD InitialUserColor,
-    __in DWORD CharactersRemainingInMatch,
+    __in YORI_ALLOC_SIZE_T CharactersRemainingInMatch,
     __out_opt PMORE_LINE_END_CONTEXT LineEndContext
     )
 {
-    DWORD SourceIndex;
-    DWORD CharsInOutputBuffer;
-    DWORD CellsDisplayed;
+    YORI_ALLOC_SIZE_T SourceIndex;
+    YORI_ALLOC_SIZE_T CharsInOutputBuffer;
+    YORI_ALLOC_SIZE_T CellsDisplayed;
     YORI_STRING EscapeSubset;
-    DWORD EndOfEscape;
+    YORI_ALLOC_SIZE_T EndOfEscape;
     WORD CurrentColor = InitialDisplayColor;
     WORD CurrentUserColor = InitialUserColor;
     YORI_STRING MatchEscapeChars;
     TCHAR MatchEscapeCharsBuf[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
-    DWORD MatchOffset;
-    DWORD MatchLength;
+    YORI_ALLOC_SIZE_T MatchOffset;
+    YORI_ALLOC_SIZE_T MatchLength;
     BOOLEAN MatchFound;
     WORD SearchColor;
     UCHAR MatchIndex;
@@ -584,7 +584,7 @@ MoreGetLogicalLineLength(
             if (MatchFound) {
                 MatchLength = MoreContext->SearchStrings[MatchIndex].LengthInChars;
                 SearchColor = MoreContext->SearchColors[MoreContext->SearchContext[MatchIndex].ColorIndex];
-                MatchOffset += SourceIndex;
+                MatchOffset = MatchOffset + SourceIndex;
             }
         }
 
@@ -629,7 +629,7 @@ MoreGetLogicalLineLength(
                         LineEndContext->RequiresGeneration = TRUE;
                     }
                     YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, SearchColor);
-                    CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
+                    CharsInOutputBuffer = CharsInOutputBuffer + MatchEscapeChars.LengthInChars;
                     CurrentColor = SearchColor;
                 }
             }
@@ -644,7 +644,7 @@ MoreGetLogicalLineLength(
                     LineEndContext->RequiresGeneration = TRUE;
                 }
                 YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, CurrentUserColor);
-                CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
+                CharsInOutputBuffer = CharsInOutputBuffer + MatchEscapeChars.LengthInChars;
                 CurrentColor = CurrentUserColor;
             }
         }
@@ -706,14 +706,14 @@ MoreGetLogicalLineLength(
 
  @return The number of logical lines within the physical line.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MoreCountLogicalLinesOnPhysicalLine(
     __in PMORE_CONTEXT MoreContext,
     __in PMORE_PHYSICAL_LINE PhysicalLine
     )
 {
-    DWORD Count = 0;
-    DWORD LogicalLineLength;
+    YORI_ALLOC_SIZE_T Count = 0;
+    YORI_ALLOC_SIZE_T LogicalLineLength;
     YORI_STRING Subset;
 
     YoriLibInitEmptyString(&Subset);
@@ -722,7 +722,7 @@ MoreCountLogicalLinesOnPhysicalLine(
     while(TRUE) {
         LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, MoreContext->ViewportWidth, 0, 0, 0, NULL);
         Subset.StartOfString += LogicalLineLength;
-        Subset.LengthInChars -= LogicalLineLength;
+        Subset.LengthInChars = Subset.LengthInChars - LogicalLineLength;
         Count++;
         if (Subset.LengthInChars == 0) {
             break;
@@ -804,28 +804,28 @@ MoreCloneLogicalLine(
         logical line, which is not the same as SourceCharsToConsume if
         RegenerationRequired is true.
  */
-BOOL
+BOOLEAN
 MoreCopyRangeIntoLogicalLine(
     __in PMORE_CONTEXT MoreContext,
     __in PMORE_LOGICAL_LINE LogicalLine,
-    __in BOOL RegenerationRequired,
-    __in DWORD SourceCharsToConsume,
-    __in DWORD AllocationLengthRequired
+    __in BOOLEAN RegenerationRequired,
+    __in YORI_ALLOC_SIZE_T SourceCharsToConsume,
+    __in YORI_ALLOC_SIZE_T AllocationLengthRequired
     )
 {
     ASSERT(LogicalLine->Line.LengthAllocated == 0 && LogicalLine->Line.MemoryToFree == NULL);
 
     if (RegenerationRequired) {
         YORI_STRING PhysicalLineSubset;
-        DWORD SourceIndex;
-        DWORD CharsInOutputBuffer;
+        YORI_ALLOC_SIZE_T SourceIndex;
+        YORI_ALLOC_SIZE_T CharsInOutputBuffer;
         YORI_STRING MatchEscapeChars;
         YORI_STRING EscapeSubset;
-        DWORD EndOfEscape;
+        YORI_ALLOC_SIZE_T EndOfEscape;
         TCHAR MatchEscapeCharsBuf[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
-        DWORD MatchOffset;
-        DWORD MatchLength;
-        BOOL MatchFound;
+        YORI_ALLOC_SIZE_T MatchOffset;
+        YORI_ALLOC_SIZE_T MatchLength;
+        BOOLEAN MatchFound;
         WORD CurrentUserColor = LogicalLine->InitialUserColor;
         WORD SearchColor;
         UCHAR MatchIndex;
@@ -874,7 +874,7 @@ MoreCopyRangeIntoLogicalLine(
                 if (MatchFound) {
                     MatchLength = MoreContext->SearchStrings[MatchIndex].LengthInChars;
                     SearchColor = MoreContext->SearchColors[MoreContext->SearchContext[MatchIndex].ColorIndex];
-                    MatchOffset += SourceIndex;
+                    MatchOffset = MatchOffset + SourceIndex;
                 }
             }
 
@@ -917,7 +917,7 @@ MoreCopyRangeIntoLogicalLine(
                     if (MatchOffset == SourceIndex) {
                         YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, SearchColor);
                         memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], MatchEscapeChars.StartOfString, MatchEscapeChars.LengthInChars * sizeof(TCHAR));
-                        CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
+                        CharsInOutputBuffer = CharsInOutputBuffer + MatchEscapeChars.LengthInChars;
                     }
                 }
 
@@ -933,7 +933,7 @@ MoreCopyRangeIntoLogicalLine(
                 if (MatchOffset + MatchLength <= SourceIndex) {
                     YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, CurrentUserColor);
                     memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], MatchEscapeChars.StartOfString, MatchEscapeChars.LengthInChars * sizeof(TCHAR));
-                    CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
+                    CharsInOutputBuffer = CharsInOutputBuffer + MatchEscapeChars.LengthInChars;
                 }
             }
         }
@@ -972,19 +972,19 @@ MoreCopyRangeIntoLogicalLine(
         On successful completion, these are populated with the logical lines
         derived from the physical line.
  */
-BOOL
+BOOLEAN
 MoreGenerateLogicalLinesFromPhysicalLine(
     __in PMORE_CONTEXT MoreContext,
     __in PMORE_PHYSICAL_LINE PhysicalLine,
-    __in DWORD FirstLogicalLineIndex,
-    __in DWORD NumberLogicalLines,
+    __in YORI_ALLOC_SIZE_T FirstLogicalLineIndex,
+    __in YORI_ALLOC_SIZE_T NumberLogicalLines,
     __out_ecount(NumberLogicalLines) PMORE_LOGICAL_LINE OutputLines
     )
 {
-    DWORD Count = 0;
-    DWORD CharIndex = 0;
-    DWORD LogicalLineLength;
-    DWORD CharactersRemainingInMatch = 0;
+    YORI_ALLOC_SIZE_T Count = 0;
+    YORI_ALLOC_SIZE_T CharIndex = 0;
+    YORI_ALLOC_SIZE_T LogicalLineLength;
+    YORI_ALLOC_SIZE_T CharactersRemainingInMatch = 0;
     YORI_STRING Subset;
     PMORE_LOGICAL_LINE ThisLine;
     WORD InitialUserColor = PhysicalLine->InitialColor;
@@ -1026,9 +1026,9 @@ MoreGenerateLogicalLinesFromPhysicalLine(
         InitialUserColor = LineEndContext.FinalUserColor;
         InitialDisplayColor = LineEndContext.FinalDisplayColor;
         Subset.StartOfString += LogicalLineLength;
-        Subset.LengthInChars -= LogicalLineLength;
+        Subset.LengthInChars = Subset.LengthInChars - LogicalLineLength;
         Count++;
-        CharIndex += LogicalLineLength;
+        CharIndex = CharIndex + LogicalLineLength;
         if (Subset.LengthInChars == 0) {
             break;
         }
@@ -1061,21 +1061,21 @@ MoreGenerateLogicalLinesFromPhysicalLine(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 MoreGetPreviousLogicalLines(
     __inout PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE CurrentLine,
-    __in DWORD LinesToOutput,
+    __in YORI_ALLOC_SIZE_T LinesToOutput,
     __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
-    __out PDWORD NumberLinesGenerated
+    __out PYORI_ALLOC_SIZE_T NumberLinesGenerated
     )
 {
-    DWORD LinesRemaining = LinesToOutput;
-    DWORD LinesToCopy;
-    DWORD LineIndexToCopy;
+    YORI_ALLOC_SIZE_T LinesRemaining = LinesToOutput;
+    YORI_ALLOC_SIZE_T LinesToCopy;
+    YORI_ALLOC_SIZE_T LineIndexToCopy;
     PMORE_LOGICAL_LINE CurrentOutputLine;
     PMORE_LOGICAL_LINE CurrentInputLine;
-    BOOL Result = TRUE;
+    BOOLEAN Result = TRUE;
 
     CurrentInputLine = CurrentLine;
 
@@ -1102,7 +1102,7 @@ MoreGetPreviousLogicalLines(
 
             Result = FALSE;
         }
-        LinesRemaining -= LinesToCopy;
+        LinesRemaining = LinesRemaining - LinesToCopy;
     }
 
     //
@@ -1115,7 +1115,7 @@ MoreGetPreviousLogicalLines(
 
     while(Result && LinesRemaining > 0) {
         PMORE_PHYSICAL_LINE PreviousPhysicalLine;
-        DWORD LogicalLineCount;
+        YORI_ALLOC_SIZE_T LogicalLineCount;
 
         if (CurrentInputLine != NULL) {
             PreviousPhysicalLine = MoreGetPreviousFilteredPhysicalLine(MoreContext, CurrentInputLine->PhysicalLine);
@@ -1146,7 +1146,7 @@ MoreGetPreviousLogicalLines(
             break;
         }
 
-        LinesRemaining -= LinesToCopy;
+        LinesRemaining = LinesRemaining - LinesToCopy;
         CurrentInputLine = CurrentOutputLine;
     }
 
@@ -1188,23 +1188,23 @@ MoreGetPreviousLogicalLines(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-DWORD
+BOOLEAN
 MoreGetNextLogicalLines(
     __inout PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE CurrentLine,
-    __in BOOL StartFromNextLine,
-    __in DWORD LinesToOutput,
+    __in BOOLEAN StartFromNextLine,
+    __in YORI_ALLOC_SIZE_T LinesToOutput,
     __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
-    __out PDWORD NumberLinesGenerated
+    __out PYORI_ALLOC_SIZE_T NumberLinesGenerated
     )
 {
-    DWORD LinesRemaining = LinesToOutput;
-    DWORD LinesToCopy;
-    DWORD LineIndexToCopy;
+    YORI_ALLOC_SIZE_T LinesRemaining = LinesToOutput;
+    YORI_ALLOC_SIZE_T LinesToCopy;
+    YORI_ALLOC_SIZE_T LineIndexToCopy;
     PMORE_LOGICAL_LINE CurrentOutputLine;
     PMORE_LOGICAL_LINE CurrentInputLine;
-    DWORD LogicalLineCount;
-    BOOL Result = TRUE;
+    YORI_ALLOC_SIZE_T LogicalLineCount;
+    BOOLEAN Result = TRUE;
 
     CurrentInputLine = CurrentLine;
 
@@ -1225,7 +1225,7 @@ MoreGetNextLogicalLines(
                                                                   LineIndexToCopy,
                                                                   LinesToCopy,
                                                                   CurrentOutputLine);
-                LinesRemaining -= LinesToCopy;
+                LinesRemaining = LinesRemaining - LinesToCopy;
             }
         } else {
             LogicalLineCount = MoreCountLogicalLinesOnPhysicalLine(MoreContext, CurrentInputLine->PhysicalLine);
@@ -1241,7 +1241,7 @@ MoreGetNextLogicalLines(
                                                               LineIndexToCopy,
                                                               LinesToCopy,
                                                               CurrentOutputLine);
-            LinesRemaining -= LinesToCopy;
+            LinesRemaining = LinesRemaining - LinesToCopy;
         }
     }
 
@@ -1275,7 +1275,7 @@ MoreGetNextLogicalLines(
                                                           LinesToCopy,
                                                           CurrentOutputLine);
 
-        LinesRemaining -= LinesToCopy;
+        LinesRemaining = LinesRemaining - LinesToCopy;
         CurrentInputLine = &CurrentOutputLine[LinesToCopy - 1];
     }
 
@@ -1324,15 +1324,15 @@ MoreFindNextLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
     __in BOOLEAN MatchAny,
-    __in DWORD MaxLogicalLinesMoved,
-    __out_opt PDWORD LogicalLinesMoved
+    __in YORI_ALLOC_SIZE_T MaxLogicalLinesMoved,
+    __out_opt PYORI_ALLOC_SIZE_T LogicalLinesMoved
     )
 {
     PMORE_PHYSICAL_LINE SearchLine;
     PYORI_STRING SearchString;
-    DWORD MatchOffset;
-    DWORD Count;
-    DWORD LogicalLinesThisPhysicalLine;
+    YORI_ALLOC_SIZE_T MatchOffset;
+    YORI_ALLOC_SIZE_T Count;
+    YORI_ALLOC_SIZE_T LogicalLinesThisPhysicalLine;
 
     Count = 0;
 
@@ -1431,15 +1431,15 @@ MoreFindPreviousLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
     __in BOOLEAN MatchAny,
-    __in DWORD MaxLogicalLinesMoved,
-    __out_opt PDWORD LogicalLinesMoved
+    __in YORI_ALLOC_SIZE_T MaxLogicalLinesMoved,
+    __out_opt PYORI_ALLOC_SIZE_T LogicalLinesMoved
     )
 {
     PMORE_PHYSICAL_LINE SearchLine;
     PYORI_STRING SearchString;
-    DWORD MatchOffset;
-    DWORD Count;
-    DWORD LogicalLinesThisPhysicalLine;
+    YORI_ALLOC_SIZE_T MatchOffset;
+    YORI_ALLOC_SIZE_T Count;
+    YORI_ALLOC_SIZE_T LogicalLinesThisPhysicalLine;
 
     Count = 0;
 

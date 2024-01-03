@@ -90,11 +90,11 @@ YoriLibAttributeFromString(
 {
     YORILIB_COLOR_ATTRIBUTES Attribute;
     YORI_STRING SingleElement;
-    DWORD Element;
-    BOOL Background = FALSE;
-    BOOL ExplicitBackground = FALSE;
-    BOOL ExplicitForeground = FALSE;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Element;
+    BOOLEAN Background = FALSE;
+    BOOLEAN ExplicitBackground = FALSE;
+    BOOLEAN ExplicitForeground = FALSE;
+    YORI_ALLOC_SIZE_T Index;
 
     memset(&Attribute, 0, sizeof(Attribute));
 
@@ -112,7 +112,7 @@ YoriLibAttributeFromString(
 
         Background = FALSE;
         SingleElement.StartOfString = &String->StartOfString[Index];
-        SingleElement.LengthInChars = String->LengthInChars - Index;
+        SingleElement.LengthInChars = (YORI_ALLOC_SIZE_T)(String->LengthInChars - Index);
         if (SingleElement.LengthInChars >= 3 &&
             (SingleElement.StartOfString[0] == 'b' || SingleElement.StartOfString[0] == 'B') &&
             (SingleElement.StartOfString[1] == 'g' || SingleElement.StartOfString[1] == 'G') &&
@@ -163,7 +163,7 @@ YoriLibAttributeFromString(
         if (Background) {
             Index += 3;
         }
-        Index += SingleElement.LengthInChars;
+        Index = (YORI_ALLOC_SIZE_T)(Index + SingleElement.LengthInChars);
         while (Index < String->LengthInChars) {
             if (String->StartOfString[Index] == '+') {
                 Index++;
@@ -411,11 +411,12 @@ YoriLibLoadCombinedFileColorString(
     __out PYORI_STRING Combined
     )
 {
-    DWORD ColorPrependLength = 0;
-    DWORD ColorAppendLength  = 0;
-    DWORD ColorReplaceLength = 0;
-    DWORD ColorCustomLength = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T ColorPrependLength = 0;
+    YORI_ALLOC_SIZE_T ColorAppendLength  = 0;
+    YORI_ALLOC_SIZE_T ColorReplaceLength = 0;
+    YORI_ALLOC_SIZE_T ColorCustomLength = 0;
+    YORI_ALLOC_SIZE_T i;
+    DWORD CharsRequired;
     LPTSTR PrependVarName = _T("YORICOLORPREPEND");
     LPTSTR ReplaceVarName = _T("YORICOLORREPLACE");
     LPTSTR AppendVarName = _T("YORICOLORAPPEND");
@@ -428,26 +429,33 @@ YoriLibLoadCombinedFileColorString(
     //  First, count how big the allocation needs to be and allocate it.
     //
 
-    ColorPrependLength = GetEnvironmentVariable(PrependVarName, NULL, 0);
+    ColorPrependLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(PrependVarName, NULL, 0);
     if (ColorPrependLength == 0) {
         PrependVarName = _T("SDIR_COLOR_PREPEND");
-        ColorPrependLength = GetEnvironmentVariable(PrependVarName, NULL, 0);
+        ColorPrependLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(PrependVarName, NULL, 0);
     }
-    ColorReplaceLength = GetEnvironmentVariable(ReplaceVarName, NULL, 0);
+    ColorReplaceLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(ReplaceVarName, NULL, 0);
     if (ColorReplaceLength == 0) {
         ReplaceVarName = _T("SDIR_COLOR_REPLACE");
-        ColorReplaceLength = GetEnvironmentVariable(ReplaceVarName, NULL, 0);
+        ColorReplaceLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(ReplaceVarName, NULL, 0);
     }
-    ColorAppendLength  = GetEnvironmentVariable(AppendVarName, NULL, 0);
+    ColorAppendLength  = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(AppendVarName, NULL, 0);
     if (ColorAppendLength == 0) {
         AppendVarName = _T("SDIR_COLOR_APPEND");
-        ColorAppendLength  = GetEnvironmentVariable(AppendVarName, NULL, 0);
+        ColorAppendLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(AppendVarName, NULL, 0);
     }
     if (Custom != NULL) {
         ColorCustomLength = Custom->LengthInChars;
     }
 
-    if (!YoriLibAllocateString(Combined, ColorPrependLength + 1 + ColorAppendLength + 1 + ColorReplaceLength + 1 + ColorCustomLength + sizeof(YoriLibDefaultFileColorString))) {
+    CharsRequired = 0;
+    CharsRequired = CharsRequired + ColorPrependLength + 1 + ColorAppendLength + 1 + ColorReplaceLength + 1 + ColorCustomLength + sizeof(YoriLibDefaultFileColorString);
+
+    if (!YoriLibIsSizeAllocatable(CharsRequired)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(Combined, (YORI_ALLOC_SIZE_T)CharsRequired)) {
         return FALSE;
     }
 
@@ -461,13 +469,13 @@ YoriLibLoadCombinedFileColorString(
         GetEnvironmentVariable(PrependVarName,
                                Combined->StartOfString,
                                ColorPrependLength);
-        i += ColorPrependLength;
+        i = (YORI_ALLOC_SIZE_T)(i + ColorPrependLength);
         Combined->StartOfString[i - 1] = ';';
     }
 
     if (ColorCustomLength) {
         YoriLibSPrintfS(&Combined->StartOfString[i], ColorCustomLength + 1, _T("%y"), Custom);
-        i += ColorCustomLength;
+        i = (YORI_ALLOC_SIZE_T)(i + ColorCustomLength);
         Combined->StartOfString[i] = ';';
         i++;
     }
@@ -476,7 +484,7 @@ YoriLibLoadCombinedFileColorString(
         GetEnvironmentVariable(ReplaceVarName,
                                &Combined->StartOfString[i],
                                ColorReplaceLength);
-        i += ColorReplaceLength - 1;
+        i = (YORI_ALLOC_SIZE_T)(i + ColorReplaceLength - 1);
     } else {
         YoriLibSPrintfS(&Combined->StartOfString[i],
                         sizeof(YoriLibDefaultFileColorString) / sizeof(YoriLibDefaultFileColorString[0]),
@@ -491,7 +499,7 @@ YoriLibLoadCombinedFileColorString(
         GetEnvironmentVariable(AppendVarName,
                                &Combined->StartOfString[i],
                                ColorAppendLength);
-        i += ColorAppendLength - 1;
+        i = i + ColorAppendLength - 1;
     }
 
     Combined->LengthInChars = i;
@@ -541,7 +549,7 @@ YoriLibGetMetadataColor(
     LPTSTR NextStart;
     YORILIB_COLOR_ATTRIBUTES FoundColor;
     YORILIB_COLOR_ATTRIBUTES WindowColor;
-    DWORD CustomLength = 0;
+    YORI_ALLOC_SIZE_T CustomLength = 0;
     LPTSTR EnvVarName = _T("YORICOLORMETADATA");
 
     YoriLibInitEmptyString(&Remaining);
@@ -555,10 +563,10 @@ YoriLibGetMetadataColor(
     //  name.
     //
 
-    CustomLength = GetEnvironmentVariable(EnvVarName, NULL, 0);
+    CustomLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(EnvVarName, NULL, 0);
     if (CustomLength == 0) {
         EnvVarName = _T("SDIR_COLOR_METADATA");
-        CustomLength = GetEnvironmentVariable(EnvVarName, NULL, 0);
+        CustomLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(EnvVarName, NULL, 0);
     }
 
     if (!YoriLibAllocateString(&CriteriaString, CustomLength + sizeof(YoriLibDefaultMetadataColorString))) {
@@ -566,11 +574,11 @@ YoriLibGetMetadataColor(
     }
 
     if (CustomLength > 0) {
-        CustomLength = GetEnvironmentVariable(EnvVarName, CriteriaString.StartOfString, CustomLength);
+        CustomLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(EnvVarName, CriteriaString.StartOfString, CustomLength);
         CriteriaString.LengthInChars = CustomLength;
     }
 
-    CriteriaString.LengthInChars += YoriLibSPrintf(&CriteriaString.StartOfString[CustomLength], _T("%hs"), YoriLibDefaultMetadataColorString);
+    CriteriaString.LengthInChars = CriteriaString.LengthInChars + YoriLibSPrintf(&CriteriaString.StartOfString[CustomLength], _T("%hs"), YoriLibDefaultMetadataColorString);
 
     Remaining.StartOfString = CriteriaString.StartOfString;
     Remaining.LengthInChars = CriteriaString.LengthInChars;
@@ -579,7 +587,7 @@ YoriLibGetMetadataColor(
         NextStart = YoriLibFindLeftMostCharacter(&Remaining, ';');
         Element.StartOfString = Remaining.StartOfString;
         if (NextStart != NULL) {
-            Element.LengthInChars = (DWORD)(NextStart - Element.StartOfString);
+            Element.LengthInChars = (YORI_ALLOC_SIZE_T)(NextStart - Element.StartOfString);
         } else {
             Element.LengthInChars = Remaining.LengthInChars;
         }
@@ -589,9 +597,9 @@ YoriLibGetMetadataColor(
             Seperator = YoriLibFindLeftMostCharacter(&Element, ',');
             if (Seperator != NULL) {
                 FoundAttributeCodeString.StartOfString = Element.StartOfString;
-                FoundAttributeCodeString.LengthInChars = (DWORD)(Seperator - Element.StartOfString);
+                FoundAttributeCodeString.LengthInChars = (YORI_ALLOC_SIZE_T)(Seperator - Element.StartOfString);
                 FoundColorString.StartOfString = Seperator + 1;
-                FoundColorString.LengthInChars = Element.LengthInChars - FoundAttributeCodeString.LengthInChars - 1;
+                FoundColorString.LengthInChars = (YORI_ALLOC_SIZE_T)(Element.LengthInChars - FoundAttributeCodeString.LengthInChars - 1);
 
 
                 if (YoriLibCompareStringInsensitive(RequestedAttributeCodeString, &FoundAttributeCodeString) == 0) {
@@ -612,7 +620,7 @@ YoriLibGetMetadataColor(
         }
 
         Remaining.StartOfString = NextStart;
-        Remaining.LengthInChars = CriteriaString.LengthInChars - (DWORD)(NextStart - CriteriaString.StartOfString);
+        Remaining.LengthInChars = (YORI_ALLOC_SIZE_T)(CriteriaString.LengthInChars - (YORI_ALLOC_SIZE_T)(NextStart - CriteriaString.StartOfString));
 
         if (Remaining.LengthInChars > 0) {
             Remaining.StartOfString++;

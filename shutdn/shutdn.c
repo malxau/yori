@@ -93,19 +93,19 @@ typedef enum _SHUTDN_OP {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     BOOL Result;
-    DWORD i;
-    DWORD StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     SHUTDN_OP Op;
     LPTSTR ErrText;
-    BOOL Force;
-    BOOL Powerdown;
+    BOOLEAN Force;
+    BOOLEAN Powerdown;
     DWORD ShutdownOptions;
     DWORD Err;
 

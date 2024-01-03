@@ -437,7 +437,7 @@ YoriLibFileFiltParseFilterOptAndOperator(
     YoriLibInitEmptyString(Operator);
 
     Operator->StartOfString = SwitchName.StartOfString + SwitchName.LengthInChars;
-    Operator->LengthInChars = FilterElement->LengthInChars - SwitchName.LengthInChars - (DWORD)(SwitchName.StartOfString - FilterElement->StartOfString);
+    Operator->LengthInChars = FilterElement->LengthInChars - SwitchName.LengthInChars - (YORI_ALLOC_SIZE_T)(SwitchName.StartOfString - FilterElement->StartOfString);
 
     Operator->LengthInChars = YoriLibCountStringContainingChars(Operator, _T("&<>=!"));
     return TRUE;
@@ -480,7 +480,7 @@ YoriLibFileFiltParseFilterElement(
     YoriLibInitEmptyString(&Value);
 
     Value.StartOfString = Operator.StartOfString + Operator.LengthInChars;
-    Value.LengthInChars = FilterElement->LengthInChars - Operator.LengthInChars - (DWORD)(Operator.StartOfString - FilterElement->StartOfString);
+    Value.LengthInChars = FilterElement->LengthInChars - Operator.LengthInChars - (YORI_ALLOC_SIZE_T)(Operator.StartOfString - FilterElement->StartOfString);
 
     return YoriLibFileFiltParseFilterOperator(Criteria, &Operator, &Value, FoundOpt, ErrorSubstring);
 }
@@ -518,8 +518,8 @@ YoriLibFileFiltParseColorElement(
     YORI_STRING Value;
     PYORI_LIB_FILE_FILT_COLOR_CRITERIA ColorCriteria = (PYORI_LIB_FILE_FILT_COLOR_CRITERIA)Criteria;
     PCYORI_LIB_FILE_FILT_FILTER_OPT FoundOpt;
-    DWORD CharsToCompare;
-    DWORD CharsRemaining;
+    YORI_ALLOC_SIZE_T CharsToCompare;
+    YORI_ALLOC_SIZE_T CharsRemaining;
 
     if (!YoriLibFileFiltParseFilterOptAndOperator(FilterElement, &FoundOpt, &Operator, ErrorSubstring)) {
         return FALSE;
@@ -528,7 +528,7 @@ YoriLibFileFiltParseColorElement(
     YoriLibInitEmptyString(&Value);
 
     Value.StartOfString = Operator.StartOfString + Operator.LengthInChars;
-    CharsRemaining = FilterElement->LengthInChars - Operator.LengthInChars - (DWORD)(Operator.StartOfString - FilterElement->StartOfString);
+    CharsRemaining = FilterElement->LengthInChars - Operator.LengthInChars - (YORI_ALLOC_SIZE_T)(Operator.StartOfString - FilterElement->StartOfString);
     Value.LengthInChars = CharsRemaining;
 
     CharsToCompare = YoriLibCountStringNotContainingChars(&Value, _T(","));
@@ -593,7 +593,7 @@ YoriLibFileFiltParseFilterStringInternal(
     __out PYORI_LIB_FILE_FILTER Filter,
     __in PYORI_STRING FilterString,
     __in PYORI_LIB_FILE_FILT_PARSE_FN Fn,
-    __in DWORD AllocationSize,
+    __in YORI_ALLOC_SIZE_T AllocationSize,
     __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     )
 {
@@ -602,7 +602,7 @@ YoriLibFileFiltParseFilterStringInternal(
     PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria = NULL;
     PYORI_LIB_FILE_FILT_MATCH_CRITERIA ThisElement;
     LPTSTR NextStart;
-    DWORD ElementCount;
+    YORI_ALLOC_SIZE_T ElementCount;
     DWORD Index;
     DWORD Phase;
 
@@ -621,7 +621,7 @@ YoriLibFileFiltParseFilterStringInternal(
             NextStart = YoriLibFindLeftMostCharacter(&Remaining, ';');
             Element.StartOfString = Remaining.StartOfString;
             if (NextStart != NULL) {
-                Element.LengthInChars = (DWORD)(NextStart - Element.StartOfString);
+                Element.LengthInChars = (YORI_ALLOC_SIZE_T)(NextStart - Element.StartOfString);
             } else {
                 Element.LengthInChars = Remaining.LengthInChars;
             }
@@ -664,7 +664,7 @@ YoriLibFileFiltParseFilterStringInternal(
             }
 
             Remaining.StartOfString = NextStart;
-            Remaining.LengthInChars = FilterString->LengthInChars - (DWORD)(NextStart - FilterString->StartOfString);
+            Remaining.LengthInChars = FilterString->LengthInChars - (YORI_ALLOC_SIZE_T)(NextStart - FilterString->StartOfString);
 
             if (Remaining.LengthInChars > 0) {
                 Remaining.StartOfString++;

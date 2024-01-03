@@ -78,17 +78,17 @@ CshotHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD SkipCount = 0;
-    DWORD LineCount = 0;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T SkipCount = 0;
+    YORI_ALLOC_SIZE_T LineCount = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     LONGLONG Temp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -107,7 +107,7 @@ ENTRYPOINT(
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
 
 
-                        LineCount = (DWORD)Temp;
+                        LineCount = (YORI_ALLOC_SIZE_T)Temp;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }
@@ -115,7 +115,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 if (ArgC > i + 1) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
-                        SkipCount = (DWORD)Temp;
+                        SkipCount = (YORI_ALLOC_SIZE_T)Temp;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }

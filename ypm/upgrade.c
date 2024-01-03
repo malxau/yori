@@ -76,13 +76,13 @@ YpmUpgradeHelp(VOID)
 DWORD
 YpmUpgradeInternal(
     __in YORIPKG_UPGRADE_PREFER UpgradePrefer,
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     PYORI_STRING NewArch = NULL;
 
@@ -143,7 +143,7 @@ YpmUpgradeInternal(
  */
 DWORD
 YpmUpgrade(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -161,7 +161,7 @@ YpmUpgrade(
  */
 DWORD
 YpmUpgradePreferDaily(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -179,7 +179,7 @@ YpmUpgradePreferDaily(
  */
 DWORD
 YpmUpgradePreferStable(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {

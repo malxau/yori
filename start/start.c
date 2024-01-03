@@ -70,7 +70,7 @@ StartHelp(VOID)
  */
 BOOL
 StartCreateProcess(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in INT ShowState
     )
@@ -135,7 +135,7 @@ StartCreateProcess(
  */
 BOOL
 StartShellExecute(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in INT ShowState,
     __in BOOL Elevate
@@ -144,7 +144,7 @@ StartShellExecute(
     YORI_STRING Args;
     HINSTANCE hInst;
     LPTSTR ErrText = NULL;
-    BOOL AllocatedError = FALSE;
+    BOOLEAN AllocatedError = FALSE;
     YORI_SHELLEXECUTEINFO sei;
     DWORD LastError;
 
@@ -249,7 +249,7 @@ StartShellExecute(
  */
 BOOL
 StartExecute(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in INT ShowState,
     __in BOOL Elevate
@@ -292,13 +292,13 @@ StartExecute(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD StartArg = 0;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     INT ShowState;
     YORI_STRING FoundExecutable;
@@ -375,7 +375,7 @@ ENTRYPOINT(
         Ext = YoriLibFindRightMostCharacter(&FoundExecutable, '.');
         if (Ext != NULL) {
             YsExt.StartOfString = Ext;
-            YsExt.LengthInChars = FoundExecutable.LengthInChars - (DWORD)(Ext - FoundExecutable.StartOfString);
+            YsExt.LengthInChars = FoundExecutable.LengthInChars - (YORI_ALLOC_SIZE_T)(Ext - FoundExecutable.StartOfString);
             if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
                 PrependYori = TRUE;
             }
@@ -391,8 +391,8 @@ ENTRYPOINT(
 
     Result = FALSE;
     if (PrependYori) {
-        DWORD ArgCount = ArgC - StartArg;
-        DWORD Index;
+        YORI_ALLOC_SIZE_T ArgCount = ArgC - StartArg;
+        YORI_ALLOC_SIZE_T Index;
         YORI_STRING * ArgArray;
 
         ArgArray = YoriLibMalloc((ArgCount + 2) * sizeof(YORI_STRING));

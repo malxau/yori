@@ -75,13 +75,13 @@ YoriDlgFindHexCancelButtonClicked(
  @return The corresponding combo box index.  On any invalid value, the first
          index (bytes) is used.
  */
-DWORD
+UCHAR
 YoriDlgFindHexBytesPerWordToIndex(
-    __in DWORD BytesPerWord
+    __in UCHAR BytesPerWord
     )
 {
-    DWORD Index;
-    DWORD Value;
+    UCHAR Index;
+    UCHAR Value;
 
     Value = BytesPerWord;
     Index = 0;
@@ -91,7 +91,7 @@ YoriDlgFindHexBytesPerWordToIndex(
             return Index;
         }
 
-        Value = Value>>1;
+        Value = (UCHAR)(Value>>1);
         Index++;
     }
 
@@ -106,12 +106,12 @@ YoriDlgFindHexBytesPerWordToIndex(
 
  @return The corresponding bytes per word.
  */
-DWORD
+UCHAR
 YoriDlgFindHexIndexToBytesPerWord(
-    __in DWORD Index
+    __in UCHAR Index
     )
 {
-    return (1 << Index);
+    return (UCHAR)(1 << Index);
 }
 
 /**
@@ -127,8 +127,8 @@ YoriDlgFindHexBytesPerWordChanged(
     PYORI_WIN_CTRL_HANDLE Parent;
     PYORI_WIN_CTRL_HANDLE HexEdit;
     PYORI_WIN_WINDOW_HANDLE Window;
-    DWORD Active;
-    DWORD BytesPerWord;
+    YORI_ALLOC_SIZE_T Active;
+    UCHAR BytesPerWord;
 
     Parent = YoriWinGetControlParent(Ctrl);
     Window = YoriWinGetWindowFromWindowCtrl(Parent);
@@ -136,7 +136,7 @@ YoriDlgFindHexBytesPerWordChanged(
         return;
     }
 
-    BytesPerWord = YoriDlgFindHexIndexToBytesPerWord(Active);
+    BytesPerWord = YoriDlgFindHexIndexToBytesPerWord((UCHAR)Active);
     HexEdit = YoriWinFindControlById(Parent, YoriDlgFindHexControlBuffer);
     ASSERT(HexEdit != NULL);
 
@@ -172,10 +172,10 @@ YoriDlgFindHex(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,
     __in_opt PUCHAR InitialData,
-    __in DWORDLONG InitialDataLength,
-    __in DWORD InitialBytesPerWord,
+    __in YORI_ALLOC_SIZE_T InitialDataLength,
+    __in UCHAR InitialBytesPerWord,
     __out PUCHAR * FindData,
-    __out PDWORDLONG FindDataLength
+    __out PYORI_ALLOC_SIZE_T FindDataLength
     )
 {
     PYORI_WIN_WINDOW_HANDLE Parent;
@@ -251,21 +251,16 @@ YoriDlgFindHex(
 
     if (InitialData != NULL) {
         PUCHAR InitialDataCopy;
-        DWORDLONG InitialDataCopyLength;
+        YORI_ALLOC_SIZE_T InitialDataCopyLength;
 
-        InitialDataCopyLength = InitialDataLength + 0x100;
-        if (InitialDataCopyLength > (DWORD)-1) {
-            YoriWinDestroyWindow(Parent);
-            return FALSE;
-        }
-
-        InitialDataCopy = YoriLibReferencedMalloc((DWORD)InitialDataCopyLength);
+        InitialDataCopyLength = YoriLibIsAllocationExtendable(InitialDataLength, 0, 0x100);
+        InitialDataCopy = YoriLibReferencedMalloc(InitialDataCopyLength);
         if (InitialDataCopy == NULL) {
             YoriWinDestroyWindow(Parent);
             return FALSE;
         }
 
-        memcpy(InitialDataCopy, InitialData, (DWORD)InitialDataLength);
+        memcpy(InitialDataCopy, InitialData, InitialDataLength);
         if (!YoriWinHexEditSetDataNoCopy(HexEdit, InitialDataCopy, InitialDataCopyLength, InitialDataLength)) {
             YoriLibDereference(InitialDataCopy);
             YoriWinDestroyWindow(Parent);
@@ -344,7 +339,7 @@ YoriDlgFindHex(
 
     if (Result) {
         PUCHAR Buffer;
-        DWORDLONG BufferLength;
+        YORI_ALLOC_SIZE_T BufferLength;
 
         if (!YoriWinHexEditGetDataNoCopy(HexEdit, &Buffer, &BufferLength)) {
             YoriWinDestroyWindow(Parent);

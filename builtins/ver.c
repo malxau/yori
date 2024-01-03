@@ -108,7 +108,7 @@ typedef struct _VER_VERSION_RESULT {
          characters required in order to successfully populate, or zero
          on error.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 VerExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
@@ -116,7 +116,7 @@ VerExpandVariables(
     )
 {
     PVER_VERSION_RESULT VerContext;
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
 
     VerContext = (PVER_VERSION_RESULT)Context;
 
@@ -137,7 +137,7 @@ VerExpandVariables(
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("shminor")) == 0) {
         CharsNeeded = 3;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("VERDATE")) == 0) {
-        CharsNeeded = strlen(__DATE__);
+        CharsNeeded = (YORI_ALLOC_SIZE_T)strlen(__DATE__);
     } else {
         return 0;
     }
@@ -198,7 +198,7 @@ VerExpandVariables(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_VER(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -208,9 +208,9 @@ YoriCmd_VER(
                           _T("Yori shell version: $SHMAJOR$.$SHMINOR$\n")
                           _T("Build date: $VERDATE$\n");
     YORI_STRING YsFormatString;
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
 
     YoriLibLoadNtDllFunctions();

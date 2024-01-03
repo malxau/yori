@@ -64,14 +64,14 @@ FgHelp(VOID)
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_FG(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     DWORD JobId = 0;
     BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
 
     YoriLibLoadNtDllFunctions();
@@ -112,7 +112,7 @@ YoriCmd_FG(
         YORI_STRING Line;
         PVOID LineContext = NULL;
         LONGLONG llTemp;
-        DWORD CharsConsumed;
+        YORI_ALLOC_SIZE_T CharsConsumed;
 
         llTemp = 0;
         if (!YoriLibStringToNumber(&ArgV[StartArg], TRUE, &llTemp, &CharsConsumed)) {

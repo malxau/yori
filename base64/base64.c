@@ -61,12 +61,12 @@ typedef struct _BASE64_BUFFER {
     /**
      The number of bytes currently allocated to this buffer.
      */
-    DWORD BytesAllocated;
+    YORI_ALLOC_SIZE_T BytesAllocated;
 
     /**
      The number of bytes populated with data in this buffer.
      */
-    DWORD BytesPopulated;
+    YORI_ALLOC_SIZE_T BytesPopulated;
 
     /**
      A handle to a pipe which is the source of data for this buffer.
@@ -108,10 +108,10 @@ Base64BufferPump(
                 break;
             }
 
-            ThisBuffer->BytesPopulated += BytesRead;
+            ThisBuffer->BytesPopulated = ThisBuffer->BytesPopulated + (YORI_ALLOC_SIZE_T)BytesRead;
             ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
             if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
-                DWORD NewBytesAllocated;
+                YORI_ALLOC_SIZE_T NewBytesAllocated;
                 PCHAR NewBuffer;
 
                 //
@@ -123,7 +123,7 @@ Base64BufferPump(
                 //  larger.  In a strict sense this limit could be higher,
                 //  but not by much.
                 //
-                if (ThisBuffer->BytesAllocated >= ((DWORD)-1) / 4) {
+                if (ThisBuffer->BytesAllocated >= (YORI_MAX_ALLOC_SIZE / 4)) {
                     break;
                 }
 
@@ -221,7 +221,7 @@ Base64Encode(
     //  Check if the buffer size would overflow, and fail if so
     //
 
-    if (CharsRequired >= ((DWORD)-1) / 2) {
+    if (!YoriLibIsSizeAllocatable(CharsRequired)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("base64: supplied data too large\n"));
         return FALSE;
     }
@@ -230,7 +230,7 @@ Base64Encode(
     //  Allocate buffer
     //
 
-    if (!YoriLibAllocateString(&Buffer, CharsRequired)) {
+    if (!YoriLibAllocateString(&Buffer, (YORI_ALLOC_SIZE_T)CharsRequired)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("base64: allocation failure: %s"), ErrText);
@@ -242,8 +242,7 @@ Base64Encode(
     //  Perform the encode
     //
 
-    Buffer.LengthInChars = CharsRequired;
-    if (!DllCrypt32.pCryptBinaryToStringW(ThisBuffer->Buffer, ThisBuffer->BytesPopulated, CRYPT_STRING_BASE64, Buffer.StartOfString, &Buffer.LengthInChars)) {
+    if (!DllCrypt32.pCryptBinaryToStringW(ThisBuffer->Buffer, ThisBuffer->BytesPopulated, CRYPT_STRING_BASE64, Buffer.StartOfString, &CharsRequired)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("base64: failure to encode in CryptBinaryToString: %s"), ErrText);
@@ -251,6 +250,8 @@ Base64Encode(
         YoriLibFreeStringContents(&Buffer);
         return FALSE;
     }
+
+    Buffer.LengthInChars = (YORI_ALLOC_SIZE_T)CharsRequired;
 
     //
     //  Free the source buffer.  We're done with it by this point, and
@@ -281,7 +282,7 @@ Base64Decode(
     __inout PBASE64_BUFFER ThisBuffer
     )
 {
-    DWORD CharsRequired;
+    YORI_ALLOC_SIZE_T CharsRequired;
     DWORD BytesRequired;
     YORI_STRING Buffer;
     PUCHAR BinaryBuffer;
@@ -334,7 +335,7 @@ Base64Decode(
     //  Allocate binary buffer
     //
 
-    BinaryBuffer = YoriLibMalloc(BytesRequired);
+    BinaryBuffer = YoriLibMalloc((YORI_ALLOC_SIZE_T)BytesRequired);
     if (BinaryBuffer == NULL) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
@@ -425,13 +426,13 @@ Base64Decode(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     BOOLEAN Decode = FALSE;
     BASE64_BUFFER Base64Buffer;

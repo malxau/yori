@@ -276,7 +276,7 @@ typedef struct _YORIPKG_PACKAGE_PENDING_INSTALL {
      occurs if the package has been downloaded from a remote path and is
      stored in a temporary location.
      */
-    BOOL DeleteLocalPackagePath;
+    BOOLEAN DeleteLocalPackagePath;
 } YORIPKG_PACKAGE_PENDING_INSTALL, *PYORIPKG_PACKAGE_PENDING_INSTALL;
 
 /**
@@ -286,12 +286,21 @@ typedef struct _YORIPKG_PACKAGE_PENDING_INSTALL {
  */
 #define YORIPKG_MAX_FIELD_LENGTH (256)
 
+#if YORI_MAX_ALLOC_SIZE >= (64 * 1024)
 /**
  The maximum length of a section in an INI file.  The APIs aren't very good
  about telling us how much space we need, so this is the size we allocate
  and the effective limit.
  */
 #define YORIPKG_MAX_SECTION_LENGTH (64 * 1024)
+#else
+/**
+ The maximum length of a section in an INI file.  The APIs aren't very good
+ about telling us how much space we need, so this is the size we allocate
+ and the effective limit.
+ */
+#define YORIPKG_MAX_SECTION_LENGTH (32 * 1024)
+#endif
 
 __success(return)
 BOOL
@@ -364,7 +373,7 @@ YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __in_opt PCYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
-    __out PBOOL DeleteWhenFinished
+    __out PBOOLEAN DeleteWhenFinished
     );
 
 __success(return)

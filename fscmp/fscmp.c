@@ -188,16 +188,16 @@ FsCmpFileFoundCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD StartArg = 0;
-    DWORD i;
-    DWORD MatchFlags;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
+    WORD MatchFlags;
     FSCMP_CONTEXT FsCmpContext;
-    BOOL BasicExpansion;
+    BOOLEAN BasicExpansion;
     YORI_STRING Arg;
 
     ZeroMemory(&FsCmpContext, sizeof(FsCmpContext));

@@ -105,7 +105,7 @@ typedef struct _HASH_CONTEXT {
     /**
      Specifies the number of bytes in HashBuffer.
      */
-    DWORD HashLength;
+    YORI_ALLOC_SIZE_T HashLength;
 
     /**
      Pointer to a buffer to read data from the file into.
@@ -115,7 +115,7 @@ typedef struct _HASH_CONTEXT {
     /**
      Specifies the number of bytes in ReadBuffer.
      */
-    DWORD ReadBufferLength;
+    YORI_ALLOC_SIZE_T ReadBufferLength;
 
     /**
      A string which contains enough characters to contain the hex
@@ -229,8 +229,8 @@ HashFileFoundCallback(
     PHASH_CONTEXT HashContext = (PHASH_CONTEXT)Context;
     YORI_STRING RelativePathFrom;
     HANDLE FileHandle;
-    DWORD SlashesFound;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T SlashesFound;
+    YORI_ALLOC_SIZE_T Index;
 
     UNREFERENCED_PARAMETER(FileInfo);
 
@@ -370,6 +370,7 @@ HashInitializeContext(
     DWORD LastError;
     LPTSTR ErrText;
     DWORD Index;
+    DWORD HashLength;
 
     LastError = ERROR_SUCCESS;
 
@@ -423,7 +424,7 @@ HashInitializeContext(
         return FALSE;
     }
 
-    if (!DllAdvApi32.pCryptGetHashParam(hHash, HP_HASHVAL, NULL, &HashContext->HashLength, 0)) {
+    if (!DllAdvApi32.pCryptGetHashParam(hHash, HP_HASHVAL, NULL, &HashLength, 0)) {
         LastError = GetLastError();
         if (LastError != ERROR_MORE_DATA) {
             ErrText = YoriLibGetWinErrorText(LastError);
@@ -434,6 +435,14 @@ HashInitializeContext(
             return FALSE;
         }
     }
+
+    if (!YoriLibIsSizeAllocatable(HashLength)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: hash length %i too large\n"), HashLength);
+        DllAdvApi32.pCryptDestroyHash(hHash);
+        HashCleanupContext(HashContext);
+        return FALSE;
+    }
+    HashContext->HashLength = (YORI_ALLOC_SIZE_T)HashLength;
 
     DllAdvApi32.pCryptDestroyHash(hHash);
 
@@ -450,7 +459,7 @@ HashInitializeContext(
         return FALSE;
     }
 
-    HashContext->ReadBufferLength = 1024 * 1024;
+    HashContext->ReadBufferLength = YoriLibMaximumAllocationInRange(60 * 1024, 1024 * 1024);
 
     HashContext->ReadBuffer = YoriLibMalloc(HashContext->ReadBufferLength);
     if (HashContext->ReadBuffer == NULL) {
@@ -510,7 +519,7 @@ HashFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -546,15 +555,15 @@ HashFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL BasicEnumeration = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN BasicEnumeration = FALSE;
     HASH_CONTEXT HashContext;
     YORI_STRING Arg;
     DWORD Algorithm = CALG_SHA1;

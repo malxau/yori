@@ -238,12 +238,12 @@ HiliteProcessStream(
     YORI_STRING DisplayString;
     PHILITE_MATCH_CRITERIA MatchCriteria;
     PHILITE_MATCH_CRITERIA BestMatchCriteria;
-    DWORD BestMatchOffset;
+    YORI_ALLOC_SIZE_T BestMatchOffset;
     YORILIB_COLOR_ATTRIBUTES ColorToUse;
     PYORI_LIST_ENTRY ListHead;
     BOOLEAN MatchFound;
     BOOLEAN AnyMatchFound;
-    DWORD MatchOffset;
+    YORI_ALLOC_SIZE_T MatchOffset;
 
     YoriLibInitEmptyString(&LineString);
     YoriLibInitEmptyString(&Substring);
@@ -541,7 +541,7 @@ HiliteFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -603,15 +603,15 @@ HiliteCleanupContext(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL BasicEnumeration = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN BasicEnumeration = FALSE;
     HILITE_CONTEXT HiliteContext;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     PHILITE_MATCH_CRITERIA NewCriteria;

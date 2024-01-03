@@ -78,19 +78,19 @@ SleepHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    BOOL CountdownMode = FALSE;
-    DWORD StartArg;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN CountdownMode = FALSE;
+    YORI_ALLOC_SIZE_T StartArg;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     YORI_STRING Suffix;
     DWORD TimeToSleep;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     HANDLE CancelHandle;
 
     StartArg = 0;

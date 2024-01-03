@@ -4,6 +4,7 @@ fun to write.
 
  - Reuse new byte buffer
  - Change completion script name evaluation to allow 8.3 compliance
+ - Have text after warnings indicating how to suppress them
  - Scroll around input line on tiny windows, where the entire line doesn't
    fit in the window
  - Make more use something like line selection

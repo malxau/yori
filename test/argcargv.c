@@ -38,11 +38,11 @@
  */
 VOID
 TestArgCleanupArg(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in PYORI_STRING ArgV
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     for (Index = 0; Index < ArgC; Index++) {
         YoriLibFreeStringContents(&ArgV[Index]);
@@ -58,9 +58,9 @@ TestArgTwoArgCmd(VOID)
 {
     LPCTSTR InputString = _T("foo bar");
     PYORI_STRING ArgV;
-    DWORD ArgC;
+    YORI_ALLOC_SIZE_T ArgC;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (DWORD)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -112,9 +112,9 @@ TestArgOneArgContainingQuotesCmd(VOID)
 {
     LPCTSTR InputString = _T("foo\" \"bar");
     PYORI_STRING ArgV;
-    DWORD ArgC;
+    YORI_ALLOC_SIZE_T ArgC;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (DWORD)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -155,9 +155,9 @@ TestArgOneArgWithStartingQuotesCmd(VOID)
 {
     LPCTSTR InputString = _T("\"Program Files\"\\foo");
     PYORI_STRING ArgV;
-    DWORD ArgC;
+    YORI_ALLOC_SIZE_T ArgC;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (DWORD)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -198,9 +198,9 @@ TestArgOneArgEnclosedInQuotesCmd(VOID)
 {
     LPCTSTR InputString = _T("\"foo\"==\"foo\" ");
     PYORI_STRING ArgV;
-    DWORD ArgC;
+    YORI_ALLOC_SIZE_T ArgC;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (DWORD)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -242,9 +242,9 @@ TestArgRedirectWithEndingQuoteCmd(VOID)
 {
     LPCTSTR InputString = _T(">\"file name\"");
     PYORI_STRING ArgV;
-    DWORD ArgC;
+    YORI_ALLOC_SIZE_T ArgC;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (DWORD)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -285,9 +285,9 @@ TestArgBackslashEscapeCmd(VOID)
 {
     LPCTSTR InputString = _T("\\\\ \\\" \\\\\" \\\\\\\"");
     PYORI_STRING ArgV;
-    DWORD ArgC;
+    YORI_ALLOC_SIZE_T ArgC;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (DWORD)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;

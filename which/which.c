@@ -80,16 +80,16 @@ WhichUsage(VOID)
  */
 BOOL
 WhichParseArgs(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
 
     for (i = 1; i < ArgC; i++) {
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
-            BOOL Parsed = FALSE;
+            BOOLEAN Parsed = FALSE;
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2014-2018"));
@@ -142,7 +142,7 @@ WhichParseArgs(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -172,15 +172,15 @@ ENTRYPOINT(
     if (_tcsicmp(SearchVar, _T("PATH")) == 0) {
         Result = YoriLibLocateExecutableInPath(SearchFor, NULL, NULL, &FoundPath);
     } else {
-        DWORD VarLength;
+        YORI_ALLOC_SIZE_T VarLength;
         YORI_STRING SearchVarData;
 
         YoriLibInitEmptyString(&SearchVarData);
-        VarLength = GetEnvironmentVariable(SearchVar, NULL, 0);
+        VarLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(SearchVar, NULL, 0);
 
         if (VarLength > 0) {
             if (YoriLibAllocateString(&SearchVarData, VarLength)) {
-                SearchVarData.LengthInChars = GetEnvironmentVariable(SearchVar, SearchVarData.StartOfString, SearchVarData.LengthAllocated);
+                SearchVarData.LengthInChars = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(SearchVar, SearchVarData.StartOfString, SearchVarData.LengthAllocated);
                 if (SearchVarData.LengthInChars == 0 || SearchVarData.LengthInChars >= SearchVarData.LengthAllocated) {
                     YoriLibFreeStringContents(&SearchVarData);
                 }

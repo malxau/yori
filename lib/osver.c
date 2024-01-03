@@ -228,7 +228,7 @@ YoriLibLoadOsEdition(
 {
     YORI_OS_VERSION_INFO_EX OsVersionInfoEx;
     LPWSTR BrandingString;
-    DWORD Length;
+    YORI_ALLOC_SIZE_T Length;
 
     YoriLibLoadWinBrandFunctions();
 
@@ -243,7 +243,7 @@ YoriLibLoadOsEdition(
             return FALSE;
         }
 
-        Length = wcslen(BrandingString);
+        Length = (YORI_ALLOC_SIZE_T)wcslen(BrandingString);
 
         if (!YoriLibAllocateString(Edition, Length + 1)) {
             return FALSE;
@@ -634,7 +634,7 @@ YoriLibIsRunningUnderSsh(VOID)
 
  @return The system page size for the current system.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriLibGetPageSize(VOID)
 {
 #if defined(_M_ALPHA)

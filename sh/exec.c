@@ -158,7 +158,7 @@ YoriShExecuteSingleProgram(
 
             YoriLibInitEmptyString(&YsExt);
             YsExt.StartOfString = szExt;
-            YsExt.LengthInChars = ExecContext->CmdToExec.ArgV[0].LengthInChars - (DWORD)(szExt - ExecContext->CmdToExec.ArgV[0].StartOfString);
+            YsExt.LengthInChars = ExecContext->CmdToExec.ArgV[0].LengthInChars - (YORI_ALLOC_SIZE_T)(szExt - ExecContext->CmdToExec.ArgV[0].StartOfString);
 
             if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
                 if (YoriShExecuteNamedModuleInProc(ExecContext->CmdToExec.ArgV[0].StartOfString, ExecContext, &ExitCode)) {
@@ -378,7 +378,7 @@ YoriShExecExecPlan(
 {
     PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
     PVOID PreviouslyObservedOutputBuffer = NULL;
-    BOOL ExecutableFound;
+    BOOLEAN ExecutableFound;
 
     //
     //  If a plan requires executing multiple tasks without waiting, hand the
@@ -542,7 +542,7 @@ YoriShExecuteExpressionAndCaptureOutput(
     PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
     YORI_LIBSH_CMD_CONTEXT CmdContext;
     PVOID OutputBuffer;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     //
     //  Parse the expression we're trying to execute.
@@ -655,7 +655,7 @@ YoriShExpandBackquotes(
     YORI_STRING TrailingPortion;
     YORI_STRING NewFullExpression;
 
-    DWORD CharsInBackquotePrefix;
+    YORI_ALLOC_SIZE_T CharsInBackquotePrefix;
 
     YoriLibInitEmptyString(&CurrentFullExpression);
     CurrentFullExpression.StartOfString = Expression->StartOfString;
@@ -687,7 +687,7 @@ YoriShExpandBackquotes(
         YoriLibInitEmptyString(&TrailingPortion);
 
         InitialPortion.StartOfString = CurrentFullExpression.StartOfString;
-        InitialPortion.LengthInChars = (DWORD)(CurrentExpressionSubset.StartOfString - CurrentFullExpression.StartOfString - CharsInBackquotePrefix);
+        InitialPortion.LengthInChars = (YORI_ALLOC_SIZE_T)(CurrentExpressionSubset.StartOfString - CurrentFullExpression.StartOfString - CharsInBackquotePrefix);
 
         TrailingPortion.StartOfString = &CurrentFullExpression.StartOfString[InitialPortion.LengthInChars + CurrentExpressionSubset.LengthInChars + 1 + CharsInBackquotePrefix];
         TrailingPortion.LengthInChars = CurrentFullExpression.LengthInChars - InitialPortion.LengthInChars - CurrentExpressionSubset.LengthInChars - 1 - CharsInBackquotePrefix;

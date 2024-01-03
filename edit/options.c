@@ -78,8 +78,8 @@ __success(return)
 BOOLEAN
 EditOpts(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
-    __in DWORD InitialTabWidth,
-    __out PDWORD NewTabWidth
+    __in YORI_ALLOC_SIZE_T InitialTabWidth,
+    __out PYORI_ALLOC_SIZE_T NewTabWidth
     )
 {
     PYORI_WIN_WINDOW_HANDLE Parent;
@@ -163,7 +163,7 @@ EditOpts(
 
     if (Result) {
         LONGLONG llTemp;
-        DWORD CharsConsumed;
+        YORI_ALLOC_SIZE_T CharsConsumed;
 
         Caption.StartOfString = CaptionBuffer;
         Caption.LengthAllocated = sizeof(CaptionBuffer)/sizeof(CaptionBuffer[0]);
@@ -178,8 +178,8 @@ EditOpts(
             llTemp <= 64 &&
             llTemp >= 0) {
 
-            DWORD dwTemp;
-            dwTemp = (DWORD)llTemp;
+            YORI_ALLOC_SIZE_T dwTemp;
+            dwTemp = (YORI_ALLOC_SIZE_T)llTemp;
 
             *NewTabWidth = dwTemp;
         } else {

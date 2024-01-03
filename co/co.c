@@ -130,7 +130,7 @@ typedef struct _CO_CONTEXT {
     /**
      The number of files that have been found.
      */
-    DWORD FilesFoundCount;
+    YORI_ALLOC_SIZE_T FilesFoundCount;
 
     /**
      The sort order currently being applied.  Note this is not reset in
@@ -234,11 +234,11 @@ CoFileFoundCallback(
 {
     PCO_CONTEXT CoContext = (PCO_CONTEXT)Context;
     PCO_FOUND_FILE FoundFile;
-    DWORD DisplayNameLength;
+    YORI_ALLOC_SIZE_T DisplayNameLength;
 
     UNREFERENCED_PARAMETER(Depth);
 
-    DisplayNameLength = _tcslen(FileInfo->cFileName);
+    DisplayNameLength = (YORI_ALLOC_SIZE_T)_tcslen(FileInfo->cFileName);
     FoundFile = YoriLibReferencedMalloc(sizeof(CO_FOUND_FILE) + (DisplayNameLength + 1 + FilePath->LengthInChars + 1) * sizeof(TCHAR));
     if (FoundFile == NULL) {
         return FALSE;
@@ -431,7 +431,7 @@ CoIsFileSelected(
     __in PCO_CONTEXT CoContext
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     YORI_STRING Buttons[1];
     YORI_STRING Title;
     YORI_STRING Label;
@@ -624,7 +624,7 @@ CoChdirButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     BOOLEAN ListChanged = FALSE;
     YORI_STRING Buttons[1];
     YORI_STRING Title;
@@ -693,7 +693,7 @@ CoDeleteButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     BOOLEAN ListChanged = FALSE;
     YORI_STRING Buttons[1];
     YORI_STRING Title;
@@ -747,7 +747,7 @@ CoMoveButtonClicked(
 {
     YORI_STRING FullDir;
     YORI_STRING FullDest;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD LastError;
     BOOLEAN ListChanged = FALSE;
     YORI_STRING Buttons[1];
@@ -827,7 +827,7 @@ CoCopyButtonClicked(
 {
     YORI_STRING FullDir;
     YORI_STRING FullDest;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD LastError;
     BOOLEAN ListChanged = FALSE;
     YORI_STRING Buttons[1];
@@ -904,10 +904,10 @@ CoSortSelected(
     __in PYORI_WIN_CTRL_HANDLE ClickedCtrl
     )
 {
-    DWORD ActiveIndex;
+    YORI_ALLOC_SIZE_T ActiveIndex;
 
     if (YoriWinComboGetActiveOption(ClickedCtrl, &ActiveIndex)) {
-        if (ActiveIndex < CoSortBeyondMaximum && ActiveIndex != (DWORD)CoContext.SortType) {
+        if (ActiveIndex < CoSortBeyondMaximum && ActiveIndex != (YORI_ALLOC_SIZE_T)CoContext.SortType) {
             CoContext.SortType = ActiveIndex;
             CoRepopulateList(&CoContext);
         }
@@ -1374,13 +1374,13 @@ CoCreateSynchronousMenu(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
 
     for (i = 1; i < ArgC; i++) {

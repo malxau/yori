@@ -122,13 +122,13 @@ YpmDownloadStableHelp(VOID)
  */
 DWORD
 YpmDownload(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     PYORI_STRING SourcePath = NULL;
     PYORI_STRING FilePath = NULL;
@@ -186,13 +186,13 @@ YpmDownload(
  */
 DWORD
 YpmDownloadDaily(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     YORI_STRING SourcePath;
     PYORI_STRING FilePath = NULL;
@@ -251,13 +251,13 @@ YpmDownloadDaily(
  */
 DWORD
 YpmDownloadStable(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     YORI_STRING SourcePath;
     PYORI_STRING FilePath = NULL;

@@ -153,20 +153,20 @@ YoriLibGetTempFileName(
 BOOL
 YoriLibGetTempPath(
     __out PYORI_STRING TempPathName,
-    __in DWORD ExtraChars
+    __in YORI_ALLOC_SIZE_T ExtraChars
     )
 {
     DWORD MajorVersion;
     DWORD MinorVersion;
     DWORD BuildNumber;
-    DWORD CharsToAllocate;
+    YORI_ALLOC_SIZE_T CharsToAllocate;
 
-    TempPathName->LengthAllocated = GetTempPath(0, NULL);
+    TempPathName->LengthAllocated = (YORI_ALLOC_SIZE_T)GetTempPath(0, NULL);
     if (TempPathName->LengthAllocated == 0) {
         return FALSE;
     }
 
-    TempPathName->LengthAllocated += ExtraChars;
+    TempPathName->LengthAllocated = TempPathName->LengthAllocated + ExtraChars;
 
     YoriLibGetOsVersion(&MajorVersion, &MinorVersion, &BuildNumber);
 
@@ -186,8 +186,8 @@ YoriLibGetTempPath(
         return FALSE;
     }
 
-    TempPathName->LengthInChars = GetTempPath(TempPathName->LengthAllocated,
-                                              TempPathName->StartOfString);
+    TempPathName->LengthInChars = (YORI_ALLOC_SIZE_T)GetTempPath(TempPathName->LengthAllocated,
+            TempPathName->StartOfString);
 
     if (MajorVersion == 3 && MinorVersion == 10) {
         TempPathName->StartOfString[TempPathName->LengthInChars] = '\0';

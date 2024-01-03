@@ -123,11 +123,18 @@ YoriPkgAllocateRemoteSource(
     )
 {
     PYORIPKG_REMOTE_SOURCE RemoteSource;
-    DWORD SizeToAllocate;
+    DWORD BytesRequired;
+    YORI_ALLOC_SIZE_T SizeToAllocate;
 
-    SizeToAllocate = sizeof(YORIPKG_REMOTE_SOURCE) +
-                     (2 * (RemoteSourceUrl->LengthInChars + 1)) * sizeof(TCHAR) +
-                     sizeof("/pkglist.ini") * sizeof(TCHAR);
+    BytesRequired = sizeof(YORIPKG_REMOTE_SOURCE) +
+                    (2 * (RemoteSourceUrl->LengthInChars + 1)) * sizeof(TCHAR) +
+                    sizeof("/pkglist.ini") * sizeof(TCHAR);
+
+    if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+        return NULL;
+    }
+
+    SizeToAllocate = (YORI_ALLOC_SIZE_T)BytesRequired;
 
     RemoteSource = YoriLibReferencedMalloc(SizeToAllocate);
     if (RemoteSource == NULL) {
@@ -229,16 +236,22 @@ YoriPkgAllocateRemotePackage(
 {
     PYORIPKG_REMOTE_PACKAGE Package;
     LPTSTR WritePtr;
-    DWORD SizeToAllocate;
+    DWORD BytesRequired;
+    YORI_ALLOC_SIZE_T SizeToAllocate;
 
-    SizeToAllocate = sizeof(YORIPKG_REMOTE_PACKAGE) +
-                     (PackageName->LengthInChars + 1 +
-                      Version->LengthInChars + 1 +
-                      Architecture->LengthInChars + 1 +
-                      MinimumOSBuild->LengthInChars + 1 +
-                      PackagePathForOlderBuilds->LengthInChars + 1 +
-                      SourceRootUrl->LengthInChars + 1 +
-                      RelativePackageUrl->LengthInChars + 1) * sizeof(TCHAR);
+    BytesRequired = sizeof(YORIPKG_REMOTE_PACKAGE) +
+                    (PackageName->LengthInChars + 1 +
+                     Version->LengthInChars + 1 +
+                     Architecture->LengthInChars + 1 +
+                     MinimumOSBuild->LengthInChars + 1 +
+                     PackagePathForOlderBuilds->LengthInChars + 1 +
+                     SourceRootUrl->LengthInChars + 1 +
+                     RelativePackageUrl->LengthInChars + 1) * sizeof(TCHAR);
+
+    if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+        return NULL;
+    }
+    SizeToAllocate = (YORI_ALLOC_SIZE_T)BytesRequired;
     Package = YoriLibReferencedMalloc(SizeToAllocate);
 
     if (Package == NULL) {
@@ -381,7 +394,7 @@ YoriPkgCollectSourcesFromIni(
         Index = 1;
         while (TRUE) {
             IniKey.LengthInChars = YoriLibSPrintf(IniKey.StartOfString, _T("Source%i"), Index);
-            IniValue.LengthInChars =
+            IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
                 DllKernel32.pGetPrivateProfileStringW(_T("Sources"),
                                                       IniKey.StartOfString,
                                                       _T(""),
@@ -513,7 +526,7 @@ YoriPkgCollectPackagesFromSource(
     YORI_STRING Architecture;
     YORI_STRING MinimumOSBuild;
     YORI_STRING PackagePathForOlderBuilds;
-    BOOL DeleteWhenFinished = FALSE;
+    BOOLEAN DeleteWhenFinished = FALSE;
     LPTSTR ThisLine;
     LPTSTR Equals;
     LPTSTR KnownArchitectures[] = {_T("noarch"),
@@ -553,30 +566,36 @@ YoriPkgCollectPackagesFromSource(
         goto Exit;
     }
 
-    if (!YoriLibAllocateString(&ProvidesSection, YORIPKG_MAX_SECTION_LENGTH * 5)) {
+    if (!YoriLibAllocateString(&ProvidesSection, YORIPKG_MAX_SECTION_LENGTH)) {
         Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
 
-    ProvidesSection.LengthAllocated = YORIPKG_MAX_SECTION_LENGTH;
+    if (!YoriLibAllocateString(&PkgVersion, YORIPKG_MAX_SECTION_LENGTH)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
 
-    YoriLibCloneString(&PkgVersion, &ProvidesSection);
-    PkgVersion.StartOfString += YORIPKG_MAX_SECTION_LENGTH;
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_SECTION_LENGTH)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
 
-    YoriLibCloneString(&IniValue, &PkgVersion);
-    IniValue.StartOfString += YORIPKG_MAX_SECTION_LENGTH;
+    if (!YoriLibAllocateString(&MinimumOSBuild, YORIPKG_MAX_SECTION_LENGTH)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
 
-    YoriLibCloneString(&MinimumOSBuild, &IniValue);
-    MinimumOSBuild.StartOfString += YORIPKG_MAX_SECTION_LENGTH;
+    if (!YoriLibAllocateString(&PackagePathForOlderBuilds, YORIPKG_MAX_SECTION_LENGTH)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
 
-    YoriLibCloneString(&PackagePathForOlderBuilds, &MinimumOSBuild);
-    PackagePathForOlderBuilds.StartOfString += YORIPKG_MAX_SECTION_LENGTH;
-
-    ProvidesSection.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(
-                                                             _T("Provides"),
-                                                             ProvidesSection.StartOfString,
-                                                             ProvidesSection.LengthAllocated,
-                                                             LocalPath.StartOfString);
+    ProvidesSection.LengthInChars = (YORI_ALLOC_SIZE_T)
+        DllKernel32.pGetPrivateProfileSectionW(_T("Provides"),
+                                               ProvidesSection.StartOfString,
+                                               ProvidesSection.LengthAllocated,
+                                               LocalPath.StartOfString);
 
     YoriLibInitEmptyString(&PkgNameOnly);
     ThisLine = ProvidesSection.StartOfString;
@@ -585,9 +604,9 @@ YoriPkgCollectPackagesFromSource(
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - ThisLine);
         } else {
-            PkgNameOnly.LengthInChars = _tcslen(ThisLine);
+            PkgNameOnly.LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(ThisLine);
         }
 
         ThisLine += _tcslen(ThisLine);
@@ -595,19 +614,19 @@ YoriPkgCollectPackagesFromSource(
 
         PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
 
-        PkgVersion.LengthInChars = DllKernel32.pGetPrivateProfileStringW(
-                                                    PkgNameOnly.StartOfString,
-                                                    _T("Version"),
-                                                    _T(""),
-                                                    PkgVersion.StartOfString,
-                                                    PkgVersion.LengthAllocated,
-                                                    LocalPath.StartOfString);
+        PkgVersion.LengthInChars = (YORI_ALLOC_SIZE_T)
+            DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
+                                                  _T("Version"),
+                                                  _T(""),
+                                                  PkgVersion.StartOfString,
+                                                  PkgVersion.LengthAllocated,
+                                                  LocalPath.StartOfString);
 
         if (PkgVersion.LengthInChars > 0) {
             for (ArchIndex = 0; ArchIndex < sizeof(KnownArchitectures)/sizeof(KnownArchitectures[0]); ArchIndex++) {
                 YoriLibConstantString(&Architecture, KnownArchitectures[ArchIndex]);
-                IniValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(
-                                                          PkgNameOnly.StartOfString,
+                IniValue.LengthInChars = (YORI_ALLOC_SIZE_T)
+                    DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
                                                           Architecture.StartOfString,
                                                           _T(""),
                                                           IniValue.StartOfString,
@@ -620,22 +639,22 @@ YoriPkgCollectPackagesFromSource(
 
                     YoriLibSPrintf(IniKey, _T("%y.minimumosbuild"), &Architecture);
 
-                    MinimumOSBuild.LengthInChars = DllKernel32.pGetPrivateProfileStringW(
-                                                                    PkgNameOnly.StartOfString,
-                                                                    IniKey,
-                                                                    _T(""),
-                                                                    MinimumOSBuild.StartOfString,
-                                                                    MinimumOSBuild.LengthAllocated,
-                                                                    LocalPath.StartOfString);
+                    MinimumOSBuild.LengthInChars = (YORI_ALLOC_SIZE_T)
+                        DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
+                                                              IniKey,
+                                                              _T(""),
+                                                              MinimumOSBuild.StartOfString,
+                                                              MinimumOSBuild.LengthAllocated,
+                                                              LocalPath.StartOfString);
                     if (MinimumOSBuild.LengthInChars > 0) {
                         YoriLibSPrintf(IniKey, _T("%y.packagepathforolderbuilds"), &Architecture);
-                        PackagePathForOlderBuilds.LengthInChars = DllKernel32.pGetPrivateProfileStringW(
-                                PkgNameOnly.StartOfString,
-                                IniKey,
-                                _T(""),
-                                PackagePathForOlderBuilds.StartOfString,
-                                PackagePathForOlderBuilds.LengthAllocated,
-                                LocalPath.StartOfString);
+                        PackagePathForOlderBuilds.LengthInChars = (YORI_ALLOC_SIZE_T)
+                            DllKernel32.pGetPrivateProfileStringW(PkgNameOnly.StartOfString,
+                                                                  IniKey,
+                                                                  _T(""),
+                                                                  PackagePathForOlderBuilds.StartOfString,
+                                                                  PackagePathForOlderBuilds.LengthAllocated,
+                                                                  LocalPath.StartOfString);
                     }
 
                     Package = YoriPkgAllocateRemotePackage(&PkgNameOnly,
@@ -906,9 +925,9 @@ YoriPkgDownloadRemotePackages(
     YORI_STRING FullFinalName;
     YORI_STRING TempLocalPath;
     YORI_STRING PackagesIni;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD Err;
-    BOOL DeleteWhenFinished;
+    BOOLEAN DeleteWhenFinished;
 
     if (DllKernel32.pWritePrivateProfileStringW == NULL) {
         return FALSE;
@@ -1454,6 +1473,7 @@ YoriPkgGetRemotePackageUrls(
     PYORI_STRING LocalPackageUrls;
     LPTSTR WritePtr;
     DWORD PkgIndex;
+    DWORD BytesRequired;
 
     YoriLibInitializeListHead(&PackagesMatchingCriteria);
 
@@ -1474,7 +1494,13 @@ YoriPkgGetRemotePackageUrls(
         CharsNeeded += Package->InstallUrl.LengthInChars + 1;
     }
 
-    LocalPackageUrls = YoriLibReferencedMalloc(CharsNeeded * sizeof(TCHAR) + MatchingPackageCount * sizeof(YORI_STRING));
+    BytesRequired = CharsNeeded * sizeof(TCHAR) + MatchingPackageCount * sizeof(YORI_STRING);
+    if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+        YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingCriteria);
+        *PackageUrls = NULL;
+        return 0;
+    }
+    LocalPackageUrls = YoriLibReferencedMalloc((YORI_ALLOC_SIZE_T)BytesRequired);
     if (LocalPackageUrls == NULL) {
         YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingCriteria);
         *PackageUrls = NULL;
@@ -1561,7 +1587,7 @@ YoriPkgIsNewerVersionAvailableFromCache(
                 DWORD OsMajor;
                 DWORD OsMinor;
                 DWORD OsBuild;
-                DWORD CharsConsumed;
+                YORI_ALLOC_SIZE_T CharsConsumed;
                 LONGLONG RequiredBuildNumber = 0;
 
                 if (!YoriLibStringToNumber(&KnownPackage->MinimumOSBuild, FALSE, &RequiredBuildNumber, &CharsConsumed)) {
@@ -1642,7 +1668,7 @@ YoriPkgIsNewerVersionAvailable(
     __out PYORI_STRING RedirectToPackageUrl
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD Err;
     YORI_STRING Substring;
     YORI_STRING MirroredPath;

@@ -38,14 +38,18 @@
  */
 PYORI_HASH_TABLE
 YoriLibAllocateHashTable(
-    __in DWORD NumberBuckets
+    __in YORI_ALLOC_SIZE_T NumberBuckets
     )
 {
     DWORD SizeNeeded = sizeof(YORI_HASH_TABLE) + NumberBuckets * sizeof(YORI_HASH_BUCKET);
     PYORI_HASH_TABLE HashTable;
     DWORD BucketIndex;
 
-    HashTable = YoriLibReferencedMalloc(SizeNeeded);
+    if (!YoriLibIsSizeAllocatable(SizeNeeded)) {
+        return NULL;
+    }
+
+    HashTable = YoriLibReferencedMalloc((YORI_ALLOC_SIZE_T)SizeNeeded);
     if (HashTable == NULL) {
         return NULL;
     }

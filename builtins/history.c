@@ -262,11 +262,11 @@ HistoryResizeWindowManager(
          operation.
  */
 __success(return)
-BOOL
+BOOLEAN
 HistoryCreateSynchronousMenu(
     __in PYORI_STRING MenuOptions,
-    __in DWORD NumberOptions,
-    __out PDWORD ActiveOption
+    __in YORI_ALLOC_SIZE_T NumberOptions,
+    __out PYORI_ALLOC_SIZE_T ActiveOption
     )
 {
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
@@ -357,7 +357,10 @@ HistoryCreateSynchronousMenu(
 
     YoriWinDestroyWindow(Parent);
     YoriWinCloseWindowManager(WinMgr);
-    return (BOOL)Result;
+    if (Result) {
+        return TRUE;
+    }
+    return FALSE;
 }
 
 
@@ -439,19 +442,19 @@ typedef enum _HISTORY_OP {
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_HISTORY(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD LineCount = 0;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T LineCount = 0;
     YORI_STRING Arg;
     YORI_STRING HistoryStrings;
     PYORI_STRING SourceFile = NULL;
     LPTSTR ThisVar;
-    DWORD VarLen;
+    YORI_ALLOC_SIZE_T VarLen;
     HISTORY_OP Op;
 
     Op = HistoryDisplayHistory;
@@ -483,12 +486,12 @@ YoriCmd_HISTORY(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 if (ArgC > i + 1) {
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
                     LONGLONG llTemp;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
                         CharsConsumed > 0) {
 
-                        LineCount = (DWORD)llTemp;
+                        LineCount = (YORI_ALLOC_SIZE_T)llTemp;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }
@@ -535,7 +538,7 @@ YoriCmd_HISTORY(
         if (YoriCallGetHistoryStrings(LineCount, &HistoryStrings)) {
             ThisVar = HistoryStrings.StartOfString;
             while (*ThisVar != '\0') {
-                VarLen = _tcslen(ThisVar);
+                VarLen = (YORI_ALLOC_SIZE_T)_tcslen(ThisVar);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
                 ThisVar += VarLen;
                 ThisVar++;
@@ -545,12 +548,12 @@ YoriCmd_HISTORY(
     } else if (Op == HistoryDisplayUi) {
         if (YoriCallGetHistoryStrings(LineCount, &HistoryStrings)) {
             PYORI_STRING StringArray;
-            DWORD StringCount;
-            DWORD Index;
+            YORI_ALLOC_SIZE_T StringCount;
+            YORI_ALLOC_SIZE_T Index;
             StringCount = 0;
             ThisVar = HistoryStrings.StartOfString;
             while (*ThisVar != '\0') {
-                VarLen = _tcslen(ThisVar);
+                VarLen = (YORI_ALLOC_SIZE_T)_tcslen(ThisVar);
                 StringCount++;
                 ThisVar += VarLen;
                 ThisVar++;
@@ -565,7 +568,7 @@ YoriCmd_HISTORY(
             Index = 0;
             ThisVar = HistoryStrings.StartOfString;
             while (*ThisVar != '\0') {
-                VarLen = _tcslen(ThisVar);
+                VarLen = (YORI_ALLOC_SIZE_T)_tcslen(ThisVar);
                 YoriLibInitEmptyString(&StringArray[Index]);
                 StringArray[Index].StartOfString = ThisVar;
                 StringArray[Index].LengthInChars = VarLen;

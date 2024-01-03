@@ -67,7 +67,7 @@ YoriLibMoveFile(
 
     if (PosixSemantics) {
         PYORI_FILE_RENAME_INFO RenameInfo;
-        DWORD RenameInfoSize;
+        YORI_ALLOC_SIZE_T RenameInfoSize;
         HANDLE hFile;
 
         if (DllKernel32.pSetFileInformationByHandle == NULL) {

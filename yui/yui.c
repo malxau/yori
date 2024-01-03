@@ -605,11 +605,11 @@ YuiPrintShellHookDebugMessage(
     YoriLibInitEmptyString(&WindowTitle);
 
     if (hWnd != NULL) {
-        DWORD CharsNeeded;
+        YORI_ALLOC_SIZE_T CharsNeeded;
 
-        CharsNeeded = GetWindowTextLength(hWnd);
+        CharsNeeded = (YORI_ALLOC_SIZE_T)GetWindowTextLength(hWnd);
         if (YoriLibAllocateString(&WindowTitle, CharsNeeded + 1)) {
-            WindowTitle.LengthInChars = GetWindowText(hWnd, WindowTitle.StartOfString, WindowTitle.LengthAllocated);
+            WindowTitle.LengthInChars = (YORI_ALLOC_SIZE_T)GetWindowText(hWnd, WindowTitle.StartOfString, WindowTitle.LengthAllocated);
         }
     }
 
@@ -1384,7 +1384,12 @@ YuiLaunchWinlogonShell(VOID)
     YoriLibInitEmptyString(&ExistingValue);
     Err = DllAdvApi32.pRegQueryValueExW(hKey, ValueName.StartOfString, NULL, NULL, NULL, &LengthRequired);
     if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
-        if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + 1)) {
+        DWORD CharsRequired = LengthRequired / sizeof(TCHAR) + 1;
+        if (!YoriLibIsSizeAllocatable(CharsRequired)) {
+            DllAdvApi32.pRegCloseKey(hKey);
+            return;
+        }
+        if (!YoriLibAllocateString(&ExistingValue, (YORI_ALLOC_SIZE_T)CharsRequired)) {
             DllAdvApi32.pRegCloseKey(hKey);
             return;
         }
@@ -1396,7 +1401,7 @@ YuiLaunchWinlogonShell(VOID)
             return;
         }
 
-        ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+        ExistingValue.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthRequired / sizeof(TCHAR) - 1);
 
         DllShell32.pShellExecuteW(NULL, NULL, ExistingValue.StartOfString, NULL, NULL, SW_SHOWNORMAL);
 
@@ -1419,13 +1424,13 @@ YuiLaunchWinlogonShell(VOID)
  */
 DWORD
 ymain(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
 
     ZeroMemory(&YuiContext, sizeof(YuiContext));

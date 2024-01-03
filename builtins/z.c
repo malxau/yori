@@ -387,16 +387,16 @@ ZBuildScoreboardAndSelectBest(
     YORI_STRING FinalComponent;
     YORI_STRING TrailingPortion;
     YORI_STRING StringToAdd;
-    DWORD EntriesPopulated;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T EntriesPopulated;
+    YORI_ALLOC_SIZE_T Index;
     DWORD ScoreForThisEntry;
     DWORD BestScore;
-    DWORD BestIndex;
-    DWORD OffsetOfMatch;
-    BOOL SeperatorBefore;
-    BOOL SeperatorAfter;
-    BOOL AddThisEntry;
-    BOOL FoundAsParentOnly;
+    YORI_ALLOC_SIZE_T BestIndex;
+    YORI_ALLOC_SIZE_T OffsetOfMatch;
+    BOOLEAN SeperatorBefore;
+    BOOLEAN SeperatorAfter;
+    BOOLEAN AddThisEntry;
+    BOOLEAN FoundAsParentOnly;
 
     //
     //  Allocate enough entries for everything we know about, including all
@@ -460,7 +460,7 @@ ZBuildScoreboardAndSelectBest(
 
         if (FinalComponent.StartOfString != NULL) {
             FinalComponent.StartOfString++;
-            FinalComponent.LengthInChars = FoundRecentDir->DirectoryName.LengthInChars - (DWORD)(FinalComponent.StartOfString - FoundRecentDir->DirectoryName.StartOfString);
+            FinalComponent.LengthInChars = FoundRecentDir->DirectoryName.LengthInChars - (YORI_ALLOC_SIZE_T)(FinalComponent.StartOfString - FoundRecentDir->DirectoryName.StartOfString);
 
             if (YoriLibCompareStringInsensitive(&FinalComponent, UserSpecification) == 0) {
                 ScoreForThisEntry += Z_MAX_RECENT_DIRS * 4;
@@ -607,21 +607,21 @@ ZBuildScoreboardAndSelectBest(
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_Z(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL Result;
-    DWORD OldCurrentDirectoryLength;
+    YORI_ALLOC_SIZE_T OldCurrentDirectoryLength;
     YORI_STRING OldCurrentDirectory;
     YORI_STRING FullyResolvedUserSpecification;
     YORI_STRING BestMatch;
     PYORI_STRING UserSpecification;
-    BOOL ArgumentUnderstood;
-    BOOL Unload = FALSE;
-    BOOL ListStack = FALSE;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN Unload = FALSE;
+    BOOLEAN ListStack = FALSE;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
 
     YoriLibLoadNtDllFunctions();
@@ -680,12 +680,12 @@ YoriCmd_Z(
 
     UserSpecification = &ArgV[StartArg];
 
-    OldCurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    OldCurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
     if (!YoriLibAllocateString(&OldCurrentDirectory, OldCurrentDirectoryLength)) {
         return EXIT_FAILURE;
     }
 
-    OldCurrentDirectory.LengthInChars = GetCurrentDirectory(OldCurrentDirectory.LengthAllocated, OldCurrentDirectory.StartOfString);
+    OldCurrentDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(OldCurrentDirectory.LengthAllocated, OldCurrentDirectory.StartOfString);
     if (OldCurrentDirectory.LengthInChars == 0 ||
         OldCurrentDirectory.LengthInChars >= OldCurrentDirectory.LengthAllocated) {
         DWORD LastError = GetLastError();

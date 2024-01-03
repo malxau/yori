@@ -87,10 +87,10 @@ YoriDlgMessageBox(
     SMALL_RECT TextArea;
     SMALL_RECT ButtonArea;
     DWORD Index;
-    DWORD DisplayLength;
+    YORI_ALLOC_SIZE_T DisplayLength;
     DWORD TotalButtonWidth;
-    DWORD LabelLinesRequired;
-    DWORD LabelWidthRequired;
+    YORI_ALLOC_SIZE_T LabelLinesRequired;
+    YORI_ALLOC_SIZE_T LabelWidthRequired;
     DWORD Style;
     WORD WindowWidth;
     WORD WindowHeight;

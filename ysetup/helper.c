@@ -254,6 +254,7 @@ SetupGetDefaultInstallDir(
     DWORD OsBuildNumber;
     BOOL IsAdmin;
     YORI_STRING Administrators;
+    DWORD CharsNeeded;
 
     hKey = NULL;
 
@@ -295,7 +296,11 @@ SetupGetDefaultInstallDir(
     }
 
     if (DllAdvApi32.pRegQueryValueExW(hKey, _T("ProgramW6432Dir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
-        if (!YoriLibAllocateString(InstallDir, SizeNeeded/sizeof(TCHAR) + sizeof(SETUP_APP_DIR))) {
+        CharsNeeded = SizeNeeded/sizeof(TCHAR) + sizeof(SETUP_APP_DIR);
+        if (!YoriLibIsSizeAllocatable(CharsNeeded)) {
+            goto ReturnDefault;
+        }
+        if (!YoriLibAllocateString(InstallDir, (YORI_ALLOC_SIZE_T)CharsNeeded)) {
             goto ReturnDefault;
         }
 
@@ -304,7 +309,7 @@ SetupGetDefaultInstallDir(
             if (RegType != REG_SZ && RegType != REG_EXPAND_SZ) {
                 goto ReturnDefault;
             }
-            InstallDir->LengthInChars = SizeNeeded / sizeof(TCHAR) - 1;
+            InstallDir->LengthInChars = (YORI_ALLOC_SIZE_T)(SizeNeeded / sizeof(TCHAR) - 1);
             if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
                 memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
                 InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
@@ -317,7 +322,11 @@ SetupGetDefaultInstallDir(
     }
 
     if (DllAdvApi32.pRegQueryValueExW(hKey, _T("ProgramFilesDir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
-        if (!YoriLibAllocateString(InstallDir, SizeNeeded/sizeof(TCHAR) + sizeof("\\Yori"))) {
+        CharsNeeded = SizeNeeded/sizeof(TCHAR) + sizeof("\\Yori");
+        if (!YoriLibIsSizeAllocatable(CharsNeeded)) {
+            goto ReturnDefault;
+        }
+        if (!YoriLibAllocateString(InstallDir, (YORI_ALLOC_SIZE_T)CharsNeeded)) {
             goto ReturnDefault;
         }
 
@@ -326,7 +335,7 @@ SetupGetDefaultInstallDir(
             if (RegType != REG_SZ && RegType != REG_EXPAND_SZ) {
                 goto ReturnDefault;
             }
-            InstallDir->LengthInChars = SizeNeeded / sizeof(TCHAR) - 1;
+            InstallDir->LengthInChars = (YORI_ALLOC_SIZE_T)CharsNeeded - 1;
             if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
                 memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
                 InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
@@ -348,7 +357,7 @@ ReturnDefault:
         WindowsDirectory.StartOfString = WindowsDirectoryBuffer;
         WindowsDirectory.LengthAllocated = sizeof(WindowsDirectoryBuffer)/sizeof(WindowsDirectoryBuffer[0]);
 
-        WindowsDirectory.LengthInChars = GetWindowsDirectory(WindowsDirectory.StartOfString, WindowsDirectory.LengthAllocated);
+        WindowsDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)GetWindowsDirectory(WindowsDirectory.StartOfString, WindowsDirectory.LengthAllocated);
         if (WindowsDirectory.LengthInChars < 2) {
             WindowsDirectory.LengthInChars = YoriLibSPrintf(WindowsDirectory.StartOfString, _T("C:"));
         } else {
@@ -425,9 +434,9 @@ SetupInstallSelectedWithOptions(
     YORI_STRING ShortcutNameFullPath[3];
     DWORD ShortcutCount;
     PYORI_STRING CustomSource;
-    DWORD PkgCount;
-    DWORD PkgIndex;
-    DWORD PkgUrlCount;
+    YORI_ALLOC_SIZE_T PkgCount;
+    YORI_ALLOC_SIZE_T PkgIndex;
+    YORI_ALLOC_SIZE_T PkgUrlCount;
     BOOL Result = FALSE;
     HANDLE OriginalStdOut;
     HANDLE OriginalStdErr;
@@ -586,7 +595,7 @@ SetupInstallSelectedWithOptions(
         SetStdHandle(STD_OUTPUT_HANDLE, NulDevice);
         SetStdHandle(STD_ERROR_HANDLE, NulDevice);
     }
-    PkgUrlCount = YoriPkgGetRemotePackageUrls(PkgNames, PkgIndex, CustomSource, InstallDir, &PackageUrls);
+    PkgUrlCount = (YORI_ALLOC_SIZE_T)YoriPkgGetRemotePackageUrls(PkgNames, PkgIndex, CustomSource, InstallDir, &PackageUrls);
 
     if (PkgUrlCount != PkgCount) {
         YoriLibConstantString(ErrorText, _T("Could not locate selected package files."));

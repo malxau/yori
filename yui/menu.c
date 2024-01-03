@@ -436,7 +436,7 @@ YuiFindDepthComponent(
 
     for (Count = 0; Count < Depth; Count++) {
         PreviousSep = Sep;
-        Current.LengthInChars = (DWORD)(Sep - Current.StartOfString) - 1;
+        Current.LengthInChars = (YORI_ALLOC_SIZE_T)(Sep - Current.StartOfString) - 1;
         Sep = YoriLibFindRightMostCharacter(&Current, '\\');
         ASSERT(Sep != NULL);
         if (Sep == NULL) {
@@ -446,14 +446,14 @@ YuiFindDepthComponent(
 
     YoriLibInitEmptyString(Component);
     Component->StartOfString = Sep + 1;
-    Component->LengthInChars = (DWORD)(PreviousSep - Sep) - 1;
+    Component->LengthInChars = (YORI_ALLOC_SIZE_T)(PreviousSep - Sep) - 1;
     Component->LengthAllocated = Component->LengthInChars;
     Component->MemoryToFree = NULL;
 
     if (RemoveExtension) {
         Sep = YoriLibFindRightMostCharacter(Component, '.');
         if (Sep != NULL) {
-            Component->LengthInChars = (DWORD)(Sep - Component->StartOfString);
+            Component->LengthInChars = (YORI_ALLOC_SIZE_T)(Sep - Component->StartOfString);
         }
     }
 
@@ -598,7 +598,7 @@ YuiCreateMenuFile(
 
         Ext.StartOfString = YoriLibFindRightMostCharacter(&IconPath, '.');
         if (Ext.StartOfString != NULL) {
-            Ext.LengthInChars = IconPath.LengthInChars - (DWORD)(Ext.StartOfString - IconPath.StartOfString);
+            Ext.LengthInChars = IconPath.LengthInChars - (YORI_ALLOC_SIZE_T)(Ext.StartOfString - IconPath.StartOfString);
         }
 
         if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".exe")) == 0 ||
@@ -1138,7 +1138,7 @@ YuiFileFoundCallback(
             YoriLibInitEmptyString(&Ext);
             Ext.StartOfString = YoriLibFindRightMostCharacter(FilePath, '.');
             if (Ext.StartOfString != NULL) {
-                Ext.LengthInChars = FilePath->LengthInChars - (DWORD)(Ext.StartOfString - FilePath->StartOfString);
+                Ext.LengthInChars = FilePath->LengthInChars - (YORI_ALLOC_SIZE_T)(Ext.StartOfString - FilePath->StartOfString);
             }
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".lnk")) == 0 &&
@@ -1179,7 +1179,7 @@ YuiFileFoundCallback(
         YoriLibInitEmptyString(&Ext);
         Ext.StartOfString = YoriLibFindRightMostCharacter(FilePath, '.');
         if (Ext.StartOfString != NULL) {
-            Ext.LengthInChars = FilePath->LengthInChars - (DWORD)(Ext.StartOfString - FilePath->StartOfString);
+            Ext.LengthInChars = FilePath->LengthInChars - (YORI_ALLOC_SIZE_T)(Ext.StartOfString - FilePath->StartOfString);
         }
 
         if (Parent != NULL &&
@@ -1242,7 +1242,7 @@ YuiFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -1266,7 +1266,7 @@ YuiMenuPopulate(
     )
 {
     YORI_STRING EnumDir;
-    DWORD MatchFlags;
+    WORD MatchFlags;
 
     //
     //  If no change notifications exist because this is the first pass,
@@ -1845,7 +1845,7 @@ RunDialogProc(
                     return TRUE;
                 case IDC_OK:
                     {
-                        DWORD Length;
+                        YORI_ALLOC_SIZE_T Length;
                         HINSTANCE hInst;
                         DWORD Err;
 
@@ -1854,14 +1854,14 @@ RunDialogProc(
                         EnableWindow(GetDlgItem(hDlg, IDC_RUNCMD), FALSE);
                         EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
 
-                        Length = GetWindowTextLength(GetDlgItem(hDlg, IDC_RUNCMD));
+                        Length = (YORI_ALLOC_SIZE_T)GetWindowTextLength(GetDlgItem(hDlg, IDC_RUNCMD));
                         if (YoriLibAllocateString(&Cmd, Length + 1)) {
                             PYORI_STRING ArgV;
-                            DWORD Index;
-                            DWORD ArgC;
+                            YORI_ALLOC_SIZE_T Index;
+                            YORI_ALLOC_SIZE_T ArgC;
                             LPTSTR ArgString;
 
-                            Cmd.LengthInChars = GetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString, Cmd.LengthAllocated);
+                            Cmd.LengthInChars = (YORI_ALLOC_SIZE_T)GetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString, Cmd.LengthAllocated);
 
                             ArgV = YoriLibCmdlineToArgcArgv(Cmd.StartOfString, 2, FALSE, &ArgC);
                             if (ArgV != NULL) {

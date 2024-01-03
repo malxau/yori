@@ -465,7 +465,7 @@ MakeCreateInferenceRule(
     )
 {
     PMAKE_INFERENCE_RULE InferenceRule;
-    DWORD CharsNeeded;
+    YORI_ALLOC_SIZE_T CharsNeeded;
     LPTSTR WritePoint;
 
     CharsNeeded = SourceDir->LengthInChars + 1 +
@@ -674,13 +674,13 @@ MakeGetNextInferenceRuleTargetExtension(
          rule may require fewer characters than the file name, in which case
          this function returns zero.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 MakeCountExtraInferenceRuleChars(
     __in PMAKE_INFERENCE_RULE InferenceRule
     )
 {
-    DWORD CharsAdded;
-    DWORD CharsRemoved;
+    YORI_ALLOC_SIZE_T CharsAdded;
+    YORI_ALLOC_SIZE_T CharsRemoved;
 
     //
     //  Inference rules are applied backwards: we know a specific target is
@@ -738,9 +738,9 @@ MakeBuildProbeNameFromInferenceRule(
 {
     YORI_STRING FileName;
     YORI_STRING Prefix;
-    DWORD Index;
-    DWORD DirIndex;
-    DWORD SepIndex;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T DirIndex;
+    YORI_ALLOC_SIZE_T SepIndex;
     TCHAR PathChar;
     TCHAR DirChar;
 
@@ -896,9 +896,9 @@ MakeFindInferenceRuleForTarget(
     YORI_STRING TargetNoExt;
     PYORI_STRING FileToProbe;
     PYORI_STRING NestedFileToProbe;
-    DWORD Index;
-    DWORD CharsNeeded;
-    DWORD LongestCharsNeeded;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T CharsNeeded;
+    YORI_ALLOC_SIZE_T LongestCharsNeeded;
     BOOLEAN FoundRuleWithTargetExtension;
 
     //
@@ -1239,12 +1239,12 @@ MakeExpandTargetVariable(
     __out PYORI_STRING VariableData
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     PYORI_LIST_ENTRY ListEntry;
     PMAKE_TARGET_DEPENDENCY DependentTarget;
     YORI_STRING BaseVariableName;
     YORI_STRING FileNamePartQualifier;
-    DWORD SymbolChars;
+    YORI_ALLOC_SIZE_T SymbolChars;
     BOOLEAN Result;
 
     SymbolChars = YoriLibCountStringContainingChars(VariableName, _T("@*<?"));
@@ -1379,7 +1379,7 @@ MakeExpandTargetVariable(
                Target->InferenceRule != NULL) {
 
         YORI_STRING BaseName;
-        DWORD CharsNeeded;
+        YORI_ALLOC_SIZE_T CharsNeeded;
         BOOLEAN PathMatch;
 
         CharsNeeded = MakeCountExtraInferenceRuleChars(Target->InferenceRule);
@@ -1447,7 +1447,7 @@ MakeExpandTargetVariable(
     } else if (YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("B")) == 0) {
         BOOLEAN FinalDotFound = FALSE;
         BOOLEAN FinalSeperatorFound = FALSE;
-        DWORD FinalDotIndex = 0;
+        YORI_ALLOC_SIZE_T FinalDotIndex = 0;
 
         for (Index = VariableData->LengthInChars; Index > 0; Index--) {
             if (FinalDotIndex == 0 && VariableData->StartOfString[Index - 1] == '.') {
@@ -1542,8 +1542,8 @@ MakeGenerateExecScriptForTarget(
     )
 {
     YORI_STRING Line;
-    DWORD StartLineIndex;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T StartLineIndex;
+    YORI_ALLOC_SIZE_T Index;
     PYORI_STRING SourceString;
     PMAKE_CMD_TO_EXEC CmdToExec;
 

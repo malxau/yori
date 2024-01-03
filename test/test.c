@@ -127,14 +127,14 @@ TestHelp(VOID)
  */
 DWORD
 ymain(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    DWORD i;
-    DWORD Var;
-    DWORD Succeeded;
-    DWORD Failed;
+    YORI_ALLOC_SIZE_T i;
+    WORD Var;
+    WORD Succeeded;
+    WORD Failed;
     YORI_STRING Arg;
     BOOLEAN ArgumentUnderstood;
     BOOLEAN RunAll;

@@ -89,7 +89,7 @@ typedef struct _YORI_DLG_DEV_STATE {
     /**
      The number of entries in DeviceEntryList.
      */
-    DWORD DeviceEntryCount;
+    YORI_ALLOC_SIZE_T DeviceEntryCount;
 
 } YORI_DLG_DEV_STATE, *PYORI_DLG_DEV_STATE;
 
@@ -136,7 +136,7 @@ YoriDlgDevOkButtonClicked(
     YORI_STRING DeviceName;
     YORI_STRING OffsetLengthText;
     PYORI_DLG_DEV_STATE State;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
     LONGLONG TempNumber;
     LONGLONG OffsetNumber;
     LONGLONG LengthNumber;
@@ -255,7 +255,7 @@ YoriDlgDevDeviceSelectionChanged(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD ActiveOption;
+    YORI_ALLOC_SIZE_T ActiveOption;
     YORI_STRING String;
     PYORI_WIN_CTRL_HANDLE Parent;
     PYORI_WIN_CTRL_HANDLE EditCtrl;
@@ -331,7 +331,7 @@ YoriDlgDevObjectFoundCallback(
     }
 
     if (!IncludeObject) {
-        DWORD MatchOffset;
+        YORI_ALLOC_SIZE_T MatchOffset;
 
         YoriLibConstantString(&MatchArray[0], _T("PhysicalDrive"));
         YoriLibConstantString(&MatchArray[1], _T("HardDisk"));
@@ -457,7 +457,7 @@ YoriDlgDevRefreshView(
     if (State->DeviceEntryCount > 0) {
         PYORI_STRING DeviceArray;
         PYORI_LIST_ENTRY ListEntry;
-        DWORD Index;
+        YORI_ALLOC_SIZE_T Index;
         PYORI_DLG_DEV_KNOWN_DEVICE Device;
 
         DeviceArray = YoriLibMalloc(sizeof(YORI_STRING) * State->DeviceEntryCount);

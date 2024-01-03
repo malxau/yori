@@ -243,16 +243,16 @@ ClmpWaitOnProcess (
  */
 DWORD
 ymain(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     YORI_STRING CommonString;
     YORI_STRING CompleteString;
-    DWORD i, j;
+    YORI_ALLOC_SIZE_T i, j;
     PCLMP_PROCESS_INFO ProcessInfo;
-    DWORD CurrentProcess = 0;
-    DWORD NumberProcesses = 0;
+    YORI_ALLOC_SIZE_T CurrentProcess = 0;
+    YORI_ALLOC_SIZE_T NumberProcesses = 0;
     BOOLEAN MultiProcPossible = FALSE;
     BOOLEAN MultiProcNotPossible = FALSE;
     YORI_STRING Arg;
@@ -302,13 +302,13 @@ ymain(
                 if (Arg.LengthInChars > 2) {
                     YORI_STRING NumberProcessesString;
                     LONGLONG LlNumberProcesses;
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
 
                     YoriLibInitEmptyString(&NumberProcessesString);
                     NumberProcessesString.StartOfString = &Arg.StartOfString[2];
                     NumberProcessesString.LengthInChars = Arg.LengthInChars - 2;
                     if (YoriLibStringToNumber(&NumberProcessesString, FALSE, &LlNumberProcesses, &CharsConsumed) && CharsConsumed > 0) {
-                        NumberProcesses = (DWORD)LlNumberProcesses;
+                        NumberProcesses = (YORI_ALLOC_SIZE_T)LlNumberProcesses;
                     }
                 }
 
@@ -380,7 +380,7 @@ ymain(
     if (!MultiProcPossible || MultiProcNotPossible) {
         NumberProcesses = 1;
     } else if (NumberProcesses == 0) {
-        NumberProcesses = SysInfo.dwNumberOfProcessors + 1;
+        NumberProcesses = (YORI_ALLOC_SIZE_T)SysInfo.dwNumberOfProcessors + 1;
     }
 
     ProcessInfo = YoriLibMalloc(sizeof(CLMP_PROCESS_INFO) * NumberProcesses);

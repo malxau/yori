@@ -103,7 +103,7 @@ typedef struct _SDIR_FMTCHAR {
  Specifies a pointer to a function which can return the amount of characters
  needed to display a piece of file metadata.
  */
-typedef DWORD (* SDIR_METADATA_WIDTH_FN)(PSDIR_FMTCHAR, YORILIB_COLOR_ATTRIBUTES, PYORI_FILE_INFO);
+typedef YORI_ALLOC_SIZE_T (* SDIR_METADATA_WIDTH_FN)(PSDIR_FMTCHAR, YORILIB_COLOR_ATTRIBUTES, PYORI_FILE_INFO);
 
 /**
  Specifies a pointer to a function which can compare two directory entries
@@ -243,25 +243,25 @@ typedef struct _SDIR_OPTS {
     /**
      Specifies the effective height of the console window, in characters.
      */
-    DWORD           ConsoleHeight;
+    WORD            ConsoleHeight;
 
     /**
      Specifies the effective width of the console buffer, in characters.
      Note this can be larger than the window width (implying horizontal
      scroll bars.)
      */
-    DWORD           ConsoleBufferWidth;
+    WORD            ConsoleBufferWidth;
 
     /**
      Specifies the effective width of the console window, in characters.
      */
-    DWORD           ConsoleWidth;
+    WORD            ConsoleWidth;
 
     /**
      Specifies the total number of characters needed to display file metadata
      (ie., not the file's name.)
      */
-    DWORD           MetadataWidth;
+    WORD            MetadataWidth;
 
     /**
      Specifies the version of the hosting OS, in GetVersion format.
@@ -682,7 +682,7 @@ extern const SDIR_OPT SdirOptions[];
 extern const SDIR_EXEC SdirExec[];
 extern PYORI_FILE_INFO SdirDirCollection;
 extern PYORI_FILE_INFO * SdirDirSorted;
-extern DWORD SdirWriteStringLinesDisplayed;
+extern WORD SdirWriteStringLinesDisplayed;
 
 //
 //  Functions from display.c
@@ -692,7 +692,7 @@ BOOL
 SdirWriteRawStringToOutputDevice(
     __in HANDLE hConsole,
     __in LPCTSTR OutputString,
-    __in DWORD Length
+    __in YORI_ALLOC_SIZE_T Length
     );
 
 BOOL
@@ -704,7 +704,7 @@ SdirSetConsoleTextAttribute(
 BOOL
 SdirWrite (
     __in_ecount(count) PSDIR_FMTCHAR str,
-    __in DWORD count
+    __in YORI_ALLOC_SIZE_T count
     );
 
 BOOL
@@ -712,8 +712,8 @@ SdirPasteStrAndPad (
     __out_ecount(padsize) PSDIR_FMTCHAR str,
     __in_ecount_opt(count) LPTSTR src,
     __in YORILIB_COLOR_ATTRIBUTES attr,
-    __in DWORD count,
-    __in DWORD padsize
+    __in YORI_ALLOC_SIZE_T count,
+    __in YORI_ALLOC_SIZE_T padsize
     );
 
 BOOL
@@ -758,13 +758,13 @@ extern YORILIB_COLOR_ATTRIBUTES SdirDefaultColor;
 //  Functions from callbacks.c
 //
 
-DWORD
+YORI_ALLOC_SIZE_T
 SdirGetNumSdirOptions(VOID);
 
-DWORD
+YORI_ALLOC_SIZE_T
 SdirGetNumSdirExec(VOID);
 
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplaySummary(
     __in YORILIB_COLOR_ATTRIBUTES DefaultAttributes
     );
@@ -774,7 +774,7 @@ SdirCollectSummary(
     __in PYORI_FILE_INFO Entry
     );
 
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayShortName (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
@@ -796,7 +796,7 @@ BOOL
 SdirColorStringFromFeature(
     __in PCSDIR_FEATURE Feature,
     __out LPTSTR String,
-    __in DWORD StringSize
+    __in YORI_ALLOC_SIZE_T StringSize
     );
 
 BOOL
@@ -818,7 +818,7 @@ SdirApplyAttribute(
 
 BOOL
 SdirInit(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     );
 
@@ -831,7 +831,7 @@ SdirAppCleanup(VOID);
 
 BOOL
 SdirUsage(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     );
 
@@ -845,43 +845,43 @@ SdirStringToNum32(
     __out_opt LPCTSTR* endptr
     );
 
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayGenericSize(
     __out_ecount(6) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in PLARGE_INTEGER GenericSize
     );
 
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayHex64 (
     __out_ecount(18) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in PLARGE_INTEGER Hex
     );
 
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayHex32 (
     __out_ecount(9) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in DWORD Hex
     );
 
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayGenericHexBuffer (
     __out_ecount(Size * 2 + 1) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in PUCHAR InputBuffer,
-    __in DWORD Size
+    __in YORI_ALLOC_SIZE_T Size
     );
 
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileDate (
     __out_ecount(11) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
     __in SYSTEMTIME * Time
     );
 
-ULONG
+YORI_ALLOC_SIZE_T
 SdirDisplayFileTime (
     __out_ecount(9) PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,

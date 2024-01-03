@@ -91,47 +91,47 @@ typedef struct _YORI_WIN_CTRL_HEX_EDIT {
     /**
      The length of the data buffer allocation in bytes.
      */
-    DWORDLONG BufferAllocated;
+    YORI_ALLOC_SIZE_T BufferAllocated;
 
     /**
      The number of bytes within the data allocation that contain meaningful
      data.
      */
-    DWORDLONG BufferValid;
+    YORI_ALLOC_SIZE_T BufferValid;
 
     /**
      The number of bytes that will be displayed in a single line of the
      control.
      */
-    DWORD BytesPerLine;
+    UCHAR BytesPerLine;
 
     /**
      Specifies the number of bytes per word.  This code will currently only
      work with 1 byte per word, but this value is here to ease the transition
      to supporting 2 byte, 4 byte and 8 byte words later.
      */
-    DWORD BytesPerWord;
+    UCHAR BytesPerWord;
 
     /**
      The index within LineArray that is displayed at the top of the control.
      */
-    DWORD ViewportTop;
+    YORI_ALLOC_SIZE_T ViewportTop;
 
     /**
      The horizontal offset within each line to display.
      */
-    DWORD ViewportLeft;
+    YORI_ALLOC_SIZE_T ViewportLeft;
 
     /**
      The index within LineArray that the cursor is located at.
      */
-    DWORD CursorLine;
+    YORI_ALLOC_SIZE_T CursorLine;
 
     /**
      The horizontal offset of the cursor in terms of the offset within the
      line buffer.
      */
-    DWORD CursorOffset;
+    YORI_ALLOC_SIZE_T CursorOffset;
 
     /**
      The first line, in cursor coordinates, that requires redrawing.  Lines
@@ -140,14 +140,14 @@ typedef struct _YORI_WIN_CTRL_HEX_EDIT {
      occurs.  This is a fairly common scenario when the cursor is moved,
      where a repaint is needed but no data changes are occurring.
      */
-    DWORD FirstDirtyLine;
+    YORI_ALLOC_SIZE_T FirstDirtyLine;
 
     /**
      The last line, in cursor coordinates, that requires redrawing.  Lines
      between the first line above and this line (inclusive) will be redrawn
      on paint.
      */
-    DWORD LastDirtyLine;
+    YORI_ALLOC_SIZE_T LastDirtyLine;
 
     /**
      Specifies the selection state of text within the multiline edit control.
@@ -266,19 +266,19 @@ typedef enum _YORI_WIN_HEX_EDIT_CELL_TYPE {
 
  @return The number of lines that will need to be displayed.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinHexEditLinesPopulated(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORD LineCount;
+    YORI_ALLOC_SIZE_T LineCount;
 
     //
     //  Calculate the number of lines, rounding up if any partial lines
     //  exist.
     //
 
-    LineCount = (DWORD)((HexEdit->BufferValid + HexEdit->BytesPerLine - 1)/HexEdit->BytesPerLine);
+    LineCount = (YORI_ALLOC_SIZE_T)((HexEdit->BufferValid + HexEdit->BytesPerLine - 1)/HexEdit->BytesPerLine);
     return LineCount;
 }
 
@@ -291,12 +291,12 @@ YoriWinHexEditLinesPopulated(
  @return The number of cells used to display the offset at the beginning of
          each line.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinHexEditOffsetSizeInCells(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORD OffsetInChars;
+    YORI_ALLOC_SIZE_T OffsetInChars;
     OffsetInChars = 0;
     if (HexEdit->OffsetWidth == 64) {
         OffsetInChars = sizeof("01234567`01234567:") - 1;
@@ -315,16 +315,16 @@ YoriWinHexEditOffsetSizeInCells(
 
  @return The number of display cells required.
  */
-DWORD
+UCHAR
 YoriWinHexEditGetCellsPerWord(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORD CellsPerWord;
+    UCHAR CellsPerWord;
 
-    CellsPerWord = HexEdit->BytesPerWord * 2 + 1;
+    CellsPerWord = (UCHAR)(HexEdit->BytesPerWord * 2 + 1);
     if (HexEdit->BytesPerWord == 8) {
-        CellsPerWord = CellsPerWord + 1;
+        CellsPerWord = (UCHAR)(CellsPerWord + 1);
     }
 
     return CellsPerWord;
@@ -342,21 +342,21 @@ YoriWinHexEditGetCellsPerWord(
 
  @return The cell offset to apply for the specified bit shift value.
  */
-DWORD
+UCHAR
 YoriWinHexEditGetCellIndexForBitShift(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD BitShift
+    __in UCHAR BitShift
     )
 {
-    DWORD CellIndex;
+    UCHAR CellIndex;
 
     UNREFERENCED_PARAMETER(HexEdit);
 
     ASSERT((BitShift % 4) == 0);
-    CellIndex = BitShift / 4;
+    CellIndex = (UCHAR)(BitShift / 4);
     if (BitShift >= 32) {
         ASSERT(HexEdit->BytesPerWord == 8);
-        CellIndex = CellIndex + 1;
+        CellIndex = (UCHAR)(CellIndex + 1);
     }
 
     return CellIndex;
@@ -387,22 +387,22 @@ YoriWinHexEditGetCellIndexForBitShift(
 YORI_WIN_HEX_EDIT_CELL_TYPE
 YoriWinHexEditCellType(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD LineIndex,
-    __in DWORD CellOffset,
-    __out_opt PDWORD ByteOffset,
-    __out_opt PDWORD BitShift,
+    __in YORI_ALLOC_SIZE_T LineIndex,
+    __in YORI_ALLOC_SIZE_T CellOffset,
+    __out_opt PYORI_ALLOC_SIZE_T ByteOffset,
+    __out_opt PUCHAR BitShift,
     __out_opt PBOOLEAN BeyondBufferEnd
     )
 {
-    DWORD LocalByteOffset;
-    DWORD ModValue;
-    DWORD DataOffset;
-    DWORD BytesThisLine;
-    DWORD LinesPopulated;
-    DWORD CellsPerWord;
-    DWORD OffsetInChars;
-    DWORD WordsPerLine;
-    DWORD LocalBitShift;
+    YORI_ALLOC_SIZE_T LocalByteOffset;
+    UCHAR ModValue;
+    YORI_ALLOC_SIZE_T DataOffset;
+    YORI_ALLOC_SIZE_T BytesThisLine;
+    YORI_ALLOC_SIZE_T LinesPopulated;
+    UCHAR CellsPerWord;
+    YORI_ALLOC_SIZE_T OffsetInChars;
+    YORI_ALLOC_SIZE_T WordsPerLine;
+    UCHAR LocalBitShift;
 
     if (ByteOffset != NULL) {
         *ByteOffset = 0;
@@ -417,11 +417,11 @@ YoriWinHexEditCellType(
     LinesPopulated = YoriWinHexEditLinesPopulated(HexEdit);
     BytesThisLine = HexEdit->BytesPerLine;
     if (LineIndex + 1 == LinesPopulated) {
-        DWORDLONG BytesInFullLines;
+        YORI_ALLOC_SIZE_T BytesInFullLines;
 
         BytesInFullLines = LineIndex;
         BytesInFullLines = BytesInFullLines * HexEdit->BytesPerLine;
-        BytesThisLine = (DWORD)(HexEdit->BufferValid - BytesInFullLines);
+        BytesThisLine = (YORI_ALLOC_SIZE_T)(HexEdit->BufferValid - BytesInFullLines);
     }
 
     OffsetInChars = YoriWinHexEditOffsetSizeInCells(HexEdit);
@@ -447,20 +447,20 @@ YoriWinHexEditCellType(
         DataOffset = DataOffset + 1;
     }
     if (DataOffset < WordsPerLine * CellsPerWord) {
-        ModValue = DataOffset % CellsPerWord;
+        ModValue = (UCHAR)(DataOffset % CellsPerWord);
         LocalByteOffset = (DataOffset / CellsPerWord) * HexEdit->BytesPerWord;
         LocalBitShift = 0;
         if (ModValue == 0) {
             return YoriWinHexEditCellTypeWhitespace;
         } else {
-            ModValue = CellsPerWord - 1 - ModValue;
+            ModValue = (UCHAR)(CellsPerWord - 1 - ModValue);
             if (ModValue == 8) {
                 ASSERT(HexEdit->BytesPerWord == 8);
                 return YoriWinHexEditCellTypeWhitespace;
             } else if (ModValue > 8) {
-                ModValue = ModValue - 1;
+                ModValue = (UCHAR)(ModValue - 1);
             }
-            LocalBitShift = 4 * ModValue;
+            LocalBitShift = (UCHAR)(4 * ModValue);
             if (ByteOffset != NULL) {
                 *ByteOffset = LocalByteOffset;
             }
@@ -517,15 +517,15 @@ __success(return)
 BOOLEAN
 YoriWinHexEditCellFromCharBufferOffset(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORDLONG BufferOffset,
-    __out PDWORD EndLine,
-    __out PDWORD EndCharOffset
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __out PYORI_ALLOC_SIZE_T EndLine,
+    __out PYORI_ALLOC_SIZE_T EndCharOffset
     )
 {
-    DWORD CellsPerWord;
-    DWORD LineByteOffset;
-    DWORD OffsetInChars;
-    DWORD WordsPerLine;
+    YORI_ALLOC_SIZE_T CellsPerWord;
+    YORI_ALLOC_SIZE_T LineByteOffset;
+    YORI_ALLOC_SIZE_T OffsetInChars;
+    YORI_ALLOC_SIZE_T WordsPerLine;
 
     OffsetInChars = YoriWinHexEditOffsetSizeInCells(HexEdit);
 
@@ -542,8 +542,8 @@ YoriWinHexEditCellFromCharBufferOffset(
     CellsPerWord = YoriWinHexEditGetCellsPerWord(HexEdit);
     WordsPerLine = HexEdit->BytesPerLine / HexEdit->BytesPerWord;
 
-    *EndLine = (DWORD)(BufferOffset / HexEdit->BytesPerLine);
-    LineByteOffset = (DWORD)(BufferOffset % HexEdit->BytesPerLine);
+    *EndLine = (YORI_ALLOC_SIZE_T)(BufferOffset / HexEdit->BytesPerLine);
+    LineByteOffset = (YORI_ALLOC_SIZE_T)(BufferOffset % HexEdit->BytesPerLine);
     *EndCharOffset = OffsetInChars + WordsPerLine * CellsPerWord + 1 + LineByteOffset;
     return TRUE;
 
@@ -572,18 +572,18 @@ __success(return)
 BOOLEAN
 YoriWinHexEditCellFromHexBufferOffset(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORDLONG BufferOffset,
-    __in DWORD BitShift,
-    __out PDWORD EndLine,
-    __out PDWORD EndCharOffset
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __in UCHAR BitShift,
+    __out PYORI_ALLOC_SIZE_T EndLine,
+    __out PYORI_ALLOC_SIZE_T EndCharOffset
     )
 {
-    DWORD CellsPerWord;
-    DWORD LineByteOffset;
-    DWORD LineCellOffset;
-    DWORD OffsetInChars;
-    DWORD BitShiftCellIndex;
-    DWORD MarginToRemove;
+    UCHAR CellsPerWord;
+    YORI_ALLOC_SIZE_T LineByteOffset;
+    YORI_ALLOC_SIZE_T LineCellOffset;
+    YORI_ALLOC_SIZE_T OffsetInChars;
+    UCHAR BitShiftCellIndex;
+    YORI_ALLOC_SIZE_T MarginToRemove;
 
     MarginToRemove = 0;
     OffsetInChars = YoriWinHexEditOffsetSizeInCells(HexEdit);
@@ -601,8 +601,8 @@ YoriWinHexEditCellFromHexBufferOffset(
 
     CellsPerWord = YoriWinHexEditGetCellsPerWord(HexEdit);
 
-    *EndLine = (DWORD)(BufferOffset / HexEdit->BytesPerLine);
-    LineByteOffset = (DWORD)(BufferOffset % HexEdit->BytesPerLine);
+    *EndLine = (BufferOffset / HexEdit->BytesPerLine);
+    LineByteOffset = (BufferOffset % HexEdit->BytesPerLine);
     LineCellOffset = (LineByteOffset + HexEdit->BytesPerWord - 1) / HexEdit->BytesPerWord;
 
     BitShiftCellIndex = YoriWinHexEditGetCellIndexForBitShift(HexEdit, BitShift);
@@ -638,15 +638,15 @@ BOOLEAN
 YoriWinHexEditPreviousCellSameType(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __in YORI_WIN_HEX_EDIT_CELL_TYPE CellType,
-    __in DWORDLONG BufferOffset,
-    __in DWORD BitShift,
-    __out PDWORD EndLine,
-    __out PDWORD EndCharOffset
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __in UCHAR BitShift,
+    __out PYORI_ALLOC_SIZE_T EndLine,
+    __out PYORI_ALLOC_SIZE_T EndCharOffset
     )
 {
-    DWORD NewBitShift;
-    DWORD Unaligned;
-    DWORDLONG NewBufferOffset;
+    UCHAR NewBitShift;
+    YORI_ALLOC_SIZE_T Unaligned;
+    YORI_ALLOC_SIZE_T NewBufferOffset;
 
     if (CellType != YoriWinHexEditCellTypeHexDigit &&
         CellType != YoriWinHexEditCellTypeCharValue) {
@@ -669,15 +669,15 @@ YoriWinHexEditPreviousCellSameType(
     //  adjust BitShift to compensate
     //
 
-    Unaligned = (DWORD)(NewBufferOffset % HexEdit->BytesPerWord);
+    Unaligned = (YORI_ALLOC_SIZE_T)(NewBufferOffset % HexEdit->BytesPerWord);
     ASSERT(Unaligned == 0);
     if (Unaligned != 0) {
-        NewBufferOffset = (DWORD)(NewBufferOffset - Unaligned);
-        NewBitShift = NewBitShift + 8 * Unaligned;
+        NewBufferOffset = (YORI_ALLOC_SIZE_T)(NewBufferOffset - Unaligned);
+        NewBitShift = (UCHAR)(NewBitShift + 8 * Unaligned);
     }
 
     if (NewBitShift < HexEdit->BytesPerWord * 8 - 4) {
-        NewBitShift = NewBitShift + 4;
+        NewBitShift = (UCHAR)(NewBitShift + 4);
     } else if (NewBufferOffset > 0) {
         ASSERT(NewBufferOffset >= HexEdit->BytesPerWord);
         NewBufferOffset = NewBufferOffset - HexEdit->BytesPerWord;
@@ -715,15 +715,15 @@ BOOLEAN
 YoriWinHexEditNextCellSameType(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __in YORI_WIN_HEX_EDIT_CELL_TYPE CellType,
-    __in DWORDLONG BufferOffset,
-    __in DWORD BitShift,
-    __out PDWORD EndLine,
-    __out PDWORD EndCharOffset
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __in UCHAR BitShift,
+    __out PYORI_ALLOC_SIZE_T EndLine,
+    __out PYORI_ALLOC_SIZE_T EndCharOffset
     )
 {
-    DWORD NewBitShift;
-    DWORD Unaligned;
-    DWORDLONG NewBufferOffset;
+    UCHAR NewBitShift;
+    YORI_ALLOC_SIZE_T Unaligned;
+    YORI_ALLOC_SIZE_T NewBufferOffset;
 
     if (CellType != YoriWinHexEditCellTypeHexDigit &&
         CellType != YoriWinHexEditCellTypeCharValue) {
@@ -744,18 +744,18 @@ YoriWinHexEditNextCellSameType(
     //  adjust BitShift to compensate
     //
 
-    Unaligned = (DWORD)(NewBufferOffset % HexEdit->BytesPerWord);
+    Unaligned = (YORI_ALLOC_SIZE_T)(NewBufferOffset % HexEdit->BytesPerWord);
     ASSERT(Unaligned == 0);
     if (Unaligned != 0) {
         NewBufferOffset = NewBufferOffset - Unaligned;
-        NewBitShift = NewBitShift + 8 * Unaligned;
+        NewBitShift = (UCHAR)(NewBitShift + 8 * Unaligned);
     }
 
     if (NewBitShift >= 4) {
-        NewBitShift = NewBitShift - 4;
+        NewBitShift = (UCHAR)(NewBitShift - 4);
     } else {
         NewBufferOffset = BufferOffset + HexEdit->BytesPerWord;
-        NewBitShift = 8 * HexEdit->BytesPerWord - 4;
+        NewBitShift = (UCHAR)(8 * HexEdit->BytesPerWord - 4);
     }
 
     return YoriWinHexEditCellFromHexBufferOffset(HexEdit, NewBufferOffset, NewBitShift, EndLine, EndCharOffset);
@@ -784,7 +784,7 @@ YoriWinHexEditNextCellSameType(
 WORD
 YoriWinHexEditSelectionColor(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORDLONG Offset,
+    __in YORI_ALLOC_SIZE_T Offset,
     __in BOOLEAN PaddingAfter
     )
 {
@@ -826,21 +826,21 @@ YoriWinHexEditSelectionColor(
 
  @return The number of elements written to the Output buffer.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinHexEditByteLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __out_ecount(OutputSize) PCHAR_INFO Output,
-    __in DWORD OutputSize,
-    __in DWORDLONG Offset,
-    __in DWORD BytesToDisplay
+    __in YORI_ALLOC_SIZE_T OutputSize,
+    __in YORI_ALLOC_SIZE_T Offset,
+    __in YORI_ALLOC_SIZE_T BytesToDisplay
     )
 {
     UCHAR WordToDisplay = 0;
-    DWORD WordIndex;
-    BOOL DisplayWord;
-    DWORD ByteIndex;
-    DWORD OutputIndex = 0;
-    DWORD WordCount;
+    YORI_ALLOC_SIZE_T WordIndex;
+    BOOLEAN DisplayWord;
+    YORI_ALLOC_SIZE_T ByteIndex;
+    YORI_ALLOC_SIZE_T OutputIndex = 0;
+    YORI_ALLOC_SIZE_T WordCount;
     UCHAR CONST * Buffer;
 
     ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
@@ -909,21 +909,21 @@ YoriWinHexEditByteLine(
 
  @return The number of elements written to the Output buffer.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinHexEditWordLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __out_ecount(OutputSize) PCHAR_INFO Output,
-    __in DWORD OutputSize,
-    __in DWORDLONG Offset,
-    __in DWORD BytesToDisplay
+    __in YORI_ALLOC_SIZE_T OutputSize,
+    __in YORI_ALLOC_SIZE_T Offset,
+    __in YORI_ALLOC_SIZE_T BytesToDisplay
     )
 {
     WORD WordToDisplay = 0;
-    DWORD WordIndex;
-    BOOL DisplayWord;
-    DWORD ByteIndex;
-    DWORD OutputIndex = 0;
-    DWORD WordCount;
+    YORI_ALLOC_SIZE_T WordIndex;
+    BOOLEAN DisplayWord;
+    YORI_ALLOC_SIZE_T ByteIndex;
+    YORI_ALLOC_SIZE_T OutputIndex = 0;
+    YORI_ALLOC_SIZE_T WordCount;
     UCHAR CONST * Buffer;
 
     ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
@@ -996,21 +996,21 @@ YoriWinHexEditWordLine(
 
  @return The number of elements written to the Output buffer.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinHexEditDWordLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __out_ecount(OutputSize) PCHAR_INFO Output,
-    __in DWORD OutputSize,
-    __in DWORDLONG Offset,
-    __in DWORD BytesToDisplay
+    __in YORI_ALLOC_SIZE_T OutputSize,
+    __in YORI_ALLOC_SIZE_T Offset,
+    __in YORI_ALLOC_SIZE_T BytesToDisplay
     )
 {
     DWORD WordToDisplay = 0;
-    DWORD WordIndex;
-    BOOL DisplayWord;
-    DWORD ByteIndex;
-    DWORD OutputIndex = 0;
-    DWORD WordCount;
+    YORI_ALLOC_SIZE_T WordIndex;
+    BOOLEAN DisplayWord;
+    YORI_ALLOC_SIZE_T ByteIndex;
+    YORI_ALLOC_SIZE_T OutputIndex = 0;
+    YORI_ALLOC_SIZE_T WordCount;
     UCHAR CONST * Buffer;
 
     ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
@@ -1090,21 +1090,21 @@ YoriWinHexEditDWordLine(
 
  @return The number of elements written to the Output buffer.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 YoriWinHexEditDWordLongLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __out_ecount(OutputSize) PCHAR_INFO Output,
-    __in DWORD OutputSize,
-    __in DWORDLONG Offset,
-    __in DWORD BytesToDisplay
+    __in YORI_ALLOC_SIZE_T OutputSize,
+    __in YORI_ALLOC_SIZE_T Offset,
+    __in YORI_ALLOC_SIZE_T BytesToDisplay
     )
 {
     DWORDLONG WordToDisplay = 0;
-    DWORD WordIndex;
+    YORI_ALLOC_SIZE_T WordIndex;
     BOOL DisplayWord;
-    DWORD ByteIndex;
-    DWORD OutputIndex = 0;
-    DWORD WordCount;
+    YORI_ALLOC_SIZE_T ByteIndex;
+    YORI_ALLOC_SIZE_T OutputIndex = 0;
+    YORI_ALLOC_SIZE_T WordCount;
     UCHAR CONST * Buffer;
 
     ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
@@ -1209,9 +1209,9 @@ YoriWinHexEditDWordLongLine(
 VOID
 YoriWinHexEditFindCursorCharFromDisplayChar(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD LineIndex,
-    __in DWORD DisplayChar,
-    __out PDWORD CursorChar
+    __in YORI_ALLOC_SIZE_T LineIndex,
+    __in YORI_ALLOC_SIZE_T DisplayChar,
+    __out PYORI_ALLOC_SIZE_T CursorChar
     )
 {
     UNREFERENCED_PARAMETER(HexEdit);
@@ -1236,9 +1236,9 @@ YoriWinHexEditFindCursorCharFromDisplayChar(
 VOID
 YoriWinHexEditFindDisplayCharFromCursorChar(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD LineIndex,
-    __in DWORD CursorChar,
-    __out PDWORD DisplayChar
+    __in YORI_ALLOC_SIZE_T LineIndex,
+    __in YORI_ALLOC_SIZE_T CursorChar,
+    __out PYORI_ALLOC_SIZE_T DisplayChar
     )
 {
     UNREFERENCED_PARAMETER(HexEdit);
@@ -1264,14 +1264,14 @@ YoriWinHexEditFindDisplayCharFromCursorChar(
 VOID
 YoriWinHexEditTranslateViewportCoordinatesToCursorCoordinates(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD ViewportLeftOffset,
-    __in DWORD ViewportTopOffset,
-    __out PDWORD LineIndex,
-    __out PDWORD CursorChar
+    __in YORI_ALLOC_SIZE_T ViewportLeftOffset,
+    __in YORI_ALLOC_SIZE_T ViewportTopOffset,
+    __out PYORI_ALLOC_SIZE_T LineIndex,
+    __out PYORI_ALLOC_SIZE_T CursorChar
     )
 {
-    DWORD LineOffset;
-    DWORD DisplayOffset;
+    YORI_ALLOC_SIZE_T LineOffset;
+    YORI_ALLOC_SIZE_T DisplayOffset;
 
     LineOffset = ViewportTopOffset + HexEdit->ViewportTop;
 
@@ -1384,7 +1384,7 @@ VOID
 YoriWinHexEditPaintSingleLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __in PCOORD ClientSize,
-    __in DWORD LineIndex
+    __in YORI_ALLOC_SIZE_T LineIndex
     )
 {
     WORD ColumnIndex;
@@ -1395,12 +1395,12 @@ YoriWinHexEditPaintSingleLine(
     DWORD LinesPopulated;
     TCHAR StringBuffer[sizeof("01234567`89abcdef: ")];
     CHAR_INFO CharInfoBuffer[YORI_LIB_HEXDUMP_BYTES_PER_LINE * 4 + 32];
-    DWORD CharInfoBufferAllocated;
-    DWORD CharInfoBufferPopulated;
-    ULARGE_INTEGER Offset;
-    DWORD LineLength;
+    YORI_ALLOC_SIZE_T CharInfoBufferAllocated;
+    YORI_ALLOC_SIZE_T CharInfoBufferPopulated;
+    YORI_ALLOC_SIZE_T Offset;
+    YORI_ALLOC_SIZE_T LineLength;
     PUCHAR SourceBuffer;
-    DWORD WordIndex;
+    YORI_ALLOC_SIZE_T WordIndex;
     UCHAR CharToDisplay;
     PCHAR_INFO Cell;
 
@@ -1419,15 +1419,14 @@ YoriWinHexEditPaintSingleLine(
 
     if (LineIndex == 0 || LineIndex < LinesPopulated) {
 
-        Offset.HighPart = 0;
-        Offset.LowPart = LineIndex;
-        Offset.QuadPart = Offset.QuadPart * HexEdit->BytesPerLine;
+        Offset = LineIndex;
+        Offset = Offset * HexEdit->BytesPerLine;
 
-        ASSERT(Offset.QuadPart <= HexEdit->BufferValid);
+        ASSERT(Offset <= HexEdit->BufferValid);
 
-        SourceBuffer = &HexEdit->Buffer[Offset.QuadPart];
-        if (HexEdit->BufferValid - Offset.QuadPart < HexEdit->BytesPerLine) {
-            LineLength = (DWORD)(HexEdit->BufferValid - Offset.QuadPart);
+        SourceBuffer = &HexEdit->Buffer[Offset];
+        if (HexEdit->BufferValid - Offset < HexEdit->BytesPerLine) {
+            LineLength = (YORI_ALLOC_SIZE_T)(HexEdit->BufferValid - Offset);
         } else {
             LineLength = HexEdit->BytesPerLine;
         }
@@ -1440,9 +1439,11 @@ YoriWinHexEditPaintSingleLine(
         //
 
         if (HexEdit->OffsetWidth == 64) {
-            String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x`%08x: "), Offset.HighPart, Offset.LowPart);
+            DWORDLONG LongOffset;
+            LongOffset = Offset;
+            String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x`%08x: "), (DWORD)(LongOffset >> 32), (DWORD)LongOffset);
         } else if (HexEdit->OffsetWidth == 32) {
-            String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x: "), Offset.LowPart);
+            String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x: "), Offset);
         }
 
         for (ColumnIndex = 0; ColumnIndex < String.LengthInChars; ColumnIndex++) {
@@ -1450,20 +1451,40 @@ YoriWinHexEditPaintSingleLine(
             CharInfoBuffer[ColumnIndex].Attributes = TextAttributes;
 
         }
-        CharInfoBufferPopulated += String.LengthInChars;
+        CharInfoBufferPopulated = CharInfoBufferPopulated + String.LengthInChars;
 
         //
         //  Depending on the requested display format, generate the data.
         //
 
         if (HexEdit->BytesPerWord == 1) {
-            CharInfoBufferPopulated += YoriWinHexEditByteLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, Offset.QuadPart, LineLength);
+            CharInfoBufferPopulated = CharInfoBufferPopulated +
+                YoriWinHexEditByteLine(HexEdit,
+                                       &CharInfoBuffer[CharInfoBufferPopulated],
+                                       CharInfoBufferAllocated - CharInfoBufferPopulated,
+                                       Offset,
+                                       LineLength);
         } else if (HexEdit->BytesPerWord == 2) {
-            CharInfoBufferPopulated += YoriWinHexEditWordLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, Offset.QuadPart, LineLength);
+            CharInfoBufferPopulated = CharInfoBufferPopulated +
+                YoriWinHexEditWordLine(HexEdit,
+                                       &CharInfoBuffer[CharInfoBufferPopulated],
+                                       CharInfoBufferAllocated - CharInfoBufferPopulated,
+                                       Offset,
+                                       LineLength);
         } else if (HexEdit->BytesPerWord == 4) {
-            CharInfoBufferPopulated += YoriWinHexEditDWordLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, Offset.QuadPart, LineLength);
+            CharInfoBufferPopulated = CharInfoBufferPopulated +
+                YoriWinHexEditDWordLine(HexEdit,
+                                        &CharInfoBuffer[CharInfoBufferPopulated],
+                                        CharInfoBufferAllocated - CharInfoBufferPopulated,
+                                        Offset,
+                                        LineLength);
         } else if (HexEdit->BytesPerWord == 8) {
-            CharInfoBufferPopulated += YoriWinHexEditDWordLongLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, Offset.QuadPart, LineLength);
+            CharInfoBufferPopulated = CharInfoBufferPopulated +
+                YoriWinHexEditDWordLongLine(HexEdit,
+                                            &CharInfoBuffer[CharInfoBufferPopulated],
+                                            CharInfoBufferAllocated - CharInfoBufferPopulated,
+                                            Offset,
+                                            LineLength);
         }
 
         //
@@ -1491,7 +1512,7 @@ YoriWinHexEditPaintSingleLine(
                 ASSERT(CharToDisplay != '\0');
                 Cell = &CharInfoBuffer[CharInfoBufferPopulated];
                 Cell->Char.UnicodeChar = CharToDisplay;
-                Cell->Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset.QuadPart + WordIndex, FALSE);
+                Cell->Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex, FALSE);
             }
         }
 
@@ -1526,7 +1547,7 @@ YoriWinHexEditPaint(
     )
 {
     WORD RowIndex;
-    DWORD LineIndex;
+    YORI_ALLOC_SIZE_T LineIndex;
     COORD ClientSize;
 
     YoriWinGetControlClientSize(&HexEdit->Ctrl, &ClientSize);
@@ -1549,7 +1570,7 @@ YoriWinHexEditPaint(
             }
         }
 
-        HexEdit->FirstDirtyLine = (DWORD)-1;
+        HexEdit->FirstDirtyLine = (YORI_ALLOC_SIZE_T)-1;
         HexEdit->LastDirtyLine = 0;
     }
 
@@ -1633,8 +1654,8 @@ YoriWinHexEditPaint(
 VOID
 YoriWinHexEditExpandDirtyRange(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD NewFirstDirtyLine,
-    __in DWORD NewLastDirtyLine
+    __in YORI_ALLOC_SIZE_T NewFirstDirtyLine,
+    __in YORI_ALLOC_SIZE_T NewLastDirtyLine
     )
 {
     if (NewFirstDirtyLine < HexEdit->FirstDirtyLine) {
@@ -1659,15 +1680,15 @@ YoriWinHexEditExpandDirtyRange(
 VOID
 YoriWinHexEditSetCursorLocationInternal(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD NewCursorOffset,
-    __in DWORD NewCursorLine
+    __in YORI_ALLOC_SIZE_T NewCursorOffset,
+    __in YORI_ALLOC_SIZE_T NewCursorLine
     )
 {
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
 
     if (NewCursorOffset == HexEdit->CursorOffset &&
         NewCursorLine == HexEdit->CursorLine) {
@@ -1707,8 +1728,8 @@ YoriWinHexEditEnsureCursorVisible(
     )
 {
     COORD ClientSize;
-    DWORD NewViewportLeft;
-    DWORD NewViewportTop;
+    YORI_ALLOC_SIZE_T NewViewportLeft;
+    YORI_ALLOC_SIZE_T NewViewportTop;
 
     NewViewportLeft = HexEdit->ViewportLeft;
     NewViewportTop = HexEdit->ViewportTop;
@@ -1729,13 +1750,13 @@ YoriWinHexEditEnsureCursorVisible(
 
     if (NewViewportTop != HexEdit->ViewportTop) {
         HexEdit->ViewportTop = NewViewportTop;
-        YoriWinHexEditExpandDirtyRange(HexEdit, NewViewportTop, (DWORD)-1);
+        YoriWinHexEditExpandDirtyRange(HexEdit, NewViewportTop, (YORI_ALLOC_SIZE_T)-1);
         YoriWinHexEditRepaintScrollBar(HexEdit);
     }
 
     if (NewViewportLeft != HexEdit->ViewportLeft) {
         HexEdit->ViewportLeft = NewViewportLeft;
-        YoriWinHexEditExpandDirtyRange(HexEdit, NewViewportTop, (DWORD)-1);
+        YoriWinHexEditExpandDirtyRange(HexEdit, NewViewportTop, (YORI_ALLOC_SIZE_T)-1);
     }
 }
 
@@ -1760,12 +1781,12 @@ BOOLEAN
 YoriWinHexEditSetCursorToBufferLocation(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __in YORI_WIN_HEX_EDIT_CELL_TYPE CellType,
-    __in DWORDLONG BufferOffset,
-    __in DWORD BitShift
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __in UCHAR BitShift
     )
 {
-    DWORD NewCursorLine;
-    DWORD NewCursorOffset;
+    YORI_ALLOC_SIZE_T NewCursorLine;
+    YORI_ALLOC_SIZE_T NewCursorOffset;
 
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
 
@@ -1801,7 +1822,7 @@ YoriWinHexEditSetCursorLocationToZero(
     return YoriWinHexEditSetCursorToBufferLocation(HexEdit,
                                                    YoriWinHexEditCellTypeHexDigit,
                                                    0,
-                                                   HexEdit->BytesPerWord * 8 - 4);
+                                                   (UCHAR)(HexEdit->BytesPerWord * 8 - 4));
 }
 
 /**
@@ -1872,23 +1893,23 @@ __success(return)
 BOOLEAN
 YoriWinHexEditDeleteCell(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD FirstLine,
-    __in DWORD FirstCharOffset,
-    __out PDWORD LastLine,
-    __out PDWORD LastCharOffset
+    __in YORI_ALLOC_SIZE_T FirstLine,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
+    __out PYORI_ALLOC_SIZE_T LastLine,
+    __out PYORI_ALLOC_SIZE_T LastCharOffset
     )
 {
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORDLONG BufferOffset;
-    DWORD BitShift;
-    DWORD CurrentLine;
-    DWORD CurrentCharOffset;
-    DWORD DirtyLastLine;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
+    UCHAR BitShift;
+    YORI_ALLOC_SIZE_T CurrentLine;
+    YORI_ALLOC_SIZE_T CurrentCharOffset;
+    YORI_ALLOC_SIZE_T DirtyLastLine;
     UCHAR BitMask;
     UCHAR InputChar;
     PUCHAR Cell;
-    DWORDLONG BytesToCopy;
+    YORI_ALLOC_SIZE_T BytesToCopy;
     BOOLEAN BeyondBufferEnd;
 
     CurrentLine = FirstLine;
@@ -1939,9 +1960,9 @@ YoriWinHexEditDeleteCell(
                 //  Move to the highest offset in the existing word
                 //
 
-                BitShift = HexEdit->BytesPerWord * 8 - 4;
+                BitShift = (UCHAR)(HexEdit->BytesPerWord * 8 - 4);
                 YoriWinHexEditCellFromHexBufferOffset(HexEdit, BufferOffset, BitShift, &CurrentLine, &CurrentCharOffset);
-                DirtyLastLine = (DWORD)-1;
+                DirtyLastLine = (YORI_ALLOC_SIZE_T)-1;
             } else {
                 BitMask = (UCHAR)(0xF << BitShift);
 
@@ -1963,7 +1984,7 @@ YoriWinHexEditDeleteCell(
                             (DWORD)BytesToCopy);
                 }
                 HexEdit->BufferValid = HexEdit->BufferValid - 1;
-                DirtyLastLine = (DWORD)-1;
+                DirtyLastLine = (YORI_ALLOC_SIZE_T)-1;
                 HexEdit->UserModified = TRUE;
             }
             break;
@@ -2009,26 +2030,30 @@ YoriWinHexEditEnsureBufferLength(
     //  insert operation, so grow the buffer by a chunk.
     //
 
-    PaddedBufferLength = NewBufferLength + 16384;
-
-    if (PaddedBufferLength >= (DWORD)-1) {
+    PaddedBufferLength = NewBufferLength;
+    if (!YoriLibIsSizeAllocatable(PaddedBufferLength)) {
         return FALSE;
     }
+    if (YoriLibIsSizeAllocatable(PaddedBufferLength + 16384)) {
+        PaddedBufferLength = PaddedBufferLength + 16384;
+    } else if (YoriLibIsSizeAllocatable(PaddedBufferLength + 1024)) {
+        PaddedBufferLength = PaddedBufferLength + 1024;
+    }
 
-    NewBuffer = YoriLibReferencedMalloc((DWORD)PaddedBufferLength);
+    NewBuffer = YoriLibReferencedMalloc((YORI_ALLOC_SIZE_T)PaddedBufferLength);
     if (NewBuffer == NULL) {
         return FALSE;
     }
 
     if (HexEdit->BufferValid > 0) {
-        memcpy(NewBuffer, HexEdit->Buffer, (DWORD)HexEdit->BufferValid);
+        memcpy(NewBuffer, HexEdit->Buffer, (YORI_ALLOC_SIZE_T)HexEdit->BufferValid);
     }
 
     if (HexEdit->Buffer != NULL) {
         YoriLibDereference(HexEdit->Buffer);
     }
     HexEdit->Buffer = NewBuffer;
-    HexEdit->BufferAllocated = PaddedBufferLength;
+    HexEdit->BufferAllocated = (YORI_ALLOC_SIZE_T)PaddedBufferLength;
 
     return TRUE;
 }
@@ -2046,7 +2071,7 @@ YoriWinHexEditEnsureBufferLength(
 BOOLEAN
 YoriWinHexEditEnsureBufferValid(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORDLONG NewBufferLength
+    __in YORI_ALLOC_SIZE_T NewBufferLength
     )
 {
     ASSERT(NewBufferLength > HexEdit->BufferValid);
@@ -2076,8 +2101,8 @@ YoriWinHexEditEnsureBufferValid(
 BOOLEAN
 YoriWinHexEditInsertSpaceInBuffer(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORDLONG BufferOffset,
-    __in DWORD BytesToInsert
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __in YORI_ALLOC_SIZE_T BytesToInsert
     )
 {
     DWORDLONG BytesToMove;
@@ -2133,28 +2158,28 @@ __success(return)
 BOOLEAN
 YoriWinHexEditInsertCell(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD FirstLine,
-    __in DWORD FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstLine,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
     __in TCHAR Char,
-    __out PDWORD LastLine,
-    __out PDWORD LastCharOffset
+    __out PYORI_ALLOC_SIZE_T LastLine,
+    __out PYORI_ALLOC_SIZE_T LastCharOffset
     )
 {
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORDLONG BufferOffset;
-    DWORD BitShift;
-    DWORD CurrentLine;
-    DWORD CurrentCharOffset;
-    DWORD DirtyLastLine;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
+    UCHAR BitShift;
+    YORI_ALLOC_SIZE_T CurrentLine;
+    YORI_ALLOC_SIZE_T CurrentCharOffset;
+    YORI_ALLOC_SIZE_T DirtyLastLine;
     UCHAR BitMask;
     UCHAR NewNibble;
     UCHAR InputChar;
     PUCHAR Cell;
     BOOLEAN CellUpdated;
     BOOLEAN BeyondBufferEnd;
-    DWORDLONG EditBufferOffset;
-    DWORD EditBitShift;
+    YORI_ALLOC_SIZE_T EditBufferOffset;
+    YORI_ALLOC_SIZE_T EditBitShift;
 
     CurrentLine = FirstLine;
     CurrentCharOffset = FirstCharOffset;
@@ -2271,27 +2296,27 @@ __success(return)
 BOOLEAN
 YoriWinHexEditOverwriteCell(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD FirstLine,
-    __in DWORD FirstCharOffset,
+    __in YORI_ALLOC_SIZE_T FirstLine,
+    __in YORI_ALLOC_SIZE_T FirstCharOffset,
     __in TCHAR Char,
-    __out PDWORD LastLine,
-    __out PDWORD LastCharOffset
+    __out PYORI_ALLOC_SIZE_T LastLine,
+    __out PYORI_ALLOC_SIZE_T LastCharOffset
     )
 {
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORDLONG BufferOffset;
-    DWORD BitShift;
-    DWORD CurrentLine;
-    DWORD CurrentCharOffset;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
+    UCHAR BitShift;
+    YORI_ALLOC_SIZE_T CurrentLine;
+    YORI_ALLOC_SIZE_T CurrentCharOffset;
     UCHAR BitMask;
     UCHAR NewNibble;
     UCHAR InputChar;
     PUCHAR Cell;
     BOOLEAN CellUpdated;
     BOOLEAN BeyondBufferEnd;
-    DWORDLONG EditBufferOffset;
-    DWORD EditBitShift;
+    YORI_ALLOC_SIZE_T EditBufferOffset;
+    UCHAR EditBitShift;
 
     CurrentLine = FirstLine;
     CurrentCharOffset = FirstCharOffset;
@@ -2309,7 +2334,7 @@ YoriWinHexEditOverwriteCell(
     EditBitShift = BitShift;
     if (EditBitShift >= 8) {
         EditBufferOffset = EditBufferOffset + EditBitShift / 8;
-        EditBitShift = EditBitShift % 8;
+        EditBitShift = (UCHAR)(EditBitShift % 8);
     }
 
     InputChar = YoriWinHexEditInputCharToByte(Char);
@@ -2394,8 +2419,8 @@ BOOLEAN
 YoriWinHexEditSetDataNoCopy(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PUCHAR NewBuffer,
-    __in DWORDLONG NewBufferAllocated,
-    __in DWORDLONG NewBufferValid
+    __in YORI_ALLOC_SIZE_T NewBufferAllocated,
+    __in YORI_ALLOC_SIZE_T NewBufferValid
     )
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
@@ -2419,7 +2444,7 @@ YoriWinHexEditSetDataNoCopy(
     //  lines need to be redisplayed.
     //
 
-    YoriWinHexEditExpandDirtyRange(HexEdit, 0, (DWORD)-1);
+    YoriWinHexEditExpandDirtyRange(HexEdit, 0, (YORI_ALLOC_SIZE_T)-1);
     YoriWinHexEditPaint(HexEdit);
 
     return TRUE;
@@ -2446,7 +2471,7 @@ BOOLEAN
 YoriWinHexEditGetDataNoCopy(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __out PUCHAR *Buffer,
-    __out PDWORDLONG BufferLength
+    __out PYORI_ALLOC_SIZE_T BufferLength
     )
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
@@ -2480,8 +2505,8 @@ YoriWinHexEditClearSelection(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
     )
 {
-    DWORD FirstDirtyLine;
-    DWORD LastDirtyLine;
+    YORI_ALLOC_SIZE_T FirstDirtyLine;
+    YORI_ALLOC_SIZE_T LastDirtyLine;
 
     PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
@@ -2493,8 +2518,8 @@ YoriWinHexEditClearSelection(
         return;
     }
 
-    FirstDirtyLine = (DWORD)(HexEdit->Selection.FirstByteOffset / HexEdit->BytesPerLine);
-    LastDirtyLine = (DWORD)(HexEdit->Selection.LastByteOffset / HexEdit->BytesPerLine);
+    FirstDirtyLine = (YORI_ALLOC_SIZE_T)(HexEdit->Selection.FirstByteOffset / HexEdit->BytesPerLine);
+    LastDirtyLine = (YORI_ALLOC_SIZE_T)(HexEdit->Selection.LastByteOffset / HexEdit->BytesPerLine);
     HexEdit->Selection.Active = YoriWinHexEditSelectNotActive;
 
     YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
@@ -2521,12 +2546,12 @@ BOOLEAN
 YoriWinHexEditGetSelectedData(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __out PVOID * Data,
-    __out PDWORDLONG DataLength
+    __out PYORI_ALLOC_SIZE_T DataLength
     )
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
     PYORI_WIN_CTRL Ctrl;
-    ULARGE_INTEGER LocalDataLength;
+    DWORDLONG LocalDataLength;
     PUCHAR Buffer;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
@@ -2536,19 +2561,20 @@ YoriWinHexEditGetSelectedData(
         return FALSE;
     }
 
-    LocalDataLength.QuadPart = HexEdit->Selection.LastByteOffset - HexEdit->Selection.FirstByteOffset + 1;
-    if (LocalDataLength.HighPart != 0) {
+    LocalDataLength = HexEdit->Selection.LastByteOffset - HexEdit->Selection.FirstByteOffset + 1;
+
+    if (!YoriLibIsSizeAllocatable(LocalDataLength)) {
         return FALSE;
     }
 
-    Buffer = YoriLibReferencedMalloc(LocalDataLength.LowPart);
+    Buffer = YoriLibReferencedMalloc((YORI_ALLOC_SIZE_T)LocalDataLength);
     if (Buffer == NULL) {
         return FALSE;
     }
 
-    memcpy(Buffer, &HexEdit->Buffer[HexEdit->Selection.FirstByteOffset], LocalDataLength.LowPart);
+    memcpy(Buffer, &HexEdit->Buffer[HexEdit->Selection.FirstByteOffset], (YORI_ALLOC_SIZE_T)LocalDataLength);
     *Data = Buffer;
-    *DataLength = LocalDataLength.QuadPart;
+    *DataLength = (YORI_ALLOC_SIZE_T)LocalDataLength;
 
     return TRUE;
 }
@@ -2598,8 +2624,8 @@ YoriWinHexEditSetColor(
 VOID
 YoriWinHexEditGetViewportLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD ViewportLeft,
-    __out PDWORD ViewportTop
+    __out PYORI_ALLOC_SIZE_T ViewportLeft,
+    __out PYORI_ALLOC_SIZE_T ViewportTop
     )
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
@@ -2624,15 +2650,15 @@ YoriWinHexEditGetViewportLocation(
 VOID
 YoriWinHexEditSetViewportLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD NewViewportLeft,
-    __in DWORD NewViewportTop
+    __in YORI_ALLOC_SIZE_T NewViewportLeft,
+    __in YORI_ALLOC_SIZE_T NewViewportTop
     )
 {
     COORD ClientSize;
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
-    DWORD EffectiveNewViewportTop;
-    DWORD LinesPopulated;
+    YORI_ALLOC_SIZE_T EffectiveNewViewportTop;
+    YORI_ALLOC_SIZE_T LinesPopulated;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
@@ -2657,13 +2683,13 @@ YoriWinHexEditSetViewportLocation(
     //
 
     if (EffectiveNewViewportTop != HexEdit->ViewportTop) {
-        YoriWinHexEditExpandDirtyRange(HexEdit, EffectiveNewViewportTop, (DWORD)-1);
+        YoriWinHexEditExpandDirtyRange(HexEdit, EffectiveNewViewportTop, (YORI_ALLOC_SIZE_T)-1);
         HexEdit->ViewportTop = EffectiveNewViewportTop;
         YoriWinHexEditRepaintScrollBar(HexEdit);
     }
 
     if (NewViewportLeft != HexEdit->ViewportLeft) {
-        YoriWinHexEditExpandDirtyRange(HexEdit, EffectiveNewViewportTop, (DWORD)-1);
+        YoriWinHexEditExpandDirtyRange(HexEdit, EffectiveNewViewportTop, (YORI_ALLOC_SIZE_T)-1);
         HexEdit->ViewportLeft = NewViewportLeft;
     }
     YoriWinHexEditPaint(HexEdit);
@@ -2867,16 +2893,16 @@ YoriWinHexEditGetBytesPerWord(
 BOOLEAN
 YoriWinHexEditSetBytesPerWord(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD BytesPerWord
+    __in UCHAR BytesPerWord
     )
 {
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
@@ -2894,15 +2920,15 @@ YoriWinHexEditSetBytesPerWord(
     BufferOffset = BufferOffset * HexEdit->BytesPerLine + ByteOffset;
 
     if (CellType == YoriWinHexEditCellTypeHexDigit) {
-        DWORD Unaligned;
+        YORI_ALLOC_SIZE_T Unaligned;
         if (BitShift >= BytesPerWord * 8) {
             Unaligned = BitShift / 8;
             BufferOffset = BufferOffset + Unaligned;
-            BitShift = BitShift - Unaligned * 8;
+            BitShift = (UCHAR)(BitShift - Unaligned * 8);
         } else if ((BufferOffset % BytesPerWord) != 0) {
-            Unaligned = (DWORD)(BufferOffset % BytesPerWord);
+            Unaligned = (YORI_ALLOC_SIZE_T)(BufferOffset % BytesPerWord);
             BufferOffset = BufferOffset - Unaligned;
-            BitShift = BitShift + 8 * Unaligned;
+            BitShift = (UCHAR)(BitShift + 8 * Unaligned);
         }
     }
 
@@ -2910,7 +2936,7 @@ YoriWinHexEditSetBytesPerWord(
 
     YoriWinHexEditSetCursorToBufferLocation(HexEdit, CellType, BufferOffset, BitShift);
 
-    YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (DWORD)-1);
+    YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (YORI_ALLOC_SIZE_T)-1);
 
     YoriWinHexEditEnsureCursorVisible(HexEdit);
     YoriWinHexEditPaint(HexEdit);
@@ -2936,10 +2962,10 @@ YoriWinHexEditSetStyle(
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
@@ -2965,7 +2991,7 @@ YoriWinHexEditSetStyle(
 
     YoriWinHexEditSetCursorToBufferLocation(HexEdit, CellType, BufferOffset, BitShift);
 
-    YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (DWORD)-1);
+    YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (YORI_ALLOC_SIZE_T)-1);
 
     YoriWinHexEditEnsureCursorVisible(HexEdit);
     YoriWinHexEditPaint(HexEdit);
@@ -2994,17 +3020,17 @@ BOOLEAN
 YoriWinHexEditGetCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __out PBOOLEAN AsChar,
-    __out PDWORDLONG BufferOffset,
-    __out PDWORD BitShift
+    __out PYORI_ALLOC_SIZE_T BufferOffset,
+    __out PUCHAR BitShift
     )
 {
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
+    YORI_ALLOC_SIZE_T ByteOffset;
     BOOLEAN BeyondBufferEnd;
-    DWORDLONG LocalBufferOffset;
-    DWORD LocalBitShift;
+    YORI_ALLOC_SIZE_T LocalBufferOffset;
+    UCHAR LocalBitShift;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
@@ -3050,8 +3076,8 @@ __success(return)
 BOOLEAN
 YoriWinHexEditGetVisualCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD CursorOffset,
-    __out PDWORD CursorLine
+    __out PYORI_ALLOC_SIZE_T CursorOffset,
+    __out PYORI_ALLOC_SIZE_T CursorLine
     )
 {
     PYORI_WIN_CTRL Ctrl;
@@ -3082,13 +3108,13 @@ __success(return)
 BOOLEAN
 YoriWinHexEditDeleteData(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORDLONG DataOffset,
-    __in DWORDLONG Length
+    __in YORI_ALLOC_SIZE_T DataOffset,
+    __in YORI_ALLOC_SIZE_T Length
     )
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
     PYORI_WIN_CTRL Ctrl;
-    DWORDLONG LengthToRemove;
+    YORI_ALLOC_SIZE_T LengthToRemove;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
@@ -3109,7 +3135,7 @@ YoriWinHexEditDeleteData(
     }
 
     HexEdit->BufferValid = HexEdit->BufferValid - LengthToRemove;
-    YoriWinHexEditExpandDirtyRange(HexEdit, (DWORD)(DataOffset / HexEdit->BytesPerLine), (DWORD)-1);
+    YoriWinHexEditExpandDirtyRange(HexEdit, (YORI_ALLOC_SIZE_T)(DataOffset / HexEdit->BytesPerLine), (YORI_ALLOC_SIZE_T)-1);
     return TRUE;
 }
 
@@ -3130,9 +3156,9 @@ __success(return)
 BOOLEAN
 YoriWinHexEditInsertData(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORDLONG DataOffset,
+    __in YORI_ALLOC_SIZE_T DataOffset,
     __in PVOID Data,
-    __in DWORDLONG Length
+    __in YORI_ALLOC_SIZE_T Length
     )
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
@@ -3145,7 +3171,7 @@ YoriWinHexEditInsertData(
         return FALSE;
     }
 
-    if (!YoriWinHexEditInsertSpaceInBuffer(HexEdit, DataOffset, (DWORD)Length)) {
+    if (!YoriWinHexEditInsertSpaceInBuffer(HexEdit, DataOffset, Length)) {
         return FALSE;
     }
 
@@ -3153,7 +3179,7 @@ YoriWinHexEditInsertData(
             Data,
             (DWORD)Length);
 
-    YoriWinHexEditExpandDirtyRange(HexEdit, (DWORD)(DataOffset / HexEdit->BytesPerLine), (DWORD)-1);
+    YoriWinHexEditExpandDirtyRange(HexEdit, (YORI_ALLOC_SIZE_T)(DataOffset / HexEdit->BytesPerLine), (DWORD)-1);
     return TRUE;
 }
 
@@ -3174,15 +3200,15 @@ __success(return)
 BOOLEAN
 YoriWinHexEditReplaceData(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORDLONG DataOffset,
+    __in YORI_ALLOC_SIZE_T DataOffset,
     __in PVOID Data,
-    __in DWORDLONG Length
+    __in YORI_ALLOC_SIZE_T Length
     )
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
     PYORI_WIN_CTRL Ctrl;
-    DWORD FirstDirtyLine;
-    DWORD LastDirtyLine;
+    YORI_ALLOC_SIZE_T FirstDirtyLine;
+    YORI_ALLOC_SIZE_T LastDirtyLine;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
@@ -3195,8 +3221,8 @@ YoriWinHexEditReplaceData(
             Data,
             (DWORD)Length);
 
-    FirstDirtyLine = (DWORD)(DataOffset / HexEdit->BytesPerLine);
-    LastDirtyLine = (DWORD)((DataOffset + Length) / HexEdit->BytesPerLine);
+    FirstDirtyLine = (YORI_ALLOC_SIZE_T)(DataOffset / HexEdit->BytesPerLine);
+    LastDirtyLine = (YORI_ALLOC_SIZE_T)((DataOffset + Length) / HexEdit->BytesPerLine);
     YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
     return TRUE;
 }
@@ -3246,10 +3272,10 @@ YoriWinHexEditDelete(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORD FirstLine;
-    DWORD FirstCharOffset;
-    DWORD LastLine;
-    DWORD LastCharOffset;
+    YORI_ALLOC_SIZE_T FirstLine;
+    YORI_ALLOC_SIZE_T FirstCharOffset;
+    YORI_ALLOC_SIZE_T LastLine;
+    YORI_ALLOC_SIZE_T LastCharOffset;
 
     FirstLine = HexEdit->CursorLine;
     FirstCharOffset = HexEdit->CursorOffset;
@@ -3280,9 +3306,9 @@ YoriWinHexEditPageUp(
     )
 {
     COORD ClientSize;
-    DWORD ViewportHeight;
-    DWORD NewCursorLine;
-    DWORD NewCursorOffset;
+    YORI_ALLOC_SIZE_T ViewportHeight;
+    YORI_ALLOC_SIZE_T NewCursorLine;
+    YORI_ALLOC_SIZE_T NewCursorOffset;
 
     YoriWinGetControlClientSize(&HexEdit->Ctrl, &ClientSize);
     ViewportHeight = ClientSize.Y;
@@ -3300,7 +3326,7 @@ YoriWinHexEditPageUp(
             HexEdit->ViewportTop = 0;
         }
 
-        YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (DWORD)-1);
+        YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (YORI_ALLOC_SIZE_T)-1);
 
         NewCursorOffset = HexEdit->CursorOffset;
         YoriWinHexEditSetCursorLocationInternal(HexEdit, NewCursorOffset, NewCursorLine);
@@ -3328,10 +3354,10 @@ YoriWinHexEditPageDown(
     )
 {
     COORD ClientSize;
-    DWORD ViewportHeight;
-    DWORD NewCursorLine;
-    DWORD NewCursorOffset;
-    DWORD LinesPopulated;
+    YORI_ALLOC_SIZE_T ViewportHeight;
+    YORI_ALLOC_SIZE_T NewCursorLine;
+    YORI_ALLOC_SIZE_T NewCursorOffset;
+    YORI_ALLOC_SIZE_T LinesPopulated;
 
     YoriWinGetControlClientSize(&HexEdit->Ctrl, &ClientSize);
     ViewportHeight = ClientSize.Y;
@@ -3369,14 +3395,14 @@ YoriWinHexEditPageDown(
 VOID
 YoriWinHexEditNotifyMouseWheel(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD LinesToMove,
+    __in YORI_ALLOC_SIZE_T LinesToMove,
     __in BOOLEAN MoveUp
     )
 {
     COORD ClientSize;
-    DWORD LineCountToDisplay;
-    DWORD NewViewportTop;
-    DWORD LinesPopulated;
+    YORI_ALLOC_SIZE_T LineCountToDisplay;
+    YORI_ALLOC_SIZE_T NewViewportTop;
+    YORI_ALLOC_SIZE_T LinesPopulated;
 
     YoriWinGetControlClientSize(&HexEdit->Ctrl, &ClientSize);
     LineCountToDisplay = ClientSize.Y;
@@ -3419,8 +3445,8 @@ YoriWinHexEditAddChar(
     __in TCHAR Char
     )
 {
-    DWORD NewCursorLine;
-    DWORD NewCursorOffset;
+    YORI_ALLOC_SIZE_T NewCursorLine;
+    YORI_ALLOC_SIZE_T NewCursorOffset;
 
     if (!HexEdit->InsertMode) {
         if (!YoriWinHexEditOverwriteCell(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, Char, &NewCursorLine, &NewCursorOffset)) {
@@ -3449,13 +3475,13 @@ YoriWinHexEditCursorLeft(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
-    DWORD NewCursorLine;
-    DWORD NewCursorOffset;
+    YORI_ALLOC_SIZE_T NewCursorLine;
+    YORI_ALLOC_SIZE_T NewCursorOffset;
 
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
     BufferOffset = HexEdit->CursorLine;
@@ -3487,13 +3513,13 @@ YoriWinHexEditCursorRight(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
-    DWORD NewCursorLine;
-    DWORD NewCursorOffset;
+    YORI_ALLOC_SIZE_T NewCursorLine;
+    YORI_ALLOC_SIZE_T NewCursorOffset;
 
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
     BufferOffset = HexEdit->CursorLine;
@@ -3534,10 +3560,10 @@ YoriWinHexEditCursorHome(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
 
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
@@ -3546,7 +3572,7 @@ YoriWinHexEditCursorHome(
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
     BufferOffset = (BufferOffset / HexEdit->BytesPerLine) * HexEdit->BytesPerLine;
     if (CellType == YoriWinHexEditCellTypeHexDigit) {
-        BitShift = HexEdit->BytesPerWord * 8 - 4;
+        BitShift = (UCHAR)(HexEdit->BytesPerWord * 8 - 4);
     }
 
     YoriWinHexEditClearSelection(HexEdit);
@@ -3568,10 +3594,10 @@ YoriWinHexEditCursorEnd(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
 
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
@@ -3611,10 +3637,10 @@ YoriWinHexEditCursorUp(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
 
     if (HexEdit->CursorLine == 0) {
@@ -3645,10 +3671,10 @@ YoriWinHexEditCursorDown(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
 
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
@@ -3679,17 +3705,17 @@ YoriWinHexEditCursorCtrlHome(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
 
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
     BufferOffset = 0;
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
     if (CellType == YoriWinHexEditCellTypeHexDigit) {
-        BitShift = HexEdit->BytesPerWord * 8 - 4;
+        BitShift = (UCHAR)(HexEdit->BytesPerWord * 8 - 4);
     }
 
     YoriWinHexEditClearSelection(HexEdit);
@@ -3711,10 +3737,10 @@ YoriWinHexEditCursorCtrlEnd(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
 
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
@@ -3752,15 +3778,15 @@ YoriWinHexEditMouseDown(
     __in DWORD DisplayY
     )
 {
-    DWORD NewCursorLine;
-    DWORD NewCursorChar;
-    DWORDLONG BufferOffset;
+    YORI_ALLOC_SIZE_T NewCursorLine;
+    YORI_ALLOC_SIZE_T NewCursorChar;
+    YORI_ALLOC_SIZE_T BufferOffset;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
-    DWORD ByteOffset;
-    DWORD BitShift;
+    YORI_ALLOC_SIZE_T ByteOffset;
+    UCHAR BitShift;
     BOOLEAN BeyondBufferEnd;
 
-    YoriWinHexEditTranslateViewportCoordinatesToCursorCoordinates(HexEdit, DisplayX, DisplayY, &NewCursorLine, &NewCursorChar);
+    YoriWinHexEditTranslateViewportCoordinatesToCursorCoordinates(HexEdit, (YORI_ALLOC_SIZE_T)DisplayX, (YORI_ALLOC_SIZE_T)DisplayY, &NewCursorLine, &NewCursorChar);
 
     CellType = YoriWinHexEditCellType(HexEdit, NewCursorLine, NewCursorChar, &ByteOffset, &BitShift, &BeyondBufferEnd);
     BufferOffset = NewCursorLine;
@@ -4005,12 +4031,12 @@ YoriWinHexEditEventHandler(
 
         case YoriWinEventMouseWheelDownInClient:
         case YoriWinEventMouseWheelDownInNonClient:
-            YoriWinHexEditNotifyMouseWheel(HexEdit, Event->MouseWheel.LinesToMove, FALSE);
+            YoriWinHexEditNotifyMouseWheel(HexEdit, (YORI_ALLOC_SIZE_T)Event->MouseWheel.LinesToMove, FALSE);
             break;
 
         case YoriWinEventMouseWheelUpInClient:
         case YoriWinEventMouseWheelUpInNonClient:
-            YoriWinHexEditNotifyMouseWheel(HexEdit, Event->MouseWheel.LinesToMove, TRUE);
+            YoriWinHexEditNotifyMouseWheel(HexEdit, (YORI_ALLOC_SIZE_T)Event->MouseWheel.LinesToMove, TRUE);
             break;
 
         case YoriWinEventMouseDownInNonClient:
@@ -4057,8 +4083,8 @@ YoriWinHexEditNotifyScrollChange(
     COORD ClientSize;
     WORD ElementCountToDisplay;
     PYORI_WIN_CTRL ScrollCtrl;
-    DWORD NewViewportTop;
-    DWORD LinesPopulated;
+    YORI_ALLOC_SIZE_T NewViewportTop;
+    YORI_ALLOC_SIZE_T LinesPopulated;
 
     ScrollCtrl = (PYORI_WIN_CTRL)ScrollCtrlHandle;
     HexEdit = CONTAINING_RECORD(ScrollCtrl->Parent, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
@@ -4079,13 +4105,13 @@ YoriWinHexEditNotifyScrollChange(
         }
     } else {
         if (ScrollValue < LinesPopulated) {
-            NewViewportTop = (DWORD)ScrollValue;
+            NewViewportTop = (YORI_ALLOC_SIZE_T)ScrollValue;
         }
     }
 
     if (NewViewportTop != HexEdit->ViewportTop) {
         HexEdit->ViewportTop = NewViewportTop;
-        YoriWinHexEditExpandDirtyRange(HexEdit, NewViewportTop, (DWORD)-1);
+        YoriWinHexEditExpandDirtyRange(HexEdit, NewViewportTop, (YORI_ALLOC_SIZE_T)-1);
     } else {
         return;
     }
@@ -4136,7 +4162,7 @@ YoriWinHexEditReposition(
         YoriWinScrollBarReposition(HexEdit->VScrollCtrl, &ScrollBarRect);
     }
 
-    YoriWinHexEditExpandDirtyRange(HexEdit, 0, (DWORD)-1);
+    YoriWinHexEditExpandDirtyRange(HexEdit, 0, (YORI_ALLOC_SIZE_T)-1);
     YoriWinHexEditPaintNonClient(HexEdit);
     YoriWinHexEditPaint(HexEdit);
 
@@ -4191,8 +4217,8 @@ BOOLEAN
 YoriWinHexEditSetCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in BOOLEAN AsChar,
-    __in DWORDLONG BufferOffset,
-    __in DWORD BitShift
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __in UCHAR BitShift
     )
 {
     PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
@@ -4222,13 +4248,13 @@ __success(return)
 BOOLEAN
 YoriWinHexEditSetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORDLONG FirstByteOffset,
-    __in DWORDLONG LastByteOffset
+    __in YORI_ALLOC_SIZE_T FirstByteOffset,
+    __in YORI_ALLOC_SIZE_T LastByteOffset
     )
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
-    DWORD FirstDirtyLine;
-    DWORD LastDirtyLine;
+    YORI_ALLOC_SIZE_T FirstDirtyLine;
+    YORI_ALLOC_SIZE_T LastDirtyLine;
 
     HexEdit = (PYORI_WIN_CTRL_HEX_EDIT)CtrlHandle;
 
@@ -4250,8 +4276,8 @@ YoriWinHexEditSetSelectionRange(
     HexEdit->Selection.FirstByteOffset = FirstByteOffset;
     HexEdit->Selection.LastByteOffset = LastByteOffset;
 
-    FirstDirtyLine = (DWORD)(HexEdit->Selection.FirstByteOffset / HexEdit->BytesPerLine);
-    LastDirtyLine = (DWORD)(HexEdit->Selection.LastByteOffset / HexEdit->BytesPerLine);
+    FirstDirtyLine = (YORI_ALLOC_SIZE_T)(HexEdit->Selection.FirstByteOffset / HexEdit->BytesPerLine);
+    LastDirtyLine = (YORI_ALLOC_SIZE_T)(HexEdit->Selection.LastByteOffset / HexEdit->BytesPerLine);
 
     YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
 
@@ -4284,7 +4310,7 @@ YoriWinHexEditCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
     __in_opt PYORI_STRING Caption,
     __in PSMALL_RECT Size,
-    __in DWORD BytesPerWord,
+    __in UCHAR BytesPerWord,
     __in DWORD Style
     )
 {

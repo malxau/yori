@@ -72,12 +72,12 @@ typedef struct _SLMENU_CONTEXT {
     /**
      The number of elements allocated in StringArray.
      */
-    DWORD StringsAllocated;
+    YORI_ALLOC_SIZE_T StringsAllocated;
 
     /**
      The number of strings populated in the StringArray.
      */
-    DWORD StringCount;
+    YORI_ALLOC_SIZE_T StringCount;
 } SLMENU_CONTEXT, *PSLMENU_CONTEXT;
 
 /**
@@ -138,17 +138,17 @@ typedef enum _SLMENU_LOCATION {
 WORD
 SlmenuCalculateColumnWidthForItems(
     __in PYORI_STRING MenuOptions,
-    __in DWORD NumberOptions,
-    __in DWORD ControlWidth
+    __in YORI_ALLOC_SIZE_T NumberOptions,
+    __in YORI_ALLOC_SIZE_T ControlWidth
     )
 {
-    DWORD LongestItem;
-    DWORD AverageNameLength;
+    YORI_ALLOC_SIZE_T LongestItem;
+    YORI_ALLOC_SIZE_T AverageNameLength;
     DWORD TotalLength;
-    DWORD ColumnWidth;
-    DWORD ColumnCount;
+    YORI_ALLOC_SIZE_T ColumnWidth;
+    YORI_ALLOC_SIZE_T ColumnCount;
 
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     TotalLength = 0;
     LongestItem = 0;
@@ -159,7 +159,7 @@ SlmenuCalculateColumnWidthForItems(
         }
     }
 
-    AverageNameLength = TotalLength / NumberOptions;
+    AverageNameLength = (YORI_ALLOC_SIZE_T)(TotalLength / NumberOptions);
 
     //
     //  The item width contains two padding characters, so add those here.
@@ -204,10 +204,10 @@ __success(return)
 BOOL
 SlmenuCreateSinglelineMenu(
     __in PYORI_STRING MenuOptions,
-    __in DWORD NumberOptions,
+    __in YORI_ALLOC_SIZE_T NumberOptions,
     __in SLMENU_LOCATION Location,
     __in_opt PYORI_STRING Title,
-    __out PDWORD ActiveOption
+    __out PYORI_ALLOC_SIZE_T ActiveOption
     )
 {
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
@@ -375,10 +375,10 @@ __success(return)
 BOOL
 SlmenuCreateMultilineMenu(
     __in PYORI_STRING MenuOptions,
-    __in DWORD NumberOptions,
+    __in YORI_ALLOC_SIZE_T NumberOptions,
     __in PYORI_STRING Title,
-    __in DWORD DisplayLineCount,
-    __out PDWORD ActiveOption
+    __in YORI_ALLOC_SIZE_T DisplayLineCount,
+    __out PYORI_ALLOC_SIZE_T ActiveOption
     )
 {
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
@@ -503,13 +503,25 @@ SlmenuProcessStream(
     while (TRUE) {
 
         if (MenuContext->StringCount + 1 > MenuContext->StringsAllocated) {
-            DWORD NewStringsAllocated;
+            DWORD DesiredBytes;
+            DWORD RequiredBytes;
+            YORI_ALLOC_SIZE_T BytesToAllocate;
+            YORI_ALLOC_SIZE_T NewStringsAllocated;
             PYORI_STRING NewStrings;
 
-            NewStringsAllocated = MenuContext->StringsAllocated * 4;
-            if (NewStringsAllocated < 0x100) {
-                NewStringsAllocated = 0x100;
+            RequiredBytes = MenuContext->StringsAllocated;
+            if (RequiredBytes < 0x100) {
+                RequiredBytes = 0x100;
             }
+            DesiredBytes = RequiredBytes * 4 * sizeof(YORI_STRING);
+            RequiredBytes = (RequiredBytes + 1) * sizeof(YORI_STRING);
+
+            BytesToAllocate = YoriLibMaximumAllocationInRange(RequiredBytes, DesiredBytes);
+            NewStringsAllocated = BytesToAllocate / sizeof(YORI_STRING);
+            if (NewStringsAllocated == 0) {
+                return FALSE;
+            }
+
 
             NewStrings = YoriLibReferencedMalloc(NewStringsAllocated * sizeof(YORI_STRING));
             if (NewStrings == NULL) {
@@ -595,21 +607,21 @@ typedef enum _SLMENU_OP {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     SLMENU_OP Op;
     SLMENU_CONTEXT MenuContext;
     SLMENU_LOCATION Location;
     YORI_STRING Prompt;
     PYORI_STRING DisplayPrompt;
-    DWORD DisplayLineCount;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T DisplayLineCount;
+    YORI_ALLOC_SIZE_T Index;
     DWORD Result;
 
     ZeroMemory(&MenuContext, sizeof(MenuContext));
@@ -640,11 +652,11 @@ ENTRYPOINT(
 
                 if (i + 1 < ArgC) {
                     LONGLONG llTemp;
-                    DWORD CharsConsumed;
+                    YORI_ALLOC_SIZE_T CharsConsumed;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
                         CharsConsumed > 0)  {
 
-                        DisplayLineCount = (DWORD)llTemp;
+                        DisplayLineCount = (YORI_ALLOC_SIZE_T)llTemp;
                         Op = SlmenuDisplayMultilineMenu;
                         i++;
                         ArgumentUnderstood = TRUE;

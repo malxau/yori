@@ -54,10 +54,13 @@ typedef struct _MAKE_SLAB_ALLOC_HDR {
 PVOID
 MakeSlabAlloc(
     __in PMAKE_SLAB_ALLOC Alloc,
-    __in DWORD SizeInBytes
+    __in YORI_ALLOC_SIZE_T SizeInBytes
     )
 {
     PMAKE_SLAB_ALLOC_HDR Hdr;
+    DWORD BytesRequired;
+    DWORD BytesDesired;
+    YORI_ALLOC_SIZE_T BytesToAllocate;
 
     if (Alloc->ElementSize != 0 &&
         Alloc->ElementSize != SizeInBytes) {
@@ -74,12 +77,20 @@ MakeSlabAlloc(
             YoriLibDereference(Alloc->Buffer);
         }
 
-        Alloc->Buffer = YoriLibReferencedMalloc(0x100 * (sizeof(MAKE_SLAB_ALLOC_HDR) + Alloc->ElementSize));
+        BytesRequired = sizeof(MAKE_SLAB_ALLOC_HDR) + Alloc->ElementSize;
+        BytesDesired = BytesRequired * 0x100;
+
+        BytesToAllocate = YoriLibMaximumAllocationInRange(BytesRequired, BytesDesired);
+        if (BytesToAllocate == 0) {
+            return NULL;
+        }
+
+        Alloc->Buffer = YoriLibReferencedMalloc(BytesToAllocate);
         if (Alloc->Buffer == NULL) {
             return NULL;
         }
 
-        Alloc->NumberAllocatedFromSystem = 0x100;
+        Alloc->NumberAllocatedFromSystem = BytesToAllocate / BytesRequired;
         Alloc->NumberAllocatedToCaller = 0;
     }
 

@@ -68,7 +68,7 @@ typedef struct _YORI_SH_TAB_COMPLETE_MATCH {
      make sense for tab complete (which is generating characters) to then
      want the cursor to be at the true beginning of the string.
      */
-    DWORD CursorOffset;
+    YORI_ALLOC_SIZE_T CursorOffset;
 
 } YORI_SH_TAB_COMPLETE_MATCH, *PYORI_SH_TAB_COMPLETE_MATCH;
 
@@ -99,14 +99,14 @@ typedef struct _YORI_SH_TAB_COMPLETE_CONTEXT {
      Indicates the number of characters of valid data exists in an argument
      when making suggestions.  Not used outside of suggestions.
      */
-    DWORD CurrentArgLength;
+    YORI_ALLOC_SIZE_T CurrentArgLength;
 
     /**
      Indicates the TabFlags passed when building any match list.  This is
      used to detect a later, incompatible set of flags that implies the
      list should be reconstructed.
      */
-    DWORD TabFlagsUsedCreatingList;
+    WORD TabFlagsUsedCreatingList;
 
     /**
      Indicates which data source to search through.
@@ -154,7 +154,7 @@ typedef struct _YORI_SH_TAB_COMPLETE_CONTEXT {
      The offset in characters from the beginning of SearchString to where
      the cursor currently is.
      */
-    DWORD SearchStringOffset;
+    YORI_ALLOC_SIZE_T SearchStringOffset;
 
 } YORI_SH_TAB_COMPLETE_CONTEXT, *PYORI_SH_TAB_COMPLETE_CONTEXT;
 
@@ -181,19 +181,19 @@ typedef struct _YORI_SH_INPUT_BUFFER {
     /**
      The current offset within @ref String that the user is modifying.
      */
-    DWORD CurrentOffset;
+    YORI_ALLOC_SIZE_T CurrentOffset;
 
     /**
      The number of characters that were filled in prior to a key press
      being evaluated.
      */
-    DWORD PreviousCharsDisplayed;
+    YORI_ALLOC_SIZE_T PreviousCharsDisplayed;
 
     /**
      The current position that was selected prior to a key press being
      evaluated.
      */
-    DWORD PreviousCurrentOffset;
+    YORI_ALLOC_SIZE_T PreviousCurrentOffset;
 
     /**
      The number of times the tab key had been pressed prior to a key being
@@ -205,19 +205,19 @@ typedef struct _YORI_SH_INPUT_BUFFER {
      The first character in the buffer that may have changed since the last
      draw.
      */
-    DWORD DirtyBeginOffset;
+    YORI_ALLOC_SIZE_T DirtyBeginOffset;
 
     /**
      The last character in the buffer that may have changed since the last
      draw.
      */
-    DWORD DirtyLength;
+    YORI_ALLOC_SIZE_T DirtyLength;
 
     /**
      TRUE if the input should be in insert mode, FALSE if it should be
      overwrite mode.
      */
-    BOOL InsertMode;
+    BOOLEAN InsertMode;
 
     /**
      Information about how to display the cursor.
@@ -304,13 +304,13 @@ typedef struct _YORI_SH_INPUT_BUFFER {
      backspace keys should be delivered to.  If FALSE, keystrokes are
      added to the input buffer.
      */
-    BOOL SearchMode;
+    BOOLEAN SearchMode;
 
     /**
      The offset as it was when the search operation started.  This is used
      if no match is found or a search is cancelled.
      */
-    DWORD PreSearchOffset;
+    YORI_ALLOC_SIZE_T PreSearchOffset;
 
     /**
      The current search string, when searching within the buffer itself.
@@ -438,7 +438,7 @@ typedef struct _YORI_SH_GLOBALS {
      command before escapes have been removed.  This can be given to a
      builtin if it needs to know the original escaped string.
      */
-    DWORD EscapedArgC;
+    YORI_ALLOC_SIZE_T EscapedArgC;
 
     /**
      A pointer to the argument array of the currently active builtin
@@ -459,7 +459,7 @@ typedef struct _YORI_SH_GLOBALS {
      Count of prompt recursion depth.  This is the number of characters to
      display when $+$ is used.
      */
-    DWORD PromptRecursionDepth;
+    YORI_ALLOC_SIZE_T PromptRecursionDepth;
 
     /**
      The current revision number of the environment variables in the process.
@@ -477,7 +477,7 @@ typedef struct _YORI_SH_GLOBALS {
      The minimum number of characters that the user must enter before
      suggestions occur.
      */
-    DWORD MinimumCharsInArgBeforeSuggesting;
+    YORI_ALLOC_SIZE_T MinimumCharsInArgBeforeSuggesting;
 
     /**
      The generation of the environment last time input parameters were
@@ -539,7 +539,7 @@ typedef struct _YORI_SH_GLOBALS {
     /**
      The offset within NextCommand to initialize the cursor to.
      */
-    DWORD NextCommandOffset;
+    YORI_ALLOC_SIZE_T NextCommandOffset;
 
     /**
      The text to use as a prepopulated string for the next user command.

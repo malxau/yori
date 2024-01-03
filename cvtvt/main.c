@@ -261,7 +261,7 @@ CvtvtLaunchChildProcess(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
@@ -270,7 +270,7 @@ ENTRYPOINT(
     HANDLE hControl = INVALID_HANDLE_VALUE;
     HANDLE InputPumpThread = NULL;
 
-    DWORD  CurrentOffset;
+    YORI_ALLOC_SIZE_T CurrentOffset;
     PVOID  LineReadContext = NULL;
     BOOL   Result;
     YORI_STRING LineString;
@@ -278,7 +278,7 @@ ENTRYPOINT(
     PYORI_STRING UserFileName = NULL;
     YORI_STRING FileName;
     YORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks;
-    DWORD  StartArg = 0;
+    YORI_ALLOC_SIZE_T StartArg = 0;
 
     BOOLEAN StreamStarted = FALSE;
     BOOLEAN ExecMode = FALSE;

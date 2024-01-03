@@ -142,7 +142,10 @@ YoriLibReallocateAttributeArray(
     //  reallocations
     //
 
-    AttributeBuffer->AttributeArray = YoriLibMalloc(RequiredLength * sizeof(WORD));
+    if (!YoriLibIsSizeAllocatable(RequiredLength * sizeof(WORD))) {
+        return FALSE;
+    }
+    AttributeBuffer->AttributeArray = YoriLibMalloc((YORI_ALLOC_SIZE_T)(RequiredLength * sizeof(WORD)));
     if (AttributeBuffer->AttributeArray != NULL) {
         AttributeBuffer->BufferSize = RequiredLength;
         return TRUE;
@@ -271,7 +274,11 @@ YoriLibReadConsoleOutputAttributeForSelection(
             dwAllocSize = 0x100;
         }
 
-        CharInfo = YoriLibMalloc(dwAllocSize * sizeof(CHAR_INFO));
+        if (!YoriLibIsSizeAllocatable(dwAllocSize * sizeof(CHAR_INFO))) {
+            return FALSE;
+        }
+
+        CharInfo = YoriLibMalloc((YORI_ALLOC_SIZE_T)(dwAllocSize * sizeof(CHAR_INFO)));
         if (CharInfo == NULL) {
             return FALSE;
         }
@@ -357,7 +364,11 @@ YoriLibReadConsoleOutputCharacterForSelection(
             dwAllocSize = 0x100;
         }
 
-        CharInfo = YoriLibMalloc(dwAllocSize * sizeof(CHAR_INFO));
+        if (!YoriLibIsSizeAllocatable(dwAllocSize * sizeof(CHAR_INFO))) {
+            return FALSE;
+        }
+
+        CharInfo = YoriLibMalloc((YORI_ALLOC_SIZE_T)(dwAllocSize * sizeof(CHAR_INFO)));
         if (CharInfo == NULL) {
             return FALSE;
         }
@@ -1452,7 +1463,7 @@ YoriLibCopySelectionIfPresent(
         TextWritePoint += LineLength;
     }
 
-    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
+    TextToCopy.LengthInChars = (YORI_ALLOC_SIZE_T)(TextWritePoint - TextToCopy.StartOfString);
 
     StartPoint.X = (SHORT)(Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1);
     StartPoint.Y = (SHORT)(Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top + 1);
@@ -1524,7 +1535,7 @@ YoriLibCopySelectionIfPresent(
             TextWritePoint++;
         }
 
-        TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
+        TextToCopy.LengthInChars = (YORI_ALLOC_SIZE_T)(TextWritePoint - TextToCopy.StartOfString);
 
         //
         //  Remove the final CRLF
@@ -1598,8 +1609,8 @@ YoriLibGetSelectionDoubleClickBreakChars(
     __out PYORI_STRING BreakChars
     )
 {
-    DWORD WriteIndex;
-    DWORD ReadIndex;
+    YORI_ALLOC_SIZE_T WriteIndex;
+    YORI_ALLOC_SIZE_T ReadIndex;
     YORI_STRING Substring;
 
     YoriLibInitEmptyString(BreakChars);
@@ -1624,7 +1635,7 @@ YoriLibGetSelectionDoubleClickBreakChars(
             BreakChars->StartOfString[ReadIndex] == '0' &&
             BreakChars->StartOfString[ReadIndex + 1] == 'x') {
 
-            DWORD CharsConsumed;
+            YORI_ALLOC_SIZE_T CharsConsumed;
             LONGLONG Number;
 
             Substring.StartOfString = &BreakChars->StartOfString[ReadIndex];
@@ -1636,7 +1647,7 @@ YoriLibGetSelectionDoubleClickBreakChars(
 
                 BreakChars->StartOfString[WriteIndex] = (TCHAR)Number;
                 WriteIndex++;
-                ReadIndex += CharsConsumed;
+                ReadIndex = ReadIndex + CharsConsumed;
             }
         } else {
             if (ReadIndex != WriteIndex) {
@@ -1665,7 +1676,7 @@ YoriLibIsYoriQuickEditEnabled(VOID)
 {
     YORI_STRING EnvVar;
     LONGLONG llTemp;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
 
     YoriLibInitEmptyString(&EnvVar);
     if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDIT"), &EnvVar)) {

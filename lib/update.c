@@ -84,7 +84,7 @@ YoriLibUpdateBinaryFromFile(
         //  existing binary.
         //
 
-        MyPath.LengthInChars = GetModuleFileName(NULL, MyPath.StartOfString, MyPath.LengthAllocated);
+        MyPath.LengthInChars = (YORI_ALLOC_SIZE_T)GetModuleFileName(NULL, MyPath.StartOfString, MyPath.LengthAllocated);
         if (MyPath.LengthInChars == 0) {
             YoriLibFreeStringContents(&MyPath);
             return FALSE;
@@ -119,7 +119,7 @@ YoriLibUpdateBinaryFromFile(
             //  the same path as the existing binary.
             //
 
-            MyPath.LengthInChars = GetModuleFileName(NULL, MyPath.StartOfString, MyPath.LengthAllocated);
+            MyPath.LengthInChars = (YORI_ALLOC_SIZE_T)GetModuleFileName(NULL, MyPath.StartOfString, MyPath.LengthAllocated);
             if (MyPath.LengthInChars == 0) {
                 YoriLibFreeStringContents(&MyPath);
                 return FALSE;
@@ -127,7 +127,7 @@ YoriLibUpdateBinaryFromFile(
 
             FinalBackslash = YoriLibFindRightMostCharacter(&MyPath, '\\');
             if (FinalBackslash != NULL) {
-                DWORD RemainingLength = (DWORD)(MyPath.LengthAllocated - (FinalBackslash - MyPath.StartOfString + 1));
+                YORI_ALLOC_SIZE_T RemainingLength = (YORI_ALLOC_SIZE_T)(MyPath.LengthAllocated - (FinalBackslash - MyPath.StartOfString + 1));
                 if (ExistingPath->LengthInChars >= RemainingLength) {
                     return FALSE;
                 }
@@ -217,12 +217,17 @@ LPCSTR YoriLibMonthNames[] = {
     "Nov",
     "Dec"};
 
+
 /**
- The size of a single read buffer.  This will be given to WInInet as a single
+ The size of a single read buffer.  This will be given to WinInet as a single
  operation.  We can read more bytes than this, it will just be done in multiple
  operations to WinInet.
  */
+#if YORI_MAX_ALLOC_SIZE >= (1024 * 1024)
 #define UPDATE_READ_SIZE (1024 * 1024)
+#else
+#define UPDATE_READ_SIZE (60 * 1024)
+#endif
 
 /**
  Construct the HTTP headers to attach to the request.  This code is shared
@@ -261,7 +266,7 @@ YoriLibUpdateBuildHttpHeaders(
     YORI_STRING IfModifiedSinceHeader;
     YORI_STRING CombinedHeader;
     YORI_STRING ProtocolDelimiter;
-    DWORD StartOfHost;
+    YORI_ALLOC_SIZE_T StartOfHost;
 
     //
     //  Newer versions of Windows will add a Host: header.  Old versions send
@@ -279,7 +284,7 @@ YoriLibUpdateBuildHttpHeaders(
         HostSubset->LengthInChars = Url->LengthInChars - StartOfHost;
         EndOfHost = YoriLibFindLeftMostCharacter(HostSubset, '/');
         if (EndOfHost != NULL) {
-            HostSubset->LengthInChars = (DWORD)(EndOfHost - HostSubset->StartOfString);
+            HostSubset->LengthInChars = (YORI_ALLOC_SIZE_T)(EndOfHost - HostSubset->StartOfString);
             *ObjectSubset = EndOfHost;
             YoriLibYPrintf(&HostHeader, _T("Host: %y\r\n"), HostSubset);
         } else {
@@ -411,7 +416,7 @@ YoriLibUpdateBinaryFromUrlWinInet(
 
         if (LastError == ERROR_CALL_NOT_IMPLEMENTED) {
             LPSTR AnsiAgent;
-            DWORD BytesForAnsiAgent;
+            YORI_ALLOC_SIZE_T BytesForAnsiAgent;
 
             if (Dll->pInternetOpenA == NULL ||
                 Dll->pInternetOpenUrlA == NULL) {
@@ -422,14 +427,14 @@ YoriLibUpdateBinaryFromUrlWinInet(
 
             WinInetOnlySupportsAnsi = TRUE;
 
-            BytesForAnsiAgent = WideCharToMultiByte(CP_ACP,
-                                                    0,
-                                                    Agent->StartOfString,
-                                                    Agent->LengthInChars,
-                                                    NULL,
-                                                    0,
-                                                    NULL,
-                                                    NULL);
+            BytesForAnsiAgent = (YORI_ALLOC_SIZE_T)WideCharToMultiByte(CP_ACP,
+                    0,
+                    Agent->StartOfString,
+                    Agent->LengthInChars,
+                    NULL,
+                    0,
+                    NULL,
+                    NULL);
 
             AnsiAgent = YoriLibMalloc(BytesForAnsiAgent + 1);
             if (AnsiAgent == NULL) {
@@ -472,27 +477,27 @@ YoriLibUpdateBinaryFromUrlWinInet(
     //
 
     if (WinInetOnlySupportsAnsi) {
-        DWORD AnsiCombinedHeaderLength;
+        YORI_ALLOC_SIZE_T AnsiCombinedHeaderLength;
         LPSTR AnsiCombinedHeader;
-        DWORD AnsiUrlLength;
+        YORI_ALLOC_SIZE_T AnsiUrlLength;
         LPSTR AnsiUrl;
 
-        AnsiCombinedHeaderLength = WideCharToMultiByte(CP_ACP,
-                                                       0,
-                                                       CombinedHeader.StartOfString,
-                                                       CombinedHeader.LengthInChars,
-                                                       NULL,
-                                                       0,
-                                                       NULL,
-                                                       NULL);
-        AnsiUrlLength = WideCharToMultiByte(CP_ACP,
-                                            0,
-                                            Url->StartOfString,
-                                            Url->LengthInChars,
-                                            NULL,
-                                            0,
-                                            NULL,
-                                            NULL);
+        AnsiCombinedHeaderLength = (YORI_ALLOC_SIZE_T)WideCharToMultiByte(CP_ACP,
+               0,
+               CombinedHeader.StartOfString,
+               CombinedHeader.LengthInChars,
+               NULL,
+               0,
+               NULL,
+               NULL);
+        AnsiUrlLength = (YORI_ALLOC_SIZE_T)WideCharToMultiByte(CP_ACP,
+                0,
+                Url->StartOfString,
+                Url->LengthInChars,
+                NULL,
+                0,
+                NULL,
+                NULL);
 
         AnsiCombinedHeader = YoriLibMalloc(AnsiCombinedHeaderLength + 1);
         if (AnsiCombinedHeader == NULL) {

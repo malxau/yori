@@ -99,7 +99,7 @@ typedef enum _WINPOS_OPERATION {
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 WinPosStringToCoordinates(
     __in PYORI_STRING WindowCoordinates,
     __out PLONG Horizontal,
@@ -108,7 +108,7 @@ WinPosStringToCoordinates(
 {
     LONGLONG Number;
     YORI_STRING Remainder;
-    DWORD CharsConsumed;
+    YORI_ALLOC_SIZE_T CharsConsumed;
 
     if (!YoriLibStringToNumber(WindowCoordinates, TRUE, &Number, &CharsConsumed)) {
         return FALSE;
@@ -171,13 +171,13 @@ WinPosStringToCoordinates(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD StartArg = 0;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     PYORI_STRING WindowTitle = NULL;
     PYORI_STRING NewWindowTitle = NULL;
@@ -185,7 +185,6 @@ ENTRYPOINT(
     WINPOS_OPERATION Operation;
 
     Operation = WinPosOperationNone;
-
 
     for (i = 1; i < ArgC; i++) {
 

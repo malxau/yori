@@ -64,26 +64,26 @@
 
 #endif // PRINTF_SIZEONLY
 
-int
+YORI_SIGNED_ALLOC_SIZE_T
 PRINTF_FN(
 #ifndef PRINTF_SIZEONLY
         __out_ecount(len) LPTSTR szDest,
-        __in DWORD len,
+        __in YORI_ALLOC_SIZE_T len,
 #endif
         __in LPCTSTR szFmt,
         __in va_list marker)
 {
-    DWORD dest_offset = 0;
-    DWORD src_offset = 0;
-    DWORD i;
+    YORI_ALLOC_SIZE_T dest_offset = 0;
+    YORI_ALLOC_SIZE_T src_offset = 0;
+    YORI_ALLOC_SIZE_T i;
 
-    BOOL leadingzero;
-    BOOL leftalign;
-    BOOL short_prefix;
-    BOOL long_prefix;
-    BOOL longlong_prefix;
-    BOOL truncated_due_to_space;
-    DWORD element_len;
+    BOOLEAN leadingzero;
+    BOOLEAN leftalign;
+    BOOLEAN short_prefix;
+    BOOLEAN long_prefix;
+    BOOLEAN longlong_prefix;
+    BOOLEAN truncated_due_to_space;
+    YORI_ALLOC_SIZE_T element_len;
 
     truncated_due_to_space = FALSE;
 
@@ -121,7 +121,7 @@ PRINTF_FN(
             }
 
             if (element_len == 0) {
-                element_len = (DWORD) -1;
+                element_len = (YORI_ALLOC_SIZE_T) -1;
             }
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
@@ -180,8 +180,8 @@ PRINTF_FN(
 #endif
                         }
 
-                        if (element_len != (DWORD)-1 && !leftalign) {
-                            DWORD str_len = 0;
+                        if (element_len != (YORI_ALLOC_SIZE_T)-1 && !leftalign) {
+                            YORI_ALLOC_SIZE_T str_len = 0;
                             if (short_prefix) {
                                 while (short_str[str_len] != '\0') str_len++;
                             } else if (long_prefix) {
@@ -249,14 +249,14 @@ PRINTF_FN(
                         PYORI_STRING str = va_arg(marker, PYORI_STRING);
                         LPSTR  short_str = (LPSTR)str->StartOfString;
                         LPWSTR long_str = (LPWSTR)str->StartOfString;
-                        DWORD str_offset;
+                        YORI_ALLOC_SIZE_T str_offset;
 
                         if (!short_prefix && !long_prefix) {
                             long_prefix = TRUE;
                         }
 
-                        if (element_len != (DWORD)-1 && !leftalign) {
-                            DWORD str_len;
+                        if (element_len != (YORI_ALLOC_SIZE_T)-1 && !leftalign) {
+                            YORI_ALLOC_SIZE_T str_len;
                             str_len = str->LengthInChars;
 
                             while (element_len > str_len) {
@@ -354,7 +354,7 @@ PRINTF_FN(
                         //  characters than the field specifier specifies.
                         //
 
-                        if (element_len != (DWORD)-1 && digits < element_len) {
+                        if (element_len != (YORI_ALLOC_SIZE_T)-1 && digits < element_len) {
                             tempnum = element_len - digits;
                             while (tempnum > 0) {
                                 if (!PRINTF_DESTLENGTH()) {
@@ -426,7 +426,7 @@ PRINTF_FN(
                         //  characters than the field specifier specifies.
                         //
 
-                        if (element_len != (DWORD)-1 && digits < element_len) {
+                        if (element_len != (YORI_ALLOC_SIZE_T)-1 && digits < element_len) {
                             tempnum = element_len - digits;
                             while (tempnum > 0) {
                                 if (!PRINTF_DESTLENGTH()) {

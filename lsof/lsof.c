@@ -68,7 +68,7 @@ typedef struct _LSOF_CONTEXT {
     /**
      The number of bytes in the Buffer below.
      */
-    DWORD BufferLength;
+    YORI_ALLOC_SIZE_T BufferLength;
 
     /**
      A buffer that is populated with the array of process IDs using a given
@@ -177,8 +177,8 @@ LsofDumpHandles(VOID)
     YORI_STRING ModuleNameString;
     YORI_STRING ObjectNameString;
     YORI_STRING ObjectTypeString;
-    DWORD ObjectNameLength;
-    DWORD ObjectTypeLength;
+    YORI_ALLOC_SIZE_T ObjectNameLength;
+    YORI_ALLOC_SIZE_T ObjectTypeLength;
     DWORD LengthReturned;
     HANDLE ProcessHandle;
     DWORD LastPid;
@@ -193,7 +193,7 @@ LsofDumpHandles(VOID)
         return FALSE;
     }
 
-    ObjectNameLength = 0x10000;
+    ObjectNameLength = YoriLibMaximumAllocationInRange(0x4000, 0x10000);
     ObjectName = YoriLibMalloc(ObjectNameLength);
     if (ObjectName == NULL) {
         YoriLibFree(Handles);
@@ -245,7 +245,11 @@ LsofDumpHandles(VOID)
             if (DllPsapi.pGetModuleFileNameExW != NULL &&
                 ProcessHandle != NULL) {
 
-                ModuleNameString.LengthInChars = DllPsapi.pGetModuleFileNameExW(ProcessHandle, NULL, ModuleNameString.StartOfString, ModuleNameString.LengthAllocated);
+                ModuleNameString.LengthInChars =
+                    (YORI_ALLOC_SIZE_T)DllPsapi.pGetModuleFileNameExW(ProcessHandle,
+                                                                      NULL,
+                                                                      ModuleNameString.StartOfString,
+                                                                      ModuleNameString.LengthAllocated);
             }
 
             if (ProcessHandle == NULL) {
@@ -307,7 +311,11 @@ LsofDumpHandles(VOID)
                 ModuleNameString.LengthInChars = 0;
                 if (DllKernel32.pGetFinalPathNameByHandleW != NULL) {
 
-                    ModuleNameString.LengthInChars = DllKernel32.pGetFinalPathNameByHandleW(LocalProcessHandle, ModuleNameString.StartOfString, ModuleNameString.LengthAllocated, 0);
+                    ModuleNameString.LengthInChars =
+                        (YORI_ALLOC_SIZE_T)DllKernel32.pGetFinalPathNameByHandleW(LocalProcessHandle,
+                                                                                  ModuleNameString.StartOfString,
+                                                                                  ModuleNameString.LengthAllocated,
+                                                                                  0);
 
                     if (ModuleNameString.LengthInChars > 0 &&
                         ModuleNameString.LengthInChars < ModuleNameString.LengthAllocated) {
@@ -356,16 +364,16 @@ LsofDumpHandles(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL Recursive = FALSE;
-    BOOL BasicEnumeration = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN Recursive = FALSE;
+    BOOLEAN BasicEnumeration = FALSE;
     LSOF_CONTEXT LsofContext;
     YORI_STRING Arg;
 

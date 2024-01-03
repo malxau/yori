@@ -271,7 +271,7 @@ RmdirFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL && ErrorCode != ERROR_DIRECTORY) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -306,17 +306,17 @@ RmdirFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    BOOL Recursive;
-    BOOL BasicEnumeration;
-    BOOL DeleteLinks;
-    DWORD MatchFlags;
-    DWORD StartArg = 0;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN Recursive;
+    BOOLEAN BasicEnumeration;
+    BOOLEAN DeleteLinks;
+    WORD MatchFlags;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    YORI_ALLOC_SIZE_T i;
     RMDIR_CONTEXT RmdirContext;
     YORI_STRING Arg;
 

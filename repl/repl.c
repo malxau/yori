@@ -113,11 +113,11 @@ ReplProcessStream(
     YORI_STRING InitialPortion;
     YORI_STRING TrailingPortion;
     PYORI_STRING SourceString;
-    DWORD SearchOffset;
+    YORI_ALLOC_SIZE_T SearchOffset;
     YORI_STRING SearchSubset;
-    DWORD MatchOffset;
-    DWORD NextAlternate;
-    DWORD LengthRequired;
+    YORI_ALLOC_SIZE_T MatchOffset;
+    YORI_ALLOC_SIZE_T NextAlternate;
+    YORI_ALLOC_SIZE_T LengthRequired;
 
     YoriLibInitEmptyString(&LineString);
     YoriLibInitEmptyString(&AlternateStrings[0]);
@@ -321,7 +321,7 @@ ReplFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -357,15 +357,15 @@ ReplFileEnumerateErrorCallback(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL BasicEnumeration = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN BasicEnumeration = FALSE;
     REPL_CONTEXT ReplContext;
     YORI_STRING Arg;
     YORI_STRING EmptyString;

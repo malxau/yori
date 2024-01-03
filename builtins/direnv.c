@@ -138,7 +138,7 @@ DirenvUndoPreviousScript(VOID)
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_DIRENVAPPLY(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     );
 
@@ -153,7 +153,7 @@ BOOL
 DirenvInstall(VOID)
 {
     YORI_STRING DirenvApplyCmd;
-    DWORD ValueLength;
+    YORI_ALLOC_SIZE_T ValueLength;
 
     YoriLibConstantString(&DirenvApplyCmd, _T("DIRENVAPPLY"));
     if (!YoriCallBuiltinRegister(&DirenvApplyCmd, YoriCmd_DIRENVAPPLY)) {
@@ -170,7 +170,7 @@ DirenvInstall(VOID)
     //
 
     ASSERT(DirenvPreviousExecutedScript.LengthInChars == 0);
-    ValueLength = GetEnvironmentVariable(_T("DIRENVACTIVESCRIPT"), NULL, 0);
+    ValueLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("DIRENVACTIVESCRIPT"), NULL, 0);
     if (ValueLength == 0) {
         DirenvInstalled = TRUE;
         return TRUE;
@@ -185,7 +185,10 @@ DirenvInstall(VOID)
         return TRUE;
     }
 
-    DirenvPreviousExecutedScript.LengthInChars = GetEnvironmentVariable(_T("DIRENVACTIVESCRIPT"), DirenvPreviousExecutedScript.StartOfString, DirenvPreviousExecutedScript.LengthAllocated);
+    DirenvPreviousExecutedScript.LengthInChars = (YORI_ALLOC_SIZE_T)
+        GetEnvironmentVariable(_T("DIRENVACTIVESCRIPT"),
+                               DirenvPreviousExecutedScript.StartOfString,
+                               DirenvPreviousExecutedScript.LengthAllocated);
 
     DirenvInstalled = TRUE;
     return TRUE;
@@ -203,7 +206,7 @@ DirenvInstallApplyHook(VOID)
     YORI_STRING YoriPostcmd;
     YORI_STRING YoriPostcmdName;
     YORI_STRING NewPrecmdComponent;
-    DWORD PrecmdLength;
+    YORI_ALLOC_SIZE_T PrecmdLength;
 
     //
     //  Get the current YORIPOSTCMD.  Allocate an extra three chars for
@@ -211,7 +214,7 @@ DirenvInstallApplyHook(VOID)
     //
 
     YoriLibConstantString(&NewPrecmdComponent, _T("direnv -a"));
-    PrecmdLength = GetEnvironmentVariable(_T("YORIPOSTCMD"), NULL, 0);
+    PrecmdLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("YORIPOSTCMD"), NULL, 0);
     if (!YoriLibAllocateString(&YoriPostcmd, PrecmdLength + 3 + NewPrecmdComponent.LengthInChars + 1)) {
         return FALSE;
     }
@@ -221,7 +224,7 @@ DirenvInstallApplyHook(VOID)
     //  it
     //
 
-    YoriPostcmd.LengthInChars = GetEnvironmentVariable(_T("YORIPOSTCMD"), YoriPostcmd.StartOfString, YoriPostcmd.LengthAllocated);
+    YoriPostcmd.LengthInChars = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("YORIPOSTCMD"), YoriPostcmd.StartOfString, YoriPostcmd.LengthAllocated);
     if (YoriLibFindFirstMatchingSubstring(&YoriPostcmd, 1, &NewPrecmdComponent, NULL) == NULL) {
 
         //
@@ -238,7 +241,7 @@ DirenvInstallApplyHook(VOID)
         //
 
         memcpy(&YoriPostcmd.StartOfString[YoriPostcmd.LengthInChars], NewPrecmdComponent.StartOfString, NewPrecmdComponent.LengthInChars * sizeof(TCHAR));
-        YoriPostcmd.LengthInChars += NewPrecmdComponent.LengthInChars;
+        YoriPostcmd.LengthInChars = YoriPostcmd.LengthInChars + NewPrecmdComponent.LengthInChars;
 
         YoriPostcmd.StartOfString[YoriPostcmd.LengthInChars] = '\0';
         YoriLibConstantString(&YoriPostcmdName, _T("YORIPOSTCMD"));
@@ -276,21 +279,21 @@ DirenvUninstallApplyHook(VOID)
     YORI_STRING YoriPostcmd;
     YORI_STRING YoriPostcmdName;
     YORI_STRING NewPrecmdComponent;
-    DWORD PrecmdLength;
-    DWORD FoundOffset;
-    DWORD FoundLength;
+    YORI_ALLOC_SIZE_T PrecmdLength;
+    YORI_ALLOC_SIZE_T FoundOffset;
+    YORI_ALLOC_SIZE_T FoundLength;
 
     //
     //  Get the current YORIPOSTCMD.
     //
 
     YoriLibConstantString(&NewPrecmdComponent, _T("direnv -a"));
-    PrecmdLength = GetEnvironmentVariable(_T("YORIPOSTCMD"), NULL, 0);
+    PrecmdLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("YORIPOSTCMD"), NULL, 0);
     if (!YoriLibAllocateString(&YoriPostcmd, PrecmdLength + 1)) {
         return FALSE;
     }
 
-    YoriPostcmd.LengthInChars = GetEnvironmentVariable(_T("YORIPOSTCMD"), YoriPostcmd.StartOfString, YoriPostcmd.LengthAllocated);
+    YoriPostcmd.LengthInChars = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("YORIPOSTCMD"), YoriPostcmd.StartOfString, YoriPostcmd.LengthAllocated);
 
     //
     //  Look for direnvapply.
@@ -326,7 +329,7 @@ DirenvUninstallApplyHook(VOID)
         //  Truncate and save
         //
 
-        YoriPostcmd.LengthInChars -= FoundLength;
+        YoriPostcmd.LengthInChars = YoriPostcmd.LengthInChars - FoundLength;
         YoriPostcmd.StartOfString[YoriPostcmd.LengthInChars] = '\0';
         YoriLibConstantString(&YoriPostcmdName, _T("YORIPOSTCMD"));
         if (YoriPostcmd.LengthInChars == 0) {
@@ -382,9 +385,9 @@ DirenvScriptAllowedInDirectory(
         NextComponent = YoriLibFindLeftMostCharacter(&Remaining, ';');
 
         if (NextComponent != NULL) {
-            Remaining.LengthInChars = Remaining.LengthInChars - (DWORD)(NextComponent - Remaining.StartOfString) - 1;
+            Remaining.LengthInChars = Remaining.LengthInChars - (YORI_ALLOC_SIZE_T)(NextComponent - Remaining.StartOfString) - 1;
             Remaining.StartOfString = NextComponent + 1;
-            Component.LengthInChars = (DWORD)(NextComponent - Component.StartOfString);
+            Component.LengthInChars = (YORI_ALLOC_SIZE_T)(NextComponent - Component.StartOfString);
         } else {
             Remaining.LengthInChars = 0;
         }
@@ -414,7 +417,7 @@ DirenvScriptAllowedInDirectory(
 DWORD
 DirenvApplyInternal(VOID)
 {
-    DWORD CurrentDirectoryLength;
+    YORI_ALLOC_SIZE_T CurrentDirectoryLength;
     YORI_STRING CurrentDirectory;
     YORI_STRING NewScript;
     YORI_STRING CurrentDirectorySubset;
@@ -435,12 +438,12 @@ DirenvApplyInternal(VOID)
     //  Find what the current directory is
     //
 
-    CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    CurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
     if (!YoriLibAllocateString(&CurrentDirectory, CurrentDirectoryLength)) {
         return EXIT_FAILURE;
     }
 
-    CurrentDirectoryLength = GetCurrentDirectory(CurrentDirectory.LengthAllocated, CurrentDirectory.StartOfString);
+    CurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(CurrentDirectory.LengthAllocated, CurrentDirectory.StartOfString);
     if (CurrentDirectoryLength == 0 || CurrentDirectoryLength >= CurrentDirectory.LengthAllocated) {
         YoriLibFreeStringContents(&CurrentDirectory);
         return EXIT_FAILURE;
@@ -557,11 +560,11 @@ DirenvApplyInternal(VOID)
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_DIRENVAPPLY(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     BOOL ArgumentUnderstood;
     YORI_STRING Arg;
 
@@ -620,12 +623,12 @@ typedef enum _DIRENV_OPERATION {
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_DIRENV(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD i;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     DIRENV_OPERATION Op;
 
@@ -645,7 +648,7 @@ YoriCmd_DIRENV(
                 DirenvHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("019"));
+                YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 ArgumentUnderstood = TRUE;

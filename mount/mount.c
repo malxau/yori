@@ -161,7 +161,7 @@ MountMountIso(
 BOOL
 MountMountVhd(
     __in PYORI_STRING FileName,
-    __in BOOL ReadOnly
+    __in BOOLEAN ReadOnly
     )
 {
     VIRTUAL_STORAGE_TYPE StorageType;
@@ -358,16 +358,16 @@ typedef enum _MOUNT_OP {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     PYORI_STRING FileName = NULL;
     MOUNT_OP Op;
-    BOOL ReadOnly = FALSE;
+    BOOLEAN ReadOnly = FALSE;
 
     Op = MountOpNone;
 
@@ -417,7 +417,7 @@ ENTRYPOINT(
                     YORI_STRING Ext;
                     YoriLibInitEmptyString(&Ext);
                     Ext.StartOfString = Period + 1;
-                    Ext.LengthInChars = ArgV[i].LengthInChars - (DWORD)(Period - ArgV[i].StartOfString) - 1;
+                    Ext.LengthInChars = ArgV[i].LengthInChars - (YORI_ALLOC_SIZE_T)(Period - ArgV[i].StartOfString) - 1;
                     if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("iso")) == 0) {
                         FileName = &ArgV[i];
                         Op = MountOpMountIso;

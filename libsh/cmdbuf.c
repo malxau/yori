@@ -37,12 +37,12 @@ typedef struct _YORI_LIBSH_PROCESS_BUFFER {
     /**
      The number of bytes currently allocated to this buffer.
      */
-    DWORD BytesAllocated;
+    YORI_ALLOC_SIZE_T BytesAllocated;
 
     /**
      The number of bytes populated with data in this buffer.
      */
-    DWORD BytesPopulated;
+    YORI_ALLOC_SIZE_T BytesPopulated;
 
     /**
      A handle to the buffer processing thread.
@@ -267,13 +267,13 @@ YoriLibShCmdBufferPump(
                 break;
             }
 
-            ThisBuffer->BytesPopulated += BytesRead;
+            ThisBuffer->BytesPopulated = ThisBuffer->BytesPopulated + (YORI_ALLOC_SIZE_T)BytesRead;
             ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
             if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
-                DWORD NewBytesAllocated;
+                YORI_ALLOC_SIZE_T NewBytesAllocated;
                 PCHAR NewBuffer;
 
-                if (ThisBuffer->BytesAllocated >= ((DWORD)-1) / 4) {
+                if (ThisBuffer->BytesAllocated >= YORI_MAX_ALLOC_SIZE) {
                     break;
                 }
 
@@ -630,7 +630,7 @@ YoriLibShGetProcessBuffer(
     __out PYORI_STRING String
     )
 {
-    DWORD LengthNeeded;
+    YORI_ALLOC_SIZE_T LengthNeeded;
 
     if (ThisBuffer->Buffer == NULL) {
         return FALSE;

@@ -59,6 +59,7 @@ YoriPkgAppendPath(
     DWORD Err;
     DWORD Disposition;
     DWORD LengthRequired;
+    DWORD BytesRequired;
     YORI_STRING ExistingValue;
 
     if (DllAdvApi32.pRegCloseKey == NULL ||
@@ -78,7 +79,13 @@ YoriPkgAppendPath(
     YoriLibInitEmptyString(&ExistingValue);
     Err = DllAdvApi32.pRegQueryValueExW(hKey, ValueName, NULL, NULL, NULL, &LengthRequired);
     if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
-        if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + PathToAdd->LengthInChars + 1)) {
+        BytesRequired = (LengthRequired / sizeof(TCHAR)) + PathToAdd->LengthInChars + 1;
+        if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+            DllAdvApi32.pRegCloseKey(hKey);
+            return FALSE;
+        }
+
+        if (!YoriLibAllocateString(&ExistingValue, (YORI_ALLOC_SIZE_T)BytesRequired)) {
             DllAdvApi32.pRegCloseKey(hKey);
             return FALSE;
         }
@@ -90,7 +97,7 @@ YoriPkgAppendPath(
             return FALSE;
         }
 
-        ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+        ExistingValue.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthRequired / sizeof(TCHAR) - 1);
 
         if (!YoriLibAddEnvironmentComponentToString(&ExistingValue, PathToAdd, TRUE)) {
             YoriLibFreeStringContents(&ExistingValue);
@@ -137,6 +144,7 @@ YoriPkgRemoveInstalledPath(
     DWORD Err;
     DWORD Disposition;
     DWORD LengthRequired;
+    DWORD CharsRequired;
     YORI_STRING ExistingValue;
     YORI_STRING NewValue;
 
@@ -161,7 +169,13 @@ YoriPkgRemoveInstalledPath(
     YoriLibInitEmptyString(&ExistingValue);
     Err = DllAdvApi32.pRegQueryValueExW(hKey, ValueName, NULL, NULL, NULL, &LengthRequired);
     if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
-        if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + 1)) {
+        CharsRequired = (LengthRequired / sizeof(TCHAR)) + 1;
+        if (!YoriLibIsSizeAllocatable(CharsRequired)) {
+            DllAdvApi32.pRegCloseKey(hKey);
+            return FALSE;
+        }
+
+        if (!YoriLibAllocateString(&ExistingValue, (YORI_ALLOC_SIZE_T)CharsRequired)) {
             DllAdvApi32.pRegCloseKey(hKey);
             return FALSE;
         }
@@ -173,7 +187,7 @@ YoriPkgRemoveInstalledPath(
             return FALSE;
         }
 
-        ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+        ExistingValue.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthRequired / sizeof(TCHAR) - 1);
 
         if (!YoriLibRemoveEnvironmentComponentFromString(&ExistingValue, PathToRemove, &NewValue)) {
 
@@ -233,10 +247,11 @@ YoriPkgIsFileToBeDeletedOnReboot(
     DWORD Err;
     DWORD Disposition;
     DWORD LengthRequired;
+    DWORD CharsRequired;
     YORI_STRING ExistingValue;
     YORI_STRING FoundFileEntry;
     BOOLEAN LookingForEndOfSource;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
 
     YoriLibLoadAdvApi32Functions();
 
@@ -264,7 +279,12 @@ YoriPkgIsFileToBeDeletedOnReboot(
     YoriLibInitEmptyString(&ExistingValue);
     Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("PendingFileRenameOperations"), NULL, NULL, NULL, &LengthRequired);
     if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
-        if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + 1)) {
+        CharsRequired = (LengthRequired / sizeof(TCHAR)) + 1;
+        if (!YoriLibIsSizeAllocatable(CharsRequired)) {
+            DllAdvApi32.pRegCloseKey(hKey);
+            return FALSE;
+        }
+        if (!YoriLibAllocateString(&ExistingValue, (YORI_ALLOC_SIZE_T)CharsRequired)) {
             DllAdvApi32.pRegCloseKey(hKey);
             return FALSE;
         }
@@ -278,7 +298,7 @@ YoriPkgIsFileToBeDeletedOnReboot(
             return FALSE;
         }
 
-        ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+        ExistingValue.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthRequired / sizeof(TCHAR) - 1);
 
         DllAdvApi32.pRegCloseKey(hKey);
 
@@ -635,6 +655,7 @@ YoriPkgGetAccessToRegistryKey(
     DWORD Err;
     DWORD Disposition;
     DWORD BytesRequired;
+    YORI_ALLOC_SIZE_T BytesToAllocate;
     PSID AdministratorSid;
     PSID UsersSid;
     PACL NewAcl;
@@ -765,13 +786,20 @@ YoriPkgGetAccessToRegistryKey(
                     DllAdvApi32.pGetLengthSid(AdministratorSid) +
                     DllAdvApi32.pGetLengthSid(UsersSid);
 
-    NewAcl = YoriLibMalloc(BytesRequired);
+    if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+        Err = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
+
+    BytesToAllocate = (YORI_ALLOC_SIZE_T)BytesRequired;
+
+    NewAcl = YoriLibMalloc(BytesToAllocate);
     if (NewAcl == NULL) {
         Err = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
 
-    if (!DllAdvApi32.pInitializeAcl(NewAcl, BytesRequired, ACL_REVISION)) {
+    if (!DllAdvApi32.pInitializeAcl(NewAcl, BytesToAllocate, ACL_REVISION)) {
         Err = GetLastError();
         goto Exit;
     }
@@ -934,6 +962,7 @@ YoriPkgBackupRegistryShell(
     DWORD Disposition;
     YORI_STRING ExistingValue;
     DWORD LengthRequired;
+    DWORD CharsRequired;
 
     ASSERT(YoriLibIsStringNullTerminated(KeyName));
     ASSERT(YoriLibIsStringNullTerminated(MasterValueName));
@@ -1006,7 +1035,11 @@ YoriPkgBackupRegistryShell(
     LengthRequired = 0;
     Err = DllAdvApi32.pRegQueryValueExW(hKey, MasterValueName->StartOfString, NULL, NULL, NULL, &LengthRequired);
     if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
-        if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + 1)) {
+        CharsRequired = (LengthRequired / sizeof(TCHAR)) + 1;
+        if (!YoriLibIsSizeAllocatable(CharsRequired)) {
+            goto Exit;
+        }
+        if (!YoriLibAllocateString(&ExistingValue, (YORI_ALLOC_SIZE_T)CharsRequired)) {
             goto Exit;
         }
 
@@ -1015,7 +1048,7 @@ YoriPkgBackupRegistryShell(
             goto Exit;
         }
 
-        ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+        ExistingValue.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthRequired / sizeof(TCHAR) - 1);
     }
 
     //
@@ -1062,6 +1095,7 @@ YoriPkgRestoreRegistryBackupShell(
     DWORD Disposition;
     YORI_STRING ExistingValue;
     DWORD LengthRequired;
+    DWORD CharsToAllocate;
 
     ASSERT(YoriLibIsStringNullTerminated(KeyName));
     ASSERT(YoriLibIsStringNullTerminated(MasterValueName));
@@ -1124,7 +1158,12 @@ YoriPkgRestoreRegistryBackupShell(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + 1)) {
+    CharsToAllocate = LengthRequired / sizeof(TCHAR) + 1;
+    if (!YoriLibIsSizeAllocatable(CharsToAllocate)) {
+        goto Exit;
+    }
+
+    if (!YoriLibAllocateString(&ExistingValue, (YORI_ALLOC_SIZE_T)CharsToAllocate)) {
         goto Exit;
     }
 
@@ -1133,7 +1172,7 @@ YoriPkgRestoreRegistryBackupShell(
         goto Exit;
     }
 
-    ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+    ExistingValue.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthRequired / sizeof(TCHAR) - 1);
 
     //
     //  Restore the backup value into the master value.
@@ -1307,7 +1346,7 @@ YoriPkgSetConsoleDefaults(
     TCHAR ValueNameBuffer[16];
     YORI_STRING ValueName;
     DWORD Err;
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     DWORD Temp;
     TCHAR Char;
     HKEY hKey;

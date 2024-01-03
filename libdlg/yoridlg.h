@@ -50,12 +50,12 @@ typedef struct _YORI_DLG_FILE_CUSTOM_OPTION {
      On successful completion of the dialog, updated to contain the index of
      the selected value.
      */
-    DWORD SelectedValue;
+    YORI_ALLOC_SIZE_T SelectedValue;
 
     /**
      The number of values in the pull down list control.
      */
-    DWORD ValueCount;
+    YORI_ALLOC_SIZE_T ValueCount;
 
     /**
      An array of values to display in the pull down list control.
@@ -124,10 +124,10 @@ YoriDlgFindHex(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,
     __in_opt PUCHAR InitialData,
-    __in DWORDLONG InitialDataLength,
-    __in DWORD InitialBytesPerWord,
+    __in YORI_ALLOC_SIZE_T InitialDataLength,
+    __in UCHAR InitialBytesPerWord,
     __out PUCHAR * FindData,
-    __out PDWORDLONG FindDataLength
+    __out PYORI_ALLOC_SIZE_T FindDataLength
     );
 
 __success(return)
@@ -164,15 +164,15 @@ YoriDlgReplaceHex(
     __in WORD DesiredTop,
     __in PYORI_STRING Title,
     __in_opt PUCHAR InitialBeforeData,
-    __in DWORDLONG InitialBeforeDataLength,
+    __in YORI_ALLOC_SIZE_T InitialBeforeDataLength,
     __in_opt PUCHAR InitialAfterData,
-    __in DWORDLONG InitialAfterDataLength,
-    __in DWORD InitialBytesPerWord,
+    __in YORI_ALLOC_SIZE_T InitialAfterDataLength,
+    __in UCHAR InitialBytesPerWord,
     __out PBOOLEAN ReplaceAll,
     __out PUCHAR * OldData,
-    __out PDWORDLONG OldDataLength,
+    __out PYORI_ALLOC_SIZE_T OldDataLength,
     __out PUCHAR * NewData,
-    __out PDWORDLONG NewDataLength
+    __out PYORI_ALLOC_SIZE_T NewDataLength
     );
 
 WORD

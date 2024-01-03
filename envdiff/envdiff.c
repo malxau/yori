@@ -69,11 +69,11 @@ EnvDiffHelp(VOID)
 VOID
 EnvDiffKeyValueAtOffset(
     __in PYORI_STRING EnvironmentBlock,
-    __in DWORD Offset,
+    __in YORI_ALLOC_SIZE_T Offset,
     __out PYORI_STRING KeyValue
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     KeyValue->StartOfString = &EnvironmentBlock->StartOfString[Offset];
     KeyValue->LengthInChars = EnvironmentBlock->LengthInChars - Offset;
 
@@ -102,14 +102,14 @@ EnvDiffKeyValueAtOffset(
          reached, this will return the same offset at the end of the block
          repeatedly.
  */
-DWORD
+YORI_ALLOC_SIZE_T
 EnvDiffGetNextKeyValueOffset(
     __in PYORI_STRING EnvironmentBlock,
     __in PYORI_STRING KeyValue,
-    __in DWORD Offset
+    __in YORI_ALLOC_SIZE_T Offset
     )
 {
-    DWORD NewOffset;
+    YORI_ALLOC_SIZE_T NewOffset;
 
     if (KeyValue->LengthInChars == 0) {
         return Offset;
@@ -140,7 +140,7 @@ EnvDiffGetKeyFromKeyValue(
     __out PYORI_STRING Key
     )
 {
-    DWORD Index;
+    YORI_ALLOC_SIZE_T Index;
     YoriLibInitEmptyString(Key);
     Key->StartOfString = KeyValue->StartOfString;
 
@@ -235,7 +235,7 @@ EnvDiffOutputDifference(
     } else if (ChangeType == EnvDiffChangeRemove) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("set %y=\n"), Key);
     } else if (ChangeType == EnvDiffChangeModify) {
-        DWORD MatchOffset;
+        YORI_ALLOC_SIZE_T MatchOffset;
 
         __analysis_assume(NewValue != NULL);
         __analysis_assume(BaseValue != NULL);
@@ -288,8 +288,8 @@ EnvDiffCompareEnvironments(
     YORI_STRING NewKey;
     YORI_STRING BaseValue;
     YORI_STRING NewValue;
-    DWORD BaseStart;
-    DWORD NewStart;
+    YORI_ALLOC_SIZE_T BaseStart;
+    YORI_ALLOC_SIZE_T NewStart;
     int Compare;
 
     YoriLibInitEmptyString(&BaseKeyValue);
@@ -399,6 +399,7 @@ EnvDiffLoadStreamIntoEnvironmentBlock(
     )
 {
     DWORD BufferSize;
+    DWORD RequiredSize;
     PVOID LineContext = NULL;
     YORI_STRING LineString;
 
@@ -406,7 +407,7 @@ EnvDiffLoadStreamIntoEnvironmentBlock(
     YoriLibInitEmptyString(&LineString);
 
     BufferSize = 1024;
-    if (!YoriLibAllocateString(EnvironmentBlock, BufferSize)) {
+    if (!YoriLibAllocateString(EnvironmentBlock, (YORI_ALLOC_SIZE_T)BufferSize)) {
         return FALSE;
     }
 
@@ -415,9 +416,25 @@ EnvDiffLoadStreamIntoEnvironmentBlock(
             break;
         }
 
-        if (EnvironmentBlock->LengthInChars + LineString.LengthInChars + 2 > EnvironmentBlock->LengthAllocated) {
-            BufferSize = BufferSize * 4;
-            if (!YoriLibReallocateString(EnvironmentBlock, BufferSize)) {
+        RequiredSize = EnvironmentBlock->LengthInChars;
+        RequiredSize = RequiredSize + LineString.LengthInChars + 2;
+
+        if (RequiredSize > EnvironmentBlock->LengthAllocated) {
+            DWORD DesiredSize;
+            DesiredSize = BufferSize * 4;
+            if (DesiredSize < RequiredSize) {
+                DesiredSize = RequiredSize;
+            }
+
+            BufferSize = YoriLibMaximumAllocationInRange(RequiredSize, DesiredSize);
+            if (BufferSize == 0) {
+                YoriLibFreeStringContents(EnvironmentBlock);
+                YoriLibFreeStringContents(&LineString);
+                YoriLibLineReadCloseOrCache(LineContext);
+                return FALSE;
+            }
+
+            if (!YoriLibReallocateString(EnvironmentBlock, (YORI_ALLOC_SIZE_T)BufferSize)) {
                 YoriLibFreeStringContents(EnvironmentBlock);
                 YoriLibFreeStringContents(&LineString);
                 YoriLibLineReadCloseOrCache(LineContext);
@@ -521,13 +538,13 @@ EnvDiffLoadFileIntoEnvironmentBlock(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     DWORD Result;
     YORI_STRING Arg;
     YORI_STRING CurrentEnvironment;

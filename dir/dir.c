@@ -203,7 +203,7 @@ typedef struct _DIR_CONTEXT {
     /**
      The number of bytes in ReparseDataBuffer allocation.
      */
-    DWORD ReparseDataBufferLength;
+    YORI_ALLOC_SIZE_T ReparseDataBufferLength;
 
     /**
      The character to use to seperate date components.
@@ -571,7 +571,7 @@ DirFileFoundCallback(
         YORI_STRING ThisDirName;
         YoriLibInitEmptyString(&ThisDirName);
         ThisDirName.StartOfString = FilePath->StartOfString;
-        ThisDirName.LengthInChars = (DWORD)(FilePart - FilePath->StartOfString);
+        ThisDirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - FilePath->StartOfString);
         if (ThisDirName.LengthInChars == (sizeof("\\\\?\\c:") - 1) &&
             YoriLibIsPrefixedDriveLetterWithColon(&ThisDirName)) {
 
@@ -678,11 +678,18 @@ DirFileFoundCallback(
 
             if (DisplayReparseBuffer) {
                 if (DirContext->ReparseDataBuffer == NULL) {
-                    DirContext->ReparseDataBuffer = YoriLibMalloc(64 * 1024);
+                    DWORD ReparseDataBufferLength;
+                    ReparseDataBufferLength = 64 * 1024;
+                    if (!YoriLibIsSizeAllocatable(ReparseDataBufferLength)) {
+                        ReparseDataBufferLength = 32 * 1024;
+                    }
+
+
+                    DirContext->ReparseDataBuffer = YoriLibMalloc((YORI_ALLOC_SIZE_T)ReparseDataBufferLength);
                     if (DirContext->ReparseDataBuffer == NULL) {
                         DisplayReparseBuffer = FALSE;
                     } else {
-                        DirContext->ReparseDataBufferLength = 64 * 1024;
+                        DirContext->ReparseDataBufferLength = (YORI_ALLOC_SIZE_T)ReparseDataBufferLength;
                     }
                 }
             }
@@ -733,7 +740,7 @@ DirFileFoundCallback(
                                 if (StringIndex == 2) {
                                     ReparseString.StartOfString = &StartOfString[CharIndex + 1];
                                 } else if (StringIndex == 3) {
-                                    ReparseString.LengthInChars = (DWORD)(&StartOfString[CharIndex] - ReparseString.StartOfString);
+                                    ReparseString.LengthInChars = (YORI_ALLOC_SIZE_T)(&StartOfString[CharIndex] - ReparseString.StartOfString);
                                 }
                             }
                         }
@@ -1008,7 +1015,7 @@ DirFileEnumerateErrorCallback(
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
         if (FilePart != NULL) {
-            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+            DirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
@@ -1099,16 +1106,16 @@ DirLoadLocaleSettings(
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
-    DWORD MatchFlags;
-    BOOL BasicEnumeration = FALSE;
-    BOOL DisplayColor = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
+    WORD MatchFlags;
+    BOOLEAN BasicEnumeration = FALSE;
+    BOOLEAN DisplayColor = FALSE;
     DIR_CONTEXT DirContext;
     YORI_STRING Arg;
 

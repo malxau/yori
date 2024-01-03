@@ -57,7 +57,7 @@ BOOL
 SdirColorStringFromFeature(
     __in PCSDIR_FEATURE Feature,
     __out LPTSTR String,
-    __in DWORD StringSize
+    __in YORI_ALLOC_SIZE_T StringSize
     )
 {
     WORD Forecolor;
@@ -215,9 +215,9 @@ SdirParseMetadataAttributeString(VOID)
     LPTSTR Next;
     LPTSTR This;
     LPTSTR Attribute;
-    ULONG i;
+    YORI_ALLOC_SIZE_T i;
     LPTSTR SdirApplyString = NULL;
-    DWORD  SdirColorMetadataLength = 0;
+    YORI_ALLOC_SIZE_T SdirColorMetadataLength = 0;
     PSDIR_FEATURE Feature;
     LPTSTR EnvVarName = _T("YORICOLORMETADATA");
 
@@ -227,10 +227,10 @@ SdirParseMetadataAttributeString(VOID)
     //  First, count how big the allocation needs to be and allocate it.
     //
 
-    SdirColorMetadataLength = GetEnvironmentVariable(EnvVarName, NULL, 0);
+    SdirColorMetadataLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(EnvVarName, NULL, 0);
     if (SdirColorMetadataLength == 0) {
         EnvVarName = _T("SDIR_COLOR_METADATA");
-        SdirColorMetadataLength = GetEnvironmentVariable(EnvVarName, NULL, 0);
+        SdirColorMetadataLength = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(EnvVarName, NULL, 0);
         if (SdirColorMetadataLength == 0) {
             return TRUE;
         }
@@ -287,8 +287,8 @@ SdirParseMetadataAttributeString(VOID)
 
         i = sizeof(SingleElement)/sizeof(SingleElement[0]);
 
-        if (Next && ((ULONG)(Next - This) < i)) {
-            i = (ULONG)(Next - This + 1);
+        if (Next && ((YORI_ALLOC_SIZE_T)(Next - This) < i)) {
+            i = (YORI_ALLOC_SIZE_T)(Next - This + 1);
         }
 
         //
@@ -310,7 +310,7 @@ SdirParseMetadataAttributeString(VOID)
         //  substring we want to process.
         //
 
-        i = (ULONG)_tcscspn(SingleElement, _T(","));
+        i = (YORI_ALLOC_SIZE_T)_tcscspn(SingleElement, _T(","));
         if (i >= sizeof(SingleSwitch)/sizeof(SingleSwitch[0])) {
             i = sizeof(SingleSwitch)/sizeof(SingleSwitch[0]);
         } else {

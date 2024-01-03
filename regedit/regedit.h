@@ -104,7 +104,7 @@ RegeditEditBinaryValue(
     __inout PYORI_STRING ValueName,
     __in BOOLEAN ValueNameReadOnly,
     __inout PUCHAR *Value,
-    __inout PDWORD ValueLength,
+    __inout PYORI_ALLOC_SIZE_T ValueLength,
     __in BOOLEAN ValueReadOnly
     );
 

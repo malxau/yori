@@ -50,7 +50,7 @@ YoriLibBuiltinSetEnvironmentStrings(
     YORI_STRING ValueName;
     LPTSTR ThisVar;
     LPTSTR ThisValue;
-    DWORD VarLen;
+    YORI_ALLOC_SIZE_T VarLen;
 
     if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
         return FALSE;
@@ -61,7 +61,7 @@ YoriLibBuiltinSetEnvironmentStrings(
 
     ThisVar = CurrentEnvironment.StartOfString;
     while (*ThisVar != '\0') {
-        VarLen = _tcslen(ThisVar);
+        VarLen = (YORI_ALLOC_SIZE_T)_tcslen(ThisVar);
 
         //
         //  We know there's at least one char.  Skip it if it's equals since
@@ -72,8 +72,8 @@ YoriLibBuiltinSetEnvironmentStrings(
         if (ThisValue != NULL) {
             ThisValue[0] = '\0';
             VariableName.StartOfString = ThisVar;
-            VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
-            VariableName.LengthAllocated = VariableName.LengthInChars + 1;
+            VariableName.LengthInChars = (YORI_ALLOC_SIZE_T)(ThisValue - ThisVar);
+            VariableName.LengthAllocated = (YORI_ALLOC_SIZE_T)(VariableName.LengthInChars + 1);
             YoriCallSetEnvironmentVariable(&VariableName, NULL);
         }
 
@@ -88,7 +88,7 @@ YoriLibBuiltinSetEnvironmentStrings(
 
     ThisVar = NewEnvironment->StartOfString;
     while (*ThisVar != '\0') {
-        VarLen = _tcslen(ThisVar);
+        VarLen = (YORI_ALLOC_SIZE_T)_tcslen(ThisVar);
 
         //
         //  We know there's at least one char.  Skip it if it's equals since
@@ -99,12 +99,12 @@ YoriLibBuiltinSetEnvironmentStrings(
         if (ThisValue != NULL) {
             ThisValue[0] = '\0';
             VariableName.StartOfString = ThisVar;
-            VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
-            VariableName.LengthAllocated = VariableName.LengthInChars + 1;
+            VariableName.LengthInChars = (YORI_ALLOC_SIZE_T)(ThisValue - ThisVar);
+            VariableName.LengthAllocated = (YORI_ALLOC_SIZE_T)(VariableName.LengthInChars + 1);
             ThisValue++;
             ValueName.StartOfString = ThisValue;
-            ValueName.LengthInChars = VarLen - VariableName.LengthInChars - 1;
-            ValueName.LengthAllocated = ValueName.LengthInChars + 1;
+            ValueName.LengthInChars = (YORI_ALLOC_SIZE_T)(VarLen - VariableName.LengthInChars - 1);
+            ValueName.LengthAllocated = (YORI_ALLOC_SIZE_T)(ValueName.LengthInChars + 1);
             YoriCallSetEnvironmentVariable(&VariableName, &ValueName);
             ThisValue--;
             ThisValue[0] = '=';
@@ -138,9 +138,9 @@ YoriLibBuiltinRemoveEmptyVariables(
     __inout PYORI_STRING Value
     )
 {
-    DWORD StartOfVariableName;
-    DWORD ReadIndex = 0;
-    DWORD WriteIndex = 0;
+    YORI_ALLOC_SIZE_T StartOfVariableName;
+    YORI_ALLOC_SIZE_T ReadIndex = 0;
+    YORI_ALLOC_SIZE_T WriteIndex = 0;
 
     while (ReadIndex < Value->LengthInChars) {
         if (YoriLibIsEscapeChar(Value->StartOfString[ReadIndex])) {
@@ -186,7 +186,7 @@ YoriLibBuiltinRemoveEmptyVariables(
                 YORI_STRING YsVariableValue;
 
                 YsVariableName.StartOfString = &Value->StartOfString[StartOfVariableName + 1];
-                YsVariableName.LengthInChars = ReadIndex - StartOfVariableName - 1;
+                YsVariableName.LengthInChars = (YORI_ALLOC_SIZE_T)(ReadIndex - StartOfVariableName - 1);
 
                 ReadIndex++;
                 YoriLibInitEmptyString(&YsVariableValue);
@@ -194,7 +194,7 @@ YoriLibBuiltinRemoveEmptyVariables(
                     if (WriteIndex != StartOfVariableName) {
                         memmove(&Value->StartOfString[WriteIndex], &Value->StartOfString[StartOfVariableName], (ReadIndex - StartOfVariableName) * sizeof(TCHAR));
                     }
-                    WriteIndex += (ReadIndex - StartOfVariableName);
+                    WriteIndex = (YORI_ALLOC_SIZE_T)(WriteIndex + (ReadIndex - StartOfVariableName));
                     YoriCallFreeYoriString(&YsVariableValue);
                 }
                 continue;

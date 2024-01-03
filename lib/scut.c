@@ -256,7 +256,7 @@ YoriLibLoadShortcutIconPath(
     IPersistFile *ScutFile = NULL;
     BOOL Result = FALSE;
     HRESULT hRes;
-    DWORD SizeNeeded;
+    YORI_ALLOC_SIZE_T SizeNeeded;
 
     ASSERT(YoriLibIsStringNullTerminated(ShortcutFileName));
 
@@ -300,9 +300,11 @@ YoriLibLoadShortcutIconPath(
 
     hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
     while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
-        SizeNeeded = IconLocation.LengthAllocated * 4;
+        SizeNeeded = IconLocation.LengthAllocated;
         if (SizeNeeded == 0) {
             SizeNeeded = 1024;
+        } else if (YoriLibIsSizeAllocatable(SizeNeeded * 4)) {
+            SizeNeeded = SizeNeeded * 4;
         }
         YoriLibFreeStringContents(&IconLocation);
 
@@ -315,7 +317,7 @@ YoriLibLoadShortcutIconPath(
                                            &LocalIconIndex);
 
         if (SUCCEEDED(hRes)) {
-            IconLocation.LengthInChars = wcslen(IconLocation.StartOfString);
+            IconLocation.LengthInChars = (YORI_ALLOC_SIZE_T)wcslen(IconLocation.StartOfString);
         }
     }
 
@@ -327,7 +329,10 @@ YoriLibLoadShortcutIconPath(
             if (SizeNeeded == 0) {
                 SizeNeeded = 1024;
             } else {
-                SizeNeeded = IconLocation.LengthAllocated * 4;
+                SizeNeeded = IconLocation.LengthAllocated;
+                if (YoriLibIsSizeAllocatable(SizeNeeded * 4)) {
+                    SizeNeeded = SizeNeeded * 4;
+                }
             }
             if (IconLocation.LengthAllocated < SizeNeeded) {
                 YoriLibFreeStringContents(&IconLocation);
@@ -343,7 +348,7 @@ YoriLibLoadShortcutIconPath(
                                        0);
 
             if (SUCCEEDED(hRes)) {
-                IconLocation.LengthInChars = wcslen(IconLocation.StartOfString);
+                IconLocation.LengthInChars = (YORI_ALLOC_SIZE_T)wcslen(IconLocation.StartOfString);
             }
         }
     }
@@ -362,7 +367,7 @@ YoriLibLoadShortcutIconPath(
     //  here.
     //
 
-    SizeNeeded = ExpandEnvironmentStrings(IconLocation.StartOfString, NULL, 0);
+    SizeNeeded = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(IconLocation.StartOfString, NULL, 0);
     if (SizeNeeded == 0) {
         goto Exit;
     }
@@ -371,7 +376,9 @@ YoriLibLoadShortcutIconPath(
         goto Exit;
     }
 
-    ExpandedLocation.LengthInChars = ExpandEnvironmentStrings(IconLocation.StartOfString, ExpandedLocation.StartOfString, ExpandedLocation.LengthAllocated);
+    ExpandedLocation.LengthInChars = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(IconLocation.StartOfString,
+            ExpandedLocation.StartOfString,
+            ExpandedLocation.LengthAllocated);
     YoriLibTrimNullTerminators(&ExpandedLocation);
 
     memcpy(IconPath, &ExpandedLocation, sizeof(YORI_STRING));
@@ -427,7 +434,7 @@ YoriLibExecuteShortcut(
     IPersistFile *ScutFile = NULL;
     BOOL Result = FALSE;
     HRESULT hRes;
-    DWORD SizeNeeded;
+    YORI_ALLOC_SIZE_T SizeNeeded;
     LPTSTR Extension;
 
     ASSERT(YoriLibIsStringNullTerminated(ShortcutFileName));
@@ -480,9 +487,11 @@ YoriLibExecuteShortcut(
 
     hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
     while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
-        SizeNeeded = WorkingDirectory.LengthAllocated * 4;
+        SizeNeeded = WorkingDirectory.LengthAllocated;
         if (SizeNeeded == 0) {
             SizeNeeded = 1024;
+        } else if (YoriLibIsSizeAllocatable(SizeNeeded * 4)) {
+            SizeNeeded = SizeNeeded * 4;
         }
         YoriLibFreeStringContents(&WorkingDirectory);
 
@@ -496,9 +505,11 @@ YoriLibExecuteShortcut(
 
     hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
     while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
-        SizeNeeded = Arguments.LengthAllocated * 4;
+        SizeNeeded = Arguments.LengthAllocated;
         if (SizeNeeded == 0) {
             SizeNeeded = 1024;
+        } else if (YoriLibIsSizeAllocatable(SizeNeeded * 4)) {
+            SizeNeeded = SizeNeeded * 4;
         }
         YoriLibFreeStringContents(&Arguments);
 
@@ -512,9 +523,11 @@ YoriLibExecuteShortcut(
 
     hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
     while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
-        SizeNeeded = FileTarget.LengthAllocated * 4;
+        SizeNeeded = FileTarget.LengthAllocated;
         if (SizeNeeded == 0) {
             SizeNeeded = 1024;
+        } else if (YoriLibIsSizeAllocatable(SizeNeeded * 4)) {
+            SizeNeeded = SizeNeeded * 4;
         }
         YoriLibFreeStringContents(&FileTarget);
 
@@ -538,7 +551,7 @@ YoriLibExecuteShortcut(
     //  here.
     //
 
-    SizeNeeded = ExpandEnvironmentStrings(FileTarget.StartOfString, NULL, 0);
+    SizeNeeded = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(FileTarget.StartOfString, NULL, 0);
     if (SizeNeeded == 0) {
         goto Exit;
     }
@@ -547,9 +560,11 @@ YoriLibExecuteShortcut(
         goto Exit;
     }
 
-    ExpandedFileTarget.LengthInChars = ExpandEnvironmentStrings(FileTarget.StartOfString, ExpandedFileTarget.StartOfString, ExpandedFileTarget.LengthAllocated);
+    ExpandedFileTarget.LengthInChars = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(FileTarget.StartOfString,
+            ExpandedFileTarget.StartOfString,
+            ExpandedFileTarget.LengthAllocated);
 
-    SizeNeeded = ExpandEnvironmentStrings(Arguments.StartOfString, NULL, 0);
+    SizeNeeded = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(Arguments.StartOfString, NULL, 0);
     if (SizeNeeded == 0) {
         goto Exit;
     }
@@ -558,9 +573,11 @@ YoriLibExecuteShortcut(
         goto Exit;
     }
 
-    ExpandedArguments.LengthInChars = ExpandEnvironmentStrings(Arguments.StartOfString, ExpandedArguments.StartOfString, ExpandedArguments.LengthAllocated);
+    ExpandedArguments.LengthInChars = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(Arguments.StartOfString,
+            ExpandedArguments.StartOfString,
+            ExpandedArguments.LengthAllocated);
 
-    SizeNeeded = ExpandEnvironmentStrings(WorkingDirectory.StartOfString, NULL, 0);
+    SizeNeeded = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(WorkingDirectory.StartOfString, NULL, 0);
     if (SizeNeeded == 0) {
         goto Exit;
     }
@@ -569,7 +586,9 @@ YoriLibExecuteShortcut(
         goto Exit;
     }
 
-    ExpandedWorkingDirectory.LengthInChars = ExpandEnvironmentStrings(WorkingDirectory.StartOfString, ExpandedWorkingDirectory.StartOfString, ExpandedWorkingDirectory.LengthAllocated);
+    ExpandedWorkingDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(WorkingDirectory.StartOfString,
+            ExpandedWorkingDirectory.StartOfString,
+            ExpandedWorkingDirectory.LengthAllocated);
 
     YoriLibTrimNullTerminators(&ExpandedFileTarget);
     YoriLibTrimNullTerminators(&ExpandedArguments);
@@ -581,7 +600,7 @@ YoriLibExecuteShortcut(
             YORI_STRING YsExt;
             YoriLibInitEmptyString(&YsExt);
             YsExt.StartOfString = Extension;
-            YsExt.LengthInChars = ExpandedFileTarget.LengthInChars - (DWORD)(Extension - ExpandedFileTarget.StartOfString);
+            YsExt.LengthInChars = ExpandedFileTarget.LengthInChars - (YORI_ALLOC_SIZE_T)(Extension - ExpandedFileTarget.StartOfString);
 
             if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) == 0 ||
                 YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
@@ -590,7 +609,7 @@ YoriLibExecuteShortcut(
                 PROCESS_INFORMATION pi;
                 YORI_STRING CmdLine;
                 YORI_STRING UnescapedPath;
-                DWORD CharsNeeded;
+                YORI_ALLOC_SIZE_T CharsNeeded;
                 BOOLEAN HasWhiteSpace;
 
                 YoriLibInitEmptyString(&UnescapedPath);

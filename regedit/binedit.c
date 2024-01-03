@@ -103,7 +103,7 @@ RegeditEditBinaryValue(
     __inout PYORI_STRING ValueName,
     __in BOOLEAN ValueNameReadOnly,
     __inout PUCHAR *Value,
-    __inout PDWORD ValueLength,
+    __inout PYORI_ALLOC_SIZE_T ValueLength,
     __in BOOLEAN ValueReadOnly
     )
 {
@@ -231,7 +231,7 @@ RegeditEditBinaryValue(
     }
 
     if (Value != NULL && *Value != NULL && *ValueLength != 0) {
-        DWORDLONG LongValueLength;
+        YORI_ALLOC_SIZE_T LongValueLength;
 
         LongValueLength = *ValueLength;
 
@@ -274,7 +274,7 @@ RegeditEditBinaryValue(
 
     if (Result) {
         PUCHAR NewValue;
-        DWORDLONG NewValueLength;
+        YORI_ALLOC_SIZE_T NewValueLength;
 
         YORI_STRING NewValueName;
 
@@ -293,7 +293,7 @@ RegeditEditBinaryValue(
                 YoriLibDereference(*Value);
             }
             *Value = NewValue;
-            *ValueLength = (DWORD)NewValueLength;
+            *ValueLength = NewValueLength;
             if (!ValueNameReadOnly) {
                 YoriLibFreeStringContents(ValueName);
                 YoriLibCloneString(ValueName, &NewValueName);

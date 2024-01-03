@@ -126,12 +126,16 @@ IniToolListSectionFromIniFile(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&Value, 64 * 1024)) {
+    if (!YoriLibAllocateString(&Value, 32 * 1024)) {
         YoriLibFreeStringContents(&RealFileName);
         return FALSE;
     }
 
-    Value.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(Section->StartOfString, Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    Value.LengthInChars = (YORI_ALLOC_SIZE_T)
+        DllKernel32.pGetPrivateProfileSectionW(Section->StartOfString,
+                                               Value.StartOfString,
+                                               Value.LengthAllocated,
+                                               RealFileName.StartOfString);
     ThisVar = Value.StartOfString;
     while (*ThisVar != '\0') {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
@@ -169,12 +173,15 @@ IniToolListSectionsFromIniFile(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&Value, 64 * 1024)) {
+    if (!YoriLibAllocateString(&Value, 32 * 1024)) {
         YoriLibFreeStringContents(&RealFileName);
         return FALSE;
     }
 
-    Value.LengthInChars = DllKernel32.pGetPrivateProfileSectionNamesW(Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    Value.LengthInChars = (YORI_ALLOC_SIZE_T)
+        DllKernel32.pGetPrivateProfileSectionNamesW(Value.StartOfString,
+                                                    Value.LengthAllocated,
+                                                    RealFileName.StartOfString);
     ThisVar = Value.StartOfString;
     while (*ThisVar != '\0') {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
@@ -217,12 +224,18 @@ IniToolReadFromIniFile(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&Value, 16 * 1024)) {
+    if (!YoriLibAllocateString(&Value, 32 * 1024)) {
         YoriLibFreeStringContents(&RealFileName);
         return FALSE;
     }
 
-    Value.LengthInChars = DllKernel32.pGetPrivateProfileStringW(Section->StartOfString, Key->StartOfString, _T(""), Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    Value.LengthInChars = (YORI_ALLOC_SIZE_T)
+        DllKernel32.pGetPrivateProfileStringW(Section->StartOfString,
+                                              Key->StartOfString,
+                                              _T(""),
+                                              Value.StartOfString,
+                                              Value.LengthAllocated,
+                                              RealFileName.StartOfString);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Value);
 
     YoriLibFreeStringContents(&RealFileName);
@@ -306,13 +319,13 @@ typedef enum _INITOOL_OPERATION {
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    DWORD i;
-    DWORD StartArg = 0;
+    BOOLEAN ArgumentUnderstood;
+    YORI_ALLOC_SIZE_T i;
+    YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
     INITOOL_OPERATION Op;
 

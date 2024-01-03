@@ -78,15 +78,15 @@ NiceHelp(VOID)
  */
 DWORD
 ENTRYPOINT(
-    __in DWORD ArgC,
+    __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     YORI_STRING CmdLine;
     DWORD ExitCode;
     BOOL ArgumentUnderstood;
-    DWORD StartArg = 1;
-    DWORD i;
+    YORI_ALLOC_SIZE_T StartArg = 1;
+    YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
 
     for (i = 1; i < ArgC; i++) {
@@ -150,7 +150,7 @@ ENTRYPOINT(
         STARTUPINFO StartupInfo;
         HANDLE hJob;
 
-        ChildArgs = YoriLibMalloc((ArgC - StartArg) * sizeof(YORI_STRING));
+        ChildArgs = YoriLibMalloc((YORI_ALLOC_SIZE_T)((ArgC - StartArg) * sizeof(YORI_STRING)));
         if (ChildArgs == NULL) {
             return EXIT_FAILURE;
         }
@@ -167,7 +167,7 @@ ENTRYPOINT(
 
 
         memcpy(&ChildArgs[0], &Executable, sizeof(YORI_STRING));
-        if (StartArg + 1 < ArgC) {
+        if (StartArg + 1 < (YORI_ALLOC_SIZE_T)ArgC) {
             memcpy(&ChildArgs[1], &ArgV[StartArg + 1], (ArgC - StartArg - 1) * sizeof(YORI_STRING));
         }
 
