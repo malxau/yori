@@ -1701,6 +1701,7 @@ YoriShResolveTabCompletionActionForExecutable(
     YORI_STRING FilePartOnly;
     YORI_STRING ActionString;
     YORI_STRING YoriCompletePathVariable;
+    YORI_STRING PathVariableCopy;
     YORI_STRING FoundCompletionScript;
     YORI_STRING CompletionExpression;
     YORI_STRING ArgToComplete;
@@ -1746,27 +1747,47 @@ YoriShResolveTabCompletionActionForExecutable(
         return FALSE;
     }
 
+    if (!YoriLibAllocateString(&PathVariableCopy, YoriCompletePathVariable.LengthInChars + 1)) {
+        YoriLibFreeStringContents(&YoriCompletePathVariable);
+        YoriLibFreeStringContents(&FoundCompletionScript);
+        return FALSE;
+    }
+
+    //
+    //  The function below uses strtok which is destructive, so being called
+    //  in a loop requires providing a new buffer each time.
+    //
+
+    memcpy(PathVariableCopy.StartOfString, YoriCompletePathVariable.StartOfString, YoriCompletePathVariable.LengthInChars * sizeof(TCHAR));
+    PathVariableCopy.LengthInChars = YoriCompletePathVariable.LengthInChars;
+    PathVariableCopy.StartOfString[PathVariableCopy.LengthInChars] = '\0';
+
     //
     //  Search through the locations for a matching script name.  If there
     //  isn't one, perform a default action.
     //
 
-    while (!YoriLibPathLocateUnknownExtensionUnknownLocation(&FilePartOnly, &YoriCompletePathVariable, FALSE, NULL, NULL, &FoundCompletionScript) ||
+    while (!YoriLibPathLocateUnknownExtensionUnknownLocation(&FilePartOnly, &PathVariableCopy, FALSE, NULL, NULL, &FoundCompletionScript) ||
         FoundCompletionScript.LengthInChars == 0) {
 
         FinalPeriod = YoriLibFindRightMostCharacter(&FilePartOnly, '.');
         if (FinalPeriod == NULL) {
             YoriLibFreeStringContents(&FoundCompletionScript);
             YoriLibFreeStringContents(&YoriCompletePathVariable);
+            YoriLibFreeStringContents(&PathVariableCopy);
 
             Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
             return TRUE;
         }
 
         FilePartOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(FinalPeriod - FilePartOnly.StartOfString);
+        memcpy(PathVariableCopy.StartOfString, YoriCompletePathVariable.StartOfString, YoriCompletePathVariable.LengthInChars * sizeof(TCHAR));
+        PathVariableCopy.LengthInChars = YoriCompletePathVariable.LengthInChars;
+        PathVariableCopy.StartOfString[PathVariableCopy.LengthInChars] = '\0';
     }
 
     YoriLibFreeStringContents(&YoriCompletePathVariable);
+    YoriLibFreeStringContents(&PathVariableCopy);
     ASSERT(FoundCompletionScript.LengthInChars > 0);
 
     //

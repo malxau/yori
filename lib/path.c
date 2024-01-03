@@ -741,6 +741,8 @@ YoriLibLocateFileExtensionsInOnePath(
  @param SearchFor The file name to search for.
 
  @param PathVariable The contents of the environment variable to search through.
+        NOTE This function uses strtok and will manipulate the buffer in this
+        string, leaving it NULL delimited rather than semicolon delimited.
 
  @param SearchCurrentDirectory If TRUE, look in the current directory before
         searching through PathVariable.  This is typical behavior when
