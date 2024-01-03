@@ -219,6 +219,11 @@ typedef struct _YUI_CONTEXT {
     HFONT hBoldFont;
 
     /**
+     Handle to a background thread that is populating the start menu.
+     */
+    HANDLE MenuPopulateThread;
+
+    /**
      The top level menu handle for the start menu.
      */
     HMENU StartMenu;
@@ -654,6 +659,16 @@ YuiMenuCleanupContext(VOID);
 
 BOOL
 YuiMenuPopulate(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+BOOL
+YuiMenuPopulateInBackground(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+VOID
+YuiMenuWaitForBackgroundReload(
     __in PYUI_CONTEXT YuiContext
     );
 

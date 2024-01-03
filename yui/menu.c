@@ -1253,6 +1253,44 @@ YuiFileEnumerateErrorCallback(
 }
 
 /**
+ Check if any change notification that is monitoring start menu changes has
+ detected a change.  The change notifications are re-queued to detect a 
+ subsequent change.
+
+ @param YuiContext Pointer to the context containing the start menu and the
+        change notifications that are monitoring it.
+
+ @return TRUE to indicate changes detected, FALSE if no changes detected.
+ */
+BOOL
+YuiMenuCheckForFileSystemChanges(
+    __in PYUI_CONTEXT YuiContext
+    )
+{
+    DWORD WaitStatus;
+    DWORD HandleCount;
+
+    HandleCount = sizeof(YuiContext->StartChangeNotifications)/sizeof(YuiContext->StartChangeNotifications[0]);
+    while(TRUE) {
+        WaitStatus = WaitForMultipleObjectsEx(HandleCount,
+                                              YuiContext->StartChangeNotifications,
+                                              FALSE,
+                                              0,
+                                              FALSE);
+        if (WaitStatus == WAIT_TIMEOUT) {
+            return FALSE;
+        }
+
+        if (WaitStatus < WAIT_OBJECT_0 + HandleCount) {
+            FindNextChangeNotification(YuiContext->StartChangeNotifications[WaitStatus - WAIT_OBJECT_0]);
+        }
+    }
+
+    return TRUE;
+}
+
+
+/**
  Enumerate all shortcuts in known folders and populate the start menu with
  shortcut files that have been found.
 
@@ -1381,6 +1419,13 @@ YuiMenuPopulate(
             return FALSE;
         }
         YoriLibFreeStringContents(&FullPath);
+
+        //
+        //  Ignore any change notifications since we haven't started parsing
+        //  the file system yet
+        //
+
+        YuiMenuCheckForFileSystemChanges(YuiContext);
     }
 
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
@@ -1572,6 +1617,72 @@ YuiMenuFreeAll(
 }
 
 /**
+ Populate the menu from within a background thread.
+
+ @param lpParameter Pointer to the global application context containing the
+        start menu.
+
+ @return Thread exit value, not meaningful here.
+ */
+DWORD WINAPI
+YuiMenuPopulateWorker(
+    __in LPVOID lpParameter
+    )
+{
+    PYUI_CONTEXT YuiContext = (PYUI_CONTEXT)lpParameter;
+    YuiMenuPopulate(YuiContext);
+    return 0;
+}
+
+/**
+ Create a background thread to populate the menu, including loading any icons
+ for start menu entries.  This allows the task bar to be displayed while the
+ menu is still being populated.
+
+ @param YuiContext Pointer to the context containing the start menu.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YuiMenuPopulateInBackground(
+    __in PYUI_CONTEXT YuiContext
+    )
+{
+    HANDLE ThreadHandle;
+    DWORD ThreadId;
+
+    if (YuiContext->MenuPopulateThread != NULL) {
+        return FALSE;
+    }
+
+    ThreadHandle = CreateThread(NULL, 0, YuiMenuPopulateWorker, YuiContext, 0, &ThreadId);
+    YuiContext->MenuPopulateThread = ThreadHandle;
+    return TRUE;
+}
+
+/**
+ Wait for any background thread populating the start menu to complete.
+ Because this thread is initiated and waited upon from the main thread, this
+ can check for the existence of the thread and avoid waiting if it is not
+ present.
+
+ @param YuiContext Pointer to the context containing the start menu.
+ */
+VOID
+YuiMenuWaitForBackgroundReload(
+    __in PYUI_CONTEXT YuiContext
+    )
+{
+    if (YuiContext->MenuPopulateThread == NULL) {
+        return;
+    }
+
+    WaitForSingleObject(YuiContext->MenuPopulateThread, INFINITE);
+    CloseHandle(YuiContext->MenuPopulateThread);
+    YuiContext->MenuPopulateThread = NULL;
+}
+
+/**
  Check if any change notification that is monitoring start menu changes has
  detected a change.  If no changes are detected, return immediately and
  allow the previously generated start menu to be displayed.  If changes are
@@ -1589,8 +1700,6 @@ YuiMenuReloadIfChanged(
     __in PYUI_CONTEXT YuiContext
     )
 {
-    DWORD WaitStatus;
-    DWORD HandleCount;
     BOOLEAN FoundChange;
 
     FoundChange = FALSE;
@@ -1600,26 +1709,12 @@ YuiMenuReloadIfChanged(
     }
 #endif
 
-    if (!FoundChange) {
-        HandleCount = sizeof(YuiContext->StartChangeNotifications)/sizeof(YuiContext->StartChangeNotifications[0]);
-        while(TRUE) {
-            WaitStatus = WaitForMultipleObjectsEx(HandleCount,
-                                                  YuiContext->StartChangeNotifications,
-                                                  FALSE,
-                                                  0,
-                                                  FALSE);
-            if (WaitStatus == WAIT_TIMEOUT) {
-                if (!FoundChange) {
-                    return TRUE;
-                }
-                break;
-            }
+    if (YuiMenuCheckForFileSystemChanges(YuiContext)) {
+        FoundChange = TRUE;
+    }
 
-            FoundChange = TRUE;
-            if (WaitStatus < WAIT_OBJECT_0 + HandleCount) {
-                FindNextChangeNotification(YuiContext->StartChangeNotifications[WaitStatus - WAIT_OBJECT_0]);
-            }
-        }
+    if (!FoundChange) {
+        return TRUE;
     }
 
     YuiMenuFreeAll(YuiContext);
@@ -2035,6 +2130,8 @@ YuiMenuDisplayAndExecute(
 {
     RECT WindowRect;
     DWORD MenuId;
+
+    YuiMenuWaitForBackgroundReload(YuiContext);
 
     if (!YuiMenuReloadIfChanged(YuiContext)) {
         return FALSE;

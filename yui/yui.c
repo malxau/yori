@@ -899,6 +899,7 @@ VOID
 YuiCleanupGlobalState(VOID)
 {
     DWORD Count;
+    YuiMenuWaitForBackgroundReload(&YuiContext);
     YuiMenuFreeAll(&YuiContext);
     YuiTaskbarFreeButtons(&YuiContext);
     YuiMenuCleanupContext();
@@ -1034,7 +1035,7 @@ YuiCreateWindow(
         YuiCleanupGlobalState();
         return FALSE;
     }
-    YuiMenuPopulate(Context);
+    YuiMenuPopulateInBackground(Context);
 
     wc.style = 0;
     wc.lpfnWndProc = YuiTaskbarWindowProc;
