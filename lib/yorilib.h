@@ -63,6 +63,12 @@ typedef YORI_SIGNED_ALLOC_SIZE_T *PYORI_SIGNED_ALLOC_SIZE_T;
 typedef DWORDLONG                YORI_MAX_WORD_T;
 
 /**
+ Pointer to a type describing the largest describable integer in this
+ environment.
+ */
+typedef YORI_MAX_WORD_T          *PYORI_MAX_WORD_T;
+
+/**
  A yori list entry structure.
  */
 typedef struct _YORI_LIST_ENTRY {
@@ -125,12 +131,12 @@ typedef struct _YORI_LIB_BYTE_BUFFER {
     /**
      The number of bytes currently allocated to this buffer.
      */
-    DWORDLONG BytesAllocated;
+    YORI_MAX_WORD_T BytesAllocated;
 
     /**
      The number of bytes populated with data in this buffer.
      */
-    DWORDLONG BytesPopulated;
+    YORI_MAX_WORD_T BytesPopulated;
 
 } YORI_LIB_BYTE_BUFFER, *PYORI_LIB_BYTE_BUFFER;
 
@@ -505,7 +511,7 @@ YoriLibBuiltinRemoveEmptyVariables(
 BOOL
 YoriLibByteBufferInitialize(
     __out PYORI_LIB_BYTE_BUFFER Buffer,
-    __in DWORDLONG InitialSize
+    __in YORI_MAX_WORD_T InitialSize
     );
 
 VOID
@@ -522,14 +528,27 @@ __success(return != NULL)
 PUCHAR
 YoriLibByteBufferGetPointerToEnd(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in DWORDLONG MinimumLengthRequired,
-    __out_opt PDWORDLONG BytesAvailable
+    __in YORI_MAX_WORD_T MinimumLengthRequired,
+    __out_opt PYORI_ALLOC_SIZE_T BytesAvailable
     );
 
 BOOLEAN
 YoriLibByteBufferAddToPopulatedLength(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in DWORDLONG NewBytesPopulated
+    __in YORI_MAX_WORD_T NewBytesPopulated
+    );
+
+__success(return != NULL)
+PUCHAR
+YoriLibByteBufferGetPointerToValidData(
+    __in PYORI_LIB_BYTE_BUFFER Buffer,
+    __in YORI_MAX_WORD_T BufferOffset,
+    __out_opt PYORI_ALLOC_SIZE_T BytesAvailable
+    );
+
+YORI_MAX_WORD_T
+YoriLibByteBufferGetValidBytes(
+    __in PYORI_LIB_BYTE_BUFFER Buffer
     );
 
 // *** CABINET.C ***

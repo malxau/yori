@@ -574,7 +574,7 @@ YoriLibHttpProcessUrlRequest(
     SOCKET s;
     DWORD Length;
     DWORD TotalLength;
-    DWORDLONG BytesRemaining;
+    YORI_ALLOC_SIZE_T BytesRemaining;
 
     //
     //  MSFIX Implement this

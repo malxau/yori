@@ -1,7 +1,7 @@
 /**
  * @file sponge/sponge.c
  *
- * Yori shell filter within a line of output
+ * Yori shell load standard input into memory and output once load complete
  *
  * Copyright (c) 2019 Malcolm J. Smith
  *
@@ -59,16 +59,6 @@ SpongeHelp(VOID)
 typedef struct _SPONGE_BUFFER {
 
     /**
-     The number of bytes currently allocated to this buffer.
-     */
-    YORI_ALLOC_SIZE_T BytesAllocated;
-
-    /**
-     The number of bytes populated with data in this buffer.
-     */
-    YORI_ALLOC_SIZE_T BytesPopulated;
-
-    /**
      A handle to a pipe which is the source of data for this buffer.
      */
     HANDLE hSource;
@@ -76,7 +66,7 @@ typedef struct _SPONGE_BUFFER {
     /**
      The data buffer.
      */
-    PCHAR Buffer;
+    YORI_LIB_BYTE_BUFFER ByteBuffer;
 
 } SPONGE_BUFFER, *PSPONGE_BUFFER;
 
@@ -87,19 +77,26 @@ typedef struct _SPONGE_BUFFER {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
+BOOLEAN
 SpongeBufferPump(
     __in PSPONGE_BUFFER ThisBuffer
     )
 {
     DWORD BytesRead;
-    BOOL Result = FALSE;
+    BOOLEAN Result = FALSE;
+    PUCHAR WriteBuffer;
+    YORI_ALLOC_SIZE_T BytesAvailable;
 
     while (TRUE) {
 
+        WriteBuffer = YoriLibByteBufferGetPointerToEnd(&ThisBuffer->ByteBuffer, 16384, &BytesAvailable);
+        if (WriteBuffer == NULL) {
+            break;
+        }
+
         if (ReadFile(ThisBuffer->hSource,
-                     YoriLibAddToPointer(ThisBuffer->Buffer, ThisBuffer->BytesPopulated),
-                     ThisBuffer->BytesAllocated - ThisBuffer->BytesPopulated,
+                     WriteBuffer,
+                     BytesAvailable,
                      &BytesRead,
                      NULL)) {
 
@@ -108,28 +105,7 @@ SpongeBufferPump(
                 break;
             }
 
-            ThisBuffer->BytesPopulated = ThisBuffer->BytesPopulated + (YORI_ALLOC_SIZE_T)BytesRead;
-            ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
-            if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
-                YORI_ALLOC_SIZE_T NewBytesAllocated;
-                PCHAR NewBuffer;
-
-                if (ThisBuffer->BytesAllocated >= (YORI_MAX_ALLOC_SIZE / 4)) {
-                    break;
-                }
-
-                NewBytesAllocated = ThisBuffer->BytesAllocated * 4;
-
-                NewBuffer = YoriLibMalloc(NewBytesAllocated);
-                if (NewBuffer == NULL) {
-                    break;
-                }
-
-                memcpy(NewBuffer, ThisBuffer->Buffer, ThisBuffer->BytesAllocated);
-                YoriLibFree(ThisBuffer->Buffer);
-                ThisBuffer->Buffer = NewBuffer;
-                ThisBuffer->BytesAllocated = NewBytesAllocated;
-            }
+            YoriLibByteBufferAddToPopulatedLength(&ThisBuffer->ByteBuffer, BytesRead);
         } else {
             Result = TRUE;
             break;
@@ -148,28 +124,30 @@ SpongeBufferPump(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
+BOOLEAN
 SpongeBufferForward(
     __in PSPONGE_BUFFER ThisBuffer,
     __in HANDLE hTarget
     )
 {
-    DWORD BytesSent;
-    BOOL Result;
+    YORI_MAX_WORD_T BytesSent;
+    BOOLEAN Result;
+    YORI_MAX_WORD_T BytesPopulated;
+    PUCHAR SrcBuffer;
+    YORI_ALLOC_SIZE_T BytesToWrite;
 
     BytesSent = 0;
     Result = TRUE;
 
-    while (BytesSent < ThisBuffer->BytesPopulated) {
-        DWORD BytesToWrite;
+    BytesPopulated = YoriLibByteBufferGetValidBytes(&ThisBuffer->ByteBuffer);
+
+    while (BytesSent < BytesPopulated) {
         DWORD BytesWritten;
-        BytesToWrite = 4096;
-        if (BytesSent + BytesToWrite > ThisBuffer->BytesPopulated) {
-            BytesToWrite = ThisBuffer->BytesPopulated - BytesSent;
-        }
+
+        SrcBuffer = YoriLibByteBufferGetPointerToValidData(&ThisBuffer->ByteBuffer, BytesSent, &BytesToWrite);
 
         if (WriteFile(hTarget,
-                      YoriLibAddToPointer(ThisBuffer->Buffer, BytesSent),
+                      SrcBuffer,
                       BytesToWrite,
                       &BytesWritten,
                       NULL)) {
@@ -179,7 +157,7 @@ SpongeBufferForward(
             Result = FALSE;
         }
 
-        ASSERT(BytesSent <= ThisBuffer->BytesPopulated);
+        ASSERT(BytesSent <= BytesPopulated);
     }
 
     return Result;
@@ -197,28 +175,20 @@ SpongeAllocateBuffer(
     __out PSPONGE_BUFFER Buffer
     )
 {
-    Buffer->BytesAllocated = 1024;
-    Buffer->Buffer = YoriLibMalloc(Buffer->BytesAllocated);
-    if (Buffer->Buffer == NULL) {
-        return FALSE;
-    }
-
-    return TRUE;
+    return YoriLibByteBufferInitialize(&Buffer->ByteBuffer, 1024);
 }
 
 /**
  Free structures associated with a single input stream.
 
- @param ThisBuffer Pointer to the single stream's buffers to deallocate.
+ @param Buffer Pointer to the single stream's buffers to deallocate.
  */
 VOID
 SpongeFreeBuffer(
-    __in PSPONGE_BUFFER ThisBuffer
+    __in PSPONGE_BUFFER Buffer
     )
 {
-    if (ThisBuffer->Buffer != NULL) {
-        YoriLibFree(ThisBuffer->Buffer);
-    }
+    YoriLibByteBufferCleanup(&Buffer->ByteBuffer);
 }
 
 

@@ -59,16 +59,6 @@ Base64Help(VOID)
 typedef struct _BASE64_BUFFER {
 
     /**
-     The number of bytes currently allocated to this buffer.
-     */
-    YORI_ALLOC_SIZE_T BytesAllocated;
-
-    /**
-     The number of bytes populated with data in this buffer.
-     */
-    YORI_ALLOC_SIZE_T BytesPopulated;
-
-    /**
      A handle to a pipe which is the source of data for this buffer.
      */
     HANDLE hSource;
@@ -76,7 +66,7 @@ typedef struct _BASE64_BUFFER {
     /**
      The data buffer.
      */
-    PCHAR Buffer;
+    YORI_LIB_BYTE_BUFFER ByteBuffer;
 
 } BASE64_BUFFER, *PBASE64_BUFFER;
 
@@ -94,12 +84,19 @@ Base64BufferPump(
 {
     DWORD BytesRead;
     BOOL Result = FALSE;
+    PUCHAR WriteBuffer;
+    YORI_ALLOC_SIZE_T BytesAvailable;
 
     while (TRUE) {
 
+        WriteBuffer = YoriLibByteBufferGetPointerToEnd(&ThisBuffer->ByteBuffer, 16384, &BytesAvailable);
+        if (WriteBuffer == NULL) {
+            break;
+        }
+
         if (ReadFile(ThisBuffer->hSource,
-                     YoriLibAddToPointer(ThisBuffer->Buffer, ThisBuffer->BytesPopulated),
-                     ThisBuffer->BytesAllocated - ThisBuffer->BytesPopulated,
+                     WriteBuffer,
+                     BytesAvailable,
                      &BytesRead,
                      NULL)) {
 
@@ -108,37 +105,8 @@ Base64BufferPump(
                 break;
             }
 
-            ThisBuffer->BytesPopulated = ThisBuffer->BytesPopulated + (YORI_ALLOC_SIZE_T)BytesRead;
-            ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
-            if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
-                YORI_ALLOC_SIZE_T NewBytesAllocated;
-                PCHAR NewBuffer;
+            YoriLibByteBufferAddToPopulatedLength(&ThisBuffer->ByteBuffer, BytesRead);
 
-                //
-                //  Note this limits the size of the allocation to be 1Gb.
-                //  This program depends on having the source buffer in
-                //  memory at the same time as the target buffer, so it
-                //  depends on ensuring that a string allocation can
-                //  coexist with this one, and that allocation will be 2.5x
-                //  larger.  In a strict sense this limit could be higher,
-                //  but not by much.
-                //
-                if (ThisBuffer->BytesAllocated >= (YORI_MAX_ALLOC_SIZE / 4)) {
-                    break;
-                }
-
-                NewBytesAllocated = ThisBuffer->BytesAllocated * 4;
-
-                NewBuffer = YoriLibMalloc(NewBytesAllocated);
-                if (NewBuffer == NULL) {
-                    break;
-                }
-
-                memcpy(NewBuffer, ThisBuffer->Buffer, ThisBuffer->BytesAllocated);
-                YoriLibFree(ThisBuffer->Buffer);
-                ThisBuffer->Buffer = NewBuffer;
-                ThisBuffer->BytesAllocated = NewBytesAllocated;
-            }
         } else {
             Result = TRUE;
             break;
@@ -160,13 +128,7 @@ Base64AllocateBuffer(
     __out PBASE64_BUFFER Buffer
     )
 {
-    Buffer->BytesAllocated = 1024;
-    Buffer->Buffer = YoriLibMalloc(Buffer->BytesAllocated);
-    if (Buffer->Buffer == NULL) {
-        return FALSE;
-    }
-
-    return TRUE;
+    return YoriLibByteBufferInitialize(&Buffer->ByteBuffer, 1024);
 }
 
 /**
@@ -179,13 +141,7 @@ Base64FreeBuffer(
     __in PBASE64_BUFFER ThisBuffer
     )
 {
-    if (ThisBuffer->Buffer != NULL) {
-        YoriLibFree(ThisBuffer->Buffer);
-        ThisBuffer->Buffer = NULL;
-    }
-
-    ThisBuffer->BytesAllocated = 0;
-    ThisBuffer->BytesPopulated = 0;
+    YoriLibByteBufferCleanup(&ThisBuffer->ByteBuffer);
 }
 
 /**
@@ -204,12 +160,15 @@ Base64Encode(
     YORI_STRING Buffer;
     DWORD Err;
     LPTSTR ErrText;
+    PUCHAR SourceBuffer;
+    YORI_ALLOC_SIZE_T BytesPopulated;
 
     //
     //  Calculate the buffer size needed
     //
 
-    if (!DllCrypt32.pCryptBinaryToStringW(ThisBuffer->Buffer, ThisBuffer->BytesPopulated, CRYPT_STRING_BASE64, NULL, &CharsRequired)) {
+    SourceBuffer = YoriLibByteBufferGetPointerToValidData(&ThisBuffer->ByteBuffer, 0, &BytesPopulated);
+    if (!DllCrypt32.pCryptBinaryToStringW(SourceBuffer, BytesPopulated, CRYPT_STRING_BASE64, NULL, &CharsRequired)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("base64: failure to calculate buffer length in CryptBinaryToString: %s"), ErrText);
@@ -242,7 +201,7 @@ Base64Encode(
     //  Perform the encode
     //
 
-    if (!DllCrypt32.pCryptBinaryToStringW(ThisBuffer->Buffer, ThisBuffer->BytesPopulated, CRYPT_STRING_BASE64, Buffer.StartOfString, &CharsRequired)) {
+    if (!DllCrypt32.pCryptBinaryToStringW(SourceBuffer, BytesPopulated, CRYPT_STRING_BASE64, Buffer.StartOfString, &CharsRequired)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("base64: failure to encode in CryptBinaryToString: %s"), ErrText);
@@ -293,12 +252,19 @@ Base64Decode(
     HANDLE hTarget;
     DWORD Err;
     LPTSTR ErrText;
+    PUCHAR SourceBuffer;
+    YORI_ALLOC_SIZE_T BytesPopulated;
 
     //
     //  Convert the input buffer into a UTF16 string.
     //
 
-    CharsRequired = YoriLibGetMultibyteInputSizeNeeded(ThisBuffer->Buffer, ThisBuffer->BytesPopulated);
+    SourceBuffer = YoriLibByteBufferGetPointerToValidData(&ThisBuffer->ByteBuffer, 0, &BytesPopulated);
+    if (SourceBuffer == NULL) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("base64: allocation failure\n"));
+        return FALSE;
+    }
+    CharsRequired = YoriLibGetMultibyteInputSizeNeeded(SourceBuffer, BytesPopulated);
     if (!YoriLibAllocateString(&Buffer, CharsRequired + 1)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
@@ -307,7 +273,7 @@ Base64Decode(
         return FALSE;
     }
 
-    YoriLibMultibyteInput(ThisBuffer->Buffer, ThisBuffer->BytesPopulated, Buffer.StartOfString, CharsRequired);
+    YoriLibMultibyteInput(SourceBuffer, BytesPopulated, Buffer.StartOfString, CharsRequired);
     Buffer.LengthInChars = CharsRequired;
     Buffer.StartOfString[CharsRequired] = '\0';
 

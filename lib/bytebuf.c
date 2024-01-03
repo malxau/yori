@@ -40,7 +40,7 @@
 BOOL
 YoriLibByteBufferInitialize(
     __out PYORI_LIB_BYTE_BUFFER Buffer,
-    __in DWORDLONG InitialSize
+    __in YORI_MAX_WORD_T InitialSize
     )
 {
     Buffer->Buffer = NULL;
@@ -105,7 +105,7 @@ YoriLibByteBufferReset(
 BOOLEAN
 YoriLibByteBufferExtend(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in DWORDLONG NewTotalLength
+    __in YORI_ALLOC_SIZE_T NewTotalLength
     )
 {
     PUCHAR NewBuffer;
@@ -158,23 +158,32 @@ __success(return != NULL)
 PUCHAR
 YoriLibByteBufferGetPointerToEnd(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in DWORDLONG MinimumLengthRequired,
-    __out_opt PDWORDLONG BytesAvailable
+    __in YORI_MAX_WORD_T MinimumLengthRequired,
+    __out_opt PYORI_ALLOC_SIZE_T BytesAvailable
     )
 {
-    DWORDLONG BytesRemaining = Buffer->BytesAllocated - Buffer->BytesPopulated;
+    YORI_MAX_WORD_T BytesRemaining = Buffer->BytesAllocated - Buffer->BytesPopulated;
     PUCHAR EndOfBuffer;
 
     if (BytesRemaining < MinimumLengthRequired) {
-        DWORDLONG NewLength;
+        YORI_MAX_WORD_T RequiredLength;
+        YORI_MAX_WORD_T DesiredLength;
+        YORI_ALLOC_SIZE_T NewLength;
 
-        NewLength = Buffer->BytesAllocated * 2;
+        DesiredLength = Buffer->BytesAllocated * 2;
+        if (DesiredLength == 0) {
+            DesiredLength = 16384;
+        }
+        RequiredLength = Buffer->BytesAllocated + MinimumLengthRequired;
+        if (DesiredLength < RequiredLength) {
+            DesiredLength = RequiredLength;
+        }
+
+        NewLength = YoriLibMaximumAllocationInRange(RequiredLength, DesiredLength);
         if (NewLength == 0) {
-            NewLength = 16384;
+            return NULL;
         }
-        if (NewLength < MinimumLengthRequired) {
-            NewLength = MinimumLengthRequired;
-        }
+
         if (!YoriLibByteBufferExtend(Buffer, NewLength)) {
             return NULL;
         }
@@ -184,7 +193,7 @@ YoriLibByteBufferGetPointerToEnd(
 
     EndOfBuffer = YoriLibAddToPointer(Buffer->Buffer, Buffer->BytesPopulated);
     if (BytesAvailable != NULL) {
-        *BytesAvailable = BytesRemaining;
+        *BytesAvailable = (YORI_ALLOC_SIZE_T)BytesRemaining;
     }
 
     return EndOfBuffer;
@@ -205,7 +214,7 @@ YoriLibByteBufferGetPointerToEnd(
 BOOLEAN
 YoriLibByteBufferAddToPopulatedLength(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in DWORDLONG NewBytesPopulated
+    __in YORI_MAX_WORD_T NewBytesPopulated
     )
 {
     ASSERT(Buffer->BytesPopulated + NewBytesPopulated <= Buffer->BytesAllocated);
@@ -215,6 +224,60 @@ YoriLibByteBufferAddToPopulatedLength(
 
     Buffer->BytesPopulated = Buffer->BytesPopulated + NewBytesPopulated;
     return TRUE;
+}
+
+/**
+ Get a pointer to data in the buffer that is already populated.
+
+ @param Buffer Pointer to the byte buffer structure.
+
+ @param BufferOffset Indicates the offset within the buffer to obtain a
+        pointer.
+
+ @param BytesAvailable On successful completion, optionally updated to
+        contain the number of bytes available in the buffer (ie., the number
+        of bytes that are valid and can be read from.)
+
+ @return On successful completion, pointer to the buffer to read from.
+         Returns NULL on failure.
+ */
+__success(return != NULL)
+PUCHAR
+YoriLibByteBufferGetPointerToValidData(
+    __in PYORI_LIB_BYTE_BUFFER Buffer,
+    __in YORI_MAX_WORD_T BufferOffset,
+    __out_opt PYORI_ALLOC_SIZE_T BytesAvailable
+    )
+{
+    YORI_MAX_WORD_T BytesRemaining;
+    PUCHAR BufferLocation;
+
+    if (BufferOffset >= Buffer->BytesPopulated) {
+        return NULL;
+    }
+
+    BytesRemaining = Buffer->BytesPopulated - BufferOffset;
+    BufferLocation = YoriLibAddToPointer(Buffer->Buffer, BufferOffset);
+    if (BytesAvailable != NULL) {
+        *BytesAvailable = (YORI_ALLOC_SIZE_T)BytesRemaining;
+    }
+
+    return BufferLocation;
+}
+
+/**
+ Return the number of valid bytes that have been written to the buffer.
+
+ @param Buffer Pointer to the byte buffer.
+
+ @return The number of valid bytes that have been written to the buffer.
+ */
+YORI_MAX_WORD_T
+YoriLibByteBufferGetValidBytes(
+    __in PYORI_LIB_BYTE_BUFFER Buffer
+    )
+{
+    return Buffer->BytesPopulated;
 }
 
 

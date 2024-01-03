@@ -63,16 +63,6 @@ EnvHelp(VOID)
 typedef struct _ENV_BUFFER {
 
     /**
-     The number of bytes currently allocated to this buffer.
-     */
-    YORI_ALLOC_SIZE_T BytesAllocated;
-
-    /**
-     The number of bytes populated with data in this buffer.
-     */
-    YORI_ALLOC_SIZE_T BytesPopulated;
-
-    /**
      A handle to a pipe which is the source of data for this buffer.
      */
     HANDLE hSource;
@@ -80,7 +70,7 @@ typedef struct _ENV_BUFFER {
     /**
      The data buffer.
      */
-    PUCHAR Buffer;
+    YORI_LIB_BYTE_BUFFER ByteBuffer;
 
 } ENV_BUFFER, *PENV_BUFFER;
 
@@ -96,13 +86,7 @@ EnvAllocateBuffer(
     __out PENV_BUFFER Buffer
     )
 {
-    Buffer->BytesAllocated = 1024;
-    Buffer->Buffer = YoriLibMalloc(Buffer->BytesAllocated);
-    if (Buffer->Buffer == NULL) {
-        return FALSE;
-    }
-
-    return TRUE;
+    return YoriLibByteBufferInitialize(&Buffer->ByteBuffer, 1024);
 }
 
 /**
@@ -115,9 +99,7 @@ EnvFreeBuffer(
     __in PENV_BUFFER ThisBuffer
     )
 {
-    if (ThisBuffer->Buffer != NULL) {
-        YoriLibFree(ThisBuffer->Buffer);
-    }
+    YoriLibByteBufferCleanup(&ThisBuffer->ByteBuffer);
 }
 
 /**
@@ -133,13 +115,20 @@ EnvBufferPump(
     )
 {
     DWORD BytesRead;
-    BOOL Result = FALSE;
+    BOOLEAN Result = FALSE;
+    PUCHAR WriteBuffer;
+    YORI_ALLOC_SIZE_T BytesAvailable;
 
     while (TRUE) {
 
+        WriteBuffer = YoriLibByteBufferGetPointerToEnd(&ThisBuffer->ByteBuffer, 16384, &BytesAvailable);
+        if (WriteBuffer == NULL) {
+            break;
+        }
+
         if (ReadFile(ThisBuffer->hSource,
-                     YoriLibAddToPointer(ThisBuffer->Buffer, ThisBuffer->BytesPopulated),
-                     ThisBuffer->BytesAllocated - ThisBuffer->BytesPopulated,
+                     WriteBuffer,
+                     BytesAvailable,
                      &BytesRead,
                      NULL)) {
 
@@ -148,28 +137,8 @@ EnvBufferPump(
                 break;
             }
 
-            ThisBuffer->BytesPopulated = ThisBuffer->BytesPopulated + (YORI_ALLOC_SIZE_T)BytesRead;
-            ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
-            if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
-                YORI_ALLOC_SIZE_T NewBytesAllocated;
-                PCHAR NewBuffer;
+            YoriLibByteBufferAddToPopulatedLength(&ThisBuffer->ByteBuffer, BytesRead);
 
-                if (ThisBuffer->BytesAllocated >= (YORI_MAX_ALLOC_SIZE / 4)) {
-                    break;
-                }
-
-                NewBytesAllocated = ThisBuffer->BytesAllocated * 4;
-
-                NewBuffer = YoriLibMalloc(NewBytesAllocated);
-                if (NewBuffer == NULL) {
-                    break;
-                }
-
-                memcpy(NewBuffer, ThisBuffer->Buffer, ThisBuffer->BytesAllocated);
-                YoriLibFree(ThisBuffer->Buffer);
-                ThisBuffer->Buffer = NewBuffer;
-                ThisBuffer->BytesAllocated = NewBytesAllocated;
-            }
         } else {
             Result = TRUE;
             break;
@@ -256,12 +225,18 @@ EnvModifyEnvironment(
     if (StdinVariableName != NULL) {
         YoriLibInitEmptyString(&StdinString);
 
-        if (Stdin->BytesPopulated > 0) {
-            StdinLength = YoriLibGetMultibyteInputSizeNeeded(Stdin->Buffer, Stdin->BytesPopulated);
+        if (YoriLibByteBufferGetValidBytes(&Stdin->ByteBuffer) != 0) {
+            YORI_ALLOC_SIZE_T BytesPopulated;
+            PUCHAR Buffer;
+
+            Buffer = YoriLibByteBufferGetPointerToValidData(&Stdin->ByteBuffer, 0, &BytesPopulated);
+            ASSERT(Buffer != NULL);
+
+            StdinLength = YoriLibGetMultibyteInputSizeNeeded(Buffer, BytesPopulated);
             if (!YoriLibAllocateString(&StdinString, StdinLength + 1)) {
                 return FALSE;
             }
-            YoriLibMultibyteInput(Stdin->Buffer, Stdin->BytesPopulated, StdinString.StartOfString, StdinLength);
+            YoriLibMultibyteInput(Buffer, BytesPopulated, StdinString.StartOfString, StdinLength);
             StdinString.LengthInChars = StdinLength;
 
             //
