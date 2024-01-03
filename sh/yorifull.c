@@ -29,6 +29,11 @@
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YAIRPLAN;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_ALIAS;
 
 /**
@@ -621,6 +626,7 @@ YoriShBuiltins[] = {
                     {_T("WHICH"),     YoriCmd_WHICH},
                     {_T("WININFO"),   YoriCmd_WININFO},
                     {_T("WINPOS"),    YoriCmd_WINPOS},
+                    {_T("YAIRPLAN"),  YoriCmd_YAIRPLAN},
                     {_T("YASSOC"),    YoriCmd_YASSOC},
                     {_T("YATTRIB"),   YoriCmd_YATTRIB},
                     {_T("YBASE64"),   YoriCmd_YBASE64},
@@ -683,6 +689,7 @@ YoriShBuiltins[] = {
 CONST YORI_SH_DEFAULT_ALIAS_ENTRY
 YoriShDefaultAliasEntries[] = {
     {_T("F7"),       _T("history -u")},
+    {_T("airplan"),  _T("yairplan $*$")},
     {_T("assoc"),    _T("yassoc $*$")},
     {_T("attrib"),   _T("yattrib $*$")},
     {_T("base64"),   _T("ybase64 $*$")},

@@ -1,3 +1,4 @@
+builtin alias -s airplan=yairplan $*$
 builtin alias -s attrib=yattrib $*$
 builtin alias -s base64=ybase64 $*$
 builtin alias -s battery=ybattery $*$

@@ -523,6 +523,21 @@ YORI_BUILTIN_UNLOAD_NOTIFY(VOID);
  */
 typedef YORI_BUILTIN_UNLOAD_NOTIFY *PYORI_BUILTIN_UNLOAD_NOTIFY;
 
+// *** AIRPLANE.C ***
+
+__success(return)
+BOOLEAN
+YoriLibGetAirplaneMode(
+    __out PBOOLEAN AirplaneModeEnabled,
+    __out PBOOLEAN AirplaneModeChangable
+    );
+
+__success(return)
+BOOLEAN
+YoriLibSetAirplaneMode(
+    __in BOOLEAN AirplaneModeEnabled
+    );
+
 // *** BARGRAPH.C ***
 
 BOOLEAN

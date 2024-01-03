@@ -5478,6 +5478,11 @@ typedef ULONG STDMETHODCALLTYPE IUnknown_Release (PVOID This);
 #define CLSCTX_INPROC_SERVER 0x1
 
 /**
+ The local type identifier when instantiating objects.
+ */
+#define CLSCTX_LOCAL_SERVER 0x4
+
+/**
  The IPersistFile interface, composed of a pointer to a set of functions.
  */
 typedef struct IPersistFile {
@@ -5584,8 +5589,6 @@ typedef struct IShellLinkW {
     struct IShellLinkWVtbl * Vtbl;
 } IShellLinkW;
 
-typedef struct IShellLinkWVtbl IShellLinkWVtbl;
-
 /**
  Get the path to the target on a shortcut.
  */
@@ -5681,7 +5684,7 @@ typedef HRESULT STDMETHODCALLTYPE IShellLink_SetPath (IShellLinkW * This, LPCWST
 /**
  A set of functions defined by the IShellLink interface.
  */
-struct IShellLinkWVtbl {
+typedef struct IShellLinkWVtbl {
 
     /**
      Standard COM QueryInterface method.
@@ -5790,7 +5793,7 @@ struct IShellLinkWVtbl {
      Set the path to the target in a shortcut.
      */
     IShellLink_SetPath * SetPath;
-};
+} IShellLinkWVtbl;
 
 /**
  An instance of the IShellLinkDataList interface, consisting only of function
@@ -6003,6 +6006,80 @@ typedef struct _ISHELLLINKDATALIST_CONSOLE_PROPS {
  The signature for console properties within a ShellLinkDataList.
  */
 #define ISHELLLINKDATALIST_CONSOLE_PROPS_SIG (0xA0000002)
+
+/**
+ An instance of the IRadioManager interface, consisting only of function pointers.
+ */
+typedef struct IRadioManager {
+
+    /**
+     The function pointer table associated with this object.
+     */
+    struct IRadioManagerVtbl * Vtbl;
+} IRadioManager;
+
+/**
+ Get the current state of the radios.
+ */
+typedef HRESULT STDMETHODCALLTYPE IRadioManager_GetSystemRadioState (IRadioManager * This, PBOOL pbRadioEnable, PDWORD pStateB, PDWORD pStateC);
+
+/**
+ Set the current state of the radios.
+ */
+typedef HRESULT STDMETHODCALLTYPE IRadioManager_SetSystemRadioState (IRadioManager * This, BOOL bRadioEnable);
+
+/**
+ A set of functions defined by the IRadioManager interface.
+ */
+typedef struct IRadioManagerVtbl {
+
+    /**
+     Standard COM QueryInterface method.
+     */
+    IUnknown_QueryInterface * QueryInterface;
+
+    /**
+     Standard COM AddRef method.
+     */
+    IUnknown_AddRef * AddRef;
+
+    /**
+     Standard COM Release method.
+     */
+    IUnknown_Release * Release;
+
+    /**
+     Unused method in this application.
+     */
+    PVOID Reserved0;
+
+    /**
+     Unused method in this application.
+     */
+    PVOID Reserved1;
+
+    /**
+     Query the current system radio state.
+     */
+    IRadioManager_GetSystemRadioState * GetSystemRadioState;
+
+    /**
+     Set the current system radio state.
+     */
+    IRadioManager_SetSystemRadioState * SetSystemRadioState;
+
+    /**
+     Unused method in this application.
+     */
+    PVOID Reserved2;
+
+    /**
+     Unused method in this application.
+     */
+    PVOID Reserved3;
+
+} IRadioManagerVtbl;
+
 
 #ifndef _VIRTUAL_STORAGE_TYPE_DEFINED
 /**

@@ -4,6 +4,7 @@ compile: yorilib.lib yoriver.obj
 !INCLUDE "..\config\common.mk"
 
 OBJS=\
+	 airplane.obj \
 	 bargraph.obj \
 	 builtin.obj  \
 	 bytebuf.obj  \

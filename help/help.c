@@ -59,6 +59,7 @@ CHAR strHelpHelpText1[] =
         "\n"
         "For more information about a command, run <command> /?\n"
         "\n"
+        "AIRPLAN   Displays or updates airplane mode\n"
         "ALIAS     Displays or updates command aliases\n"
         "ASSOC     Display or edit file associations\n"
         "ATTRIB    Display or edit file attributes\n"

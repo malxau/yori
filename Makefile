@@ -87,6 +87,7 @@ DIRS1=crt        \
       libsh      \
       kernelbase \
       builtins   \
+      airplan    \
       assoc      \
       attrib     \
       base64     \
