@@ -481,7 +481,7 @@ YoriShParseArgs(
 /**
  The number of days before suggesting the user upgrade on a release build.
  */
-#define YORI_SH_DAYS_BEFORE_WARNING (180)
+#define YORI_SH_DAYS_BEFORE_WARNING (120)
 #endif
 
 /**
