@@ -1292,10 +1292,10 @@ YoriPkgRestoreRegistryLoginShell(
     Err = DllAdvApi32.pRegOpenKeyExW(HKEY_LOCAL_MACHINE,
                                      KeyName.StartOfString,
                                      0,
-                                     KEY_QUERY_VALUE,
+                                     KEY_QUERY_VALUE | KEY_SET_VALUE,
                                      &hKey);
     if (Err == ERROR_SUCCESS) {
-        Err = DllAdvApi32.pRegDeleteKeyW(hKey, ValueName.StartOfString);
+        Err = DllAdvApi32.pRegDeleteValueW(hKey, ValueName.StartOfString);
         DllAdvApi32.pRegCloseKey(hKey);
         return TRUE;
     } else {
