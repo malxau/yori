@@ -68,7 +68,7 @@ StartHelp(VOID)
 
  @return TRUE to indicate success, FALSE on failure.
  */
-BOOL
+BOOLEAN
 StartCreateProcess(
     __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
@@ -131,14 +131,19 @@ StartCreateProcess(
 
  @param Elevate TRUE to indicate the program should prompt for elevation.
 
+ @param NoElevate TRUE to indicate automatic elevation prompts should be
+        suppressed; FALSE to let the system determine whether to display
+        a prompt.
+
  @return TRUE to indicate success, FALSE on failure.
  */
-BOOL
+BOOLEAN
 StartShellExecute(
     __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in INT ShowState,
-    __in BOOL Elevate
+    __in BOOLEAN Elevate,
+    __in BOOLEAN NoElevate
     )
 {
     YORI_STRING Args;
@@ -147,6 +152,7 @@ StartShellExecute(
     BOOLEAN AllocatedError = FALSE;
     YORI_SHELLEXECUTEINFO sei;
     DWORD LastError;
+    BOOL Result;
 
     ZeroMemory(&sei, sizeof(sei));
     sei.cbSize = sizeof(sei);
@@ -175,9 +181,21 @@ StartShellExecute(
             sei.lpVerb = _T("runas");
         }
 
-        if (!DllShell32.pShellExecuteExW(&sei)) {
+        if (NoElevate) {
+            SetEnvironmentVariable(_T("__COMPAT_LAYER"), _T("runasinvoker"));
+        }
+
+        Result = DllShell32.pShellExecuteExW(&sei);
+
+        if (!Result) {
             LastError = GetLastError();
-        } else {
+        }
+
+        if (NoElevate) {
+            SetEnvironmentVariable(_T("__COMPAT_LAYER"), NULL);
+        }
+
+        if (Result) {
             YoriLibFreeStringContents(&Args);
             return TRUE;
         }
@@ -193,7 +211,15 @@ StartShellExecute(
         return FALSE;
     }
 
+    if (NoElevate) {
+        SetEnvironmentVariable(_T("__COMPAT_LAYER"), _T("runasinvoker"));
+    }
+
     hInst = DllShell32.pShellExecuteW(NULL, NULL, sei.lpFile, sei.lpParameters, NULL, sei.nShow);
+
+    if (NoElevate) {
+        SetEnvironmentVariable(_T("__COMPAT_LAYER"), NULL);
+    }
 
     YoriLibFreeStringContents(&Args);
     if ((DWORD_PTR)hInst >= 32) {
@@ -245,14 +271,19 @@ StartShellExecute(
 
  @param Elevate TRUE to indicate the program should prompt for elevation.
 
+ @param NoElevate TRUE to indicate automatic elevation prompts should be
+        suppressed; FALSE to let the system determine whether to display
+        a prompt.
+
  @return TRUE to indicate success, FALSE on failure.
  */
-BOOL
+BOOLEAN
 StartExecute(
     __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
     __in INT ShowState,
-    __in BOOL Elevate
+    __in BOOLEAN Elevate,
+    __in BOOLEAN NoElevate
     )
 {
     YoriLibLoadShell32Functions();
@@ -262,7 +293,7 @@ StartExecute(
     }
 
     if (DllShell32.pShellExecuteW != NULL) {
-        return StartShellExecute(ArgC, ArgV, ShowState, Elevate);
+        return StartShellExecute(ArgC, ArgV, ShowState, Elevate, NoElevate);
     }
 
     return StartCreateProcess(ArgC, ArgV, ShowState);
@@ -302,9 +333,10 @@ ENTRYPOINT(
     YORI_STRING Arg;
     INT ShowState;
     YORI_STRING FoundExecutable;
-    BOOL PrependYori = FALSE;
-    BOOL Elevate = FALSE;
-    BOOL Result;
+    BOOLEAN PrependYori = FALSE;
+    BOOLEAN Elevate = FALSE;
+    BOOLEAN Result;
+    BOOLEAN NoElevate = FALSE;
 
     ShowState = SW_SHOWNORMAL;
 
@@ -323,6 +355,11 @@ ENTRYPOINT(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 Elevate = TRUE;
+                NoElevate = FALSE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ne")) == 0) {
+                NoElevate = TRUE;
+                Elevate = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s:b")) == 0) {
                 ShowState = SW_SHOWNOACTIVATE;
@@ -415,11 +452,11 @@ ENTRYPOINT(
             ArgArray[Index + 2].MemoryToFree = NULL;
         }
 
-        Result = StartExecute(ArgCount + 2, ArgArray, ShowState, Elevate);
+        Result = StartExecute(ArgCount + 2, ArgArray, ShowState, Elevate, NoElevate);
         YoriLibFreeStringContents(&ArgArray[0]);
         YoriLibFree(ArgArray);
     } else {
-        Result = StartExecute(ArgC - StartArg, &ArgV[StartArg], ShowState, Elevate);
+        Result = StartExecute(ArgC - StartArg, &ArgV[StartArg], ShowState, Elevate, NoElevate);
     }
 
     if (Result) {
