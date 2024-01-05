@@ -2195,7 +2195,7 @@ EditGoToLineButtonClicked(
     YORI_STRING Text;
     PYORI_WIN_CTRL_HANDLE Parent;
     PEDIT_CONTEXT EditContext;
-    LONGLONG llNewLine;
+    YORI_MAX_SIGNED_T llNewLine;
     YORI_ALLOC_SIZE_T CharsConsumed;
 
     Parent = YoriWinGetControlParent(Ctrl);

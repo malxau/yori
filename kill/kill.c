@@ -192,7 +192,7 @@ ENTRYPOINT(
     YORI_ALLOC_SIZE_T StartArg = 1;
     YORI_STRING Arg;
     DWORD ProcessPid = 0;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD KillCount;
     PYORI_SYSTEM_PROCESS_INFORMATION ProcessInfo = NULL;

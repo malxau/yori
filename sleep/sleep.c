@@ -89,7 +89,7 @@ ENTRYPOINT(
     YORI_STRING Arg;
     YORI_STRING Suffix;
     DWORD TimeToSleep;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     HANDLE CancelHandle;
 

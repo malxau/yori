@@ -106,7 +106,7 @@ __success(return)
 BOOL
 YoriLibConsCnvInitializeStream(
     __in HANDLE hOutput,
-    __inout DWORDLONG *Context
+    __inout YORI_MAX_UNSIGNED_T *Context
     )
 {
     // PYORI_LIB_CHARINFO_CONVERT_CONTEXT Context = (PYORI_LIB_CHARINFO_CONVERT_CONTEXT)hOutput;
@@ -130,7 +130,7 @@ __success(return)
 BOOL
 YoriLibConsCnvEndStream(
     __in HANDLE hOutput,
-    __inout DWORDLONG *Context
+    __inout YORI_MAX_UNSIGNED_T *Context
     )
 {
     // PYORI_LIB_CHARINFO_CONVERT_CONTEXT Context = (PYORI_LIB_CHARINFO_CONVERT_CONTEXT)hOutput;
@@ -217,7 +217,7 @@ BOOL
 YoriLibConsCnvProcessAndOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout DWORDLONG *Context
+    __inout YORI_MAX_UNSIGNED_T *Context
     )
 {
     PYORI_LIB_CHARINFO_CONVERT_CONTEXT CvtContext;
@@ -275,7 +275,7 @@ BOOL
 YoriLibConsCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout DWORDLONG *Context
+    __inout YORI_MAX_UNSIGNED_T *Context
     )
 {
     PYORI_LIB_CHARINFO_CONVERT_CONTEXT CvtContext;
@@ -426,7 +426,7 @@ YoriLibAllocateConsoleVtConvertContext(
     Context->Callbacks.EndStream = YoriLibConsCnvEndStream;
     Context->Callbacks.ProcessAndOutputText = YoriLibConsCnvProcessAndOutputText;
     Context->Callbacks.ProcessAndOutputEscape = YoriLibConsCnvProcessAndOutputEscape;
-    Context->Callbacks.Context = (DWORDLONG)(DWORD_PTR)Context;
+    Context->Callbacks.Context = (YORI_MAX_UNSIGNED_T)(DWORD_PTR)Context;
 
     return &Context->Callbacks;
 }

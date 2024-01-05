@@ -44,7 +44,7 @@ BOOLEAN CvtvtRtfUnderlineOn = FALSE;
 BOOL
 CvtvtRtfInitializeStream(
     __in HANDLE hOutput,
-    __in PDWORDLONG Context
+    __in PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING OutputString;
@@ -74,7 +74,7 @@ CvtvtRtfInitializeStream(
 BOOL
 CvtvtRtfEndStream(
     __in HANDLE hOutput,
-    __in PDWORDLONG Context
+    __in PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING OutputString;
@@ -109,7 +109,7 @@ BOOL
 CvtvtRtfProcessAndOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __in PDWORDLONG Context
+    __in PYORI_MAX_UNSIGNED_T Context
     )
 {
 
@@ -157,7 +157,7 @@ BOOL
 CvtvtRtfProcessAndOutputEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __in PDWORDLONG Context
+    __in PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING TextString;

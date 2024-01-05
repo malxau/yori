@@ -87,7 +87,7 @@ ENTRYPOINT(
     YORI_ALLOC_SIZE_T LineCount = 0;
     YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
-    LONGLONG Temp;
+    YORI_MAX_SIGNED_T Temp;
     YORI_ALLOC_SIZE_T CharsConsumed;
 
     for (i = 1; i < ArgC; i++) {

@@ -71,7 +71,7 @@ YoriLibParseSchemeColorString(
     __out COLORREF *ColorValue
     )
 {
-    LONGLONG Temp;
+    YORI_MAX_SIGNED_T Temp;
     YORI_STRING SubString;
     YORI_ALLOC_SIZE_T CharsConsumed;
     UCHAR Red;

@@ -111,7 +111,7 @@ YoriCmd_FG(
         HANDLE WritePipe;
         YORI_STRING Line;
         PVOID LineContext = NULL;
-        LONGLONG llTemp;
+        YORI_MAX_SIGNED_T llTemp;
         YORI_ALLOC_SIZE_T CharsConsumed;
 
         llTemp = 0;

@@ -130,9 +130,9 @@ SpongeBufferForward(
     __in HANDLE hTarget
     )
 {
-    YORI_MAX_WORD_T BytesSent;
+    YORI_MAX_UNSIGNED_T BytesSent;
     BOOLEAN Result;
-    YORI_MAX_WORD_T BytesPopulated;
+    YORI_MAX_UNSIGNED_T BytesPopulated;
     PUCHAR SrcBuffer;
     YORI_ALLOC_SIZE_T BytesToWrite;
 

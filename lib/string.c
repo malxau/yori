@@ -351,11 +351,11 @@ YoriLibStringToNumberSpecifyBase(
     __in PCYORI_STRING String,
     __in WORD Base,
     __in BOOL IgnoreSeperators,
-    __out PLONGLONG Number,
+    __out PYORI_MAX_SIGNED_T Number,
     __out PYORI_ALLOC_SIZE_T CharsConsumed
     )
 {
-    LONGLONG Result;
+    YORI_MAX_SIGNED_T Result;
     YORI_ALLOC_SIZE_T Index;
     BOOL Negative = FALSE;
 
@@ -444,12 +444,12 @@ BOOL
 YoriLibStringToNumber(
     __in PCYORI_STRING String,
     __in BOOL IgnoreSeperators,
-    __out PLONGLONG Number,
+    __out PYORI_MAX_SIGNED_T Number,
     __out PYORI_ALLOC_SIZE_T CharsConsumed
     )
 {
-    DWORDLONG Result;
-    LONGLONG SignedResult;
+    YORI_MAX_UNSIGNED_T Result;
+    YORI_MAX_SIGNED_T SignedResult;
     YORI_ALLOC_SIZE_T Index;
     YORI_ALLOC_SIZE_T Base = 10;
     BOOL Negative = FALSE;
@@ -527,9 +527,9 @@ YoriLibStringToNumber(
     }
 
     if (Negative) {
-        SignedResult = (LONGLONG)0 - (LONGLONG)Result;
+        SignedResult = (YORI_MAX_SIGNED_T)0 - (YORI_MAX_SIGNED_T)Result;
     } else {
-        SignedResult = (LONGLONG)Result;
+        SignedResult = (YORI_MAX_SIGNED_T)Result;
     }
 
     *CharsConsumed = Index;
@@ -562,15 +562,15 @@ __success(return)
 BOOL
 YoriLibNumberToString(
     __inout PYORI_STRING String,
-    __in LONGLONG Number,
+    __in YORI_MAX_SIGNED_T Number,
     __in WORD Base,
     __in WORD DigitsPerGroup,
     __in TCHAR GroupSeperator
     )
 {
     YORI_ALLOC_SIZE_T Index;
-    DWORDLONG Num;
-    DWORDLONG IndexValue;
+    YORI_MAX_UNSIGNED_T Num;
+    YORI_MAX_UNSIGNED_T IndexValue;
     YORI_ALLOC_SIZE_T Digits;
     YORI_ALLOC_SIZE_T DigitIndex;
 
@@ -591,7 +591,7 @@ YoriLibNumberToString(
 
     Digits = 1;
     IndexValue = Num;
-    while (IndexValue > Base - 1) {
+    while (IndexValue > (WORD)(Base - 1)) {
         IndexValue = IndexValue / Base;
         Digits++;
     }
@@ -1663,10 +1663,14 @@ YoriLibStringToFileSize(
     LARGE_INTEGER FileSize;
     DWORD i;
     YORI_ALLOC_SIZE_T CharsConsumed;
+    YORI_MAX_SIGNED_T llTemp;
 
-    if (!YoriLibStringToNumber(String, TRUE, &FileSize.QuadPart, &CharsConsumed)) {
+    llTemp = 0;
+    if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed)) {
+        FileSize.QuadPart = llTemp;
         return FileSize;
     }
+    FileSize.QuadPart = llTemp;
 
     if (CharsConsumed < String->LengthInChars) {
         TCHAR SuffixChar = String->StartOfString[CharsConsumed];
@@ -1782,7 +1786,7 @@ YoriLibStringToDate(
     YORI_STRING Substring;
     YORI_ALLOC_SIZE_T CurrentCharsConsumed;
     YORI_ALLOC_SIZE_T TotalCharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
 
     YoriLibInitEmptyString(&Substring);
     Substring.StartOfString = String->StartOfString;
@@ -1849,7 +1853,7 @@ YoriLibStringToTime(
 {
     YORI_STRING Substring;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
 
     YoriLibInitEmptyString(&Substring);
     Substring.StartOfString = String->StartOfString;

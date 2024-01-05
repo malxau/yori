@@ -71,17 +71,17 @@ typedef struct _SPLIT_CONTEXT {
     /**
      If LinesMode is FALSE, specifies the number of bytes per part.
      */
-    LONGLONG BytesPerPart;
+    YORI_MAX_SIGNED_T BytesPerPart;
 
     /**
      If LinesMode is TRUE, specifies the number of lines per part.
      */
-    LONGLONG LinesPerPart;
+    YORI_MAX_SIGNED_T LinesPerPart;
 
     /**
      Indicates the next part to open.
      */
-    LONGLONG CurrentPartNumber;
+    YORI_MAX_SIGNED_T CurrentPartNumber;
 
     /**
      A string containing the prefix of newly created split fragments. The
@@ -164,7 +164,7 @@ SplitProcessStream(
     if (SplitContext->LinesMode) {
         PVOID LineContext = NULL;
         YORI_STRING LineString;
-        LONGLONG LineNumber;
+        YORI_MAX_SIGNED_T LineNumber;
 
         LineNumber = 0;
         YoriLibInitEmptyString(&LineString);
@@ -263,7 +263,7 @@ SplitJoin(
     PUCHAR Buffer;
     DWORD BytesRead;
     YORI_ALLOC_SIZE_T BytesAllocated;
-    LONGLONG CurrentFragment;
+    YORI_MAX_SIGNED_T CurrentFragment;
     LPTSTR FragmentFileName;
     YORI_STRING NumberString;
     DWORD LastError;

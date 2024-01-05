@@ -1636,7 +1636,7 @@ YoriLibGetSelectionDoubleClickBreakChars(
             BreakChars->StartOfString[ReadIndex + 1] == 'x') {
 
             YORI_ALLOC_SIZE_T CharsConsumed;
-            LONGLONG Number;
+            YORI_MAX_SIGNED_T Number;
 
             Substring.StartOfString = &BreakChars->StartOfString[ReadIndex];
             Substring.LengthInChars = BreakChars->LengthInChars - ReadIndex;
@@ -1675,7 +1675,7 @@ BOOL
 YoriLibIsYoriQuickEditEnabled(VOID)
 {
     YORI_STRING EnvVar;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
 
     YoriLibInitEmptyString(&EnvVar);

@@ -1588,14 +1588,14 @@ YoriPkgIsNewerVersionAvailableFromCache(
                 DWORD OsMinor;
                 DWORD OsBuild;
                 YORI_ALLOC_SIZE_T CharsConsumed;
-                LONGLONG RequiredBuildNumber = 0;
+                YORI_MAX_SIGNED_T RequiredBuildNumber = 0;
 
                 if (!YoriLibStringToNumber(&KnownPackage->MinimumOSBuild, FALSE, &RequiredBuildNumber, &CharsConsumed)) {
                     RequiredBuildNumber = 0;
                 }
 
                 YoriLibGetOsVersion(&OsMajor, &OsMinor, &OsBuild);
-                if (RequiredBuildNumber > OsBuild) {
+                if ((YORI_MAX_UNSIGNED_T)RequiredBuildNumber > OsBuild) {
                     if (KnownPackage->PackagePathForOlderBuilds.LengthInChars != 0) {
                         YoriLibCloneString(RedirectToPackageUrl, &KnownPackage->PackagePathForOlderBuilds);
                         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y requires newer OS, attempting %y\n"), UpgradePath, RedirectToPackageUrl);

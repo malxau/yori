@@ -526,7 +526,7 @@ ENTRYPOINT(
     YORI_STRING Arg;
     SYSTEMTIME CurrentSysTime;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG TargetYear;
+    YORI_MAX_SIGNED_T TargetYear;
 
     for (i = 1; i < ArgC; i++) {
 

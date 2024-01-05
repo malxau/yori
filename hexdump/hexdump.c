@@ -75,23 +75,23 @@ typedef struct _HEXDUMP_CONTEXT {
     /**
      Records the total number of files processed.
      */
-    LONGLONG FilesFound;
+    YORI_MAX_SIGNED_T FilesFound;
 
     /**
      Records the total number of files processed within a single command line
      argument.
      */
-    LONGLONG FilesFoundThisArg;
+    YORI_MAX_SIGNED_T FilesFoundThisArg;
 
     /**
      Offset within each stream to display.
      */
-    LONGLONG OffsetToDisplay;
+    YORI_MAX_SIGNED_T OffsetToDisplay;
 
     /**
      Length within each stream to display.
      */
-    LONGLONG LengthToDisplay;
+    YORI_MAX_SIGNED_T LengthToDisplay;
 
     /**
      Number of bytes to display per group.

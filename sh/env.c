@@ -409,8 +409,8 @@ YoriShGetEnvironmentVariable(
     if (ColonPtr[0] == '~') {
         YORI_STRING SubstringString;
         YORI_ALLOC_SIZE_T CharsConsumed;
-        LONGLONG RequestedOffset;
-        LONGLONG RequestedLength;
+        YORI_MAX_SIGNED_T RequestedOffset;
+        YORI_MAX_SIGNED_T RequestedLength;
         YORI_ALLOC_SIZE_T ActualOffset;
         YORI_ALLOC_SIZE_T ActualLength;
 
@@ -455,7 +455,7 @@ YoriShGetEnvironmentVariable(
         //
 
         if (RequestedOffset >= 0) {
-            if (RequestedOffset < DataLength) {
+            if ((YORI_MAX_UNSIGNED_T)RequestedOffset < DataLength) {
                 ActualOffset = (YORI_ALLOC_SIZE_T)RequestedOffset;
             } else {
                 ActualOffset = 0;
@@ -463,7 +463,7 @@ YoriShGetEnvironmentVariable(
             }
         } else {
             RequestedOffset = RequestedOffset * -1;
-            if (RequestedOffset > DataLength) {
+            if ((YORI_MAX_UNSIGNED_T)RequestedOffset > DataLength) {
                 ActualOffset = 0;
                 RequestedLength = 0;
             } else {
@@ -473,7 +473,7 @@ YoriShGetEnvironmentVariable(
 
         if (RequestedLength < 0) {
             RequestedLength = RequestedLength * -1;
-            if (RequestedLength > DataLength) {
+            if ((YORI_MAX_UNSIGNED_T)RequestedLength > DataLength) {
                 RequestedLength = DataLength;
             }
 

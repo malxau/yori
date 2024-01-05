@@ -212,7 +212,7 @@ YoriShInitHistory(VOID)
     if (EnvVarLength != 0) {
         YORI_STRING HistSizeString;
         YORI_ALLOC_SIZE_T CharsConsumed;
-        LONGLONG HistSize;
+        YORI_MAX_SIGNED_T HistSize;
 
         if (!YoriLibAllocateString(&HistSizeString, EnvVarLength)) {
             return FALSE;

@@ -301,7 +301,7 @@ ymain(
             if (YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("MP"), 2) == 0) {
                 if (Arg.LengthInChars > 2) {
                     YORI_STRING NumberProcessesString;
-                    LONGLONG LlNumberProcesses;
+                    YORI_MAX_SIGNED_T LlNumberProcesses;
                     YORI_ALLOC_SIZE_T CharsConsumed;
 
                     YoriLibInitEmptyString(&NumberProcessesString);

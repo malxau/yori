@@ -110,7 +110,7 @@ YoriCmd_WAIT(
         }
 
     } else {
-        LONGLONG llTemp;
+        YORI_MAX_SIGNED_T llTemp;
         YORI_ALLOC_SIZE_T CharsConsumed;
 
         if (!YoriLibStringToNumber(&ArgV[StartArg], TRUE, &llTemp, &CharsConsumed)) {

@@ -522,7 +522,7 @@ ENTRYPOINT(
     BOOLEAN BasicEnumeration = FALSE;
     YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
-    LONGLONG Temp;
+    YORI_MAX_SIGNED_T Temp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD Result;
 

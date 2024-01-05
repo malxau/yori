@@ -369,7 +369,7 @@ YoriLibHttpProcessResponseHeaders(
     DWORD CharIndex;
     YORI_ALLOC_SIZE_T LineLengthInChars;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     PYORI_LIB_HTTP_HEADER_LINE ResponseLine;
     PYORI_LIST_ENTRY ListEntry;
     YORI_STRING Str;

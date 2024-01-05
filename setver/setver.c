@@ -732,7 +732,7 @@ ENTRYPOINT(
     YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
     YORI_STRING WinVer;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     SETVER_CONTEXT Context;
 

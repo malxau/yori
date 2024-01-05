@@ -719,7 +719,7 @@ MakeLoadPreprocessorCacheEntries(
     YORI_STRING Key;
     YORI_STRING LineString;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     HANDLE hCache;
     PVOID LineContext = NULL;
 
@@ -1312,8 +1312,8 @@ MakePreprocessorEvaluateSingleCondition(
         }
 
     } else {
-        LONGLONG FirstNumber;
-        LONGLONG SecondNumber;
+        YORI_MAX_SIGNED_T FirstNumber;
+        YORI_MAX_SIGNED_T SecondNumber;
         YORI_ALLOC_SIZE_T CharsConsumed;
 
         //

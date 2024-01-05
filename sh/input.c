@@ -1617,7 +1617,7 @@ YoriShConfigureInputSettings(VOID)
 {
     YORI_ALLOC_SIZE_T EnvVarLength;
     YORI_STRING EnvVar;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     TCHAR EnvVarBuffer[10];
     YORI_STRING MouseoverColorString;

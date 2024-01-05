@@ -487,7 +487,7 @@ YoriCmd_HISTORY(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 if (ArgC > i + 1) {
                     YORI_ALLOC_SIZE_T CharsConsumed;
-                    LONGLONG llTemp;
+                    YORI_MAX_SIGNED_T llTemp;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
                         CharsConsumed > 0) {
 

@@ -43,17 +43,17 @@ typedef struct _YORI_WIN_CTRL_SCROLLBAR {
      The maximum value that the scrollbar will report when it has been
      scrolled to the end.
      */
-    DWORDLONG MaximumValue;
+    YORI_MAX_UNSIGNED_T MaximumValue;
 
     /**
      The current value of the position within the scrollbar.
      */
-    DWORDLONG CurrentValue;
+    YORI_MAX_UNSIGNED_T CurrentValue;
 
     /**
      The range of values that are visible at any one time.
      */
-    DWORDLONG NumberVisible;
+    YORI_MAX_UNSIGNED_T NumberVisible;
 
     /**
      A function to invoke when the scroll bar value is changed via any
@@ -75,7 +75,7 @@ typedef struct _YORI_WIN_CTRL_SCROLLBAR {
 
  @return The number of values that are represented by each character cell.
  */
-DWORDLONG
+YORI_MAX_UNSIGNED_T
 YoriWinScrollBarValueCountPerCell(
     __in PYORI_WIN_CTRL_SCROLLBAR ScrollBar
     )
@@ -121,7 +121,7 @@ YoriWinScrollBarPaint(
     WORD FirstSelectedPositionCell;
     WORD NumberSelectedPositionCells;
     WORD Index;
-    DWORDLONG ValueCountPerCell;
+    YORI_MAX_UNSIGNED_T ValueCountPerCell;
     CONST TCHAR* ScrollChars;
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
@@ -223,7 +223,7 @@ YoriWinScrollBarEventHandler(
                 WORD ClientHeight;
                 WORD NumberPositionCells;
                 WORD ClickedPositionCell;
-                DWORDLONG ValueCountPerCell;
+                YORI_MAX_UNSIGNED_T ValueCountPerCell;
                 ClientHeight = (WORD)(ScrollBar->Ctrl.ClientRect.Bottom - ScrollBar->Ctrl.ClientRect.Top + 1);
                 NumberPositionCells = (WORD)(ClientHeight - 2);
                 ClickedPositionCell = (WORD)(Event->MouseDown.Location.Y - 1);
@@ -284,7 +284,7 @@ YoriWinScrollBarEventHandler(
 
  @return The currently selected value.
  */
-DWORDLONG
+YORI_MAX_UNSIGNED_T
 YoriWinScrollBarGetPosition(
     __in PYORI_WIN_CTRL Ctrl
     )
@@ -309,9 +309,9 @@ YoriWinScrollBarGetPosition(
 VOID
 YoriWinScrollBarSetPosition(
     __in PYORI_WIN_CTRL Ctrl,
-    __in DWORDLONG CurrentValue,
-    __in DWORDLONG NumberVisible,
-    __in DWORDLONG MaximumValue
+    __in YORI_MAX_UNSIGNED_T CurrentValue,
+    __in YORI_MAX_UNSIGNED_T NumberVisible,
+    __in YORI_MAX_UNSIGNED_T MaximumValue
     )
 {
     PYORI_WIN_CTRL_SCROLLBAR ScrollBar;

@@ -283,7 +283,7 @@ YoriLibOutputTextToMultibyteNormalizeLineEnding(
 BOOL
 YoriLibConsoleInitializeStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -305,7 +305,7 @@ YoriLibConsoleInitializeStream(
 BOOL
 YoriLibConsoleEndStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -329,7 +329,7 @@ BOOL
 YoriLibConsoleProcessAndOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     DWORD BytesTransferred;
@@ -359,7 +359,7 @@ BOOL
 YoriLibConsoleProcessAndIgnoreEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -566,7 +566,7 @@ BOOL
 YoriLibConsoleProcessAndOutputEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
@@ -703,7 +703,7 @@ YoriLibConsoleIncludeEscapeSetFunctions(
 BOOL
 YoriLibUtf8TextInitializeStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -725,7 +725,7 @@ YoriLibUtf8TextInitializeStream(
 BOOL
 YoriLibUtf8TextEndStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -749,7 +749,7 @@ BOOL
 YoriLibUtf8TextProcessAndOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(Context);
@@ -771,7 +771,7 @@ BOOL
 YoriLibUtf8TextProcessAndOutputEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -840,7 +840,7 @@ YoriLibUtf8TextWithEscapesSetFunctions(
 BOOL
 YoriLibDebuggerInitializeStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -862,7 +862,7 @@ YoriLibDebuggerInitializeStream(
 BOOL
 YoriLibDebuggerEndStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -886,7 +886,7 @@ BOOL
 YoriLibDebuggerProcessAndOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     TCHAR StackBuf[64 + 1];
@@ -946,7 +946,7 @@ BOOL
 YoriLibDebuggerProcessAndOutputEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
@@ -1570,7 +1570,7 @@ YoriLibGetWindowDimensions(
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
-    LONGLONG Temp;
+    YORI_MAX_SIGNED_T Temp;
 
     if (GetConsoleScreenBufferInfo(OutputHandle, &ConsoleInfo)) {
         if (Width != NULL) {

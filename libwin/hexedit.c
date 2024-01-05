@@ -48,13 +48,13 @@ typedef struct _YORI_WIN_HEX_EDIT_SELECT {
      The first byte of the selection range.  This byte is included in the
      selection.
      */
-    DWORDLONG FirstByteOffset;
+    YORI_MAX_UNSIGNED_T FirstByteOffset;
 
     /**
      The last byte of the selection range.  This byte is included in the
      selection.
      */
-    DWORDLONG LastByteOffset;
+    YORI_MAX_UNSIGNED_T LastByteOffset;
 
 } YORI_WIN_HEX_EDIT_SELECT, *PYORI_WIN_HEX_EDIT_SELECT;
 
@@ -2010,10 +2010,10 @@ YoriWinHexEditDeleteCell(
 BOOLEAN
 YoriWinHexEditEnsureBufferLength(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORDLONG NewBufferLength
+    __in YORI_MAX_UNSIGNED_T NewBufferLength
     )
 {
-    DWORDLONG PaddedBufferLength;
+    YORI_MAX_UNSIGNED_T PaddedBufferLength;
     PUCHAR NewBuffer;
 
     if (HexEdit->BufferAllocated >= NewBufferLength) {
@@ -2105,7 +2105,7 @@ YoriWinHexEditInsertSpaceInBuffer(
     __in YORI_ALLOC_SIZE_T BytesToInsert
     )
 {
-    DWORDLONG BytesToMove;
+    YORI_MAX_UNSIGNED_T BytesToMove;
 
     ASSERT(BufferOffset <= HexEdit->BufferValid);
     if (BufferOffset > HexEdit->BufferValid) {
@@ -2551,7 +2551,7 @@ YoriWinHexEditGetSelectedData(
 {
     PYORI_WIN_CTRL_HEX_EDIT HexEdit;
     PYORI_WIN_CTRL Ctrl;
-    DWORDLONG LocalDataLength;
+    YORI_MAX_UNSIGNED_T LocalDataLength;
     PUCHAR Buffer;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;

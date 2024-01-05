@@ -2833,11 +2833,13 @@ YoriLibGenerateAllocatedRangeCount(
     )
 {
     YORI_ALLOC_SIZE_T CharsConsumed;
-    if (!YoriLibStringToNumber(String, TRUE, &Entry->AllocatedRangeCount.QuadPart, &CharsConsumed) ||
+    YORI_MAX_SIGNED_T llTemp;
+    if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
 
         return FALSE;
     }
+    Entry->AllocatedRangeCount.QuadPart = llTemp;
     return TRUE;
 }
 
@@ -3213,7 +3215,7 @@ YoriLibGenerateFileId(
     )
 {
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG FileId;
+    YORI_MAX_SIGNED_T FileId;
 
     if (!YoriLibStringToNumber(String, TRUE, &FileId, &CharsConsumed) ||
         CharsConsumed == 0) {
@@ -3221,7 +3223,7 @@ YoriLibGenerateFileId(
         return FALSE;
     }
 
-    Entry->FileId.QuadPart = (DWORDLONG)FileId;
+    Entry->FileId.QuadPart = (YORI_MAX_UNSIGNED_T)FileId;
     return TRUE;
 }
 
@@ -3310,11 +3312,13 @@ YoriLibGenerateFragmentCount(
     )
 {
     YORI_ALLOC_SIZE_T CharsConsumed;
-    if (!YoriLibStringToNumber(String, TRUE, &Entry->FragmentCount.QuadPart, &CharsConsumed) ||
+    YORI_MAX_SIGNED_T llTemp;
+    if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
 
         return FALSE;
     }
+    Entry->FragmentCount.QuadPart = llTemp;
     return TRUE;
 }
 
@@ -3336,7 +3340,7 @@ YoriLibGenerateLinkCount(
     )
 {
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
 
@@ -3389,7 +3393,7 @@ YoriLibGenerateOsVersion(
 {
     YORI_STRING Substring;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
 
     YoriLibInitEmptyString(&Substring);
     Substring.StartOfString = String->StartOfString;
@@ -3458,7 +3462,7 @@ YoriLibGenerateReparseTag(
     )
 {
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
 
@@ -3563,7 +3567,7 @@ YoriLibGenerateStreamCount(
     )
 {
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
 
@@ -3591,11 +3595,13 @@ YoriLibGenerateUsn(
     )
 {
     YORI_ALLOC_SIZE_T CharsConsumed;
-    if (!YoriLibStringToNumber(String, TRUE, &Entry->Usn.QuadPart, &CharsConsumed) ||
+    YORI_MAX_SIGNED_T llTemp;
+    if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
         CharsConsumed == 0) {
 
         return FALSE;
     }
+    Entry->Usn.QuadPart = llTemp;
     return TRUE;
 }
 
@@ -3619,7 +3625,7 @@ YoriLibGenerateVersion(
     LARGE_INTEGER FileVersion;
     YORI_STRING Substring;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
 
     YoriLibInitEmptyString(&Substring);
     Substring.StartOfString = String->StartOfString;

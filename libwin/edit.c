@@ -1293,7 +1293,7 @@ YoriWinEditIsValidNumericInput(
 {
     YORI_STRING TempString;
     TCHAR StringBuffer[32];
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     YORI_ALLOC_SIZE_T LengthNeeded;
 

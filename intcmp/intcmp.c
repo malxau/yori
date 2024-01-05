@@ -135,8 +135,8 @@ ENTRYPOINT(
     PYORI_STRING MatchingOperator;
     YORI_ALLOC_SIZE_T OperatorIndex;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG FirstNumber;
-    LONGLONG SecondNumber;
+    YORI_MAX_SIGNED_T FirstNumber;
+    YORI_MAX_SIGNED_T SecondNumber;
     int Result;
 
     for (i = 1; i < ArgC; i++) {

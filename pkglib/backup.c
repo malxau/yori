@@ -841,7 +841,7 @@ YoriPkgPreparePackageForInstall(
     YORI_STRING PkgInstalled;
     YORI_STRING PkgToReplace;
     YORI_ALLOC_SIZE_T LineLength;
-    LONGLONG RequiredBuildNumber;
+    YORI_MAX_SIGNED_T RequiredBuildNumber;
     YORI_ALLOC_SIZE_T CharsConsumed;
     LPTSTR ThisLine;
     LPTSTR Equals;
@@ -975,7 +975,7 @@ YoriPkgPreparePackageForInstall(
         DWORD OsBuild;
 
         YoriLibGetOsVersion(&OsMajor, &OsMinor, &OsBuild);
-        if (RequiredBuildNumber > OsBuild) {
+        if ((YORI_MAX_UNSIGNED_T)RequiredBuildNumber > OsBuild) {
             if (RedirectToPackageUrl != NULL &&
                 PendingPackage->PackagePathForOlderBuilds.LengthInChars > 0) {
 

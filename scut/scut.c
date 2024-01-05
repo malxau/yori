@@ -474,7 +474,7 @@ ScutStringToCoord(
     __out PCOORD Coord
     )
 {
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     YORI_STRING Substring;
     SHORT LocalCoordX;
@@ -625,7 +625,7 @@ ENTRYPOINT(
     IPersistFile *savedfile = NULL;
     IShellLinkDataList *ShortcutDataList = NULL;
     YORI_STRING Arg;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD   ExitCode;
     COORD   BufferSize;

@@ -2,9 +2,7 @@
 At this point, the TODO is more a list of tasks that might be useful and/or
 fun to write.
 
- - Reuse new byte buffer
- - Change completion script name evaluation to allow 8.3 compliance
- - Have text after warnings indicating how to suppress them
+ - Replace a lot of LONGLONG/DWORDLONG with max int types
  - Scroll around input line on tiny windows, where the entire line doesn't
    fit in the window
  - Make more use something like line selection
@@ -25,7 +23,6 @@ fun to write.
  - Minimize in libwin, implying defining an icon form of a window
  - TreeView
  - Multi-column list
- - Sort file and directory dialogs
  - Edit reposition viewport after paste
  - Edit horizontal scroll bar
  - Edit parse vim tags
@@ -44,7 +41,6 @@ fun to write.
  - Regedit search
  - Regedit multi-sz editor
 
- - Yui doesn't detect explorer already running on Windows 10
  - Yui should look deeper for background color
  - Windows 10 taskbar unhides itself very aggressively
  - Yui advertize minimize location for animation rendering
@@ -53,6 +49,7 @@ fun to write.
  - Run recent list and autocomplete
  - Calendar view within yui clock
  - Airplane mode toggle
+ - Customize button rendering to be more traditional
  - Shift+click in taskbar to launch new instance
  - Right click for cascade, tile, etc.
  - Desktop context menu

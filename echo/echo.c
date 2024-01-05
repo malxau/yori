@@ -122,7 +122,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 if (i + 1 < ArgC) {
-                    LONGLONG llRepeat;
+                    YORI_MAX_SIGNED_T llRepeat;
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llRepeat, &CharsConsumed) &&
                         CharsConsumed > 0) {

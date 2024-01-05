@@ -92,12 +92,14 @@ CpuInfoOutputLargeInteger(
 {
     YORI_STRING String;
     TCHAR StringBuffer[32];
+    YORI_MAX_SIGNED_T QuadPart;
 
     YoriLibInitEmptyString(&String);
     String.StartOfString = StringBuffer;
     String.LengthAllocated = sizeof(StringBuffer)/sizeof(StringBuffer[0]);
 
-    YoriLibNumberToString(&String, LargeInt.QuadPart, NumberBase, 0, ' ');
+    QuadPart = (YORI_MAX_SIGNED_T)LargeInt.QuadPart;
+    YoriLibNumberToString(&String, QuadPart, NumberBase, 0, ' ');
 
     if (OutputString->LengthAllocated >= String.LengthInChars) {
         memcpy(OutputString->StartOfString, String.StartOfString, String.LengthInChars * sizeof(TCHAR));
@@ -1114,7 +1116,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0 &&
                        i + 1 < ArgC) {
 
-                LONGLONG llTemp;
+                YORI_MAX_SIGNED_T llTemp;
                 YORI_ALLOC_SIZE_T CharsConsumed;
 
                 llTemp = 0;

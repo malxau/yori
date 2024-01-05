@@ -54,7 +54,7 @@ YoriShCleanupStaleRestartStates(VOID)
     YORI_STRING RestartFileName;
     HANDLE FindHandle;
     WIN32_FIND_DATA FindData;
-    LONGLONG LongProcessId;
+    YORI_MAX_SIGNED_T LongProcessId;
     YORI_ALLOC_SIZE_T FileNameBufferLength;
     DWORD ProcessId;
     YORI_ALLOC_SIZE_T Index;
@@ -288,7 +288,7 @@ YoriShSaveRestartStateWorker(
     if (Comma != NULL) {
         YORI_STRING LineCountAsString;
         YORI_ALLOC_SIZE_T CharsConsumed;
-        LONGLONG llTemp;
+        YORI_MAX_SIGNED_T llTemp;
 
         YoriLibInitEmptyString(&LineCountAsString);
         LineCountAsString.StartOfString = Comma + 1;

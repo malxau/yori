@@ -77,14 +77,14 @@ BOOLEAN
 RegeditNumEditGetNumberFromDialog(
     __in PYORI_WIN_CTRL_HANDLE Parent,
     __in WORD ForceBase,
-    __out PLONGLONG NumberValue,
+    __out PYORI_MAX_SIGNED_T NumberValue,
     __out_opt PWORD Base
     )
 {
     PYORI_WIN_CTRL_HANDLE ValueEdit;
     PYORI_WIN_CTRL_HANDLE Radio;
     YORI_STRING ValueText;
-    LONGLONG NewNumberValue;
+    YORI_MAX_SIGNED_T NewNumberValue;
     YORI_ALLOC_SIZE_T CharsConsumed;
     WORD NewBase;
 
@@ -149,7 +149,7 @@ RegeditNumEditOkButtonClicked(
     )
 {
     PYORI_WIN_CTRL_HANDLE Parent;
-    LONGLONG NewNumberValue;
+    YORI_MAX_SIGNED_T NewNumberValue;
 
     Parent = YoriWinGetControlParent(Ctrl);
 
@@ -197,7 +197,7 @@ RegeditNumEditChangeNumberBase(
     PYORI_WIN_CTRL_HANDLE Parent;
     PYORI_WIN_CTRL_HANDLE ValueEdit;
     YORI_STRING Value;
-    LONGLONG NumberValue;
+    YORI_MAX_SIGNED_T NumberValue;
     WORD Base;
 
     Parent = YoriWinGetControlParent(Ctrl);
@@ -280,7 +280,7 @@ RegeditEditNumericValue(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
     __inout PYORI_STRING ValueName,
     __in BOOLEAN ValueNameReadOnly,
-    __inout PDWORDLONG Value,
+    __inout PYORI_MAX_UNSIGNED_T Value,
     __in BOOLEAN ValueReadOnly
     )
 {
@@ -293,7 +293,7 @@ RegeditEditNumericValue(
     PYORI_WIN_CTRL_HANDLE ValueEdit;
     PYORI_WIN_CTRL_HANDLE ValueNameEdit;
     YORI_STRING NewValue;
-    LONGLONG NewNumberValue;
+    YORI_MAX_SIGNED_T NewNumberValue;
     DWORD_PTR Result;
     COORD WinMgrSize;
     DWORD ButtonWidth;
@@ -389,7 +389,7 @@ RegeditEditNumericValue(
         return FALSE;
     }
 
-    NewNumberValue = *(PLONGLONG)Value;
+    NewNumberValue = *(PYORI_MAX_SIGNED_T)Value;
     YoriLibInitEmptyString(&NewValue);
     YoriLibNumberToString(&NewValue, NewNumberValue, 10, 0, ' ');
 
@@ -488,7 +488,7 @@ RegeditEditNumericValue(
 
         if (Result) {
             if (RegeditNumEditGetNumberFromDialog(Parent, 0, &NewNumberValue, NULL)) {
-                *Value = (DWORDLONG)NewNumberValue;
+                *Value = (YORI_MAX_UNSIGNED_T)NewNumberValue;
                 if (!ValueNameReadOnly) {
                     YoriLibFreeStringContents(ValueName);
                     YoriLibCloneString(ValueName, &NewValueName);

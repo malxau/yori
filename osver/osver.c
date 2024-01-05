@@ -244,7 +244,7 @@ OsVerDisplayMatchingBuilds(
     __in_opt PYORI_STRING MatchString
     )
 {
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_STRING DisplayString;
     YORI_ALLOC_SIZE_T CharsConsumed;
     YORI_ALLOC_SIZE_T CharsNeeded;

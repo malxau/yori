@@ -351,7 +351,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
                 if (ArgC > i + 1) {
                     YORI_ALLOC_SIZE_T CharsConsumed;
-                    LONGLONG HeadLines = 0;
+                    YORI_MAX_SIGNED_T HeadLines = 0;
                     if (!YoriLibStringToNumber(&ArgV[i + 1], TRUE, &HeadLines, &CharsConsumed) ||
                          CharsConsumed == 0) {
 

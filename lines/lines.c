@@ -89,39 +89,39 @@ typedef struct _LINES_CONTEXT {
     /**
      Records the total number of files processed.
      */
-    LONGLONG FilesFound;
+    YORI_MAX_SIGNED_T FilesFound;
 
     /**
      Records the total number of files processed within a single command line
      argument.
      */
-    LONGLONG FilesFoundThisArg;
+    YORI_MAX_SIGNED_T FilesFoundThisArg;
 
     /**
      Records the number of lines found in a single file.
      */
-    LONGLONG FileLinesFound;
+    YORI_MAX_SIGNED_T FileLinesFound;
 
     /**
      The shortest line within a single file.
      */
-    LONGLONG FileShortestLine;
+    YORI_MAX_UNSIGNED_T FileShortestLine;
 
     /**
      The longest line within a single file.
      */
-    LONGLONG FileLongestLine;
+    YORI_MAX_UNSIGNED_T FileLongestLine;
 
     /**
      The total number of characters within all lines in a single file, used
      to display an average if one is requested.
      */
-    LONGLONG FileTotalChars;
+    YORI_MAX_SIGNED_T FileTotalChars;
 
     /**
      Records the total number of lines processed for all files.
      */
-    LONGLONG TotalLinesFound;
+    YORI_MAX_SIGNED_T TotalLinesFound;
 } LINES_CONTEXT, *PLINES_CONTEXT;
 
 /**

@@ -115,7 +115,7 @@ RegeditEditNumericValue(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
     __inout PYORI_STRING ValueName,
     __in BOOLEAN ValueNameReadOnly,
-    __inout PDWORDLONG Value,
+    __inout PYORI_MAX_UNSIGNED_T Value,
     __in BOOLEAN ValueReadOnly
     );
 

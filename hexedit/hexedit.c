@@ -258,6 +258,7 @@ HexEditLoadFile(
     HANDLE hFile;
     LARGE_INTEGER FileSize;
     LARGE_INTEGER FileOffset;
+    YORI_MAX_SIGNED_T nFileSize;
     YORI_ALLOC_SIZE_T ReadLength;
     PUCHAR Buffer;
     DWORD BytesRead;
@@ -290,7 +291,8 @@ HexEditLoadFile(
         FileSize.QuadPart = DataLength;
     }
 
-    if (!YoriLibIsSizeAllocatable(FileSize.QuadPart)) {
+    nFileSize = (YORI_MAX_SIGNED_T)FileSize.QuadPart;
+    if (!YoriLibIsSizeAllocatable(nFileSize)) {
         CloseHandle(hFile);
         return ERROR_READ_FAULT;
     }
@@ -1581,7 +1583,8 @@ HexEditGoToButtonClicked(
     YORI_STRING Text;
     PYORI_WIN_CTRL_HANDLE Parent;
     PHEXEDIT_CONTEXT HexEditContext;
-    DWORDLONG NewOffset;
+    YORI_MAX_SIGNED_T SignedNewOffset;
+    YORI_MAX_UNSIGNED_T NewOffset;
     YORI_ALLOC_SIZE_T CharsConsumed;
 
     Parent = YoriWinGetControlParent(Ctrl);
@@ -1600,11 +1603,13 @@ HexEditGoToButtonClicked(
         return;
     }
 
-    if (YoriLibStringToNumber(&Text, FALSE, &NewOffset, &CharsConsumed) &&
+    if (YoriLibStringToNumber(&Text, FALSE, &SignedNewOffset, &CharsConsumed) &&
         CharsConsumed > 0) {
 
-        if (NewOffset < 0) {
+        if (SignedNewOffset < 0) {
             NewOffset = 0;
+        } else {
+            NewOffset = (YORI_MAX_UNSIGNED_T)SignedNewOffset;
         }
 
         YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, (YORI_ALLOC_SIZE_T)NewOffset, 0);

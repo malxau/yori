@@ -747,7 +747,7 @@ __success(return)
 BOOL
 YoriLibHtmlCnvInitializeStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING OutputString;
@@ -783,7 +783,7 @@ __success(return)
 BOOL
 YoriLibHtmlCnvEndStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING OutputString;
@@ -824,7 +824,7 @@ BOOL
 YoriLibHtmlCnvProcessAndOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
 
@@ -878,7 +878,7 @@ BOOL
 YoriLibHtmlCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING TextString;

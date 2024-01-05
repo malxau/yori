@@ -746,7 +746,7 @@ YoriWinScrollBarCreate(
     __in_opt PYORI_WIN_NOTIFY ChangeCallback
     );
 
-DWORDLONG
+YORI_MAX_UNSIGNED_T
 YoriWinScrollBarGetPosition(
     __in PYORI_WIN_CTRL Ctrl
     );
@@ -754,9 +754,9 @@ YoriWinScrollBarGetPosition(
 VOID
 YoriWinScrollBarSetPosition(
     __in PYORI_WIN_CTRL Ctrl,
-    __in DWORDLONG CurrentValue,
-    __in DWORDLONG NumberVisible,
-    __in DWORDLONG MaximumValue
+    __in YORI_MAX_UNSIGNED_T CurrentValue,
+    __in YORI_MAX_UNSIGNED_T NumberVisible,
+    __in YORI_MAX_UNSIGNED_T MaximumValue
     );
 
 BOOLEAN

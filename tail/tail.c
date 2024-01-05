@@ -414,7 +414,7 @@ ENTRYPOINT(
     DWORD Count;
     BOOLEAN BasicEnumeration = FALSE;
     TAIL_CONTEXT TailContext;
-    LONGLONG ContextLine;
+    YORI_MAX_SIGNED_T ContextLine;
     YORI_STRING Arg;
 
     ZeroMemory(&TailContext, sizeof(TailContext));
@@ -454,7 +454,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 if (ArgC > i + 1) {
-                    LONGLONG LineCount;
+                    YORI_MAX_SIGNED_T LineCount;
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &LineCount, &CharsConsumed) &&
                         LineCount != 0 && LineCount < 1 * 1024 * 1024 && LineCount < YORI_MAX_ALLOC_SIZE) {

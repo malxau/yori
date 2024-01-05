@@ -449,11 +449,14 @@ ENTRYPOINT(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 YORI_ALLOC_SIZE_T CharsConsumed;
+                YORI_MAX_SIGNED_T llTemp;
                 LARGE_INTEGER liTemp;
                 if (i + 1 < ArgC &&
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &liTemp.QuadPart, &CharsConsumed) &&
+                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
                     CharsConsumed > 0) {
                     FILETIME ftTemp;
+
+                    liTemp.QuadPart = llTemp;
 
                     ftTemp.dwLowDateTime = liTemp.LowPart;
                     ftTemp.dwHighDateTime = liTemp.HighPart;

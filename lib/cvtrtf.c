@@ -601,7 +601,7 @@ __success(return)
 BOOL
 YoriLibRtfCnvInitializeStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING OutputString;
@@ -637,7 +637,7 @@ __success(return)
 BOOL
 YoriLibRtfCnvEndStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING OutputString;
@@ -677,7 +677,7 @@ BOOL
 YoriLibRtfCnvProcessAndOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
 
@@ -730,7 +730,7 @@ BOOL
 YoriLibRtfCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING TextString;

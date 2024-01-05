@@ -72,7 +72,7 @@ typedef struct _EXPR_NUMBER {
     /**
      The number value.
      */
-    LONGLONG Value;
+    YORI_MAX_SIGNED_T Value;
 } EXPR_NUMBER, *PEXPR_NUMBER;
 
 /**
@@ -384,22 +384,22 @@ ENTRYPOINT(
 
     switch (BitsInOutput) {
         case 32:
-            Result.Value = (LONGLONG)(DWORD)Result.Value;
+            Result.Value = (YORI_MAX_SIGNED_T)(DWORD)Result.Value;
             break;
         case 31:
-            Result.Value = (LONGLONG)(INT)Result.Value;
+            Result.Value = (YORI_MAX_SIGNED_T)(INT)Result.Value;
             break;
         case 16:
-            Result.Value = (LONGLONG)(WORD)Result.Value;
+            Result.Value = (YORI_MAX_SIGNED_T)(WORD)Result.Value;
             break;
         case 15:
-            Result.Value = (LONGLONG)(SHORT)Result.Value;
+            Result.Value = (YORI_MAX_SIGNED_T)(SHORT)Result.Value;
             break;
         case 8:
-            Result.Value = (LONGLONG)(UCHAR)Result.Value;
+            Result.Value = (YORI_MAX_SIGNED_T)(UCHAR)Result.Value;
             break;
         case 7:
-            Result.Value = (LONGLONG)(CHAR)Result.Value;
+            Result.Value = (YORI_MAX_SIGNED_T)(CHAR)Result.Value;
             break;
     }
 

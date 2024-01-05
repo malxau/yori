@@ -106,7 +106,7 @@ WinPosStringToCoordinates(
     __out PLONG Vertical
     )
 {
-    LONGLONG Number;
+    YORI_MAX_SIGNED_T Number;
     YORI_STRING Remainder;
     YORI_ALLOC_SIZE_T CharsConsumed;
 

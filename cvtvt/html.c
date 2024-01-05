@@ -44,7 +44,7 @@ YORILIB_HTML_GENERATE_CONTEXT CvtvtHtmlGenerateContext;
 BOOL
 CvtvtHtmlInitializeStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING OutputString;
@@ -74,7 +74,7 @@ CvtvtHtmlInitializeStream(
 BOOL
 CvtvtHtmlEndStream(
     __in HANDLE hOutput,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING OutputString;
@@ -110,7 +110,7 @@ BOOL
 CvtvtHtmlProcessAndOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING TextString;
@@ -158,7 +158,7 @@ BOOL
 CvtvtHtmlProcessAndOutputEscape(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
-    __inout PDWORDLONG Context
+    __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     YORI_STRING TextString;

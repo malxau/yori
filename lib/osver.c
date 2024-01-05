@@ -580,7 +580,7 @@ YoriLibDoesSystemSupportBackgroundColors(VOID)
     }
 
     if (!YoriLibBackgroundColorSupportDetermined) {
-        LONGLONG Enabled;
+        YORI_MAX_SIGNED_T Enabled;
 
         YoriLibBackgroundColorSupported = FALSE;
         if (!YoriLibGetEnvironmentVariableAsNumber(_T("YORIBACKGROUND"), &Enabled)) {

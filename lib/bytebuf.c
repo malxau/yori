@@ -40,7 +40,7 @@
 BOOL
 YoriLibByteBufferInitialize(
     __out PYORI_LIB_BYTE_BUFFER Buffer,
-    __in YORI_MAX_WORD_T InitialSize
+    __in YORI_MAX_UNSIGNED_T InitialSize
     )
 {
     Buffer->Buffer = NULL;
@@ -158,16 +158,16 @@ __success(return != NULL)
 PUCHAR
 YoriLibByteBufferGetPointerToEnd(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in YORI_MAX_WORD_T MinimumLengthRequired,
+    __in YORI_MAX_UNSIGNED_T MinimumLengthRequired,
     __out_opt PYORI_ALLOC_SIZE_T BytesAvailable
     )
 {
-    YORI_MAX_WORD_T BytesRemaining = Buffer->BytesAllocated - Buffer->BytesPopulated;
+    YORI_MAX_UNSIGNED_T BytesRemaining = Buffer->BytesAllocated - Buffer->BytesPopulated;
     PUCHAR EndOfBuffer;
 
     if (BytesRemaining < MinimumLengthRequired) {
-        YORI_MAX_WORD_T RequiredLength;
-        YORI_MAX_WORD_T DesiredLength;
+        YORI_MAX_UNSIGNED_T RequiredLength;
+        YORI_MAX_UNSIGNED_T DesiredLength;
         YORI_ALLOC_SIZE_T NewLength;
 
         DesiredLength = Buffer->BytesAllocated * 2;
@@ -214,7 +214,7 @@ YoriLibByteBufferGetPointerToEnd(
 BOOLEAN
 YoriLibByteBufferAddToPopulatedLength(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in YORI_MAX_WORD_T NewBytesPopulated
+    __in YORI_MAX_UNSIGNED_T NewBytesPopulated
     )
 {
     ASSERT(Buffer->BytesPopulated + NewBytesPopulated <= Buffer->BytesAllocated);
@@ -245,11 +245,11 @@ __success(return != NULL)
 PUCHAR
 YoriLibByteBufferGetPointerToValidData(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in YORI_MAX_WORD_T BufferOffset,
+    __in YORI_MAX_UNSIGNED_T BufferOffset,
     __out_opt PYORI_ALLOC_SIZE_T BytesAvailable
     )
 {
-    YORI_MAX_WORD_T BytesRemaining;
+    YORI_MAX_UNSIGNED_T BytesRemaining;
     PUCHAR BufferLocation;
 
     if (BufferOffset >= Buffer->BytesPopulated) {
@@ -272,7 +272,7 @@ YoriLibByteBufferGetPointerToValidData(
 
  @return The number of valid bytes that have been written to the buffer.
  */
-YORI_MAX_WORD_T
+YORI_MAX_UNSIGNED_T
 YoriLibByteBufferGetValidBytes(
     __in PYORI_LIB_BYTE_BUFFER Buffer
     )

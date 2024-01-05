@@ -919,7 +919,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
                 if (i + 1 < ArgC) {
-                    LONGLONG LlNumberProcesses = 0;
+                    YORI_MAX_SIGNED_T LlNumberProcesses = 0;
                     YORI_ALLOC_SIZE_T CharsConsumed = 0;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &LlNumberProcesses, &CharsConsumed) &&
                         CharsConsumed > 0) {
@@ -1036,10 +1036,10 @@ ENTRYPOINT(
     }
 
     if (StepMode) {
-        LONGLONG Start;
-        LONGLONG Step;
-        LONGLONG End;
-        LONGLONG Current;
+        YORI_MAX_SIGNED_T Start;
+        YORI_MAX_SIGNED_T Step;
+        YORI_MAX_SIGNED_T End;
+        YORI_MAX_SIGNED_T Current;
         YORI_ALLOC_SIZE_T CharsConsumed;
         YORI_STRING FoundMatch;
         YORI_STRING Criteria;

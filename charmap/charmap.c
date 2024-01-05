@@ -269,7 +269,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
                     YORI_ALLOC_SIZE_T CharsConsumed;
-                    LONGLONG llTemp;
+                    YORI_MAX_SIGNED_T llTemp;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
                         CharCount = (YORI_ALLOC_SIZE_T)llTemp;
                         ArgumentUnderstood = TRUE;
@@ -289,7 +289,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 if (ArgC > i + 1) {
                     YORI_ALLOC_SIZE_T CharsConsumed;
-                    LONGLONG llTemp;
+                    YORI_MAX_SIGNED_T llTemp;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
                         StartChar = (YORI_ALLOC_SIZE_T)llTemp;
                         ArgumentUnderstood = TRUE;

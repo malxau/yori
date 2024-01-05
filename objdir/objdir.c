@@ -66,12 +66,12 @@ typedef struct _OBJDIR_CONTEXT {
     /**
      Records the total number of objects processed.
      */
-    LONGLONG ObjectsFound;
+    YORI_MAX_SIGNED_T ObjectsFound;
 
     /**
      Records the total number of directories processed.
      */
-    LONGLONG DirsFound;
+    YORI_MAX_SIGNED_T DirsFound;
 
     /**
      An allocation that receives the target location of a symbolic link.

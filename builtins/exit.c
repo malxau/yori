@@ -107,7 +107,7 @@ YoriCmd_EXIT(
     if (StartArg == 0) {
         ExitCode = EXIT_SUCCESS;
     } else {
-        LONGLONG llTemp;
+        YORI_MAX_SIGNED_T llTemp;
         YORI_ALLOC_SIZE_T CharsConsumed;
         if (!YoriLibStringToNumber(&ArgV[StartArg], FALSE, &llTemp, &CharsConsumed) ||
             CharsConsumed == 0) {

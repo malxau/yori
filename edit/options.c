@@ -162,7 +162,7 @@ EditOpts(
     }
 
     if (Result) {
-        LONGLONG llTemp;
+        YORI_MAX_SIGNED_T llTemp;
         YORI_ALLOC_SIZE_T CharsConsumed;
 
         Caption.StartOfString = CaptionBuffer;

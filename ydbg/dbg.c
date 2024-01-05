@@ -1174,7 +1174,7 @@ ENTRYPOINT(
     YDBG_OP Op;
     DWORD ProcessPid = 0;
     PYORI_STRING FileName = NULL;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     DWORD ExitResult;
     BOOLEAN EnableLoaderSnaps;

@@ -237,7 +237,7 @@ __success(return)
 BOOL
 YoriLibGetEnvironmentVariableAsNumber(
     __in LPCTSTR Name,
-    __out PLONGLONG Value
+    __out PYORI_MAX_SIGNED_T Value
     )
 {
     YORI_ALLOC_SIZE_T LengthNeeded;

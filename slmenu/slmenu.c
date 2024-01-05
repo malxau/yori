@@ -651,7 +651,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
 
                 if (i + 1 < ArgC) {
-                    LONGLONG llTemp;
+                    YORI_MAX_SIGNED_T llTemp;
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
                         CharsConsumed > 0)  {

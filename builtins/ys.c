@@ -528,7 +528,7 @@ YoriCmd_RETURN(
 
     ExitCode = 0;
     if (StartArg != 0) {
-        LONGLONG LlExitCode;
+        YORI_MAX_SIGNED_T LlExitCode;
         YORI_ALLOC_SIZE_T CharsConsumed;
 
         if (!YoriLibStringToNumber(&ArgV[StartArg], TRUE, &LlExitCode, &CharsConsumed) ||
@@ -993,7 +993,7 @@ YsExpandArgumentVariables(
     )
 {
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG ArgIndex;
+    YORI_MAX_SIGNED_T ArgIndex;
     YORI_ALLOC_SIZE_T StringLength;
     PYS_ARGUMENT_CONTEXT ArgContext = (PYS_ARGUMENT_CONTEXT)Context;
 

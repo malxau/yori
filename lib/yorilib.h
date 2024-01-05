@@ -56,17 +56,32 @@ typedef LONG                     YORI_SIGNED_ALLOC_SIZE_T;
 typedef YORI_SIGNED_ALLOC_SIZE_T *PYORI_SIGNED_ALLOC_SIZE_T;
 
 /**
- A type describing the largest describable integer in this environment.
- This must implicitly be equal to or larger than the maximum allocation size
- (we can't allocate a number of bytes that can't be represented.)
+ A type describing the largest describable unsigned integer in this
+ environment.  This must implicitly be equal to or larger than the
+ maximum allocation size (we can't allocate a number of bytes that
+ can't be represented.)
  */
-typedef DWORDLONG                YORI_MAX_WORD_T;
+typedef DWORDLONG                YORI_MAX_UNSIGNED_T;
 
 /**
- Pointer to a type describing the largest describable integer in this
+ Pointer to a type describing the largest describable unsigned integer in
+ this environment.
+ */
+typedef YORI_MAX_UNSIGNED_T      *PYORI_MAX_UNSIGNED_T;
+
+/**
+ A type describing the largest describable signed integer in this
+ environment.  This must implicitly be equal to or larger than the maximum
+ allocation size (we can't allocate a number of bytes that can't be
+ represented.)
+ */
+typedef LONGLONG                 YORI_MAX_SIGNED_T;
+
+/**
+ Pointer to a type describing the largest describable signed integer in this
  environment.
  */
-typedef YORI_MAX_WORD_T          *PYORI_MAX_WORD_T;
+typedef YORI_MAX_SIGNED_T        *PYORI_MAX_SIGNED_T;
 
 /**
  A yori list entry structure.
@@ -170,12 +185,12 @@ typedef struct _YORI_LIB_BYTE_BUFFER {
     /**
      The number of bytes currently allocated to this buffer.
      */
-    YORI_MAX_WORD_T BytesAllocated;
+    YORI_MAX_UNSIGNED_T BytesAllocated;
 
     /**
      The number of bytes populated with data in this buffer.
      */
-    YORI_MAX_WORD_T BytesPopulated;
+    YORI_MAX_UNSIGNED_T BytesPopulated;
 
 } YORI_LIB_BYTE_BUFFER, *PYORI_LIB_BYTE_BUFFER;
 
@@ -565,7 +580,7 @@ YoriLibBuiltinRemoveEmptyVariables(
 BOOL
 YoriLibByteBufferInitialize(
     __out PYORI_LIB_BYTE_BUFFER Buffer,
-    __in YORI_MAX_WORD_T InitialSize
+    __in YORI_MAX_UNSIGNED_T InitialSize
     );
 
 VOID
@@ -582,25 +597,25 @@ __success(return != NULL)
 PUCHAR
 YoriLibByteBufferGetPointerToEnd(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in YORI_MAX_WORD_T MinimumLengthRequired,
+    __in YORI_MAX_UNSIGNED_T MinimumLengthRequired,
     __out_opt PYORI_ALLOC_SIZE_T BytesAvailable
     );
 
 BOOLEAN
 YoriLibByteBufferAddToPopulatedLength(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in YORI_MAX_WORD_T NewBytesPopulated
+    __in YORI_MAX_UNSIGNED_T NewBytesPopulated
     );
 
 __success(return != NULL)
 PUCHAR
 YoriLibByteBufferGetPointerToValidData(
     __in PYORI_LIB_BYTE_BUFFER Buffer,
-    __in YORI_MAX_WORD_T BufferOffset,
+    __in YORI_MAX_UNSIGNED_T BufferOffset,
     __out_opt PYORI_ALLOC_SIZE_T BytesAvailable
     );
 
-YORI_MAX_WORD_T
+YORI_MAX_UNSIGNED_T
 YoriLibByteBufferGetValidBytes(
     __in PYORI_LIB_BYTE_BUFFER Buffer
     );
@@ -1307,7 +1322,7 @@ __success(return)
 BOOL
 YoriLibGetEnvironmentVariableAsNumber(
     __in LPCTSTR Name,
-    __out PLONGLONG Value
+    __out PYORI_MAX_SIGNED_T Value
     );
 
 __success(return)
@@ -2982,13 +2997,13 @@ YoriLibDereference(
 
 BOOLEAN
 YoriLibIsSizeAllocatable(
-    __in YORI_MAX_WORD_T Size
+    __in YORI_MAX_UNSIGNED_T Size
     );
 
 YORI_ALLOC_SIZE_T
 YoriLibMaximumAllocationInRange(
-    __in YORI_MAX_WORD_T RequiredSize,
-    __in YORI_MAX_WORD_T DesiredSize
+    __in YORI_MAX_UNSIGNED_T RequiredSize,
+    __in YORI_MAX_UNSIGNED_T DesiredSize
     );
 
 YORI_ALLOC_SIZE_T
@@ -3728,7 +3743,7 @@ YoriLibStringToNumberSpecifyBase(
     __in PCYORI_STRING String,
     __in WORD Base,
     __in BOOL IgnoreSeperators,
-    __out PLONGLONG Number,
+    __out PYORI_MAX_SIGNED_T Number,
     __out PYORI_ALLOC_SIZE_T CharsConsumed
     );
 
@@ -3737,7 +3752,7 @@ BOOL
 YoriLibStringToNumber(
     __in PCYORI_STRING String,
     __in BOOL IgnoreSeperators,
-    __out PLONGLONG Number,
+    __out PYORI_MAX_SIGNED_T Number,
     __out PYORI_ALLOC_SIZE_T CharsConsumed
     );
 
@@ -3745,7 +3760,7 @@ __success(return)
 BOOL
 YoriLibNumberToString(
     __inout PYORI_STRING String,
-    __in LONGLONG Number,
+    __in YORI_MAX_SIGNED_T Number,
     __in WORD Base,
     __in WORD DigitsPerGroup,
     __in TCHAR GroupSeperator
@@ -4223,23 +4238,23 @@ YoriLibOutputTextToMultibyteDevice(
 /**
  Initialize the output stream with any header information.
 */
-typedef BOOL (* YORI_LIB_VT_INITIALIZE_STREAM_FN)(HANDLE, DWORDLONG*);
+typedef BOOL (* YORI_LIB_VT_INITIALIZE_STREAM_FN)(HANDLE, YORI_MAX_UNSIGNED_T*);
 
 /**
  End processing for the specified stream.
 */
-typedef BOOL (* YORI_LIB_VT_END_STREAM_FN)(HANDLE, DWORDLONG*);
+typedef BOOL (* YORI_LIB_VT_END_STREAM_FN)(HANDLE, YORI_MAX_UNSIGNED_T*);
 
 /**
  Output text between escapes to the output device.
 */
-typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN)(HANDLE, PCYORI_STRING, DWORDLONG*);
+typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN)(HANDLE, PCYORI_STRING, YORI_MAX_UNSIGNED_T*);
 
 /**
  A callback function to receive an escape and translate it into the
  appropriate action.
 */
-typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN)(HANDLE, PCYORI_STRING, DWORDLONG*);
+typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN)(HANDLE, PCYORI_STRING, YORI_MAX_UNSIGNED_T*);
 
 /**
  A set of callback functions that can be invoked when processing VT100
@@ -4271,7 +4286,7 @@ typedef struct _YORI_LIB_VT_CALLBACK_FUNCTIONS {
     /**
      Context which is passed between functions and is opaque to the VT engine.
      */
-    DWORDLONG Context;
+    YORI_MAX_UNSIGNED_T Context;
 
 } YORI_LIB_VT_CALLBACK_FUNCTIONS, *PYORI_LIB_VT_CALLBACK_FUNCTIONS;
 

@@ -490,7 +490,7 @@ PeToolUpdateSubsystemVersion(
     DWORD DataChecksum;
     YORI_STRING FullPath;
     YORI_STRING WinVer;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     YORI_ALLOC_SIZE_T CharsConsumed;
     WORD MajorVersion;
     WORD MinorVersion;

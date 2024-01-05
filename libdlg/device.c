@@ -137,9 +137,9 @@ YoriDlgDevOkButtonClicked(
     YORI_STRING OffsetLengthText;
     PYORI_DLG_DEV_STATE State;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG TempNumber;
-    LONGLONG OffsetNumber;
-    LONGLONG LengthNumber;
+    YORI_MAX_SIGNED_T TempNumber;
+    YORI_MAX_SIGNED_T OffsetNumber;
+    YORI_MAX_SIGNED_T LengthNumber;
     DWORD Pass;
 
     Parent = YoriWinGetControlParent(Ctrl);

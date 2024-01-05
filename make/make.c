@@ -362,7 +362,7 @@ ENTRYPOINT(
     HANDLE hStream;
     YORI_STRING Arg;
     YORI_STRING RootDir;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
     DWORD Result;
     YORI_ALLOC_SIZE_T CharsConsumed;
     MAKE_PRIORITY Priority;

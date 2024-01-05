@@ -333,7 +333,7 @@ ENTRYPOINT(
     STRIDE_CONTEXT StrideContext;
     YORI_STRING Arg;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    LONGLONG llTemp;
+    YORI_MAX_SIGNED_T llTemp;
 
     ZeroMemory(&StrideContext, sizeof(StrideContext));
     StrideContext.Interval = 10;

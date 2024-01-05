@@ -787,7 +787,7 @@ RegeditEditSelectedValue(
 
             } else if (DataType == REG_DWORD) {
                 DWORD Data;
-                DWORDLONG LongData;
+                YORI_MAX_UNSIGNED_T LongData;
                 LongData = 0;
                 if (DataSize >= sizeof(DWORD)) {
                     Data = *(PDWORD)Value.StartOfString;
@@ -808,10 +808,10 @@ RegeditEditSelectedValue(
                     }
                 }
             } else if (DataType == REG_QWORD) {
-                DWORDLONG Data;
+                YORI_MAX_UNSIGNED_T Data;
                 Data = 0;
                 if (DataSize >= sizeof(DWORDLONG)) {
-                    Data = *(PDWORDLONG)Value.StartOfString;
+                    Data = (YORI_MAX_UNSIGNED_T)(*(PDWORDLONG)Value.StartOfString);
                 }
 
                 if (RegeditEditNumericValue(RegeditContext,
@@ -1238,7 +1238,7 @@ RegeditNewDWORDButtonClicked(
     PREGEDIT_CONTEXT RegeditContext;
     YORI_STRING ValueName;
     DWORD Value;
-    DWORDLONG LongValue;
+    YORI_MAX_UNSIGNED_T LongValue;
     DWORD Err;
     HKEY Key;
 
@@ -1297,7 +1297,7 @@ RegeditNewQWORDButtonClicked(
     PYORI_WIN_CTRL_HANDLE Parent;
     PREGEDIT_CONTEXT RegeditContext;
     YORI_STRING ValueName;
-    DWORDLONG Value;
+    YORI_MAX_UNSIGNED_T Value;
     DWORD Err;
     HKEY Key;
 

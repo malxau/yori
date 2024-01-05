@@ -507,10 +507,10 @@ YoriLibDereference(
  */
 BOOLEAN
 YoriLibIsSizeAllocatable(
-    __in YORI_MAX_WORD_T Size
+    __in YORI_MAX_UNSIGNED_T Size
     )
 {
-    YORI_MAX_WORD_T AllocMask;
+    YORI_MAX_UNSIGNED_T AllocMask;
     YORI_ALLOC_SIZE_T MaxAlloc;
 
     MaxAlloc = (YORI_ALLOC_SIZE_T)-1;
@@ -538,8 +538,8 @@ YoriLibIsSizeAllocatable(
  */
 YORI_ALLOC_SIZE_T
 YoriLibMaximumAllocationInRange(
-    __in YORI_MAX_WORD_T RequiredSize,
-    __in YORI_MAX_WORD_T DesiredSize
+    __in YORI_MAX_UNSIGNED_T RequiredSize,
+    __in YORI_MAX_UNSIGNED_T DesiredSize
     )
 {
     YORI_ALLOC_SIZE_T MaxAlloc;
@@ -583,7 +583,7 @@ YoriLibIsAllocationExtendable(
     __in YORI_ALLOC_SIZE_T DesiredExtraSize
     )
 {
-    YORI_MAX_WORD_T AllocSize;
+    YORI_MAX_UNSIGNED_T AllocSize;
 
     ASSERT(DesiredExtraSize >= RequiredExtraSize);
 

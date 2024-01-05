@@ -149,17 +149,17 @@ typedef struct _DIR_CONTEXT {
     /**
      Records the total number of files processed.
      */
-    LONGLONG FilesFound;
+    YORI_MAX_SIGNED_T FilesFound;
 
     /**
      Records the total number of directories processed.
      */
-    LONGLONG DirsFound;
+    YORI_MAX_SIGNED_T DirsFound;
 
     /**
      The total amount of bytes consumed by all files processed.
      */
-    LONGLONG TotalFileSize;
+    YORI_MAX_SIGNED_T TotalFileSize;
 
     /**
      A string containing the directory currently being enumerated.
@@ -169,24 +169,24 @@ typedef struct _DIR_CONTEXT {
     /**
      The total number of directory entries enumerated from this directory.
      */
-    LONGLONG ObjectsFoundInThisDir;
+    YORI_MAX_SIGNED_T ObjectsFoundInThisDir;
 
     /**
      The total number of directory entries enumerated from this directory
      that were themselves directories.
      */
-    LONGLONG DirsFoundInThisDir;
+    YORI_MAX_SIGNED_T DirsFoundInThisDir;
 
     /**
      The total number of directory entries enumerated from this directory
      that were themselves files.
      */
-    LONGLONG FilesFoundInThisDir;
+    YORI_MAX_SIGNED_T FilesFoundInThisDir;
 
     /**
      The total amount of bytes consumed by files within this directory.
      */
-    LONGLONG FileSizeInThisDir;
+    YORI_MAX_SIGNED_T FileSizeInThisDir;
 
     /**
      Color information to display against matching files.
@@ -330,6 +330,7 @@ DirOutputEndOfDirectorySummary(
     TCHAR CountStringBuffer[DIR_COUNT_FIELD_SIZE];
     TCHAR SizeStringBuffer[DIR_SIZE_FIELD_SIZE];
     LARGE_INTEGER FreeSpace;
+    YORI_MAX_SIGNED_T Temp;
 
     YoriLibInitEmptyString(&SizeString);
     SizeString.StartOfString = SizeStringBuffer;
@@ -352,7 +353,8 @@ DirOutputEndOfDirectorySummary(
     YoriLibGetDiskFreeSpace(DirContext->CurrentDirectoryName.StartOfString, NULL, NULL, &FreeSpace);
 
     YoriLibNumberToString(&CountString, DirContext->DirsFoundInThisDir, 10, 3, ',');
-    YoriLibNumberToString(&SizeString, FreeSpace.QuadPart, 10, 3, ',');
+    Temp = (YORI_MAX_SIGNED_T)FreeSpace.QuadPart;
+    YoriLibNumberToString(&SizeString, Temp, 10, 3, ',');
 
     YoriLibRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
     YoriLibRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
@@ -768,11 +770,13 @@ DirFileFoundCallback(
                 YoriLibYPrintf(&SizeString, _T(" <DIR>"));
                 DirContext->DirsFoundInThisDir++;
             } else {
+                YORI_MAX_SIGNED_T nFileSize;
                 FileSize.HighPart = FileInfo->nFileSizeHigh;
                 FileSize.LowPart = FileInfo->nFileSizeLow;
-                DirContext->FileSizeInThisDir += FileSize.QuadPart;
-                DirContext->TotalFileSize += FileSize.QuadPart;
-                YoriLibNumberToString(&SizeString, FileSize.QuadPart, 10, 3, ',');
+                DirContext->FileSizeInThisDir += (YORI_MAX_SIGNED_T)FileSize.QuadPart;
+                DirContext->TotalFileSize += (YORI_MAX_SIGNED_T)FileSize.QuadPart;
+                nFileSize = (YORI_MAX_SIGNED_T)FileSize.QuadPart;
+                YoriLibNumberToString(&SizeString, nFileSize, 10, 3, ',');
                 if (SizeString.LengthInChars < DIR_SIZE_FIELD_SIZE) {
                     YoriLibRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
                 }
@@ -871,6 +875,7 @@ DirFileFoundCallback(
             WIN32_FIND_STREAM_DATA FindStreamData;
             WIN32_FIND_DATA BogusFileInfo;
             YORI_STRING StreamFullPath;
+            YORI_MAX_SIGNED_T StreamSize;
 
             hFind = DllKernel32.pFindFirstStreamW(FilePath->StartOfString, 0, &FindStreamData, 0);
             if (hFind != INVALID_HANDLE_VALUE) {
@@ -932,7 +937,8 @@ DirFileFoundCallback(
                                 DirInitializeVtAttributeForFile(DirContext, &StreamFullPath, &BogusFileInfo, &VtAttribute, &VtReset);
                             }
                         }
-                        YoriLibNumberToString(&SizeString, FindStreamData.StreamSize.QuadPart, 10, 3, ',');
+                        StreamSize = (YORI_MAX_SIGNED_T)FindStreamData.StreamSize.QuadPart;
+                        YoriLibNumberToString(&SizeString, StreamSize, 10, 3, ',');
                         if (SizeString.LengthInChars < DIR_SIZE_FIELD_SIZE) {
                             YoriLibRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
                         }

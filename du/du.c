@@ -886,7 +886,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 if (i + 1 < ArgC) {
-                    LONGLONG Depth;
+                    YORI_MAX_SIGNED_T Depth;
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Depth, &CharsConsumed);
                     if (CharsConsumed > 0) {
