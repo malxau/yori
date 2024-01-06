@@ -30,12 +30,84 @@
 #include "resource.h"
 
 /**
+ Return the color used for the background of a normal button.
+ */
+COLORREF
+YuiGetWindowBackgroundColor(VOID)
+{
+    return RGB(192, 192, 192);
+}
+
+/**
+ Return the color used for the background of a pressed button.
+ */
+COLORREF
+YuiGetPressedBackgroundColor(VOID)
+{
+    return RGB(224, 224, 224);
+}
+
+/**
  Return the color used to display a flashing window in the taskbar.
  */
 COLORREF
 YuiGetWindowFlashColor(VOID)
 {
     return RGB(255, 192, 96);
+}
+
+/**
+ Return the color used for the bright area of 3D controls.
+ */
+COLORREF
+YuiGetHighlightColor(VOID)
+{
+    return RGB(255, 255, 255);
+}
+
+/**
+ Return the color used for the dark area of 3D controls.
+ */
+COLORREF
+YuiGetDarkShadowColor(VOID)
+{
+    return RGB(0, 0, 0);
+}
+
+/**
+ Return the color used for the shaded area of 3D controls.
+ */
+COLORREF
+YuiGetShadowColor(VOID)
+{
+    return RGB(128, 128, 128);
+}
+
+/**
+ Return the color used for menu text.
+ */
+COLORREF
+YuiGetMenuTextColor(VOID)
+{
+    return RGB(0, 0, 0);
+}
+
+/**
+ Return the color used for the background of a selected menu item.
+ */
+COLORREF
+YuiGetMenuSelectedBackgroundColor(VOID)
+{
+    return RGB(0, 0, 160);
+}
+
+/**
+ Return the color used for the background of a selected menu item.
+ */
+COLORREF
+YuiGetMenuSelectedTextColor(VOID)
+{
+    return RGB(255, 255, 255);
 }
 
 /**
@@ -73,21 +145,79 @@ YuiDrawButton(
     DWORD IconHeight;
     DWORD IconOffset;
     DWORD ButtonHeight;
+    COLORREF ButtonBackground;
+    COLORREF TopLeft;
+    COLORREF SecondTopLeft;
+    COLORREF BottomRight;
+    COLORREF SecondBottomRight;
+    HBRUSH Brush;
+    HGDIOBJ OldObject;
+    HPEN Pen;
 
     //
     //  Check if the button should be pressed.
     //
 
-    Flags = DFCS_BUTTONPUSH;
-    if (Pushed) {
-        Flags = Flags | DFCS_PUSHED;
-    }
+    ButtonBackground = YuiGetWindowBackgroundColor();
+    if (Flashing) {
+        ButtonBackground = YuiGetWindowFlashColor();
+    } else if (Pushed) {
+        ButtonBackground = YuiGetPressedBackgroundColor();
+    } 
 
     //
     //  Render the basic button outline.
     //
 
-    DllUser32.pDrawFrameControl(DrawItemStruct->hDC, &DrawItemStruct->rcItem, DFC_BUTTON, Flags);
+    Brush = CreateSolidBrush(ButtonBackground);
+    SetBkColor(DrawItemStruct->hDC, ButtonBackground);
+    FillRect(DrawItemStruct->hDC, &DrawItemStruct->rcItem, Brush);
+    DeleteObject(Brush);
+
+    if (Pushed) {
+        TopLeft = YuiGetDarkShadowColor();
+        BottomRight = YuiGetHighlightColor();
+        SecondBottomRight = YuiGetWindowBackgroundColor();
+        SecondTopLeft = YuiGetShadowColor();
+    } else {
+        TopLeft = YuiGetHighlightColor();
+        BottomRight = YuiGetDarkShadowColor();
+        SecondBottomRight = YuiGetShadowColor();
+        SecondTopLeft = ButtonBackground;
+    }
+
+    Pen = CreatePen(PS_SOLID, 0, TopLeft);
+    OldObject = SelectObject(DrawItemStruct->hDC, Pen);
+    MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.bottom - 1, NULL);
+    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.top);
+    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1, DrawItemStruct->rcItem.top);
+    SelectObject(DrawItemStruct->hDC, OldObject);
+    DeleteObject(Pen);
+
+    Pen = CreatePen(PS_SOLID, 0, BottomRight);
+    SelectObject(DrawItemStruct->hDC, Pen);
+    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1, DrawItemStruct->rcItem.bottom - 1);
+    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.bottom - 1);
+    SelectObject(DrawItemStruct->hDC, OldObject);
+    DeleteObject(Pen);
+
+    Pen = CreatePen(PS_SOLID, 0, SecondBottomRight);
+    SelectObject(DrawItemStruct->hDC, Pen);
+    MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1, DrawItemStruct->rcItem.bottom -2, NULL);
+    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2, DrawItemStruct->rcItem.bottom - 2);
+    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2, DrawItemStruct->rcItem.top - 1);
+    SelectObject(DrawItemStruct->hDC, OldObject);
+    DeleteObject(Pen);
+
+    if (SecondTopLeft != ButtonBackground) {
+        Pen = CreatePen(PS_SOLID, 0, SecondTopLeft);
+        SelectObject(DrawItemStruct->hDC, Pen);
+        MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1, DrawItemStruct->rcItem.bottom - 2, NULL);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1, DrawItemStruct->rcItem.top - 1);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2, DrawItemStruct->rcItem.top - 1);
+        SelectObject(DrawItemStruct->hDC, OldObject);
+        DeleteObject(Pen);
+    }
 
     //
     //  If the dimensions are too small to draw text, stop now.
@@ -111,7 +241,6 @@ YuiDrawButton(
     }
 
     if (Flashing) {
-        HBRUSH Brush;
         Brush = CreateSolidBrush(YuiGetWindowFlashColor());
         FillRect(DrawItemStruct->hDC, &TextRect, Brush);
         DeleteObject(Brush);
@@ -136,7 +265,7 @@ YuiDrawButton(
             IconOffset = (ButtonHeight - IconHeight) / 2;
         }
 
-        if (Flags & DFCS_PUSHED) {
+        if (Pushed) {
             IconOffset = IconOffset + 1;
         }
         DllUser32.pDrawIconEx(DrawItemStruct->hDC, 4, IconOffset, Icon, IconWidth, IconHeight, 0, NULL, DI_NORMAL);
@@ -155,11 +284,152 @@ YuiDrawButton(
         if (CenterText) {
             Flags = Flags | DT_CENTER;
         }
-        if (Flashing) {
-            SetBkColor(DrawItemStruct->hDC, YuiGetWindowFlashColor());
-        }
         DrawText(DrawItemStruct->hDC, Text->StartOfString, Text->LengthInChars, &TextRect, Flags);
     }
+}
+
+/**
+ Draw a simple, single line 3D box.  This can be raised or sunken.
+
+ @param hDC The device context to render the box into.
+
+ @param Rect The dimensions to render the box.
+
+ @param Pressed If TRUE, display a sunken box.  If FALSE, display a raised
+        box.
+ */
+VOID
+YuiDrawThreeDBox(
+    __in HDC hDC,
+    __in PRECT Rect,
+    __in BOOLEAN Pressed
+    )
+{
+    COLORREF Background;
+    COLORREF TopLeft;
+    COLORREF BottomRight;
+    HBRUSH Brush;
+    HPEN Pen;
+    HGDIOBJ OldObject;
+
+    //
+    //  Check if the button should be pressed.
+    //
+
+    Background = YuiGetWindowBackgroundColor();
+
+    //
+    //  Render the basic button outline.
+    //
+
+    Brush = CreateSolidBrush(Background);
+    SetBkColor(hDC, Background);
+    FillRect(hDC, Rect, Brush);
+    DeleteObject(Brush);
+
+    if (Pressed) {
+        TopLeft = YuiGetShadowColor();
+        BottomRight = YuiGetHighlightColor();
+    } else {
+        TopLeft = YuiGetHighlightColor();
+        BottomRight = YuiGetShadowColor();
+    }
+
+    Pen = CreatePen(PS_SOLID, 0, TopLeft);
+    OldObject = SelectObject(hDC, Pen);
+    MoveToEx(hDC, Rect->left, Rect->bottom - 1, NULL);
+    LineTo(hDC, Rect->left, Rect->top);
+    LineTo(hDC, Rect->right - 1, Rect->top);
+    SelectObject(hDC, OldObject);
+    DeleteObject(Pen);
+
+    Pen = CreatePen(PS_SOLID, 0, BottomRight);
+    SelectObject(hDC, Pen);
+    LineTo(hDC, Rect->right - 1, Rect->bottom - 1);
+    LineTo(hDC, Rect->left, Rect->bottom - 1);
+    SelectObject(hDC, OldObject);
+    DeleteObject(Pen);
+}
+
+/**
+ Draw an ownerdraw static control.  Currently this routine assumes it will
+ have a sunken appearence.
+
+ @param DrawItemStruct Pointer to the struct describing the draw operation.
+
+ @param Text Pointer to text to draw in the control.  Currently this routine
+        assumes this text should be vertically and horizontally centered.
+ */
+VOID
+YuiTaskbarDrawStatic(
+    __in PDRAWITEMSTRUCT DrawItemStruct,
+    __in PYORI_STRING Text
+    )
+{
+    DWORD Flags;
+    RECT TextRect;
+
+    YuiDrawThreeDBox(DrawItemStruct->hDC, &DrawItemStruct->rcItem, TRUE);
+
+    //
+    //  If the dimensions are too small to draw text, stop now.
+    //
+
+    if (DrawItemStruct->rcItem.right - DrawItemStruct->rcItem.left < 12 ||
+        DrawItemStruct->rcItem.bottom - DrawItemStruct->rcItem.top < 6) {
+
+        return;
+    }
+
+    TextRect.left = DrawItemStruct->rcItem.left + 1;
+    TextRect.right = DrawItemStruct->rcItem.right - 1;
+    TextRect.top = DrawItemStruct->rcItem.top + 1;
+    TextRect.bottom = DrawItemStruct->rcItem.bottom - 1;
+
+    //
+    //  Render text if there's space for it.
+    //
+
+    if (Text != NULL &&
+        Text->LengthInChars > 0 &&
+        TextRect.right - TextRect.left > 6 &&
+        TextRect.bottom - TextRect.top > 6) {
+
+        Flags = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_CENTER;
+        DrawText(DrawItemStruct->hDC, Text->StartOfString, Text->LengthInChars, &TextRect, Flags);
+    }
+}
+
+/**
+ Draw a popup menu.  Note this is distinct from drawing items within a popup
+ menu, and this operation is not well supported by the platform.  This
+ function will fill the menu with a chosen color, and draw a raised 3D box
+ around it.
+
+ @param DrawItemStruct Pointer to the struct describing a draw operation.
+        Note this is for an item within a menu, not the menu itself.  This
+        function is responsible for navigating from this to the menu window
+        and region to draw.
+ */
+VOID
+YuiDrawEntireMenu(
+    __in LPDRAWITEMSTRUCT DrawItemStruct
+    )
+{
+    HWND hwndMenu;
+    HDC menuDC;
+    RECT windowRect;
+    RECT clientRect;
+
+    hwndMenu = WindowFromDC(DrawItemStruct->hDC);
+    GetWindowRect(hwndMenu, &windowRect);
+    clientRect.left = 0;
+    clientRect.top = 0;
+    clientRect.right = windowRect.right - windowRect.left;
+    clientRect.bottom = windowRect.bottom - windowRect.top;
+    menuDC = GetWindowDC(hwndMenu);
+    YuiDrawThreeDBox(menuDC, &clientRect, FALSE);
+    ReleaseDC(hwndMenu, menuDC);
 }
 
 /**
@@ -194,8 +464,10 @@ YuiDrawMeasureMenuItem(
 
     if (ItemContext->TallItem) {
         Item->itemHeight = YuiContext->TallMenuHeight;
-    } else {
+    } else if (ItemContext->Text.LengthInChars > 0) {
         Item->itemHeight = YuiContext->ShortMenuHeight;
+    } else {
+        Item->itemHeight = YuiContext->MenuSeperatorHeight;
     }
 
     //
@@ -233,14 +505,21 @@ YuiDrawMenuItem(
     PYUI_MENU_OWNERDRAW_ITEM ItemContext;
     DWORD IconPadding;
 
+    if (Item->rcItem.top == 0 &&
+        Item->rcItem.left == 0 &&
+        Item->itemAction == ODA_DRAWENTIRE) {
+
+        YuiDrawEntireMenu(Item);
+    }
+
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
 
     if (Item->itemState & ODS_SELECTED) {
-        BackColor = GetSysColor(COLOR_HIGHLIGHT);
-        ForeColor = GetSysColor(COLOR_HIGHLIGHTTEXT);
+        BackColor = YuiGetMenuSelectedBackgroundColor();
+        ForeColor = YuiGetMenuSelectedTextColor();
     } else {
-        BackColor = GetSysColor(COLOR_MENU);
-        ForeColor = GetSysColor(COLOR_MENUTEXT);
+        BackColor = YuiGetWindowBackgroundColor();
+        ForeColor = YuiGetMenuTextColor();
     }
 
     Brush = CreateSolidBrush(BackColor);
@@ -297,20 +576,37 @@ YuiDrawMenuItem(
     }
 
     //
-    //  Create a rectangle for text after the icon.  Leave some space on the
-    //  right for a menu flyout.  This is done unconditionally just to ensure
-    //  all items have the same text region, flyout or not.
+    //  If the item has no text, assume it is a seperator and render a sunken
+    //  3D line.  If it has text, render the text.
     //
 
-    TextRect.left = Item->rcItem.left + IconPadding;
-    TextRect.top = Item->rcItem.top;
-    TextRect.right = Item->rcItem.right - 20;
-    TextRect.bottom = Item->rcItem.bottom;
+    if (ItemContext->Text.LengthInChars == 0) {
+        RECT DrawRect;
 
-    SetBkColor(Item->hDC, BackColor);
-    SetTextColor(Item->hDC, ForeColor);
-    SelectObject(Item->hDC, YuiContext->hFont);
-    DrawText(Item->hDC, ItemContext->Text.StartOfString, ItemContext->Text.LengthInChars, &TextRect, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+        DrawRect.left = Item->rcItem.left;
+        DrawRect.right = Item->rcItem.right;
+        DrawRect.top = (Item->rcItem.bottom - Item->rcItem.top) / 2 + Item->rcItem.top - 1;
+        DrawRect.bottom = DrawRect.top + 2;
+        YuiDrawThreeDBox(Item->hDC, &DrawRect, TRUE);
+
+    } else {
+
+        //
+        //  Create a rectangle for text after the icon.  Leave some space on the
+        //  right for a menu flyout.  This is done unconditionally just to ensure
+        //  all items have the same text region, flyout or not.
+        //
+
+        TextRect.left = Item->rcItem.left + IconPadding;
+        TextRect.top = Item->rcItem.top;
+        TextRect.right = Item->rcItem.right - 20;
+        TextRect.bottom = Item->rcItem.bottom;
+
+        SetBkColor(Item->hDC, BackColor);
+        SetTextColor(Item->hDC, ForeColor);
+        SelectObject(Item->hDC, YuiContext->hFont);
+        DrawText(Item->hDC, ItemContext->Text.StartOfString, ItemContext->Text.LengthInChars, &TextRect, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+    }
     return TRUE;
 }
 

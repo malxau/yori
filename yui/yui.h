@@ -317,6 +317,11 @@ typedef struct _YUI_CONTEXT {
     DWORD ShortMenuHeight;
 
     /**
+     The number of pixels in height of a menu seperator.
+     */
+    DWORD MenuSeperatorHeight;
+
+    /**
      The left offset of the start button, in pixels, relative to the client
      area.  This is used to detect clicks that are in the parent window
      outside of the button area.
@@ -689,6 +694,9 @@ YuiMenuExecuteById(
     __in DWORD MenuId
     );
 
+COLORREF
+YuiGetWindowBackgroundColor(VOID);
+
 VOID
 YuiDrawButton(
     __in PDRAWITEMSTRUCT DrawItemStruct,
@@ -697,6 +705,12 @@ YuiDrawButton(
     __in_opt HICON Icon,
     __in PYORI_STRING Text,
     __in BOOLEAN CenterText
+    );
+
+VOID
+YuiTaskbarDrawStatic(
+    __in PDRAWITEMSTRUCT DrawItemStruct,
+    __in PYORI_STRING Text
     );
 
 BOOL

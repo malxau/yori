@@ -4352,6 +4352,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define BS_CENTER 0x300
 #endif
 
+#ifndef SS_OWNERDRAW
+/**
+ If not defined by the compilation environment, the flag indicating a static
+ control should be drawn via window messages.
+ */
+#define SS_OWNERDRAW 0x0D
+#endif
+
 #ifndef SS_NOTIFY
 /**
  If not defined by the compilation environment, the flag indicating a static

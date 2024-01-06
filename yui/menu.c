@@ -121,6 +121,12 @@ typedef struct _YUI_MENU_CONTEXT {
     YUI_MENU_DIRECTORY ProgramsDirectory;
 
     /**
+     Owner draw state for a menu seperator.  This is reused for all of them,
+     since they're all rendered the same.
+     */
+    YUI_MENU_OWNERDRAW_ITEM Seperator;
+
+    /**
      Owner draw state for the Programs menu item.
      */
     YUI_MENU_OWNERDRAW_ITEM Programs;
@@ -241,6 +247,7 @@ VOID
 YuiMenuCleanupContext(VOID)
 {
     YuiMenuCleanupItem(&YuiMenuContext.Programs);
+    YuiMenuCleanupItem(&YuiMenuContext.Seperator);
 
 #if DBG
     YuiMenuCleanupItem(&YuiMenuContext.Debug);
@@ -284,6 +291,10 @@ YuiMenuInitializeContext(
     YoriLibInitializeListHead(&YuiMenuContext.StartDirectory.ChildDirectories);
     YoriLibInitializeListHead(&YuiMenuContext.StartDirectory.ChildFiles);
     YuiMenuInitializeItem(&YuiMenuContext.StartDirectory.Item);
+
+    YuiMenuInitializeItem(&YuiMenuContext.Seperator);
+    YoriLibConstantString(&YuiMenuContext.Seperator.Text, _T(""));
+    YuiMenuContext.Seperator.TallItem = FALSE;
 
     YuiMenuContext.Programs.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, PROGRAMSICON, TRUE);
     YoriLibConstantString(&YuiMenuContext.Programs.Text, _T("Programs"));
@@ -1521,7 +1532,7 @@ YuiMenuPopulate(
                                         YuiPopulateMenuOnDirectory);
 
     if (!YoriLibIsListEmpty(&YuiMenuContext.StartDirectory.ChildFiles)) {
-        AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.Seperator);
     }
 
     YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.ProgramsDirectory,
@@ -1552,7 +1563,7 @@ YuiMenuPopulate(
     AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->DebugMenu, (LPCWSTR)&YuiMenuContext.Debug);
 #endif
     AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW, YUI_MENU_RUN, (LPCWSTR)&YuiMenuContext.Run);
-    AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.Seperator);
     if (YuiContext->LoginShell) {
         AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW, YUI_MENU_LOGOFF, (LPCWSTR)&YuiMenuContext.Exit);
     } else {
@@ -1570,7 +1581,7 @@ YuiMenuPopulate(
     } else {
         AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_LOGOFF, (LPCWSTR)&YuiMenuContext.ShutdownLogoff);
     }
-    AppendMenu(YuiContext->ShutdownMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.Seperator);
     AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_REBOOT, (LPCWSTR)&YuiMenuContext.ShutdownReboot);
     AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_SHUTDOWN, (LPCWSTR)&YuiMenuContext.ShutdownShutdown);
     AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->ShutdownMenu, (LPCWSTR)&YuiMenuContext.Shutdown);

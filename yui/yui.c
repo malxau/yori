@@ -793,6 +793,10 @@ YuiTaskbarWindowProc(
                 CtrlId = LOWORD(wParam);
                 if (CtrlId == YUI_START_BUTTON) {
                     YuiStartDrawButton(DrawItemStruct);
+                } else if (CtrlId == YUI_BATTERY_DISPLAY) {
+                    YuiTaskbarDrawStatic(DrawItemStruct, &YuiContext.BatteryDisplayedValue);
+                } else if (CtrlId == YUI_CLOCK_DISPLAY) {
+                    YuiTaskbarDrawStatic(DrawItemStruct, &YuiContext.ClockDisplayedValue);
                 } else if (CtrlId != 0) {
                     ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
                     YuiTaskbarDrawButton(&YuiContext, CtrlId, DrawItemStruct);
@@ -1030,6 +1034,7 @@ YuiCreateWindow(
     Context->ShortIconPadding = 4;
     Context->TallMenuHeight = Context->TallIconHeight + 2 * Context->TallIconPadding;
     Context->ShortMenuHeight = Context->SmallIconHeight + 2 * Context->ShortIconPadding;
+    Context->MenuSeperatorHeight = 12;
 
     if (!YuiMenuInitializeContext(Context)) {
         YuiCleanupGlobalState();
@@ -1044,7 +1049,7 @@ YuiCreateWindow(
     wc.hInstance = NULL;
     wc.hIcon = NULL;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)(DWORD_PTR)COLOR_WINDOW;
+    wc.hbrBackground = CreateSolidBrush(YuiGetWindowBackgroundColor());
     wc.lpszMenuName = NULL;
     wc.lpszClassName = _T("YuiWnd");
 
@@ -1236,10 +1241,10 @@ YuiCreateWindow(
     Context->ClockDisplayedValue.StartOfString = Context->ClockDisplayedValueBuffer;
     Context->ClockDisplayedValue.LengthAllocated = sizeof(Context->ClockDisplayedValueBuffer)/sizeof(Context->ClockDisplayedValueBuffer[0]);
 
-    Context->hWndClock = CreateWindowEx(WS_EX_STATICEDGE,
+    Context->hWndClock = CreateWindowEx(0,
                                         _T("STATIC"),
                                         _T(""),
-                                        SS_CENTER | SS_SUNKEN | SS_CENTERIMAGE | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
+                                        SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
                                         ClientRect.right - YUI_CLOCK_WIDTH - 1,
                                         1,
                                         YUI_CLOCK_WIDTH,
@@ -1269,10 +1274,10 @@ YuiCreateWindow(
         if (DllKernel32.pGetSystemPowerStatus(&PowerStatus) &&
             (PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) == 0) {
 
-            Context->hWndBattery = CreateWindowEx(WS_EX_STATICEDGE,
+            Context->hWndBattery = CreateWindowEx(0,
                                                   _T("STATIC"),
                                                   _T(""),
-                                                  SS_CENTER | SS_SUNKEN | SS_CENTERIMAGE | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
+                                                  SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
                                                   ClientRect.right - YUI_CLOCK_WIDTH - 3 - YUI_BATTERY_WIDTH - 1,
                                                   1,
                                                   YUI_BATTERY_WIDTH,
@@ -1486,8 +1491,7 @@ ymain(
         YoriLibLoadShfolderFunctions();
     }
 
-    if (DllUser32.pDrawFrameControl == NULL ||
-        DllUser32.pDrawIconEx == NULL ||
+    if (DllUser32.pDrawIconEx == NULL ||
         DllUser32.pGetClientRect == NULL ||
         DllUser32.pGetWindowRect == NULL ||
         DllUser32.pMoveWindow == NULL ||
