@@ -843,10 +843,44 @@ YuiPopulateMenuOnDirectory(
     PYORI_LIST_ENTRY NextEntry;
     PYUI_MENU_DIRECTORY ExistingDir;
     PYUI_MENU_FILE ExistingFile;
+    BOOLEAN ChildFound;
 
     ListEntry = NULL;
     NextEntry = NULL;
     EnumContext = (PYUI_CONTEXT)Context;
+    ChildFound = FALSE;
+
+    //
+    //  Because this enumerates from the deepest to the shallowest, any
+    //  child directory has already determined whether it has items to
+    //  warrant a popup.  If it doesn't, don't bother including it here.
+    //
+
+    ListEntry = YoriLibGetNextListEntry(&Parent->ChildDirectories, ListEntry);
+    while (ListEntry != NULL) {
+        NextEntry = YoriLibGetNextListEntry(&Parent->ChildDirectories, ListEntry);
+        ExistingDir = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
+        if (ExistingDir->MenuHandle != NULL) {
+            ChildFound = TRUE;
+            break;
+        }
+        ListEntry = NextEntry;
+    }
+
+
+    ListEntry = YoriLibGetNextListEntry(&Parent->ChildFiles, NULL);
+    if (ListEntry != NULL) {
+        ChildFound = TRUE;
+    }
+
+    //
+    //  This directory contains no child objects, and there's no need to
+    //  display it.
+    //
+
+    if (!ChildFound) {
+        return TRUE;
+    }
 
     //
     //  Normal directories create their menus here.  The programs directly
@@ -864,11 +898,14 @@ YuiPopulateMenuOnDirectory(
     //  Recurse down for any child objects first
     //
 
+    ListEntry = NULL;
     ListEntry = YoriLibGetNextListEntry(&Parent->ChildDirectories, ListEntry);
     while (ListEntry != NULL) {
         NextEntry = YoriLibGetNextListEntry(&Parent->ChildDirectories, ListEntry);
         ExistingDir = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
-        AppendMenu(Parent->MenuHandle, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)ExistingDir->MenuHandle, (LPCTSTR)&ExistingDir->Item);
+        if (ExistingDir->MenuHandle != NULL) {
+            AppendMenu(Parent->MenuHandle, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)ExistingDir->MenuHandle, (LPCTSTR)&ExistingDir->Item);
+        }
         ListEntry = NextEntry;
     }
 
