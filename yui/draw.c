@@ -111,6 +111,41 @@ YuiGetMenuSelectedTextColor(VOID)
 }
 
 /**
+ Calculate the width of a string in the current font, in pixels.
+
+ @param YuiContext Pointer to the application context including font and font
+        metrics.
+
+ @param Text Pointer to the string whose width should be calculated.
+
+ @return The width of the string when displayed, in pixels.
+ */
+DWORD
+YuiDrawGetTextWidth(
+    __in PYUI_CONTEXT YuiContext,
+    __in PYORI_STRING Text
+    )
+{
+    DWORD Width;
+    TCHAR Char;
+    YORI_ALLOC_SIZE_T Index;
+    LPABC Abc;
+
+    Width = 0;
+    for (Index = 0; Index < Text->LengthInChars; Index++) {
+        Char = Text->StartOfString[Index];
+        if (Char >= 32 && Char <= 127) {
+            Abc = &YuiContext->hFontCharWidths[Char - 32];
+            Width = Width + Abc->abcA + Abc->abcB + Abc->abcC;
+        } else {
+            Width = Width + YuiContext->hFontAvgWidth;
+        }
+    }
+
+    return Width;
+}
+
+/**
  Draw an owner draw button.
 
  @param DrawItemStruct Pointer to a structure describing the button to
@@ -451,15 +486,23 @@ YuiDrawMeasureMenuItem(
 
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
 
-    //
-    //  The base width is chosen to fit three menus side by side on an 800x600
-    //  display.  Add 5% of any horizontal pixels above 1200 to allow wider
-    //  menu items to display.
-    //
 
-    Item->itemWidth = 245;
-    if (YuiContext->ScreenWidth > 800) {
-        Item->itemWidth = Item->itemWidth + (YuiContext->ScreenWidth - 800) / 20;
+    if (ItemContext->NarrowItem) {
+        Item->itemWidth = YuiDrawGetTextWidth(YuiContext, &ItemContext->Text) + 
+                          YuiContext->SmallIconWidth +
+                          2 * YuiContext->ShortIconPadding;
+    } else {
+
+        //
+        //  The base width is chosen to fit three menus side by side on an 800x600
+        //  display.  Add 5% of any horizontal pixels above 1200 to allow wider
+        //  menu items to display.
+        //
+
+        Item->itemWidth = 245;
+        if (YuiContext->ScreenWidth > 800) {
+            Item->itemWidth = Item->itemWidth + (YuiContext->ScreenWidth - 800) / 20;
+        }
     }
 
     if (ItemContext->TallItem) {

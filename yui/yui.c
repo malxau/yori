@@ -423,6 +423,7 @@ YuiNotifyResolutionChange(
     HDC hDC;
     HFONT hFont;
     HFONT hBoldFont;
+    DWORD Index;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
@@ -469,13 +470,30 @@ YuiNotifyResolutionChange(
                            DEFAULT_QUALITY,
                            FF_DONTCARE,
                            YUI_FONT_NAME);
-    ReleaseDC(hWnd, hDC);
 
     if (hFont != NULL) {
+
         if (YuiContext.hFont != NULL) {
             DeleteObject(YuiContext.hFont);
         }
         YuiContext.hFont = hFont;
+
+        if (GetCharABCWidths(hDC, 32, 127, YuiContext.hFontCharWidths)) {
+            INT TotalWidth;
+
+            TotalWidth = 0;
+
+            for (Index = 0;
+                 Index < sizeof(YuiContext.hFontCharWidths) / sizeof(YuiContext.hFontCharWidths[0]);
+                 Index++) {
+                TotalWidth = TotalWidth +
+                             YuiContext.hFontCharWidths[Index].abcA +
+                             YuiContext.hFontCharWidths[Index].abcB +
+                             YuiContext.hFontCharWidths[Index].abcC;
+            }
+
+            YuiContext.hFontAvgWidth = (WORD)(TotalWidth / 96);
+        }
 
         if (YuiContext.hWndBattery != NULL) {
             SendMessage(YuiContext.hWndBattery, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
@@ -496,6 +514,8 @@ YuiNotifyResolutionChange(
             SendMessage(YuiContext.hWndStart, WM_SETFONT, (WPARAM)YuiContext.hBoldFont, MAKELPARAM(TRUE, 0));
         }
     }
+
+    ReleaseDC(hWnd, hDC);
 
     DllUser32.pMoveWindow(hWnd,
                           0,
@@ -561,6 +581,25 @@ YuiDisplayMenu(VOID)
         YuiContext.MenuActive = FALSE;
         SendMessage(YuiContext.hWndStart, BM_SETSTATE, FALSE, 0);
     }
+    return TRUE;
+}
+
+/**
+ Display the taskbar context menu and perform any action requested.
+
+ @return TRUE to indicate the context menu was displayed successfully.
+ */
+BOOL
+YuiDisplayContextMenu(
+    __in DWORD CursorX,
+    __in DWORD CursorY
+    )
+{
+    if (YuiContext.MenuActive) {
+        return FALSE;
+    }
+    YuiTaskbarSuppressFullscreenHiding(&YuiContext);
+    YuiMenuDisplayContext(&YuiContext, YuiContext.hWnd, CursorX, CursorY);
     return TRUE;
 }
 
@@ -698,7 +737,7 @@ YuiTaskbarWindowProc(
             break;
         case WM_LBUTTONDOWN:
             {
-                short XPos;
+                SHORT XPos;
 
                 //
                 //  Explorer won't allow windows without focus to change the
@@ -714,7 +753,7 @@ YuiTaskbarWindowProc(
                 //  values can be negative.
                 //
 
-                XPos = (short)(LOWORD(lParam));
+                XPos = (SHORT)(LOWORD(lParam));
                 if (XPos <= YuiContext.StartRightOffset) {
                     YuiDisplayMenu();
                 } else {
@@ -750,6 +789,24 @@ YuiTaskbarWindowProc(
         case WM_CLOSE:
             PostQuitMessage(0);
             return 0;
+        case WM_CONTEXTMENU:
+            {
+                SHORT XPos;
+                SHORT RightmostTaskbarOffset;
+                RECT TaskbarWindowClient;
+                XPos = (SHORT)(LOWORD(lParam));
+                DllUser32.pGetClientRect(YuiContext.hWnd, &TaskbarWindowClient);
+                RightmostTaskbarOffset = (SHORT)(TaskbarWindowClient.right - YuiContext.RightmostTaskbarOffset);
+                if (XPos >= (SHORT)YuiContext.LeftmostTaskbarOffset &&
+                    XPos <= RightmostTaskbarOffset) {
+
+                    CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
+                    if (CtrlId < YUI_FIRST_TASKBAR_BUTTON) {
+                        YuiDisplayContextMenu(LOWORD(lParam), HIWORD(lParam));
+                    }
+                }
+            }
+            break;
         case WM_HOTKEY:
 #if DBG
             if (YuiContext.DebugLogEnabled) {

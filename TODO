@@ -49,9 +49,7 @@ fun to write.
  - Run recent list and autocomplete
  - Calendar view within yui clock
  - Airplane mode toggle
- - Customize button rendering to be more traditional
  - Shift+click in taskbar to launch new instance
- - Right click for cascade, tile, etc.
  - Desktop context menu
  - Taskbar button progress
  - Progman DDE server

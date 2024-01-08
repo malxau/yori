@@ -202,6 +202,38 @@ typedef struct _YUI_MENU_CONTEXT {
      Owner draw state for the Shutdown Shut down menu item.
      */
     YUI_MENU_OWNERDRAW_ITEM ShutdownShutdown;
+
+    /**
+     Owner draw state for a narrow menu seperator.  This is reused for all
+     of them, since they're all rendered the same.
+     */
+    YUI_MENU_OWNERDRAW_ITEM NarrowSeperator;
+
+    /**
+     Owner draw state for the Cascade menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ContextCascade;
+
+    /**
+     Owner draw state for the Tile side by side menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ContextTileSideBySide;
+
+    /**
+     Owner draw state for the Tile stacked menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ContextTileStacked;
+
+    /**
+     Owner draw state for the show desktop menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ContextShowDesktop;
+
+    /**
+     Owner draw state for the refresh taskbar menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ContextRefreshTaskbar;
+
 } YUI_MENU_CONTEXT, *PYUI_MENU_CONTEXT;
 
 /**
@@ -269,6 +301,13 @@ YuiMenuCleanupContext(VOID)
 
     YuiMenuCleanupItem(&YuiMenuContext.ProgramsDirectory.Item);
     YuiMenuCleanupItem(&YuiMenuContext.StartDirectory.Item);
+
+    YuiMenuCleanupItem(&YuiMenuContext.NarrowSeperator);
+    YuiMenuCleanupItem(&YuiMenuContext.ContextCascade);
+    YuiMenuCleanupItem(&YuiMenuContext.ContextTileSideBySide);
+    YuiMenuCleanupItem(&YuiMenuContext.ContextTileStacked);
+    YuiMenuCleanupItem(&YuiMenuContext.ContextShowDesktop);
+    YuiMenuCleanupItem(&YuiMenuContext.ContextRefreshTaskbar);
 }
 
 /**
@@ -352,6 +391,30 @@ YuiMenuInitializeContext(
 
     YuiMenuInitializeItem(&YuiMenuContext.ShutdownShutdown);
     YoriLibConstantString(&YuiMenuContext.ShutdownShutdown.Text, _T("Shut down"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.NarrowSeperator);
+    YoriLibConstantString(&YuiMenuContext.NarrowSeperator.Text, _T(""));
+    YuiMenuContext.NarrowSeperator.NarrowItem = TRUE;
+
+    YuiMenuInitializeItem(&YuiMenuContext.ContextCascade);
+    YoriLibConstantString(&YuiMenuContext.ContextCascade.Text, _T("Cascade windows"));
+    YuiMenuContext.ContextCascade.NarrowItem = TRUE;
+
+    YuiMenuInitializeItem(&YuiMenuContext.ContextTileSideBySide);
+    YoriLibConstantString(&YuiMenuContext.ContextTileSideBySide.Text, _T("Tile windows side by side"));
+    YuiMenuContext.ContextTileSideBySide.NarrowItem = TRUE;
+
+    YuiMenuInitializeItem(&YuiMenuContext.ContextTileStacked);
+    YoriLibConstantString(&YuiMenuContext.ContextTileStacked.Text, _T("Tile windows stacked"));
+    YuiMenuContext.ContextTileStacked.NarrowItem = TRUE;
+
+    YuiMenuInitializeItem(&YuiMenuContext.ContextShowDesktop);
+    YoriLibConstantString(&YuiMenuContext.ContextShowDesktop.Text, _T("Show desktop"));
+    YuiMenuContext.ContextShowDesktop.NarrowItem = TRUE;
+
+    YuiMenuInitializeItem(&YuiMenuContext.ContextRefreshTaskbar);
+    YoriLibConstantString(&YuiMenuContext.ContextRefreshTaskbar.Text, _T("Refresh Taskbar"));
+    YuiMenuContext.ContextRefreshTaskbar.NarrowItem = TRUE;
 
     return TRUE;
 }
@@ -1770,6 +1833,81 @@ YuiMenuReloadIfChanged(
 }
 
 /**
+ A callback function invoked for all windows found in the system which may
+ minimize a window in order to show the desktop.
+
+ @param hWnd The window to evaluate and possibly minimize.
+
+ @param lParam Pointer to the application context.
+
+ @return TRUE to continue enumerating, FALSE to terminate.
+ */
+BOOL WINAPI
+YuiShowDesktopCallback(
+    __in HWND hWnd,
+    __in LPARAM lParam
+    )
+{
+    PYUI_CONTEXT YuiContext;
+    DWORD WinStyle;
+    DWORD ExStyle;
+
+    YuiContext = (PYUI_CONTEXT)lParam;
+
+    if (!IsWindowVisible(hWnd)) {
+        return TRUE;
+    }
+
+    if (!IsWindowEnabled(hWnd)) {
+        return TRUE;
+    }
+
+    if (GetWindow(hWnd, GW_OWNER) != NULL) {
+        return TRUE;
+    }
+
+    if (IsIconic(hWnd)) {
+        return TRUE;
+    }
+
+    WinStyle = GetWindowLong(hWnd, GWL_STYLE);
+    ExStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+
+    if ((ExStyle & WS_EX_TOOLWINDOW) != 0) {
+        return TRUE;
+    }
+
+    if ((WinStyle & WS_SYSMENU) == 0) {
+        return TRUE;
+    }
+
+    if (hWnd == YuiContext->hWnd) {
+        return TRUE;
+    }
+
+    if (DllUser32.pShowWindowAsync != NULL) {
+        DllUser32.pShowWindowAsync(hWnd, SW_SHOWMINNOACTIVE);
+    } else {
+        ShowWindow(hWnd, SW_SHOWMINNOACTIVE);
+    }
+
+    return TRUE;
+}
+
+/**
+ Show the desktop, aka, minimize all windows on the desktop.
+
+ @param YuiContext Pointer to the application context.
+ */
+VOID
+YuiShowDesktop(
+    __in PYUI_CONTEXT YuiContext
+    )
+{
+    EnumWindows(YuiShowDesktopCallback, (LPARAM)YuiContext);
+}
+
+/**
  A structure defining state for the run browse (file open) dialog box.
  */
 typedef struct _OPENFILENAMEW {
@@ -2129,10 +2267,10 @@ YuiMenuExecuteById(
         case YUI_MENU_RUN:
             YuiMenuRun(YuiContext);
             break;
-#if DBG
         case YUI_MENU_REFRESH:
             YuiTaskbarSyncWithCurrent(YuiContext);
             break;
+#if DBG
         case YUI_MENU_LOGGING:
             YuiMenuToggleLogging(YuiContext);
             break;
@@ -2143,6 +2281,38 @@ YuiMenuExecuteById(
             YuiNotifyResolutionChange(YuiContext->hWnd);
             break;
 #endif
+        case YUI_MENU_CASCADE:
+            if (DllUser32.pCascadeWindows != NULL) {
+                DllUser32.pCascadeWindows(NULL,
+                                          0,
+                                          NULL,
+                                          0,
+                                          NULL);
+            }
+            break;
+        case YUI_MENU_TILE_SIDEBYSIDE:
+            if (DllUser32.pTileWindows != NULL) {
+                DllUser32.pTileWindows(NULL,
+                                       MDITILE_VERTICAL,
+                                       NULL,
+                                       0,
+                                       NULL);
+            }
+            break;
+        case YUI_MENU_TILE_STACKED:
+            if (DllUser32.pTileWindows != NULL) {
+                DllUser32.pTileWindows(NULL,
+                                       MDITILE_HORIZONTAL,
+                                       NULL,
+                                       0,
+                                       NULL);
+            }
+            break;
+
+        case YUI_MENU_SHOW_DESKTOP:
+            YuiShowDesktop(YuiContext);
+            break;
+
         default:
             ASSERT(MenuId >= YUI_MENU_FIRST_PROGRAM_MENU_ID);
 
@@ -2187,6 +2357,11 @@ YuiMenuDisplayAndExecute(
 
     DllUser32.pGetWindowRect(hWnd, &WindowRect);
 
+    //
+    //  We need to make the taskbar the foreground so if the foreground
+    //  changes the menu is dismissed.
+    //
+
     DllUser32.pSetForegroundWindow(hWnd);
 
     MenuId = TrackPopupMenu(YuiContext->StartMenu,
@@ -2217,6 +2392,67 @@ YuiMenuDisplayAndExecute(
     }
 
     return TRUE;
+}
+
+/**
+ Display a menu corresponding to a right click on the taskbar.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hWnd The handle of the taskbar window.
+
+ @param CursorX The horizontal position of the mouse cursor in screen
+        coordinates.
+
+ @param CursorY The vertical position of the mouse cursor in screen
+        coordinates.
+
+ @return TRUE to indicate an action was invoked, FALSE if it was not.
+ */
+BOOL
+YuiMenuDisplayContext(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd,
+    __in DWORD CursorX,
+    __in DWORD CursorY
+    )
+{
+    HMENU Menu;
+    DWORD MenuId;
+
+    Menu = CreatePopupMenu();
+
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_CASCADE, (LPCWSTR)&YuiMenuContext.ContextCascade);
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_TILE_SIDEBYSIDE, (LPCWSTR)&YuiMenuContext.ContextTileSideBySide);
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_TILE_STACKED, (LPCWSTR)&YuiMenuContext.ContextTileStacked);
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_SHOW_DESKTOP, (LPCWSTR)&YuiMenuContext.ContextShowDesktop);
+    AppendMenu(Menu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.NarrowSeperator);
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_REFRESH, (LPCWSTR)&YuiMenuContext.ContextRefreshTaskbar);
+
+    //
+    //  We need to make the taskbar the foreground so if the foreground
+    //  changes the menu is dismissed.
+    //
+
+    DllUser32.pSetForegroundWindow(hWnd);
+
+    MenuId = TrackPopupMenu(Menu,
+                            TPM_NONOTIFY | TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_RIGHTALIGN,
+                            CursorX,
+                            CursorY,
+                            0,
+                            hWnd,
+                            NULL);
+
+    PostMessage(hWnd, WM_NULL, 0, 0);
+    DestroyMenu(Menu);
+
+    if (MenuId > 0) {
+        YuiMenuExecuteById(YuiContext, MenuId);
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 // vim:sw=4:ts=4:et:

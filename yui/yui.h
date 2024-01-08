@@ -219,6 +219,16 @@ typedef struct _YUI_CONTEXT {
     HFONT hBoldFont;
 
     /**
+     The width of characters in the range 32-127.
+     */
+    ABC hFontCharWidths[96];
+
+    /**
+     The average width of a character in hFont.
+     */
+    WORD hFontAvgWidth;
+
+    /**
      Handle to a background thread that is populating the start menu.
      */
     HANDLE MenuPopulateThread;
@@ -502,6 +512,13 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
      item that could contain a 20x20 small icon.)
      */
     BOOLEAN TallItem;
+
+    /**
+     TRUE if the item is a typical menu item, where the horizontal size should
+     be determined by string length.  FALSE if the item is a start menu item,
+     where a minimum horizontal size is enforced.
+     */
+    BOOLEAN NarrowItem;
 } YUI_MENU_OWNERDRAW_ITEM, *PYUI_MENU_OWNERDRAW_ITEM;
 
 
@@ -619,6 +636,27 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
  */
 #define YUI_MENU_DISPLAYCHANGE         (33)
 
+/**
+ An identifier for the menu item to cascade desktop windows.
+ */
+#define YUI_MENU_CASCADE               (40)
+
+/**
+ An identifier for the menu item to tile desktop windows side by side.
+ */
+#define YUI_MENU_TILE_SIDEBYSIDE       (41)
+
+/**
+ An identifier for the menu item to tile desktop windows stacked.
+ */
+#define YUI_MENU_TILE_STACKED          (42)
+
+/**
+ An identifier for the menu item to show the desktop, ie., minimize all
+ windows.
+ */
+#define YUI_MENU_SHOW_DESKTOP          (43)
+
 WNDPROC
 YuiGetDefaultButtonWndProc(VOID);
 
@@ -681,6 +719,14 @@ BOOL
 YuiMenuDisplayAndExecute(
     __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
+    );
+
+BOOL
+YuiMenuDisplayContext(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd,
+    __in DWORD CursorX,
+    __in DWORD CursorY
     );
 
 VOID

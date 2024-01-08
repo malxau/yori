@@ -4201,6 +4201,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
     INT iArrange;
 } YORI_MINIMIZEDMETRICS, *PYORI_MINIMIZEDMETRICS;
 
+#ifndef WM_CONTEXTMENU
+/**
+ If not defined by the compilation environment, the message indicating that
+ the right mouse button was clicked in a window area.
+ */
+#define WM_CONTEXTMENU 0x007b
+#endif
+
 #ifndef WM_DISPLAYCHANGE
 /**
  If not defined by the compilation environment, the message indicating that
