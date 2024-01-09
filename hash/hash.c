@@ -33,11 +33,6 @@
 #define MS_PRIMITIVE_PROVIDER L"Microsoft Primitive Provider"
 
 /**
- Specifies the NT success error code.
- */
-#define STATUS_SUCCESS (0)
-
-/**
  Help text to display to the user.
  */
 const

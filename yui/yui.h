@@ -25,6 +25,44 @@
  */
 
 /**
+ A structure to record recently opened child processes.  These describe the
+ process ID as well as a path to the shortcut used to open it.  This allows
+ taskbar buttons, which can identify a window owner's process ID, to know
+ how to open a second instance.
+ */
+typedef struct _YUI_RECENT_CHILD_PROCESS {
+
+    /**
+     The global list of recently opened child processes.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The process ID for the child process.
+     */
+    DWORD ProcessId;
+
+    /**
+     The number of taskbar buttons referencing this process.  So long as any
+     exist, we know that the process ID hasn't been recycled, so future
+     windows could be for the same process.
+     */
+    DWORD TaskbarButtonCount;
+
+    /**
+     The timestamp for when the process was created or the last taskbar
+     button was removed.  Some time after this it is a candidate for
+     removal.
+     */
+    LONGLONG LastModifiedTime;
+
+    /**
+     A path to the shortcut used to open the child process.
+     */
+    YORI_STRING FilePath;
+} YUI_RECENT_CHILD_PROCESS, *PYUI_RECENT_CHILD_PROCESS;
+
+/**
  In memory state corresponding to a taskbar button.
  */
 typedef struct _YUI_TASKBAR_BUTTON {
@@ -34,6 +72,31 @@ typedef struct _YUI_TASKBAR_BUTTON {
      Paired with @ref YUI_CONTEXT::TaskbarButtons .
      */
     YORI_LIST_ENTRY ListEntry;
+
+    /**
+     Pointer to a YUI_RECENT_CHILD_PROCESS, possibly NULL.  This is populated
+     if a recent process caused this taskbar button to be displayed.  When
+     the button is destroyed, it needs to drop the reference on this process,
+     allowing it to expire so future taskbar buttons won't match its process
+     ID.
+     */
+    PYUI_RECENT_CHILD_PROCESS ChildProcess;
+
+    /**
+     A string corresponding to the shortcut that launched this process.
+     */
+    YORI_STRING ShortcutPath;
+
+    /**
+     The file name of the process, without any path components.
+     MSFIX Not populated yet
+     */
+    YORI_STRING ProcessName;
+
+    /**
+     The process ID corresponding to hWndToActivate.
+     */
+    DWORD ProcessId;
 
     /**
      The window handle for the button control for this taskbar button.
@@ -110,6 +173,19 @@ typedef struct _YUI_CONTEXT {
      well as Programs and Start Menu directories.
      */
     HANDLE StartChangeNotifications[4];
+
+    /**
+     A list of recently launched processes.  This is used to look for a
+     shortcut that launched newly arriving taskbar buttons.
+
+     MSFIX This is not initialized or cleaned up
+     */
+    YORI_LIST_ENTRY RecentProcessList;
+
+    /**
+     The number of items in the recently launched process list.
+     */
+    DWORD RecentProcessCount;
 
     /**
      The next identifier to allocate for subsequent menu entries.
@@ -716,6 +792,13 @@ YuiMenuWaitForBackgroundReload(
     );
 
 BOOL
+YuiExecuteShortcut(
+    __in PYUI_CONTEXT YuiContext,
+    __in PYORI_STRING FilePath,
+    __in BOOLEAN Elevated
+    );
+
+BOOL
 YuiMenuDisplayAndExecute(
     __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
@@ -784,6 +867,12 @@ YuiTaskbarPopulateWindows(
 
 VOID
 YuiTaskbarSwitchToTask(
+    __in PYUI_CONTEXT YuiContext,
+    __in DWORD CtrlId
+    );
+
+VOID
+YuiTaskbarLaunchNewTask(
     __in PYUI_CONTEXT YuiContext,
     __in DWORD CtrlId
     );

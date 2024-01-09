@@ -206,6 +206,14 @@ typedef _Return_type_success_(return >= 0) long HRESULT;
 #define DIRECTORY_QUERY (0x0001)
 #endif
 
+#ifndef STATUS_SUCCESS
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating successful completion.
+ */
+#define STATUS_SUCCESS ((LONG)0x00000000)
+#endif
+
 #ifndef STATUS_MORE_ENTRIES
 /**
  If not defined by the current compilation environment, the NTSTATUS code
@@ -438,7 +446,17 @@ typedef struct _PROCESS_BASIC_INFORMATION {
     /**
      Ignored for alignment.
      */
-    PVOID Reserved2[4];
+    PVOID Reserved2[2];
+
+    /**
+     The process ID.
+     */
+    DWORD_PTR ProcessId;
+
+    /**
+     Ignored for alignment.
+     */
+    PVOID Reserved3;
 } PROCESS_BASIC_INFORMATION, *PPROCESS_BASIC_INFORMATION;
 
 

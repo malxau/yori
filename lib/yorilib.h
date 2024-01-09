@@ -3425,7 +3425,8 @@ __success(return)
 BOOL
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName,
-    __in BOOLEAN Elevate
+    __in BOOLEAN Elevate,
+    __out_opt PDWORD LaunchedProcessId
     );
 
 PISHELLLINKDATALIST_CONSOLE_PROPS

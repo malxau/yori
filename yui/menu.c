@@ -30,6 +30,31 @@
 #include "resource.h"
 
 /**
+ A structure passed when looking for an item to execute from the menu.  This
+ is used because Windows returns a control ID, so we search again through the
+ tree looking for a matching control.
+ */
+typedef struct _YUI_MENU_FIND_EXEC_CONTEXT {
+
+    /**
+     Pointer to the application context.
+     */
+    PYUI_CONTEXT YuiContext;
+
+    /**
+     The menu control to search for.
+     */
+    DWORD CtrlId;
+
+    /**
+     If a match is found and execution commences, the process ID of the child
+     process.
+     */
+    DWORD ProcessId;
+
+} YUI_MENU_FIND_EXEC_CONTEXT, *PYUI_MENU_FIND_EXEC_CONTEXT;
+
+/**
  A structure describing a directory within the start menu.
  */
 typedef struct _YUI_MENU_DIRECTORY {
@@ -986,6 +1011,63 @@ YuiPopulateMenuOnDirectory(
 }
 
 /**
+ Execute a shortcut.  If it opens successfully, register the process ID as a
+ recently opened process in case a taskbar button arrives with the same
+ process ID.
+
+ @param YuiContext Pointer to the application context including a list of
+        recently opened programs.
+
+ @param FilePath Pointer to the shortcut to execute.
+
+ @param Elevated TRUE if the program should be launched elevated, FALSE if
+        not.
+
+ @return TRUE to indicate the shortcut was executed, FALSE if it was not.
+ */
+BOOL
+YuiExecuteShortcut(
+    __in PYUI_CONTEXT YuiContext,
+    __in PYORI_STRING FilePath,
+    __in BOOLEAN Elevated
+    )
+{
+    DWORD ProcessId;
+
+    if (!YoriLibExecuteShortcut(FilePath, Elevated, &ProcessId)) {
+        return FALSE;
+    }
+
+    if (ProcessId != 0) {
+        PYUI_RECENT_CHILD_PROCESS ChildProcess;
+        ChildProcess = YoriLibReferencedMalloc(sizeof(YUI_RECENT_CHILD_PROCESS) + 
+                                               (FilePath->LengthInChars + 1) * sizeof(TCHAR));
+        if (ChildProcess != NULL) {
+            ChildProcess->TaskbarButtonCount = 0;
+            ChildProcess->LastModifiedTime = YoriLibGetSystemTimeAsInteger();
+            ChildProcess->ProcessId = ProcessId;
+            YoriLibInitEmptyString(&ChildProcess->FilePath);
+            ChildProcess->FilePath.MemoryToFree = ChildProcess;
+            YoriLibReference(ChildProcess);
+            ChildProcess->FilePath.StartOfString = (LPTSTR)(ChildProcess + 1);
+            ChildProcess->FilePath.LengthAllocated = FilePath->LengthInChars + 1;
+            memcpy(ChildProcess->FilePath.StartOfString, FilePath->StartOfString, FilePath->LengthInChars * sizeof(TCHAR));
+            ChildProcess->FilePath.LengthInChars = FilePath->LengthInChars;
+            ChildProcess->FilePath.StartOfString[FilePath->LengthInChars] = '\0';
+
+#if DBG
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Adding new process %x %y\n"), ChildProcess->ProcessId, &ChildProcess->FilePath);
+#endif
+
+            YoriLibInsertList(&YuiContext->RecentProcessList, &ChildProcess->ListEntry);
+            YuiContext->RecentProcessCount++;
+        }
+    }
+
+    return TRUE;
+}
+
+/**
  A callback function that is invoked on all files/programs within the start
  menu tree to find the item corresponding to the user selection.  Obviously
  this could be implemented much more efficiently given the ID is known and
@@ -1006,11 +1088,12 @@ YuiFindMenuCommandToExecute(
     __in PVOID Context
     )
 {
-    PDWORD ItemToFind;
     BOOLEAN Elevated;
+    PYUI_MENU_FIND_EXEC_CONTEXT FindContext;
 
-    ItemToFind = (PDWORD)Context;
-    if (*ItemToFind != Item->MenuId) {
+    FindContext = (PYUI_MENU_FIND_EXEC_CONTEXT)Context;
+
+    if (FindContext->CtrlId != Item->MenuId) {
         return TRUE;
     }
 
@@ -1018,7 +1101,8 @@ YuiFindMenuCommandToExecute(
     if (GetKeyState(VK_SHIFT) < 0) {
         Elevated = TRUE;
     }
-    YoriLibExecuteShortcut(&Item->FilePath, Elevated);
+
+    YuiExecuteShortcut(FindContext->YuiContext, &Item->FilePath, Elevated);
     return FALSE;
 }
 
@@ -2316,14 +2400,21 @@ YuiMenuExecuteById(
         default:
             ASSERT(MenuId >= YUI_MENU_FIRST_PROGRAM_MENU_ID);
 
-            if (YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.StartDirectory,
-                                                    &MenuId,
-                                                    YuiFindMenuCommandToExecute,
-                                                    NULL)) {
-                YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.ProgramsDirectory,
-                                                    &MenuId,
-                                                    YuiFindMenuCommandToExecute,
-                                                    NULL);
+            {
+                YUI_MENU_FIND_EXEC_CONTEXT FindContext;
+                FindContext.YuiContext = YuiContext;
+                FindContext.CtrlId = MenuId;
+                FindContext.ProcessId = 0;
+
+                if (YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.StartDirectory,
+                                                        &FindContext,
+                                                        YuiFindMenuCommandToExecute,
+                                                        NULL)) {
+                    YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.ProgramsDirectory,
+                                                        &FindContext,
+                                                        YuiFindMenuCommandToExecute,
+                                                        NULL);
+                }
             }
     }
 

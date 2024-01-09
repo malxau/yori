@@ -332,6 +332,10 @@ YuiTaskbarAllocateAndAddButton(
 {
     PYUI_TASKBAR_BUTTON NewButton;
     YORI_ALLOC_SIZE_T WindowTitleLength;
+    PYORI_LIST_ENTRY ListEntry;
+    PYUI_RECENT_CHILD_PROCESS ChildProcess;
+    LONGLONG CurrentTime;
+    LONGLONG ExpireTime;
 
     WindowTitleLength = (YORI_ALLOC_SIZE_T)GetWindowTextLength(hWnd);
 
@@ -339,6 +343,9 @@ YuiTaskbarAllocateAndAddButton(
     if (NewButton == NULL) {
         return FALSE;
     }
+
+    YoriLibInitEmptyString(&NewButton->ProcessName);
+    YoriLibInitEmptyString(&NewButton->ShortcutPath);
 
     YoriLibInitEmptyString(&NewButton->ButtonText);
     NewButton->ButtonText.StartOfString = (LPTSTR)(NewButton + 1);
@@ -348,16 +355,93 @@ YuiTaskbarAllocateAndAddButton(
     NewButton->ButtonText.LengthInChars = (YORI_ALLOC_SIZE_T)
         GetWindowText(hWnd, NewButton->ButtonText.StartOfString, NewButton->ButtonText.LengthAllocated);
 
+    NewButton->ChildProcess = NULL;
     NewButton->hWndToActivate = hWnd;
     NewButton->hWndButton = NULL;
     NewButton->WindowActive = FALSE;
     NewButton->AssociatedWindowFound = TRUE;
     NewButton->Flashing = FALSE;
+    NewButton->ProcessId = 0;
+
+    CurrentTime = YoriLibGetSystemTimeAsInteger();
+    ExpireTime = CurrentTime - (10 * 1000 * 1000 * 30);
+    GetWindowThreadProcessId(hWnd, &NewButton->ProcessId);
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiContext->RecentProcessList, ListEntry);
+    while (ListEntry != NULL) {
+        ChildProcess = CONTAINING_RECORD(ListEntry, YUI_RECENT_CHILD_PROCESS, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiContext->RecentProcessList, ListEntry);
+
+        //
+        //  Note that new processes are inserted into the front of the list,
+        //  so there's a chance of a duplicate process ID in the list, where
+        //  the first is current and the second is stale.
+        //
+
+        if (ChildProcess->ProcessId == NewButton->ProcessId &&
+            NewButton->ChildProcess == NULL) {
+
+            ChildProcess->TaskbarButtonCount++;
+            YoriLibReference(ChildProcess);
+            NewButton->ChildProcess = ChildProcess;
+            YoriLibCloneString(&NewButton->ShortcutPath, &ChildProcess->FilePath);
+#if DBG
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Associating shortcut with button %x %y\n"), NewButton->ProcessId, &ChildProcess->FilePath);
+#endif
+
+        //
+        //  If the process has had no windows for the last minute, remove it
+        //  from this list, since there's a good chance any newly created
+        //  window for the same process ID refers to a different process.
+        //
+
+        } else if (ChildProcess->TaskbarButtonCount == 0 &&
+                   ChildProcess->LastModifiedTime < ExpireTime) {
+
+#if DBG
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Removing expired process %x %y\n"), ChildProcess->ProcessId, &ChildProcess->FilePath);
+#endif
+            YoriLibRemoveListItem(&ChildProcess->ListEntry);
+            YoriLibFreeStringContents(&ChildProcess->FilePath);
+            YoriLibDereference(ChildProcess);
+            YuiContext->RecentProcessCount--;
+        }
+    }
 
     YoriLibAppendList(&YuiContext->TaskbarButtons, &NewButton->ListEntry);
     YuiContext->TaskbarButtonCount++;
 
     return TRUE;
+}
+
+/**
+ Free a taskbar button structure.
+
+ @param Button Pointer to the button structure to free.
+ */
+VOID
+YuiTaskbarFreeButton(
+    __in PYUI_TASKBAR_BUTTON Button
+    )
+{
+    ASSERT(Button->hWndButton == NULL);
+    YoriLibRemoveListItem(&Button->ListEntry);
+    YoriLibFreeStringContents(&Button->ShortcutPath);
+    if (Button->ChildProcess != NULL) {
+        PYUI_RECENT_CHILD_PROCESS ChildProcess;
+        ChildProcess = Button->ChildProcess;
+#if DBG
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Removing association with button %x %y\n"), ChildProcess->ProcessId, &ChildProcess->FilePath);
+#endif
+        ChildProcess->TaskbarButtonCount--;
+        if (ChildProcess->TaskbarButtonCount == 0) {
+            ChildProcess->LastModifiedTime = YoriLibGetSystemTimeAsInteger();
+        }
+        YoriLibDereference(ChildProcess);
+        Button->ChildProcess = NULL;
+    }
+    YoriLibFreeStringContents(&Button->ButtonText);
+    YoriLibDereference(Button);
 }
 
 /**
@@ -774,9 +858,8 @@ YuiTaskbarNotifyDestroyWindow(
     }
 
     DestroyWindow(ThisButton->hWndButton);
-    YoriLibRemoveListItem(&ThisButton->ListEntry);
-    YoriLibFreeStringContents(&ThisButton->ButtonText);
-    YoriLibDereference(ThisButton);
+    ThisButton->hWndButton = NULL;
+    YuiTaskbarFreeButton(ThisButton);
 
     ASSERT(YuiContext->TaskbarButtonCount > 0);
     YuiContext->TaskbarButtonCount--;
@@ -1065,9 +1148,7 @@ YuiTaskbarFreeButtons(
             DestroyWindow(ThisButton->hWndButton);
             ThisButton->hWndButton = NULL;
         }
-        YoriLibRemoveListItem(&ThisButton->ListEntry);
-        YoriLibFreeStringContents(&ThisButton->ButtonText);
-        YoriLibDereference(ThisButton);
+        YuiTaskbarFreeButton(ThisButton);
         ListEntry = NextEntry;
     }
 }
@@ -1126,6 +1207,34 @@ YuiTaskbarSwitchToTask(
     ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
     if (ThisButton != NULL) {
         YuiTaskbarSwitchToButton(YuiContext, ThisButton);
+    }
+}
+
+/**
+ Attempt to launch a new instance of a running program.  This is invoked if
+ the user shift-clicks a taskbar button.
+
+ @param YuiContext Pointer to the application context.
+
+ @param CtrlId The identifier of the button that was pressed indicating a
+        desire to relaunch the associated window.
+ */
+VOID
+YuiTaskbarLaunchNewTask(
+    __in PYUI_CONTEXT YuiContext,
+    __in DWORD CtrlId
+    )
+{
+    PYUI_TASKBAR_BUTTON ThisButton;
+
+    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
+    if (ThisButton != NULL) {
+        if (ThisButton->ShortcutPath.LengthInChars > 0) {
+#if DBG
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Launching shortcut associated with button %y\n"), &ThisButton->ShortcutPath);
+#endif
+            YuiExecuteShortcut(YuiContext, &ThisButton->ShortcutPath, FALSE);
+        }
     }
 }
 

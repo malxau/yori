@@ -731,7 +731,11 @@ YuiTaskbarWindowProc(
                     YuiClockDisplayBatteryInfo(&YuiContext);
                 } else {
                     ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
-                    YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
+                    if (GetKeyState(VK_SHIFT) < 0) {
+                        YuiTaskbarLaunchNewTask(&YuiContext, CtrlId);
+                    } else {
+                        YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
+                    }
                 }
             }
             break;
@@ -759,7 +763,11 @@ YuiTaskbarWindowProc(
                 } else {
                     CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
                     if (CtrlId >= YUI_FIRST_TASKBAR_BUTTON) {
-                        YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
+                        if (GetKeyState(VK_SHIFT) < 0) {
+                            YuiTaskbarLaunchNewTask(&YuiContext, CtrlId);
+                        } else {
+                            YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
+                        }
                     } else {
                         YuiTaskbarSwitchToActiveTask(&YuiContext);
                     }
@@ -960,11 +968,27 @@ VOID
 YuiCleanupGlobalState(VOID)
 {
     DWORD Count;
+    PYORI_LIST_ENTRY ListEntry;
+    PYUI_RECENT_CHILD_PROCESS ChildProcess;
+
     YuiMenuWaitForBackgroundReload(&YuiContext);
     YuiMenuFreeAll(&YuiContext);
     YuiTaskbarFreeButtons(&YuiContext);
     YuiMenuCleanupContext();
     YuiIconCacheCleanupContext();
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiContext.RecentProcessList, ListEntry);
+    while (ListEntry != NULL) {
+        ChildProcess = CONTAINING_RECORD(ListEntry, YUI_RECENT_CHILD_PROCESS, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiContext.RecentProcessList, ListEntry);
+        ASSERT(ChildProcess->TaskbarButtonCount == 0);
+        YoriLibRemoveListItem(&ChildProcess->ListEntry);
+        YoriLibFreeStringContents(&ChildProcess->FilePath);
+        YoriLibDereference(ChildProcess);
+        YuiContext.RecentProcessCount--;
+    }
+    ASSERT(YuiContext.RecentProcessCount == 0);
 
     for (Count = 0; Count < sizeof(YuiContext.StartChangeNotifications)/sizeof(YuiContext.StartChangeNotifications[0]); Count++) {
         if (YuiContext.StartChangeNotifications[Count] != NULL) {
@@ -1499,6 +1523,7 @@ ymain(
     YORI_STRING Arg;
 
     ZeroMemory(&YuiContext, sizeof(YuiContext));
+    YoriLibInitializeListHead(&YuiContext.RecentProcessList);
     YoriLibInitializeListHead(&YuiContext.TaskbarButtons);
     YuiContext.TaskbarButtonCount = 0;
 

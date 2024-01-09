@@ -413,13 +413,18 @@ Exit:
  @param Elevate TRUE if the program should be run as an Administrator;
         FALSE to run in current user context.
 
+ @param LaunchedProcessId On successful completion, populated with the process
+        ID of the child process.  Note that this cannot be guaranteed due to
+        process activation via DDE; if not available, this value is zero.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName,
-    __in BOOLEAN Elevate
+    __in BOOLEAN Elevate,
+    __out_opt PDWORD LaunchedProcessId
     )
 {
     YORI_STRING FileTarget;
@@ -436,7 +441,9 @@ YoriLibExecuteShortcut(
     HRESULT hRes;
     YORI_ALLOC_SIZE_T SizeNeeded;
     LPTSTR Extension;
+    DWORD LocalProcessId;
 
+    LocalProcessId = 0;
     ASSERT(YoriLibIsStringNullTerminated(ShortcutFileName));
 
     YoriLibLoadShell32Functions();
@@ -654,6 +661,7 @@ YoriLibExecuteShortcut(
                 if (Result) {
                     CloseHandle(pi.hProcess);
                     CloseHandle(pi.hThread);
+                    LocalProcessId = pi.dwProcessId;
                 }
 
                 YoriLibFreeStringContents(&CmdLine);
@@ -669,7 +677,8 @@ YoriLibExecuteShortcut(
         sei.cbSize = sizeof(sei);
         sei.fMask = SEE_MASK_FLAG_NO_UI |
                     SEE_MASK_NOZONECHECKS |
-                    SEE_MASK_UNICODE;
+                    SEE_MASK_UNICODE |
+                    SEE_MASK_NOCLOSEPROCESS;
 
         sei.lpFile = ExpandedFileTarget.StartOfString;
         sei.lpParameters = ExpandedArguments.StartOfString;
@@ -683,6 +692,18 @@ YoriLibExecuteShortcut(
 
             if (!DllShell32.pShellExecuteExW(&sei)) {
                 goto Exit;
+            }
+
+            if (sei.hProcess != NULL) {
+                LONG Status;
+                PROCESS_BASIC_INFORMATION BasicInfo;
+                DWORD dwBytesReturned;
+
+                Status = DllNtDll.pNtQueryInformationProcess(sei.hProcess, 0, &BasicInfo, sizeof(BasicInfo), &dwBytesReturned);
+                if (Status == STATUS_SUCCESS) {
+                    LocalProcessId = (DWORD)BasicInfo.ProcessId;
+                }
+                CloseHandle(sei.hProcess);
             }
 
             Result = TRUE;
@@ -718,6 +739,10 @@ Exit:
     if (Scut != NULL) {
         Scut->Vtbl->Release(Scut);
         Scut = NULL;
+    }
+
+    if (Result) {
+        *LaunchedProcessId = LocalProcessId;
     }
 
     return Result;
