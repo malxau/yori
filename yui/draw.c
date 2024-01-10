@@ -126,23 +126,23 @@ YuiDrawGetTextWidth(
     __in PYORI_STRING Text
     )
 {
-    DWORD Width;
-    TCHAR Char;
-    YORI_ALLOC_SIZE_T Index;
-    LPABC Abc;
+    HDC hDC;
+    SIZE Size;
+    HGDIOBJ OldObject;
 
-    Width = 0;
-    for (Index = 0; Index < Text->LengthInChars; Index++) {
-        Char = Text->StartOfString[Index];
-        if (Char >= 32 && Char <= 127) {
-            Abc = &YuiContext->hFontCharWidths[Char - 32];
-            Width = Width + Abc->abcA + Abc->abcB + Abc->abcC;
-        } else {
-            Width = Width + YuiContext->hFontAvgWidth;
-        }
-    }
+    //
+    //  For some odd reason, when measuring menu items, we don't get a DC.
+    //  Grab one for the taskbar window, set the font, and assume it'll do
+    //  approximately the same as the menu window.
+    //
 
-    return Width;
+    hDC = GetWindowDC(YuiContext->hWnd);
+    OldObject = SelectObject(hDC, YuiContext->hFont);
+    GetTextExtentPoint32(hDC, Text->StartOfString, Text->LengthInChars, &Size);
+    SelectObject(hDC, OldObject);
+    ReleaseDC(YuiContext->hWnd, hDC);
+
+    return (DWORD)Size.cx;
 }
 
 /**
@@ -486,11 +486,13 @@ YuiDrawMeasureMenuItem(
 
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
 
-
-    if (ItemContext->NarrowItem) {
+    if (ItemContext->WidthByStringLength) {
         Item->itemWidth = YuiDrawGetTextWidth(YuiContext, &ItemContext->Text) + 
                           YuiContext->SmallIconWidth +
                           2 * YuiContext->ShortIconPadding;
+        if (ItemContext->AddFlyoutIcon) {
+            Item->itemWidth = Item->itemWidth + YUI_FLYOUT_ICON_WIDTH;
+        }
     } else {
 
         //
@@ -634,21 +636,22 @@ YuiDrawMenuItem(
 
     } else {
 
-        //
-        //  Create a rectangle for text after the icon.  Leave some space on the
-        //  right for a menu flyout.  This is done unconditionally just to ensure
-        //  all items have the same text region, flyout or not.
-        //
+        HGDIOBJ OldObject;
 
         TextRect.left = Item->rcItem.left + IconPadding;
         TextRect.top = Item->rcItem.top;
-        TextRect.right = Item->rcItem.right - 20;
+        if (ItemContext->AddFlyoutIcon) {
+            TextRect.right = Item->rcItem.right - YUI_FLYOUT_ICON_WIDTH;
+        } else {
+            TextRect.right = Item->rcItem.right;
+        }
         TextRect.bottom = Item->rcItem.bottom;
 
         SetBkColor(Item->hDC, BackColor);
         SetTextColor(Item->hDC, ForeColor);
-        SelectObject(Item->hDC, YuiContext->hFont);
+        OldObject = SelectObject(Item->hDC, YuiContext->hFont);
         DrawText(Item->hDC, ItemContext->Text.StartOfString, ItemContext->Text.LengthInChars, &TextRect, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+        SelectObject(Item->hDC, OldObject);
     }
     return TRUE;
 }

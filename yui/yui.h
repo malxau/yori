@@ -295,16 +295,6 @@ typedef struct _YUI_CONTEXT {
     HFONT hBoldFont;
 
     /**
-     The width of characters in the range 32-127.
-     */
-    ABC hFontCharWidths[96];
-
-    /**
-     The average width of a character in hFont.
-     */
-    WORD hFontAvgWidth;
-
-    /**
      Handle to a background thread that is populating the start menu.
      */
     HANDLE MenuPopulateThread;
@@ -594,7 +584,14 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
      be determined by string length.  FALSE if the item is a start menu item,
      where a minimum horizontal size is enforced.
      */
-    BOOLEAN NarrowItem;
+    BOOLEAN WidthByStringLength;
+
+    /**
+     TRUE if the menu item might have a submenu, so string length needs to
+     account for space for the flyout icon.  FALSE if it is guaranteed to not
+     need a flyout.
+     */
+    BOOLEAN AddFlyoutIcon;
 } YUI_MENU_OWNERDRAW_ITEM, *PYUI_MENU_OWNERDRAW_ITEM;
 
 
@@ -612,6 +609,11 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
  The number of pixels to include in the battery indicator.
  */
 #define YUI_BATTERY_WIDTH (45)
+
+/**
+ The number of pixels to reserve for a submenu flyout icon.
+ */
+#define YUI_FLYOUT_ICON_WIDTH (20)
 
 /**
  The control identifier for the start button.

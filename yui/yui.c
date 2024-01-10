@@ -423,7 +423,6 @@ YuiNotifyResolutionChange(
     HDC hDC;
     HFONT hFont;
     HFONT hBoldFont;
-    DWORD Index;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
@@ -478,21 +477,8 @@ YuiNotifyResolutionChange(
         }
         YuiContext.hFont = hFont;
 
-        if (GetCharABCWidths(hDC, 32, 127, YuiContext.hFontCharWidths)) {
-            INT TotalWidth;
-
-            TotalWidth = 0;
-
-            for (Index = 0;
-                 Index < sizeof(YuiContext.hFontCharWidths) / sizeof(YuiContext.hFontCharWidths[0]);
-                 Index++) {
-                TotalWidth = TotalWidth +
-                             YuiContext.hFontCharWidths[Index].abcA +
-                             YuiContext.hFontCharWidths[Index].abcB +
-                             YuiContext.hFontCharWidths[Index].abcC;
-            }
-
-            YuiContext.hFontAvgWidth = (WORD)(TotalWidth / 96);
+        if (YuiContext.hWnd != NULL) {
+            SendMessage(YuiContext.hWnd, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
         }
 
         if (YuiContext.hWndBattery != NULL) {
@@ -1285,6 +1271,8 @@ YuiCreateWindow(
         YuiCleanupGlobalState();
         return FALSE;
     }
+
+    SendMessage(Context->hWnd, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
 
     DllUser32.pGetClientRect(Context->hWnd, &ClientRect);
 

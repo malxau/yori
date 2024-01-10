@@ -229,12 +229,6 @@ typedef struct _YUI_MENU_CONTEXT {
     YUI_MENU_OWNERDRAW_ITEM ShutdownShutdown;
 
     /**
-     Owner draw state for a narrow menu seperator.  This is reused for all
-     of them, since they're all rendered the same.
-     */
-    YUI_MENU_OWNERDRAW_ITEM NarrowSeperator;
-
-    /**
      Owner draw state for the Cascade menu item.
      */
     YUI_MENU_OWNERDRAW_ITEM ContextCascade;
@@ -279,6 +273,8 @@ YuiMenuInitializeItem(
     Item->Icon = NULL;
     YoriLibInitEmptyString(&Item->Text);
     Item->TallItem = FALSE;
+    Item->WidthByStringLength = TRUE;
+    Item->AddFlyoutIcon = FALSE;
 }
 
 /**
@@ -327,7 +323,6 @@ YuiMenuCleanupContext(VOID)
     YuiMenuCleanupItem(&YuiMenuContext.ProgramsDirectory.Item);
     YuiMenuCleanupItem(&YuiMenuContext.StartDirectory.Item);
 
-    YuiMenuCleanupItem(&YuiMenuContext.NarrowSeperator);
     YuiMenuCleanupItem(&YuiMenuContext.ContextCascade);
     YuiMenuCleanupItem(&YuiMenuContext.ContextTileSideBySide);
     YuiMenuCleanupItem(&YuiMenuContext.ContextTileStacked);
@@ -359,15 +354,18 @@ YuiMenuInitializeContext(
     YuiMenuInitializeItem(&YuiMenuContext.Seperator);
     YoriLibConstantString(&YuiMenuContext.Seperator.Text, _T(""));
     YuiMenuContext.Seperator.TallItem = FALSE;
+    YuiMenuContext.Seperator.WidthByStringLength = TRUE;
 
     YuiMenuContext.Programs.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, PROGRAMSICON, TRUE);
     YoriLibConstantString(&YuiMenuContext.Programs.Text, _T("Programs"));
     YuiMenuContext.Programs.TallItem = TRUE;
+    YuiMenuContext.Programs.WidthByStringLength = FALSE;
 
 #if DBG
     YuiMenuContext.Debug.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, DEBUGICON, TRUE);
     YoriLibConstantString(&YuiMenuContext.Debug.Text, _T("Debug"));
     YuiMenuContext.Debug.TallItem = TRUE;
+    YuiMenuContext.Debug.WidthByStringLength = FALSE;
 
     YuiMenuInitializeItem(&YuiMenuContext.DebugRefreshTaskbar);
     YoriLibConstantString(&YuiMenuContext.DebugRefreshTaskbar.Text, _T("Refresh Taskbar"));
@@ -384,6 +382,7 @@ YuiMenuInitializeContext(
     YuiMenuContext.Run.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, RUNICON, TRUE);
     YoriLibConstantString(&YuiMenuContext.Run.Text, _T("Run..."));
     YuiMenuContext.Run.TallItem = TRUE;
+    YuiMenuContext.Run.WidthByStringLength = FALSE;
 
     if (YuiContext->LoginShell) {
         YuiMenuContext.Exit.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, LOGOFFICON, TRUE);
@@ -393,11 +392,13 @@ YuiMenuInitializeContext(
         YoriLibConstantString(&YuiMenuContext.Exit.Text, _T("Exit"));
     }
     YuiMenuContext.Exit.TallItem = TRUE;
+    YuiMenuContext.Exit.WidthByStringLength = FALSE;
 
     YuiMenuInitializeItem(&YuiMenuContext.Shutdown);
     YuiMenuContext.Shutdown.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, SHUTDOWNICON, TRUE);
     YoriLibConstantString(&YuiMenuContext.Shutdown.Text, _T("Shutdown"));
     YuiMenuContext.Shutdown.TallItem = TRUE;
+    YuiMenuContext.Shutdown.WidthByStringLength = FALSE;
 
     YuiMenuInitializeItem(&YuiMenuContext.ShutdownDisconnect);
     YoriLibConstantString(&YuiMenuContext.ShutdownDisconnect.Text, _T("Disconnect"));
@@ -417,29 +418,20 @@ YuiMenuInitializeContext(
     YuiMenuInitializeItem(&YuiMenuContext.ShutdownShutdown);
     YoriLibConstantString(&YuiMenuContext.ShutdownShutdown.Text, _T("Shut down"));
 
-    YuiMenuInitializeItem(&YuiMenuContext.NarrowSeperator);
-    YoriLibConstantString(&YuiMenuContext.NarrowSeperator.Text, _T(""));
-    YuiMenuContext.NarrowSeperator.NarrowItem = TRUE;
-
     YuiMenuInitializeItem(&YuiMenuContext.ContextCascade);
     YoriLibConstantString(&YuiMenuContext.ContextCascade.Text, _T("Cascade windows"));
-    YuiMenuContext.ContextCascade.NarrowItem = TRUE;
 
     YuiMenuInitializeItem(&YuiMenuContext.ContextTileSideBySide);
     YoriLibConstantString(&YuiMenuContext.ContextTileSideBySide.Text, _T("Tile windows side by side"));
-    YuiMenuContext.ContextTileSideBySide.NarrowItem = TRUE;
 
     YuiMenuInitializeItem(&YuiMenuContext.ContextTileStacked);
     YoriLibConstantString(&YuiMenuContext.ContextTileStacked.Text, _T("Tile windows stacked"));
-    YuiMenuContext.ContextTileStacked.NarrowItem = TRUE;
 
     YuiMenuInitializeItem(&YuiMenuContext.ContextShowDesktop);
     YoriLibConstantString(&YuiMenuContext.ContextShowDesktop.Text, _T("Show desktop"));
-    YuiMenuContext.ContextShowDesktop.NarrowItem = TRUE;
 
     YuiMenuInitializeItem(&YuiMenuContext.ContextRefreshTaskbar);
     YoriLibConstantString(&YuiMenuContext.ContextRefreshTaskbar.Text, _T("Refresh Taskbar"));
-    YuiMenuContext.ContextRefreshTaskbar.NarrowItem = TRUE;
 
     return TRUE;
 }
@@ -587,6 +579,7 @@ YuiCreateMenuDirectory(
     YoriLibInitializeListHead(&Entry->ChildDirectories);
     YoriLibInitializeListHead(&Entry->ChildFiles);
     YuiMenuInitializeItem(&Entry->Item);
+    Entry->Item.AddFlyoutIcon = TRUE;
     Entry->Item.Text.StartOfString = (LPTSTR)(Entry + 1);
     Entry->Item.Text.LengthAllocated = DirName->LengthInChars + 1;
     Entry->Item.Text.LengthInChars = DirName->LengthInChars;
@@ -674,6 +667,13 @@ YuiCreateMenuFile(
     YoriLibInitializeListHead(&Entry->ListEntry);
     YoriLibInitEmptyString(&Entry->FilePath);
     YuiMenuInitializeItem(&Entry->Item);
+
+    //
+    //  Even though no flyout is associated with a file, add one so the space
+    //  consumed by file and directory text is consistent.
+    //
+
+    Entry->Item.AddFlyoutIcon = TRUE;
 
     Entry->FilePath.StartOfString = (LPTSTR)(Entry + 1);
     Entry->FilePath.LengthAllocated = FilePath->LengthInChars + 1;
@@ -2517,7 +2517,7 @@ YuiMenuDisplayContext(
     AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_TILE_SIDEBYSIDE, (LPCWSTR)&YuiMenuContext.ContextTileSideBySide);
     AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_TILE_STACKED, (LPCWSTR)&YuiMenuContext.ContextTileStacked);
     AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_SHOW_DESKTOP, (LPCWSTR)&YuiMenuContext.ContextShowDesktop);
-    AppendMenu(Menu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.NarrowSeperator);
+    AppendMenu(Menu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.Seperator);
     AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_REFRESH, (LPCWSTR)&YuiMenuContext.ContextRefreshTaskbar);
 
     //
