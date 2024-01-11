@@ -353,24 +353,42 @@ typedef struct _YUI_CONTEXT {
     TCHAR BatteryDisplayedValueBuffer[16];
 
     /**
-     The number of pixels in height of a small icon.
+     The number of pixels in height of a small icon obtained from an open
+     window.  The size of this is determined by the window manager which
+     needs to fit it into the title bar.
      */
-    DWORD SmallIconHeight;
+    WORD SmallTaskbarIconHeight;
 
     /**
-     The number of pixels in width of a small icon.
+     The number of pixels in width of a small icon obtained from an open
+     window.  The size of this is determined by the window manager which
+     needs to fit it into the title bar.
      */
-    DWORD SmallIconWidth;
+    WORD SmallTaskbarIconWidth;
+
+    /**
+     The number of pixels in height of a small icon in the start menu.
+     This can be whatever yui wants, and it's nice to keep it to an even
+     four pixels since many icons were generated that way.
+     */
+    WORD SmallStartIconHeight;
+
+    /**
+     The number of pixels in width of a small icon in the start menu.
+     This can be whatever yui wants, and it's nice to keep it to an even
+     four pixels since many icons were generated that way.
+     */
+    WORD SmallStartIconWidth;
 
     /**
      The number of pixels in height of a tall icon.
      */
-    DWORD TallIconHeight;
+    WORD TallIconHeight;
 
     /**
      The number of pixels in width of a tall icon.
      */
-    DWORD TallIconWidth;
+    WORD TallIconWidth;
 
     /**
      The number of pixels of padding to display around a large icon.

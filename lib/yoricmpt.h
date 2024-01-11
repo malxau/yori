@@ -4267,6 +4267,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define ICON_BIG 1
 #endif
 
+#ifndef LR_LOADFROMFILE
+/**
+ A definition for loading an icon from a file if it is not defined by the
+ current compilation environment.
+ */
+#define LR_LOADFROMFILE 0x10
+#endif
+
 #ifndef IMAGE_ICON
 /**
  A definition for the icon type in LoadImage if it is not defined by the

@@ -488,7 +488,7 @@ YuiDrawMeasureMenuItem(
 
     if (ItemContext->WidthByStringLength) {
         Item->itemWidth = YuiDrawGetTextWidth(YuiContext, &ItemContext->Text) + 
-                          YuiContext->SmallIconWidth +
+                          YuiContext->SmallStartIconWidth +
                           2 * YuiContext->ShortIconPadding;
         if (ItemContext->AddFlyoutIcon) {
             Item->itemWidth = Item->itemWidth + YUI_FLYOUT_ICON_WIDTH;
@@ -583,8 +583,8 @@ YuiDrawMenuItem(
             IconHeight = YuiContext->TallIconHeight;
         } else {
             IconPadding = YuiContext->ShortIconPadding;
-            IconWidth = YuiContext->SmallIconWidth;
-            IconHeight = YuiContext->SmallIconHeight;
+            IconWidth = YuiContext->SmallStartIconWidth;
+            IconHeight = YuiContext->SmallStartIconHeight;
         }
 
         IconTop = Item->rcItem.top + (Item->rcItem.bottom - Item->rcItem.top - IconHeight) / 2;
@@ -617,7 +617,7 @@ YuiDrawMenuItem(
     if (ItemContext->TallItem) {
         IconPadding = YuiContext->TallIconPadding * 2 + YuiContext->TallIconWidth;
     } else {
-        IconPadding = YuiContext->ShortIconPadding * 2 + YuiContext->SmallIconWidth;
+        IconPadding = YuiContext->ShortIconPadding * 2 + YuiContext->SmallStartIconWidth;
     }
 
     //

@@ -1092,15 +1092,36 @@ YuiCreateWindow(
         return FALSE;
     }
 
-    Context->SmallIconWidth = GetSystemMetrics(SM_CXSMICON);
-    Context->SmallIconHeight = GetSystemMetrics(SM_CYSMICON);
-    Context->TallIconWidth = GetSystemMetrics(SM_CXICON);
-    Context->TallIconHeight = GetSystemMetrics(SM_CYICON);
+    Context->SmallTaskbarIconWidth = (WORD)GetSystemMetrics(SM_CXSMICON);
+    Context->SmallTaskbarIconHeight = (WORD)GetSystemMetrics(SM_CYSMICON);
+    Context->TallIconWidth = (WORD)GetSystemMetrics(SM_CXICON);
+    Context->TallIconHeight = (WORD)GetSystemMetrics(SM_CYICON);
+
+    //
+    //  Adjust the small start menu icon to the next multiple of 4.
+    //  This is just a visual improvement in case the small system icon size
+    //  is irregular.
+    //
+
+    Context->SmallStartIconWidth = Context->SmallTaskbarIconWidth;
+    Context->SmallStartIconHeight = Context->SmallTaskbarIconHeight;
+    if (Context->SmallStartIconWidth == Context->SmallStartIconHeight) {
+        Context->SmallStartIconWidth = (Context->SmallStartIconWidth + 3) & ~(3);
+        Context->SmallStartIconHeight = (Context->SmallStartIconHeight + 3) & ~(3);
+    }
+
+#if DBG
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                  _T("Large system icon %ix%i, Taskbar icon %ix%i, Small start icon %ix%i\n"),
+                  Context->TallIconWidth, Context->TallIconHeight,
+                  Context->SmallTaskbarIconWidth, Context->SmallTaskbarIconHeight,
+                  Context->SmallStartIconWidth, Context->SmallStartIconHeight);
+#endif
 
     Context->TallIconPadding = 6;
     Context->ShortIconPadding = 4;
     Context->TallMenuHeight = Context->TallIconHeight + 2 * Context->TallIconPadding;
-    Context->ShortMenuHeight = Context->SmallIconHeight + 2 * Context->ShortIconPadding;
+    Context->ShortMenuHeight = Context->SmallStartIconHeight + 2 * Context->ShortIconPadding;
     Context->MenuSeperatorHeight = 12;
 
     if (!YuiMenuInitializeContext(Context)) {
@@ -1154,7 +1175,7 @@ YuiCreateWindow(
     if (DllUser32.pLoadImageW == NULL) {
         Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
     } else {
-        Context->StartIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON), IMAGE_ICON, Context->SmallIconWidth, Context->SmallIconHeight, 0);
+        Context->StartIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON), IMAGE_ICON, Context->SmallStartIconWidth, Context->SmallStartIconHeight, 0);
     }
 
     NoActivate = WS_EX_NOACTIVATE;
