@@ -9092,18 +9092,6 @@ typedef struct _YORI_PSAPI_FUNCTIONS {
 extern YORI_PSAPI_FUNCTIONS DllPsapi;
 
 /**
- A prototype for the ExtractIconExW function.
- */
-typedef
-DWORD WINAPI
-EXTRACT_ICON_EXW(LPCWSTR, INT, HICON *, HICON *, DWORD);
-
-/**
- A prototype for a pointer to the ExtractIconExW function.
- */
-typedef EXTRACT_ICON_EXW *PEXTRACT_ICON_EXW;
-
-/**
  A prototype for the SHBrowseForFolderW function.
  */
 typedef
@@ -9196,11 +9184,6 @@ typedef struct _YORI_SHELL32_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
-
-    /**
-     If it's available on the current system, a pointer to ExtractIconExW.
-     */
-    PEXTRACT_ICON_EXW pExtractIconExW;
 
     /**
      If it's available on the current system, a pointer to SHBrowseForFolderW.
@@ -9389,18 +9372,6 @@ DDE_UNINITIALIZE(DWORD);
  A prototype for a pointer to the DdeUninitialize function.
  */
 typedef DDE_UNINITIALIZE *PDDE_UNINITIALIZE;
-
-/**
- A prototype for the DrawFrameControl function.
- */
-typedef
-BOOL WINAPI
-DRAW_FRAME_CONTROL(HDC, LPRECT, DWORD, DWORD);
-
-/**
- A prototype for a pointer to the DrawFrameControl function.
- */
-typedef DRAW_FRAME_CONTROL *PDRAW_FRAME_CONTROL;
 
 /**
  A prototype for the DrawIconEx function.
@@ -9809,11 +9780,6 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to DdeUninitialize.
      */
     PDDE_UNINITIALIZE pDdeUninitialize;
-
-    /**
-     If it's available on the current system, a pointer to DrawFrameControl.
-     */
-    PDRAW_FRAME_CONTROL pDrawFrameControl;
 
     /**
      If it's available on the current system, a pointer to DrawIconEx.
