@@ -436,6 +436,56 @@ YuiTaskbarDrawStatic(
 }
 
 /**
+ Draw a 3D effect around the taskbar.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hDC Optional device context.  This can be NULL in which case normal
+        BeginPaint logic is used.
+
+ @return TRUE if painting occurred, FALSE if it did not.
+ */
+BOOLEAN
+YuiTaskbarDrawFrame(
+    __in PYUI_CONTEXT YuiContext,
+    __in_opt HDC hDC
+    )
+{
+    RECT ClientRect;
+    HDC hDCPaint;
+    HDC hDCToUse;
+    PAINTSTRUCT paintStruct;
+
+    //
+    //  If the window has no repainting to do, stop.
+    //
+
+    if (!GetUpdateRect(YuiContext->hWnd, &ClientRect, FALSE)) {
+        return FALSE;
+    }
+
+    //
+    //  If it does, redraw everything.
+    //
+
+    hDCPaint = BeginPaint(YuiContext->hWnd, &paintStruct);
+    if (hDCPaint == NULL) {
+        return FALSE;
+    }
+
+    if (hDC != NULL) {
+        hDCToUse = hDC;
+    } else {
+        hDCToUse = hDCPaint;
+    }
+    GetClientRect(YuiContext->hWnd, &ClientRect);
+    YuiDrawThreeDBox(hDCToUse, &ClientRect, FALSE);
+
+    EndPaint(YuiContext->hWnd, &paintStruct);
+    return TRUE;
+}
+
+/**
  Draw a popup menu.  Note this is distinct from drawing items within a popup
  menu, and this operation is not well supported by the platform.  This
  function will fill the menu with a chosen color, and draw a raised 3D box

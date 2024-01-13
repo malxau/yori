@@ -234,6 +234,18 @@ typedef struct _YUI_CONTEXT {
     DWORD TaskbarHeight;
 
     /**
+     The number of pixels of padding to leave in the taskbar window above
+     and below buttons and other controls in the taskbar.
+     */
+    WORD TaskbarPaddingVertical;
+
+    /**
+     The number of pixels of padding to leave in the taskbar window to the
+     left of the start menu and right of the clock.
+     */
+    WORD TaskbarPaddingHorizontal;
+
+    /**
      The default window procedure for a push button.  Stored here so we can
      override it and call it recursively.
      */
@@ -860,6 +872,12 @@ VOID
 YuiTaskbarDrawStatic(
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in PYORI_STRING Text
+    );
+
+BOOLEAN
+YuiTaskbarDrawFrame(
+    __in PYUI_CONTEXT YuiContext,
+    __in_opt HDC hDC
     );
 
 BOOL

@@ -111,7 +111,7 @@ YuiGetDefaultButtonWndProc(VOID)
 /**
  The base height of the taskbar, in pixels.
  */
-#define YUI_BASE_TASKBAR_HEIGHT (32)
+#define YUI_BASE_TASKBAR_HEIGHT (30)
 
 /**
  The base width of each taskbar button, in pixels.
@@ -856,6 +856,13 @@ YuiTaskbarWindowProc(
                 }
             }
             break;
+        case WM_PAINT:
+            if (hwnd == YuiContext.hWnd) {
+                if (YuiTaskbarDrawFrame(&YuiContext, (HDC)wParam)) {
+                    return 0;
+                }
+            }
+            break;
 #if DBG
         case WM_WININICHANGE:
             if (YuiContext.DebugLogEnabled) {
@@ -1106,8 +1113,8 @@ YuiCreateWindow(
     Context->SmallStartIconWidth = Context->SmallTaskbarIconWidth;
     Context->SmallStartIconHeight = Context->SmallTaskbarIconHeight;
     if (Context->SmallStartIconWidth == Context->SmallStartIconHeight) {
-        Context->SmallStartIconWidth = (Context->SmallStartIconWidth + 3) & ~(3);
-        Context->SmallStartIconHeight = (Context->SmallStartIconHeight + 3) & ~(3);
+        Context->SmallStartIconWidth = (WORD)((Context->SmallStartIconWidth + 3) & ~(3));
+        Context->SmallStartIconHeight = (WORD)((Context->SmallStartIconHeight + 3) & ~(3));
     }
 
 #if DBG
@@ -1189,7 +1196,7 @@ YuiCreateWindow(
         Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | NoActivate,
                                        _T("YuiWnd"),
                                        _T("Yui"),
-                                       WS_POPUP | WS_DLGFRAME | WS_CLIPCHILDREN,
+                                       WS_POPUP | WS_CLIPCHILDREN,
                                        0,
                                        Context->ScreenHeight - Context->TaskbarHeight,
                                        Context->ScreenWidth,
@@ -1206,6 +1213,9 @@ YuiCreateWindow(
             return FALSE;
         }
     }
+
+    Context->TaskbarPaddingVertical = 3;
+    Context->TaskbarPaddingHorizontal = 3;
 
     //
     //  Mark minimized windows as invisible.  The taskbar should still have
@@ -1300,10 +1310,10 @@ YuiCreateWindow(
     Context->hWndStart = CreateWindow(_T("BUTTON"),
                                       _T("Start"),
                                       BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
-                                      1,
-                                      1,
+                                      Context->TaskbarPaddingHorizontal,
+                                      Context->TaskbarPaddingVertical,
                                       YUI_START_BUTTON_WIDTH,
-                                      ClientRect.bottom - 2,
+                                      ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
                                       Context->hWnd,
                                       (HMENU)(DWORD_PTR)YUI_START_BUTTON,
                                       NULL,
@@ -1314,7 +1324,7 @@ YuiCreateWindow(
         return FALSE;
     }
 
-    Context->StartLeftOffset = 1;
+    Context->StartLeftOffset = Context->TaskbarPaddingHorizontal;
     Context->StartRightOffset = (WORD)(Context->StartLeftOffset + YUI_START_BUTTON_WIDTH);
     if (Context->DefaultButtonWndProc == NULL) {
         Context->DefaultButtonWndProc = (WNDPROC)GetWindowLongPtr(Context->hWndStart, GWLP_WNDPROC);
@@ -1335,10 +1345,10 @@ YuiCreateWindow(
                                         _T("STATIC"),
                                         _T(""),
                                         SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
-                                        ClientRect.right - YUI_CLOCK_WIDTH - 1,
-                                        1,
+                                        ClientRect.right - YUI_CLOCK_WIDTH - Context->TaskbarPaddingHorizontal,
+                                        Context->TaskbarPaddingVertical,
                                         YUI_CLOCK_WIDTH,
-                                        ClientRect.bottom - 2,
+                                        ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
                                         Context->hWnd,
                                         (HMENU)(DWORD_PTR)YUI_CLOCK_DISPLAY,
                                         NULL,
@@ -1351,8 +1361,8 @@ YuiCreateWindow(
 
     SendMessage(Context->hWndClock, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
 
-    Context->LeftmostTaskbarOffset = 1 + YUI_START_BUTTON_WIDTH + 1;
-    Context->RightmostTaskbarOffset = 1 + YUI_CLOCK_WIDTH + 1;
+    Context->LeftmostTaskbarOffset = Context->TaskbarPaddingHorizontal + YUI_START_BUTTON_WIDTH + 1;
+    Context->RightmostTaskbarOffset = 1 + YUI_CLOCK_WIDTH + Context->TaskbarPaddingHorizontal;
 
     YoriLibInitEmptyString(&Context->BatteryDisplayedValue);
     Context->BatteryDisplayedValue.StartOfString = Context->BatteryDisplayedValueBuffer;
@@ -1368,10 +1378,10 @@ YuiCreateWindow(
                                                   _T("STATIC"),
                                                   _T(""),
                                                   SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
-                                                  ClientRect.right - YUI_CLOCK_WIDTH - 3 - YUI_BATTERY_WIDTH - 1,
-                                                  1,
+                                                  ClientRect.right - YUI_CLOCK_WIDTH - 3 - YUI_BATTERY_WIDTH - Context->TaskbarPaddingHorizontal,
+                                                  Context->TaskbarPaddingVertical,
                                                   YUI_BATTERY_WIDTH,
-                                                  ClientRect.bottom - 2,
+                                                  ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
                                                   Context->hWnd,
                                                   (HMENU)(DWORD_PTR)YUI_BATTERY_DISPLAY,
                                                   NULL,

@@ -454,6 +454,8 @@ YuiTaskbarFreeButton(
 
  @param TaskbarHwnd The taskbar window (parent.)
 
+ @param TopOffset The offset from the top of the parent window, in pixels.
+
  @param Height Height of the new button, in pixels.
 
  @return TRUE to indicate success, FALSE to indicate failure.
@@ -463,6 +465,7 @@ YuiTaskbarCreateButtonControl(
     __in PYUI_CONTEXT YuiContext,
     __in PYUI_TASKBAR_BUTTON ThisButton,
     __in HWND TaskbarHwnd,
+    __in WORD TopOffset,
     __in WORD Height
     )
 {
@@ -470,7 +473,7 @@ YuiTaskbarCreateButtonControl(
                                           _T(""),
                                           BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
                                           ThisButton->LeftOffset,
-                                          1,
+                                          TopOffset,
                                           (WORD)(ThisButton->RightOffset - ThisButton->LeftOffset),
                                           Height,
                                           TaskbarHwnd,
@@ -648,7 +651,11 @@ YuiTaskbarPopulateWindows(
         ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
         ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1),
         ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2),
-        YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
+        YuiTaskbarCreateButtonControl(YuiContext,
+                                      ThisButton,
+                                      TaskbarHwnd,
+                                      YuiContext->TaskbarPaddingVertical,
+                                      (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical * 2));
         if (ThisButton->hWndToActivate == ActiveWindow) {
             YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
         }
@@ -753,9 +760,9 @@ YuiTaskbarNotifyResolutionChange(
             ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
             DllUser32.pMoveWindow(ThisButton->hWndButton,
                                   ThisButton->LeftOffset,
-                                  1,
+                                  YuiContext->TaskbarPaddingVertical,
                                   WidthPerButton - 2,
-                                  TaskbarWindowClient.bottom - 2,
+                                  TaskbarWindowClient.bottom - 2 * YuiContext->TaskbarPaddingVertical,
                                   TRUE);
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
@@ -811,13 +818,17 @@ YuiTaskbarNotifyNewWindow(
         if (ThisButton->hWndButton != NULL) {
             DllUser32.pMoveWindow(ThisButton->hWndButton,
                                   ThisButton->LeftOffset,
-                                  1,
+                                  YuiContext->TaskbarPaddingVertical,
                                   WidthPerButton - 2,
-                                  TaskbarWindowClient.bottom - 2,
+                                  TaskbarWindowClient.bottom - 2 * YuiContext->TaskbarPaddingVertical,
                                   TRUE);
         } else {
             ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
-            YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
+            YuiTaskbarCreateButtonControl(YuiContext,
+                                          ThisButton,
+                                          TaskbarHwnd,
+                                          YuiContext->TaskbarPaddingVertical,
+                                          (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical * 2));
             if (ThisButton->hWndToActivate == GetForegroundWindow()) {
                 YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
             }
@@ -879,9 +890,9 @@ YuiTaskbarNotifyDestroyWindow(
         if (ThisButton->hWndButton != NULL) {
             DllUser32.pMoveWindow(ThisButton->hWndButton,
                                   ThisButton->LeftOffset,
-                                  1,
+                                  YuiContext->TaskbarPaddingVertical,
                                   WidthPerButton - 2,
-                                  TaskbarWindowClient.bottom - 2,
+                                  TaskbarWindowClient.bottom - 2 * YuiContext->TaskbarPaddingVertical,
                                   TRUE);
         }
 
