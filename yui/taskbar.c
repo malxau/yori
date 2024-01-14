@@ -315,6 +315,31 @@ YuiTaskbarGetNewCtrlId(
 }
 
 /**
+ Update the button text to contain characters that can be displayed by common
+ system fonts.
+
+ @param Button Pointer to the button containing populated button text.
+ */
+VOID
+YuiTaskbarMungeButtonText(
+    __in PYUI_TASKBAR_BUTTON Button
+    )
+{
+    YORI_ALLOC_SIZE_T Index;
+
+    for (Index = 0; Index < Button->ButtonText.LengthInChars; Index++) {
+
+        //
+        //  Replace EM-dash with a dash that all fonts have
+        //
+
+        if (Button->ButtonText.StartOfString[Index] == 0x2014) {
+            Button->ButtonText.StartOfString[Index] = '-';
+        }
+    }
+}
+
+/**
  Allocate memory for the structure that describes a taskbar button.  Note
  this does not create the button control itself.
 
@@ -354,6 +379,7 @@ YuiTaskbarAllocateAndAddButton(
     NewButton->ButtonText.MemoryToFree = NewButton;
     NewButton->ButtonText.LengthInChars = (YORI_ALLOC_SIZE_T)
         GetWindowText(hWnd, NewButton->ButtonText.StartOfString, NewButton->ButtonText.LengthAllocated);
+    YuiTaskbarMungeButtonText(NewButton);
 
     NewButton->ChildProcess = NULL;
     NewButton->hWndToActivate = hWnd;
@@ -991,6 +1017,7 @@ YuiTaskbarNotifyTitleChange(
             NewTitle.LengthInChars = (YORI_ALLOC_SIZE_T)GetWindowText(hWnd, NewTitle.StartOfString, NewTitle.LengthAllocated);
             YoriLibFreeStringContents(&ThisButton->ButtonText);
             memcpy(&ThisButton->ButtonText, &NewTitle, sizeof(YORI_STRING));
+            YuiTaskbarMungeButtonText(ThisButton);
             RedrawWindow(ThisButton->hWndButton, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);
         }
     }
@@ -1301,7 +1328,13 @@ YuiTaskbarDrawButton(
     }
 
     Icon = (HICON)GetClassLongPtr(ThisButton->hWndToActivate, GCLP_HICONSM);
-    YuiDrawButton(DrawItemStruct, ThisButton->WindowActive, ThisButton->Flashing, Icon, &ThisButton->ButtonText, FALSE);
+    YuiDrawButton(YuiContext,
+                  DrawItemStruct,
+                  ThisButton->WindowActive,
+                  ThisButton->Flashing,
+                  Icon,
+                  &ThisButton->ButtonText,
+                  FALSE);
 }
 
 /**

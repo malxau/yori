@@ -148,6 +148,8 @@ YuiDrawGetTextWidth(
 /**
  Draw an owner draw button.
 
+ @param YuiContext Pointer to the application context.
+
  @param DrawItemStruct Pointer to a structure describing the button to
         redraw, including its bounds and device context.
 
@@ -166,6 +168,7 @@ YuiDrawGetTextWidth(
  */
 VOID
 YuiDrawButton(
+    __in PYUI_CONTEXT YuiContext,
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
     __in BOOLEAN Flashing,
@@ -272,6 +275,7 @@ YuiDrawButton(
     if (Pushed) {
         TextRect.top = TextRect.top + 2;
     } else {
+        TextRect.top = TextRect.top + YuiContext->ExtraPixelsAboveText;
         TextRect.bottom = TextRect.bottom - 2;
     }
 

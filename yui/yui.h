@@ -297,6 +297,17 @@ typedef struct _YUI_CONTEXT {
     DWORD ShellHookMsg;
 
     /**
+     The size of the font being used.
+     */
+    WORD FontSize;
+
+    /**
+     Extra pixels to add above text on the taskbar.  This happens because not
+     all fonts use the same bounding rectangles.
+     */
+    WORD ExtraPixelsAboveText;
+
+    /**
      A handle to a font used to display buttons on the task bar.
      */
     HFONT hFont;
@@ -365,6 +376,21 @@ typedef struct _YUI_CONTEXT {
     TCHAR BatteryDisplayedValueBuffer[16];
 
     /**
+     Width of the start button, in pixels.
+     */
+    WORD StartButtonWidth;
+
+    /**
+     Width of the clock, in pixels.
+     */
+    WORD ClockWidth;
+
+    /**
+     Width of the battery indicator, in pixels.
+     */
+    WORD BatteryWidth;
+
+    /**
      The number of pixels in height of a small icon obtained from an open
      window.  The size of this is determined by the window manager which
      needs to fit it into the title bar.
@@ -405,27 +431,27 @@ typedef struct _YUI_CONTEXT {
     /**
      The number of pixels of padding to display around a large icon.
      */
-    DWORD TallIconPadding;
+    WORD TallIconPadding;
 
     /**
      The number of pixels of padding to display around a small icon.
      */
-    DWORD ShortIconPadding;
+    WORD ShortIconPadding;
 
     /**
      The number of pixels in height of a tall menu entry.
      */
-    DWORD TallMenuHeight;
+    WORD TallMenuHeight;
 
     /**
      The number of pixels in height of a short menu entry.
      */
-    DWORD ShortMenuHeight;
+    WORD ShortMenuHeight;
 
     /**
      The number of pixels in height of a menu seperator.
      */
-    DWORD MenuSeperatorHeight;
+    WORD MenuSeperatorHeight;
 
     /**
      The left offset of the start button, in pixels, relative to the client
@@ -628,17 +654,17 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
 /**
  The number of pixels to include in the start button.
  */
-#define YUI_START_BUTTON_WIDTH (75)
+#define YUI_START_BUTTON_WIDTH (60)
 
 /**
  The number of pixels to include in the clock.
  */
-#define YUI_CLOCK_WIDTH (80)
+#define YUI_CLOCK_WIDTH (65)
 
 /**
  The number of pixels to include in the battery indicator.
  */
-#define YUI_BATTERY_WIDTH (45)
+#define YUI_BATTERY_WIDTH (38)
 
 /**
  The number of pixels to reserve for a submenu flyout icon.
@@ -860,6 +886,7 @@ YuiGetWindowBackgroundColor(VOID);
 
 VOID
 YuiDrawButton(
+    __in PYUI_CONTEXT YuiContext,
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
     __in BOOLEAN Flashing,

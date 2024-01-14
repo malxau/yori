@@ -104,19 +104,29 @@ YuiGetDefaultButtonWndProc(VOID)
 }
 
 /**
- The font name to use in the taskbar and menus.
+ The base/minimum font size.
  */
-#define YUI_FONT_NAME _T("Tahoma")
+#define YUI_BASE_FONT_SIZE 8
+
+/**
+ The font name to use in the taskbar and menus at size 8.
+ */
+#define YUI_SMALL_FONT_NAME _T("MS Sans Serif")
+
+/**
+ The font name to use in the taskbar and menus at size 9 or above.
+ */
+#define YUI_LARGE_FONT_NAME _T("Tahoma")
 
 /**
  The base height of the taskbar, in pixels.
  */
-#define YUI_BASE_TASKBAR_HEIGHT (30)
+#define YUI_BASE_TASKBAR_HEIGHT (28)
 
 /**
  The base width of each taskbar button, in pixels.
  */
-#define YUI_BASE_TASKBAR_BUTTON_WIDTH (190)
+#define YUI_BASE_TASKBAR_BUTTON_WIDTH (160)
 
 /**
  Query the taskbar height for this system.  The taskbar is generally 32 pixels
@@ -141,11 +151,11 @@ YuiGetTaskbarHeight(
     TaskbarHeight = YUI_BASE_TASKBAR_HEIGHT;
 
     //
-    //  Give 1% of any vertical pixels above 1200
+    //  Give 1% of any vertical pixels above 800
     //
 
-    if (ScreenHeight > 1200) {
-        TaskbarHeight = TaskbarHeight + (ScreenHeight - 1200) / 100;
+    if (ScreenHeight > 800) {
+        TaskbarHeight = TaskbarHeight + (ScreenHeight - 800) / 100;
     }
 
     return TaskbarHeight;
@@ -164,6 +174,7 @@ YuiGetTaskbarHeight(
  */
 WORD
 YuiGetTaskbarMaximumButtonWidth(
+
     __in DWORD ScreenWidth,
     __in DWORD ScreenHeight
     )
@@ -175,11 +186,19 @@ YuiGetTaskbarMaximumButtonWidth(
     TaskbarButtonWidth = YUI_BASE_TASKBAR_BUTTON_WIDTH;
 
     //
-    //  Give 5% of any horizontal pixels above 1200
+    //  Give an extra 20px for every font point size
     //
 
-    if (ScreenWidth > 1200) {
-        TaskbarButtonWidth = TaskbarButtonWidth + (ScreenWidth - 1200) / 20;
+    if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
+        TaskbarButtonWidth = TaskbarButtonWidth + 20 * (YuiContext.FontSize - YUI_BASE_FONT_SIZE);
+    }
+
+    //
+    //  Give 2% of any horizontal pixels above 800
+    //
+
+    if (ScreenWidth > 800) {
+        TaskbarButtonWidth = TaskbarButtonWidth + (ScreenWidth - 800) / 50;
     }
 
     return (WORD)TaskbarButtonWidth;
@@ -248,7 +267,13 @@ YuiStartDrawButton(
 {
     YORI_STRING Text;
     YoriLibConstantString(&Text, _T("Start"));
-    YuiDrawButton(DrawItemStruct, YuiContext.MenuActive, FALSE, YuiContext.StartIcon, &Text, TRUE);
+    YuiDrawButton(&YuiContext,
+                  DrawItemStruct,
+                  YuiContext.MenuActive,
+                  FALSE,
+                  YuiContext.StartIcon,
+                  &Text,
+                  TRUE);
 }
 
 /**
@@ -419,10 +444,11 @@ YuiNotifyResolutionChange(
     )
 {
     RECT ClientRect;
-    DWORD FontSize;
+    WORD FontSize;
     HDC hDC;
     HFONT hFont;
     HFONT hBoldFont;
+    LPCTSTR FontName;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
@@ -436,11 +462,18 @@ YuiNotifyResolutionChange(
 
     YuiHideExplorerTaskbar(&YuiContext);
 
-    FontSize = 9;
-    FontSize = FontSize + (YuiContext.TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3;
+    FontSize = YUI_BASE_FONT_SIZE;
+    FontName = YUI_SMALL_FONT_NAME;
+
+    YuiContext.ExtraPixelsAboveText = 1;
+    YuiContext.FontSize = (WORD)(FontSize + (YuiContext.TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3);
+    if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
+        FontName = YUI_LARGE_FONT_NAME;
+        YuiContext.ExtraPixelsAboveText = 0;
+    }
 
     hDC = GetWindowDC(hWnd);
-    hFont = CreateFont(-YoriLibMulDiv(FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+    hFont = CreateFont(-YoriLibMulDiv(YuiContext.FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
                        0,
                        0,
                        0,
@@ -453,9 +486,9 @@ YuiNotifyResolutionChange(
                        CLIP_DEFAULT_PRECIS,
                        DEFAULT_QUALITY,
                        FF_DONTCARE,
-                       YUI_FONT_NAME);
+                       FontName);
 
-    hBoldFont = CreateFont(-YoriLibMulDiv(FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+    hBoldFont = CreateFont(-YoriLibMulDiv(YuiContext.FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
                            0,
                            0,
                            0,
@@ -468,7 +501,7 @@ YuiNotifyResolutionChange(
                            CLIP_DEFAULT_PRECIS,
                            DEFAULT_QUALITY,
                            FF_DONTCARE,
-                           YUI_FONT_NAME);
+                           FontName);
 
     if (hFont != NULL) {
 
@@ -501,6 +534,22 @@ YuiNotifyResolutionChange(
         }
     }
 
+    if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
+        YuiContext.TallIconPadding = 6;
+        YuiContext.ShortIconPadding = 4;
+    } else {
+        YuiContext.TallIconPadding = 4;
+        YuiContext.ShortIconPadding = 3;
+    }
+
+    YuiContext.TallMenuHeight = (WORD)(YuiContext.TallIconHeight + 2 * YuiContext.TallIconPadding);
+    YuiContext.ShortMenuHeight = (WORD)(YuiContext.SmallStartIconHeight + 2 * YuiContext.ShortIconPadding);
+    YuiContext.MenuSeperatorHeight = 12;
+
+    YuiContext.StartButtonWidth = (WORD)(YUI_START_BUTTON_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 10);
+    YuiContext.ClockWidth = (WORD)(YUI_CLOCK_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 10);
+    YuiContext.BatteryWidth = (WORD)(YUI_BATTERY_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 5);
+
     ReleaseDC(hWnd, hDC);
 
     DllUser32.pMoveWindow(hWnd,
@@ -525,21 +574,36 @@ YuiNotifyResolutionChange(
 
     if (YuiContext.hWndBattery != NULL) {
         DllUser32.pMoveWindow(YuiContext.hWndBattery,
-                              ClientRect.right - YUI_CLOCK_WIDTH - 3 - YUI_BATTERY_WIDTH - 1,
-                              1,
-                              YUI_BATTERY_WIDTH,
-                              ClientRect.bottom - 2,
+                              ClientRect.right - YuiContext.ClockWidth - 3 - YuiContext.BatteryWidth - 1,
+                              YuiContext.TaskbarPaddingVertical,
+                              YuiContext.BatteryWidth,
+                              ClientRect.bottom - 2 * YuiContext.TaskbarPaddingVertical,
                               TRUE);
     }
 
     if (YuiContext.hWndClock != NULL) {
         DllUser32.pMoveWindow(YuiContext.hWndClock,
-                              ClientRect.right - YUI_CLOCK_WIDTH - 1,
-                              1,
-                              YUI_CLOCK_WIDTH,
-                              ClientRect.bottom - 2,
+                              ClientRect.right - YuiContext.ClockWidth - 1,
+                              YuiContext.TaskbarPaddingVertical,
+                              YuiContext.ClockWidth,
+                              ClientRect.bottom - 2 * YuiContext.TaskbarPaddingVertical,
                               TRUE);
     }
+
+    if (YuiContext.hWndStart != NULL) {
+        DllUser32.pMoveWindow(YuiContext.hWndStart,
+                              YuiContext.TaskbarPaddingHorizontal,
+                              YuiContext.TaskbarPaddingVertical,
+                              YuiContext.StartButtonWidth,
+                              ClientRect.bottom - 2 * YuiContext.TaskbarPaddingVertical,
+                              TRUE);
+    }
+
+    YuiContext.StartLeftOffset = YuiContext.TaskbarPaddingHorizontal;
+    YuiContext.StartRightOffset = (WORD)(YuiContext.StartLeftOffset + YuiContext.StartButtonWidth);
+
+    YuiContext.LeftmostTaskbarOffset = YuiContext.TaskbarPaddingHorizontal + YuiContext.StartButtonWidth + 1;
+    YuiContext.RightmostTaskbarOffset = 1 + YuiContext.ClockWidth + YuiContext.TaskbarPaddingHorizontal;
 
     YuiTaskbarNotifyResolutionChange(&YuiContext);
 
@@ -1125,11 +1189,6 @@ YuiCreateWindow(
                   Context->SmallStartIconWidth, Context->SmallStartIconHeight);
 #endif
 
-    Context->TallIconPadding = 6;
-    Context->ShortIconPadding = 4;
-    Context->TallMenuHeight = Context->TallIconHeight + 2 * Context->TallIconPadding;
-    Context->ShortMenuHeight = Context->SmallStartIconHeight + 2 * Context->ShortIconPadding;
-    Context->MenuSeperatorHeight = 12;
 
     if (!YuiMenuInitializeContext(Context)) {
         YuiCleanupGlobalState();
@@ -1312,7 +1371,7 @@ YuiCreateWindow(
                                       BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
                                       Context->TaskbarPaddingHorizontal,
                                       Context->TaskbarPaddingVertical,
-                                      YUI_START_BUTTON_WIDTH,
+                                      Context->StartButtonWidth,
                                       ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
                                       Context->hWnd,
                                       (HMENU)(DWORD_PTR)YUI_START_BUTTON,
@@ -1324,8 +1383,6 @@ YuiCreateWindow(
         return FALSE;
     }
 
-    Context->StartLeftOffset = Context->TaskbarPaddingHorizontal;
-    Context->StartRightOffset = (WORD)(Context->StartLeftOffset + YUI_START_BUTTON_WIDTH);
     if (Context->DefaultButtonWndProc == NULL) {
         Context->DefaultButtonWndProc = (WNDPROC)GetWindowLongPtr(Context->hWndStart, GWLP_WNDPROC);
         if (Context->DefaultButtonWndProc == NULL) {
@@ -1360,9 +1417,6 @@ YuiCreateWindow(
     }
 
     SendMessage(Context->hWndClock, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
-
-    Context->LeftmostTaskbarOffset = Context->TaskbarPaddingHorizontal + YUI_START_BUTTON_WIDTH + 1;
-    Context->RightmostTaskbarOffset = 1 + YUI_CLOCK_WIDTH + Context->TaskbarPaddingHorizontal;
 
     YoriLibInitEmptyString(&Context->BatteryDisplayedValue);
     Context->BatteryDisplayedValue.StartOfString = Context->BatteryDisplayedValueBuffer;
