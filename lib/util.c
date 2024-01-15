@@ -763,7 +763,7 @@ YoriLibDosDateTimeToFileTime(
  */
 DWORD
 YoriLibShellExecuteInstanceToError(
-    __in HINSTANCE hInst
+    __in_opt HINSTANCE hInst
     )
 {
     DWORD Err;
@@ -771,6 +771,9 @@ YoriLibShellExecuteInstanceToError(
     Err = ERROR_SUCCESS;
     if (hInst < (HINSTANCE)(DWORD_PTR)32) {
         switch((DWORD_PTR)hInst) {
+            case 0:
+                Err = ERROR_NOT_ENOUGH_MEMORY;
+                break;
             case ERROR_FILE_NOT_FOUND:
             case ERROR_PATH_NOT_FOUND:
             case ERROR_ACCESS_DENIED:

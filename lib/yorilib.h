@@ -3421,8 +3421,8 @@ YoriLibLoadShortcutIconPath(
     __out PDWORD IconIndex
     );
 
-__success(return)
-BOOL
+__success(return == S_OK)
+HRESULT
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName,
     __in BOOLEAN Elevate,
@@ -4168,7 +4168,7 @@ YoriLibDosDateTimeToFileTime(
 
 DWORD
 YoriLibShellExecuteInstanceToError(
-    __in HINSTANCE hInst
+    __in_opt HINSTANCE hInst
     );
 
 // *** VT.C ***

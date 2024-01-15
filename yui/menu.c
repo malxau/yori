@@ -1033,8 +1033,33 @@ YuiExecuteShortcut(
     )
 {
     DWORD ProcessId;
+    HRESULT hRes;
 
-    if (!YoriLibExecuteShortcut(FilePath, Elevated, &ProcessId)) {
+    hRes = YoriLibExecuteShortcut(FilePath, Elevated, &ProcessId);
+    if (!SUCCEEDED(hRes)) {
+        YORI_STRING Error;
+        YoriLibInitEmptyString(&Error);
+
+        //
+        //  Check if it's a Win32 code, which it probably is.
+        //
+
+        if (HRESULT_FACILITY(hRes) == FACILITY_WIN32) {
+            LPTSTR ErrText;
+            ErrText = YoriLibGetWinErrorText(HRESULT_CODE(hRes));
+            if (ErrText != NULL) {
+                YoriLibYPrintf(&Error, _T("Could not execute shortcut: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+            }
+        }
+
+        if (Error.StartOfString == NULL) {
+            YoriLibYPrintf(&Error, _T("Could not execute shortcut: %08x"), hRes);
+        }
+        if (Error.StartOfString != NULL) {
+            MessageBox(YuiContext->hWnd, Error.StartOfString, _T("Error"), MB_ICONSTOP);
+        }
+        YoriLibFreeStringContents(&Error);
         return FALSE;
     }
 

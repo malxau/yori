@@ -6050,6 +6050,41 @@ typedef struct _ISHELLLINKDATALIST_CONSOLE_PROPS {
 #define ISHELLLINKDATALIST_CONSOLE_PROPS_SIG (0xA0000002)
 
 /**
+ A structure defining extra information which can be attached to a
+ shortcut to configure windows installer.
+ */
+typedef struct _ISHELLLINKDATALIST_MSI_PROPS {
+
+    /**
+     The size of this structure.
+     */
+    DWORD dwSize;
+
+    /**
+     The signature for this type of structure.
+     */
+    DWORD dwSignature;
+
+    /**
+     An opaque blob to identify to the Installer which object this should
+     point to.
+     */
+    CHAR szDarwinID[MAX_PATH];
+
+    /**
+     An opaque blob to identify to the Installer which object this should
+     point to.
+     */
+    WCHAR szwDarwinID[MAX_PATH];
+} ISHELLLINKDATALIST_MSI_PROPS, *PISHELLLINKDATALIST_MSI_PROPS;
+
+/**
+ The signature for Microsoft Installer aka Windows Installer properties within
+ a ShellLinkDataList.
+ */
+#define ISHELLLINKDATALIST_MSI_PROPS_SIG (0xA0000006)
+
+/**
  An instance of the IRadioManager interface, consisting only of function pointers.
  */
 typedef struct IRadioManager {
@@ -8003,6 +8038,18 @@ CHECK_TOKEN_MEMBERSHIP(HANDLE, PSID, PBOOL);
 typedef CHECK_TOKEN_MEMBERSHIP *PCHECK_TOKEN_MEMBERSHIP;
 
 /**
+ Prototype for the CommandLineFromMsiDescriptor function.
+ */
+typedef
+DWORD WINAPI
+COMMAND_LINE_FROM_MSI_DESCRIPTOR(LPWSTR, LPWSTR, PDWORD);
+
+/**
+ Prototype for a pointer to the CommandLineFromMsiDescriptor function.
+ */
+typedef COMMAND_LINE_FROM_MSI_DESCRIPTOR *PCOMMAND_LINE_FROM_MSI_DESCRIPTOR;
+
+/**
  Prototype for the CryptAcquireContext function.
  */
 typedef
@@ -8468,6 +8515,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to CheckTokenMembership.
      */
     PCHECK_TOKEN_MEMBERSHIP pCheckTokenMembership;
+
+    /**
+     If it's available on the current system, a pointer to CommandLineFromMsiDescriptor.
+     */
+    PCOMMAND_LINE_FROM_MSI_DESCRIPTOR pCommandLineFromMsiDescriptor;
 
     /**
      If it's available on the current system, a pointer to CryptAcquireContextW.

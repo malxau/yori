@@ -417,10 +417,10 @@ Exit:
         ID of the child process.  Note that this cannot be guaranteed due to
         process activation via DDE; if not available, this value is zero.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @return HRESULT including S_OK to indicate success, or appropriate failure.
  */
-__success(return)
-BOOL
+__success(return == S_OK)
+HRESULT
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName,
     __in BOOLEAN Elevate,
@@ -437,6 +437,7 @@ YoriLibExecuteShortcut(
     HINSTANCE hApp;
     IShellLinkW *Scut = NULL;
     IPersistFile *ScutFile = NULL;
+    IShellLinkDataList *ShortcutDataList = NULL;
     BOOL Result = FALSE;
     HRESULT hRes;
     YORI_ALLOC_SIZE_T SizeNeeded;
@@ -446,25 +447,26 @@ YoriLibExecuteShortcut(
     LocalProcessId = 0;
     ASSERT(YoriLibIsStringNullTerminated(ShortcutFileName));
 
+    YoriLibLoadAdvApi32Functions();
     YoriLibLoadShell32Functions();
 
     if (Elevate && DllShell32.pShellExecuteExW == NULL) {
-        return FALSE;
+        return HRESULT_FROM_WIN32(ERROR_INVALID_FUNCTION);
     }
 
     YoriLibLoadOle32Functions();
     if (DllOle32.pCoCreateInstance == NULL || DllOle32.pCoInitialize == NULL) {
-        return FALSE;
+        return HRESULT_FROM_WIN32(ERROR_INVALID_FUNCTION);
     }
 
     hRes = DllOle32.pCoInitialize(NULL);
     if (!SUCCEEDED(hRes)) {
-        return FALSE;
+        return hRes;
     }
 
     hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&Scut);
     if (!SUCCEEDED(hRes)) {
-        return FALSE;
+        return hRes;
     }
 
     YoriLibInitEmptyString(&FileTarget);
@@ -482,6 +484,42 @@ YoriLibExecuteShortcut(
     hRes = ScutFile->Vtbl->Load(ScutFile, ShortcutFileName->StartOfString, 0);
     if (!SUCCEEDED(hRes)) {
         goto Exit;
+    }
+
+    //
+    //  If the OS supports Windows installer translation, see if the
+    //  shortcut contains Windows installer information, and if so attempt
+    //  to resolve it to find the "real" target of the shortcut.
+    //
+
+    if (DllAdvApi32.pCommandLineFromMsiDescriptor != NULL) {
+        Scut->Vtbl->QueryInterface(Scut, &IID_IShellLinkDataList, (void **)&ShortcutDataList);
+        if (ShortcutDataList != NULL) {
+            PISHELLLINKDATALIST_MSI_PROPS MsiLink = NULL;
+            DWORD dwResult;
+            hRes = ShortcutDataList->Vtbl->CopyDataBlock(ShortcutDataList, ISHELLLINKDATALIST_MSI_PROPS_SIG, &MsiLink);
+            if (SUCCEEDED(hRes)) {
+                DWORD Length;
+                Length = 0;
+                dwResult = DllAdvApi32.pCommandLineFromMsiDescriptor(MsiLink->szwDarwinID, NULL, &Length);
+                if (dwResult != ERROR_SUCCESS) {
+                    hRes = HRESULT_FROM_WIN32(dwResult);
+                    goto Exit;
+                }
+                if (!YoriLibAllocateString(&FileTarget, (YORI_ALLOC_SIZE_T)(Length + 1))) {
+                    hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
+                    goto Exit;
+                }
+                Length = FileTarget.LengthAllocated;
+                dwResult = DllAdvApi32.pCommandLineFromMsiDescriptor(MsiLink->szwDarwinID, FileTarget.StartOfString, &Length);
+                if (dwResult != ERROR_SUCCESS) {
+                    hRes = HRESULT_FROM_WIN32(dwResult);
+                    goto Exit;
+                }
+                FileTarget.LengthInChars = (YORI_ALLOC_SIZE_T)Length;
+                LocalFree(MsiLink);
+            }
+        }
     }
 
     //
@@ -503,6 +541,7 @@ YoriLibExecuteShortcut(
         YoriLibFreeStringContents(&WorkingDirectory);
 
         if (!YoriLibAllocateString(&WorkingDirectory, SizeNeeded)) {
+            hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
             goto Exit;
         }
         hRes = Scut->Vtbl->GetWorkingDirectory(Scut,
@@ -521,6 +560,7 @@ YoriLibExecuteShortcut(
         YoriLibFreeStringContents(&Arguments);
 
         if (!YoriLibAllocateString(&Arguments, SizeNeeded)) {
+            hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
             goto Exit;
         }
         hRes = Scut->Vtbl->GetArguments(Scut,
@@ -528,27 +568,35 @@ YoriLibExecuteShortcut(
                                         Arguments.LengthAllocated);
     }
 
-    hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
-    while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
-        SizeNeeded = FileTarget.LengthAllocated;
-        if (SizeNeeded == 0) {
-            SizeNeeded = 1024;
-        } else if (YoriLibIsSizeAllocatable(SizeNeeded * 4)) {
-            SizeNeeded = SizeNeeded * 4;
-        }
-        YoriLibFreeStringContents(&FileTarget);
+    //
+    //  Only look at GetPath if MSI hasn't found the target for us already.
+    //
 
-        if (!YoriLibAllocateString(&FileTarget, SizeNeeded)) {
-            goto Exit;
+    if (FileTarget.StartOfString == NULL) {
+        hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
+        while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
+            SizeNeeded = FileTarget.LengthAllocated;
+            if (SizeNeeded == 0) {
+                SizeNeeded = 1024;
+            } else if (YoriLibIsSizeAllocatable(SizeNeeded * 4)) {
+                SizeNeeded = SizeNeeded * 4;
+            }
+            YoriLibFreeStringContents(&FileTarget);
+
+            if (!YoriLibAllocateString(&FileTarget, SizeNeeded)) {
+                hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
+                goto Exit;
+            }
+            hRes = Scut->Vtbl->GetPath(Scut,
+                                       FileTarget.StartOfString,
+                                       FileTarget.LengthAllocated,
+                                       NULL,
+                                       0);
         }
-        hRes = Scut->Vtbl->GetPath(Scut,
-                                   FileTarget.StartOfString,
-                                   FileTarget.LengthAllocated,
-                                   NULL,
-                                   0);
     }
 
-    if (Scut->Vtbl->GetShowCmd(Scut, &nShow) != NOERROR) {
+    hRes = Scut->Vtbl->GetShowCmd(Scut, &nShow);
+    if (!SUCCEEDED(hRes)) {
         goto Exit;
     }
 
@@ -560,10 +608,12 @@ YoriLibExecuteShortcut(
 
     SizeNeeded = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(FileTarget.StartOfString, NULL, 0);
     if (SizeNeeded == 0) {
+        hRes = HRESULT_FROM_WIN32(GetLastError());
         goto Exit;
     }
 
     if (!YoriLibAllocateString(&ExpandedFileTarget, SizeNeeded + 1)) {
+        hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
         goto Exit;
     }
 
@@ -573,10 +623,12 @@ YoriLibExecuteShortcut(
 
     SizeNeeded = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(Arguments.StartOfString, NULL, 0);
     if (SizeNeeded == 0) {
+        hRes = HRESULT_FROM_WIN32(GetLastError());
         goto Exit;
     }
 
     if (!YoriLibAllocateString(&ExpandedArguments, SizeNeeded + 1)) {
+        hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
         goto Exit;
     }
 
@@ -586,10 +638,12 @@ YoriLibExecuteShortcut(
 
     SizeNeeded = (YORI_ALLOC_SIZE_T)ExpandEnvironmentStrings(WorkingDirectory.StartOfString, NULL, 0);
     if (SizeNeeded == 0) {
+        hRes = HRESULT_FROM_WIN32(GetLastError());
         goto Exit;
     }
 
     if (!YoriLibAllocateString(&ExpandedWorkingDirectory, SizeNeeded + 1)) {
+        hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
         goto Exit;
     }
 
@@ -638,6 +692,7 @@ YoriLibExecuteShortcut(
 
                 if (!YoriLibAllocateString(&CmdLine, CharsNeeded)) {
                     YoriLibFreeStringContents(&UnescapedPath);
+                    hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
                     goto Exit;
                 }
 
@@ -662,6 +717,9 @@ YoriLibExecuteShortcut(
                     CloseHandle(pi.hProcess);
                     CloseHandle(pi.hThread);
                     LocalProcessId = pi.dwProcessId;
+                    hRes = S_OK;
+                } else {
+                    hRes = HRESULT_FROM_WIN32(GetLastError());
                 }
 
                 YoriLibFreeStringContents(&CmdLine);
@@ -691,6 +749,7 @@ YoriLibExecuteShortcut(
             }
 
             if (!DllShell32.pShellExecuteExW(&sei)) {
+                hRes = HRESULT_FROM_WIN32(GetLastError());
                 goto Exit;
             }
 
@@ -707,6 +766,7 @@ YoriLibExecuteShortcut(
             }
 
             Result = TRUE;
+            hRes = S_OK;
         } else if (DllShell32.pShellExecuteW != NULL) {
             hApp = DllShell32.pShellExecuteW(NULL,
                                              NULL,
@@ -715,10 +775,25 @@ YoriLibExecuteShortcut(
                                              sei.lpDirectory,
                                              sei.nShow);
             if ((ULONG_PTR)hApp <= 32) {
+                hRes = HRESULT_FROM_WIN32((DWORD)(ULONG_PTR)hApp);
                 goto Exit;
             }
 
             Result = TRUE;
+            hRes = S_OK;
+        } else {
+
+            //
+            //  This shouldn't happen, because it implies that neither
+            //  ShellExecuteEx nor ShellExecute are available, and that
+            //  CreateProcess wasn't attempted (which was checked for at the
+            //  beginning of the function) or it failed but GetLastError
+            //  returned success...point is, this is here to keep OACR happy.
+            //
+
+            if (SUCCEEDED(hRes)) {
+                hRes = E_FAIL;
+            }
         }
     }
 
@@ -730,6 +805,11 @@ Exit:
     YoriLibFreeStringContents(&ExpandedFileTarget);
     YoriLibFreeStringContents(&ExpandedWorkingDirectory);
     YoriLibFreeStringContents(&ExpandedArguments);
+
+    if (ShortcutDataList != NULL) {
+        ShortcutDataList->Vtbl->Release(ShortcutDataList);
+        ShortcutDataList = NULL;
+    }
 
     if (ScutFile != NULL) {
         ScutFile->Vtbl->Release(ScutFile);
@@ -745,7 +825,7 @@ Exit:
         *LaunchedProcessId = LocalProcessId;
     }
 
-    return Result;
+    return hRes;
 }
 
 /**

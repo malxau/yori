@@ -59,6 +59,7 @@ CONST YORI_DLL_NAME_MAP DllAdvApi32Symbols[] = {
     {(FARPROC *)&DllAdvApi32.pAdjustTokenPrivileges, "AdjustTokenPrivileges"},
     {(FARPROC *)&DllAdvApi32.pAllocateAndInitializeSid, "AllocateAndInitializeSid"},
     {(FARPROC *)&DllAdvApi32.pCheckTokenMembership, "CheckTokenMembership"},
+    {(FARPROC *)&DllAdvApi32.pCommandLineFromMsiDescriptor, "CommandLineFromMsiDescriptor"},
     {(FARPROC *)&DllAdvApi32.pCryptAcquireContextW, "CryptAcquireContextW"},
     {(FARPROC *)&DllAdvApi32.pCryptCreateHash, "CryptCreateHash"},
     {(FARPROC *)&DllAdvApi32.pCryptDestroyHash, "CryptDestroyHash"},
