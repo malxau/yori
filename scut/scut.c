@@ -107,6 +107,18 @@ typedef struct _SCUT_EXPAND_CONTEXT {
      shortcut doesn't specify console properties.
      */
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProperties;
+
+    /**
+     Optionally points to extra MSI properties.  May be NULL if the
+     shortcut doesn't specify Installer properties.
+     */
+    PISHELLLINKDATALIST_MSI_PROPS MsiProperties;
+
+    /**
+     Points to an MSI target path.  May be empty string.
+     */
+    PYORI_STRING MsiTarget;
+
 } SCUT_EXPAND_CONTEXT, *PSCUT_EXPAND_CONTEXT;
 
 /**
@@ -142,18 +154,26 @@ ScutExpandVariables(
     )
 {
     TCHAR szDisplay[MAX_PATH];
+    PYORI_STRING yDisplay;
     YORI_ALLOC_SIZE_T CharsNeeded;
     DWORD dwDisplay = 0;
     int iTemp;
     BOOLEAN Numeric = FALSE;
+    BOOLEAN UseYoriString = FALSE;
     YORI_ALLOC_SIZE_T HexDigits = 0;
     PSCUT_EXPAND_CONTEXT ExpandContext;
     IShellLinkW * scut;
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps;
+    PISHELLLINKDATALIST_MSI_PROPS MsiProps;
+    PYORI_STRING MsiTarget;
+
+    yDisplay = NULL;
 
     ExpandContext = (PSCUT_EXPAND_CONTEXT)Context;
     scut = ExpandContext->ShellLink;
     ConsoleProps = ExpandContext->ConsoleProperties;
+    MsiProps = ExpandContext->MsiProperties;
+    MsiTarget = ExpandContext->MsiTarget;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("TARGET")) == 0) {
         if (scut->Vtbl->GetPath(scut, szDisplay, MAX_PATH, NULL, 0) != NOERROR) {
@@ -195,6 +215,14 @@ ScutExpandVariables(
         }
         dwDisplay = ShortTemp;
         Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("INSTALLERID")) == 0) {
+        if (MsiProps == NULL) {
+            return 0;
+        }
+        memcpy(szDisplay, MsiProps->szwDarwinID, sizeof(MsiProps->szwDarwinID));
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("INSTALLERTARGET")) == 0) {
+        yDisplay = MsiTarget;
+        UseYoriString = TRUE;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WINDOWCOLOR")) == 0) {
         if (ConsoleProps == NULL) {
             return 0;
@@ -444,6 +472,8 @@ ScutExpandVariables(
         CharsNeeded = YoriLibSPrintf(szDisplay, _T("%02x"), dwDisplay);
     } else if (Numeric) {
         CharsNeeded = YoriLibSPrintf(szDisplay, _T("%i"), dwDisplay);
+    } else if (UseYoriString) {
+        CharsNeeded = yDisplay->LengthInChars;
     } else {
         CharsNeeded = (YORI_ALLOC_SIZE_T)_tcslen(szDisplay);
     }
@@ -451,7 +481,11 @@ ScutExpandVariables(
         return CharsNeeded;
     }
 
-    memcpy(OutputString->StartOfString, szDisplay, CharsNeeded * sizeof(TCHAR));
+    if (UseYoriString) {
+        memcpy(OutputString->StartOfString, yDisplay->StartOfString, CharsNeeded * sizeof(TCHAR));
+    } else {
+        memcpy(OutputString->StartOfString, szDisplay, CharsNeeded * sizeof(TCHAR));
+    }
     OutputString->LengthInChars = CharsNeeded;
     return CharsNeeded;
 }
@@ -532,6 +566,13 @@ LPCTSTR ScutDefaultFormatString = _T("Target:                $TARGET$\n")
                                   _T("Icon Index:            $ICONINDEX$\n")
                                   _T("Show State:            $SHOW$\n")
                                   _T("Hotkey:                $HOTKEY$\n");
+
+/**
+ If the default format string is used, an extra default string for installer
+ properties.  This is only displayed if MSI properties are present.
+ */
+LPCTSTR ScutInstallerFormatString = _T("Installer ID:          $INSTALLERID$\n")
+                                    _T("Installer Target:      $INSTALLERTARGET$\n");
 
 /**
  If the default format string is used, an extra default string for console
@@ -621,6 +662,7 @@ ENTRYPOINT(
     TCHAR * szTarget        = NULL;
     YORI_STRING szWorkingDir;
     YORI_STRING szSchemeFile;
+    YORI_STRING szMsiTarget;
     IShellLinkW *scut       = NULL;
     IPersistFile *savedfile = NULL;
     IShellLinkDataList *ShortcutDataList = NULL;
@@ -639,6 +681,7 @@ ENTRYPOINT(
     YORI_ALLOC_SIZE_T i;
     YORI_STRING FormatString;
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps = NULL;
+    PISHELLLINKDATALIST_MSI_PROPS MsiProps = NULL;
     BOOLEAN FreeConsolePropsWithLocalFree = FALSE;
     BOOLEAN FreeConsolePropsWithDereference = FALSE;
     BOOLEAN AutoPositionSet = FALSE;
@@ -650,6 +693,7 @@ ENTRYPOINT(
     YoriLibInitEmptyString(&szIcon);
     YoriLibInitEmptyString(&szWorkingDir);
     YoriLibInitEmptyString(&szSchemeFile);
+    YoriLibInitEmptyString(&szMsiTarget);
     YoriLibInitEmptyString(&FormatString);
     BufferSize.X = 0;
     BufferSize.Y = 0;
@@ -878,6 +922,7 @@ ENTRYPOINT(
         goto Exit;
     }
 
+    YoriLibLoadAdvApi32Functions();
     YoriLibLoadOle32Functions();
     if (DllOle32.pCoCreateInstance == NULL || DllOle32.pCoInitialize == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("COM not found\n"));
@@ -937,10 +982,50 @@ ENTRYPOINT(
                 ASSERT(ConsoleProps != NULL);
                 FreeConsolePropsWithLocalFree = TRUE;
             }
+
+            hRes = ShortcutDataList->Vtbl->CopyDataBlock(ShortcutDataList, ISHELLLINKDATALIST_MSI_PROPS_SIG, &MsiProps);
+            if (SUCCEEDED(hRes)) {
+                ASSERT(MsiProps != NULL);
+
+                //
+                //  NULL terminate this thing since it's just a block of
+                //  potentially malicious data
+                //
+
+                MsiProps->szwDarwinID[sizeof(MsiProps->szwDarwinID)/sizeof(MsiProps->szwDarwinID[0]) - 1] = '\0';
+
+                //
+                //  See if it's possible to convert the block of data into an
+                //  actionable target to execute
+                //
+
+                if (DllAdvApi32.pCommandLineFromMsiDescriptor) {
+                    DWORD dwResult;
+                    DWORD Length;
+                    Length = 0;
+                    dwResult = DllAdvApi32.pCommandLineFromMsiDescriptor(MsiProps->szwDarwinID, NULL, &Length);
+                    if (dwResult != ERROR_SUCCESS) {
+                        hRes = HRESULT_FROM_WIN32(dwResult);
+                        goto Exit;
+                    }
+                    if (!YoriLibAllocateString(&szMsiTarget, (YORI_ALLOC_SIZE_T)(Length + 1))) {
+                        hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
+                        goto Exit;
+                    }
+                    Length = szMsiTarget.LengthAllocated;
+                    dwResult = DllAdvApi32.pCommandLineFromMsiDescriptor(MsiProps->szwDarwinID, szMsiTarget.StartOfString, &Length);
+                    if (dwResult != ERROR_SUCCESS) {
+                        hRes = HRESULT_FROM_WIN32(dwResult);
+                        goto Exit;
+                    }
+                    szMsiTarget.LengthInChars = (YORI_ALLOC_SIZE_T)Length;
+                }
+            }
         }
     }
 
     if (op == ScutOperationDump) {
+        YORI_STRING TempFormatString;
         YORI_STRING DisplayString;
         SCUT_EXPAND_CONTEXT ExpandContext;
 
@@ -951,6 +1036,8 @@ ENTRYPOINT(
         YoriLibInitEmptyString(&DisplayString);
         ExpandContext.ShellLink = scut;
         ExpandContext.ConsoleProperties = ConsoleProps;
+        ExpandContext.MsiProperties = MsiProps;
+        ExpandContext.MsiTarget = &szMsiTarget;
         YoriLibExpandCommandVariables(&FormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
 
         if (DisplayString.StartOfString != NULL) {
@@ -959,12 +1046,36 @@ ENTRYPOINT(
             ExitCode = EXIT_SUCCESS;
         }
 
+        //
+        //  If the shortcut contains a Windows installer block, display
+        //  anything we can get from it.
+        //
+
+        if (FormatString.StartOfString == ScutDefaultFormatString &&
+            MsiProps != NULL) {
+
+            YoriLibConstantString(&TempFormatString, ScutInstallerFormatString);
+            DisplayString.LengthInChars = 0;
+            YoriLibExpandCommandVariables(&TempFormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
+
+            if (DisplayString.StartOfString != NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                YoriLibFreeStringContents(&DisplayString);
+                ExitCode = EXIT_SUCCESS;
+            }
+        }
+
+        //
+        //  If the shortcut contains a console properties block, display
+        //  anything we can get from it.
+        //
+
         if (FormatString.StartOfString == ScutDefaultFormatString &&
             ConsoleProps != NULL) {
 
-            YoriLibConstantString(&FormatString, ScutConsoleFormatString);
+            YoriLibConstantString(&TempFormatString, ScutConsoleFormatString);
             DisplayString.LengthInChars = 0;
-            YoriLibExpandCommandVariables(&FormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
+            YoriLibExpandCommandVariables(&TempFormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
 
             if (DisplayString.StartOfString != NULL) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
@@ -972,9 +1083,9 @@ ENTRYPOINT(
                 ExitCode = EXIT_SUCCESS;
             }
 
-            YoriLibConstantString(&FormatString, ScutConsoleFormatString2);
+            YoriLibConstantString(&TempFormatString, ScutConsoleFormatString2);
             DisplayString.LengthInChars = 0;
-            YoriLibExpandCommandVariables(&FormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
+            YoriLibExpandCommandVariables(&TempFormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
 
             if (DisplayString.StartOfString != NULL) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
@@ -1191,6 +1302,10 @@ ENTRYPOINT(
 
 Exit:
 
+    if (MsiProps != NULL) {
+        LocalFree(MsiProps);
+    }
+
     if (FreeConsolePropsWithLocalFree) {
         ASSERT(ConsoleProps != NULL);
         LocalFree(ConsoleProps);
@@ -1211,6 +1326,7 @@ Exit:
     YoriLibFreeStringContents(&szIcon);
     YoriLibFreeStringContents(&szWorkingDir);
     YoriLibFreeStringContents(&szSchemeFile);
+    YoriLibFreeStringContents(&szMsiTarget);
 
     return ExitCode;
 }
