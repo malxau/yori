@@ -71,13 +71,90 @@ CHAR strScutHelpText[] =
         "SCUT -license\n"
         "SCUT -create|-modify <filename> [-target target] [-args args] [-autoposition]\n"
         "     [-bold] [-buffersize X*Y] [-desc description] [-deleteconsolesettings]\n"
-        "     [-font name] [-fontsize size] [-hotkey hotkey]\n"
+        "     [-deleteinstallersettings] [-font name] [-fontsize size] [-hotkey hotkey]\n"
         "     [-iconpath filename [-iconindex index]] [-nonbold] [-scheme file]\n"
         "     [-show showcmd] [-windowposition X*Y] [-windowsize X*Y]\n"
         "     [-workingdir workingdir]\n"
         "SCUT -exec <filename> [-target target] [-args args] [-show showcmd]\n"
         "     [-workingdir workingdir]\n"
-        "SCUT [-f fmt] -dump <filename>\n";
+        "SCUT [-f fmt] -dump <filename>\n"
+        "\n";
+
+/**
+ More help text for this application.
+ */
+const
+CHAR strScutHelpText2[] =
+        "Format specifiers are:\n"
+        "   $ARGS$            Arguments to pass to the target\n"
+        "   $AUTOPOSITION$    Whether the system should determine console position\n"
+        "   $COLOR_BLACK$     The RGB value to use for console black text\n"
+        "   $COLOR_BLUE$      The RGB value to use for console blue text\n"
+        "   $COLOR_GREEN$     The RGB value to use for console green text\n"
+        "   $COLOR_CYAN$      The RGB value to use for console cyan text\n"
+        "   $COLOR_RED$       The RGB value to use for console red text\n"
+        "   $COLOR_MAGENTA$   The RGB value to use for console magenta text\n"
+        "   $COLOR_BROWN$     The RGB value to use for console brown text\n"
+        "   $COLOR_GRAY$      The RGB value to use for console light gray text\n"
+        "   $COLOR_DARKGRAY$  The RGB value to use for console dark gray text\n"
+        "   $COLOR_LIGHTBLUE$ The RGB value to use for console light blue text\n"
+        "   $COLOR_LIGHTGREEN$\n"
+        "                     The RGB value to use for console light green text\n"
+        "   $COLOR_LIGHTCYAN$ The RGB value to use for console light cyan text\n"
+        "   $COLOR_LIGHTRED$  The RGB value to use for console light red text\n"
+        "   $COLOR_LIGHTMAGENTA$"
+        "                     The RGB value to use for console light magenta text\n"
+        "   $COLOR_YELLOW$    The RGB value to use for console yellow text\n"
+        "   $COLOR_WHITE$     The RGB value to use for console white text\n";
+
+/**
+ More help text for this application.
+ */
+const
+CHAR strScutHelpText3[] =
+        "   $CURSORSIZE$      The height of the cursor for console programs\n"
+        "   $FONT$            The name of the font to use for console programs\n"
+        "   $FONTFAMILY$      The type of font to use for console programs\n"
+        "   $FONTNUMBER$      The font index to use for console programs\n"
+        "   $FONTWEIGHT$      The boldness of the font to use for console programs\n"
+        "   $FULLSCREEN$      Whether a console should be windowed or fullscreen\n"
+        "   $HISTORYBUFFERCOUNT$\n"
+        "                     The number of console command history buffers\n"
+        "   $HISTORYBUFFERSIZE$\n"
+        "                     The size of each console command history buffer\n"
+        "   $HOTKEY$          Hotkey to open the shortcut\n"
+        "   $ICONINDEX$       Zero based index for the icon number within the icon file\n"
+        "   $ICONPATH$        Path to the file containing the icon\n"
+        "   $INSERT$          Whether insert mode should be initially set on console\n"
+        "   $INSTALLERID$     Windows installer identifier for the shortcut\n"
+        "   $INSTALLERTARGET$ Program to open from Windows installer ID\n"
+        "   $NOHISTORYDUPLICATES$\n"
+        "                     Remove identical entries from command history\n"
+        "   $POPUPCOLOR$      The color of popup text to use for console programs\n";
+
+/**
+ More help text for this application.
+ */
+const
+CHAR strScutHelpText4[] =
+        "   $TARGET$          The target of the shortcut\n"
+        "   $SCREENBUFFERSIZE_X$\n"
+        "                     The width of the console screen buffer\n"
+        "   $SCREENBUFFERSIZE_Y$\n"
+        "                     The height of the console screen buffer\n"
+        "   $SHOW$            The initial state of the window\n"
+        "   $WINDOWCOLOR$     The initial color to use for console programs\n"
+        "   $WINDOWPOSITION_X$\n"
+        "                     The horizontal location of the console window\n"
+        "   $WINDOWPOSITION_Y$\n"
+        "                     The vertical location of the console window\n"
+        "   $SCREENBUFFERSIZE_X$\n"
+        "                     The width of the console screen buffer\n"
+        "   $SCREENBUFFERSIZE_Y$\n"
+        "                     The height of the console screen buffer\n"
+        "   $WINDOWSIZE_X$    The width of the console window\n"
+        "   $WINDOWSIZE_Y$    The height of the console window\n"
+        "   $WORKINGDIR$      The initial working directory\n";
 
 /**
  Display help text and license for the scut application.
@@ -90,6 +167,9 @@ ScutHelp(VOID)
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strScutHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strScutHelpText2);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strScutHelpText3);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strScutHelpText4);
 }
 
 /**
@@ -676,8 +756,9 @@ ENTRYPOINT(
     COORD   FontSize;
 
     HRESULT hRes;
-    BOOL    ArgumentUnderstood;
-    BOOL    DeleteConsoleSettings = FALSE;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN DeleteConsoleSettings = FALSE;
+    BOOLEAN DeleteInstallerSettings = FALSE;
     YORI_ALLOC_SIZE_T i;
     YORI_STRING FormatString;
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps = NULL;
@@ -786,6 +867,11 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("deleteconsolesettings")) == 0) {
                 if (op == ScutOperationModify || op == ScutOperationCreate) {
                     DeleteConsoleSettings = TRUE;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("deleteinstallersettings")) == 0) {
+                if (op == ScutOperationModify || op == ScutOperationCreate) {
+                    DeleteInstallerSettings = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
@@ -1239,14 +1325,23 @@ ENTRYPOINT(
     }
 
     if (op == ScutOperationModify &&
-        DeleteConsoleSettings &&
-        ShortcutDataList != NULL) {
+        (DeleteConsoleSettings || DeleteInstallerSettings)) {
 
         if (ShortcutDataList == NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("scut: OS support not present\n"));
             goto Exit;
-        } else {
+        }
+
+        if (DeleteConsoleSettings) {
             hRes = ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG);
+            if (!SUCCEEDED(hRes)) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("RemoveDataBlock failure: %x\n"), hRes);
+                goto Exit;
+            }
+        }
+
+        if (DeleteInstallerSettings) {
+            hRes = ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_MSI_PROPS_SIG);
             if (!SUCCEEDED(hRes)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("RemoveDataBlock failure: %x\n"), hRes);
                 goto Exit;
