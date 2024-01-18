@@ -369,7 +369,6 @@ YuiTaskbarAllocateAndAddButton(
         return FALSE;
     }
 
-    YoriLibInitEmptyString(&NewButton->ProcessName);
     YoriLibInitEmptyString(&NewButton->ShortcutPath);
 
     YoriLibInitEmptyString(&NewButton->ButtonText);
@@ -1264,15 +1263,66 @@ YuiTaskbarLaunchNewTask(
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
+    YORI_STRING ModuleName;
+    HANDLE ProcessHandle;
+    HINSTANCE hInst;
 
     ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
     if (ThisButton != NULL) {
+
+        //
+        //  Simple case: this window was found to be associated with a process
+        //  launched by this program.  In that case, we know which shortcut
+        //  was used to launch it, and can accurately launch a new instance
+        //  from the same shortcut.
+        //
+
         if (ThisButton->ShortcutPath.LengthInChars > 0) {
 #if DBG
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Launching shortcut associated with button %y\n"), &ThisButton->ShortcutPath);
 #endif
             YuiExecuteShortcut(YuiContext, &ThisButton->ShortcutPath, FALSE);
+            return;
         }
+
+        //
+        //  If that didn't happen, look up the process name associated with
+        //  the window and launch it.  We don't know anything about startup
+        //  parameters to use.
+        //
+
+        YoriLibLoadPsapiFunctions();
+        if (DllPsapi.pGetModuleFileNameExW == NULL ||
+            DllShell32.pShellExecuteW == NULL) {
+            return;
+        }
+
+        //
+        //  Attempt to find the process executable.  If we don't have access,
+        //  there's not much we can do.
+        //
+
+        ProcessHandle = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, ThisButton->ProcessId);
+        if (ProcessHandle == NULL) {
+            return;
+        }
+
+        if (!YoriLibAllocateString(&ModuleName, 32 * 1024)) {
+            CloseHandle(ProcessHandle);
+            return;
+        }
+
+        ModuleName.LengthInChars = (YORI_ALLOC_SIZE_T)DllPsapi.pGetModuleFileNameExW(ProcessHandle, NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
+
+        //
+        //  Launch what we've got, no arguments, working directory, or other
+        //  state.
+        //
+
+        hInst = DllShell32.pShellExecuteW(NULL, NULL, ModuleName.StartOfString, NULL, NULL, SW_SHOWNORMAL);
+
+        YoriLibFreeStringContents(&ModuleName);
+        CloseHandle(ProcessHandle);
     }
 }
 

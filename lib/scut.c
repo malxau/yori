@@ -775,7 +775,7 @@ YoriLibExecuteShortcut(
                                              sei.lpDirectory,
                                              sei.nShow);
             if ((ULONG_PTR)hApp <= 32) {
-                hRes = HRESULT_FROM_WIN32((DWORD)(ULONG_PTR)hApp);
+                hRes = HRESULT_FROM_WIN32(YoriLibShellExecuteInstanceToError(hApp));
                 goto Exit;
             }
 

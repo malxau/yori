@@ -88,12 +88,6 @@ typedef struct _YUI_TASKBAR_BUTTON {
     YORI_STRING ShortcutPath;
 
     /**
-     The file name of the process, without any path components.
-     MSFIX Not populated yet
-     */
-    YORI_STRING ProcessName;
-
-    /**
      The process ID corresponding to hWndToActivate.
      */
     DWORD ProcessId;
