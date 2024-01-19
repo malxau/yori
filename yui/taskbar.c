@@ -1327,6 +1327,39 @@ YuiTaskbarLaunchNewTask(
 }
 
 /**
+ Display the context menu associated with a specific taskbar button.
+
+ @param YuiContext Pointer to the application context.
+
+ @param CtrlId A control ID for the taskbar button.
+
+ @param CursorX The horizontal location of the mouse, used to decide where to
+        draw the menu.
+
+ @param CursorY The vertical location of the mouse, used to decide where to
+        draw the menu.
+
+ @return TRUE if any action was performed, FALSE if it was not.
+ */
+BOOL
+YuiTaskbarDisplayContextMenuForTask(
+    __in PYUI_CONTEXT YuiContext,
+    __in DWORD CtrlId,
+    __in DWORD CursorX,
+    __in DWORD CursorY
+    )
+{
+    PYUI_TASKBAR_BUTTON ThisButton;
+
+    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
+    if (ThisButton != NULL) {
+        return YuiMenuDisplayWindowContext(YuiContext, YuiContext->hWnd, ThisButton->hWndToActivate, ThisButton->ProcessId, CursorX, CursorY);
+    }
+
+    return FALSE;
+}
+
+/**
  If a taskbar button is currently pressed, switch to that window.  This is
  used after an action which would leave the taskbar with input focus.
 

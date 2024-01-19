@@ -861,6 +861,8 @@ YuiTaskbarWindowProc(
                     CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
                     if (CtrlId < YUI_FIRST_TASKBAR_BUTTON) {
                         YuiDisplayContextMenu(LOWORD(lParam), HIWORD(lParam));
+                    } else {
+                        YuiTaskbarDisplayContextMenuForTask(&YuiContext, CtrlId, LOWORD(lParam), HIWORD(lParam));
                     }
                 }
             }

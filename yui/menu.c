@@ -253,6 +253,26 @@ typedef struct _YUI_MENU_CONTEXT {
      */
     YUI_MENU_OWNERDRAW_ITEM ContextRefreshTaskbar;
 
+    /**
+     Owner draw state for the minimize window menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM WinContextMinimize;
+
+    /**
+     Owner draw state for the hide window menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM WinContextHide;
+
+    /**
+     Owner draw state for the close window menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM WinContextClose;
+
+    /**
+     Owner draw state for the terminate process menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM WinContextTerminateProcess;
+
 } YUI_MENU_CONTEXT, *PYUI_MENU_CONTEXT;
 
 /**
@@ -328,6 +348,11 @@ YuiMenuCleanupContext(VOID)
     YuiMenuCleanupItem(&YuiMenuContext.ContextTileStacked);
     YuiMenuCleanupItem(&YuiMenuContext.ContextShowDesktop);
     YuiMenuCleanupItem(&YuiMenuContext.ContextRefreshTaskbar);
+
+    YuiMenuCleanupItem(&YuiMenuContext.WinContextMinimize);
+    YuiMenuCleanupItem(&YuiMenuContext.WinContextHide);
+    YuiMenuCleanupItem(&YuiMenuContext.WinContextClose);
+    YuiMenuCleanupItem(&YuiMenuContext.WinContextTerminateProcess);
 }
 
 /**
@@ -432,6 +457,18 @@ YuiMenuInitializeContext(
 
     YuiMenuInitializeItem(&YuiMenuContext.ContextRefreshTaskbar);
     YoriLibConstantString(&YuiMenuContext.ContextRefreshTaskbar.Text, _T("Refresh Taskbar"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.WinContextMinimize);
+    YoriLibConstantString(&YuiMenuContext.WinContextMinimize.Text, _T("Minimize window"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.WinContextHide);
+    YoriLibConstantString(&YuiMenuContext.WinContextHide.Text, _T("Hide window"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.WinContextClose);
+    YoriLibConstantString(&YuiMenuContext.WinContextClose.Text, _T("Close window"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.WinContextTerminateProcess);
+    YoriLibConstantString(&YuiMenuContext.WinContextTerminateProcess.Text, _T("Terminate process"));
 
     return TRUE;
 }
@@ -2565,6 +2602,126 @@ YuiMenuDisplayContext(
 
     if (MenuId > 0) {
         YuiMenuExecuteById(YuiContext, MenuId);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ Execute the item selected from window context menu.
+
+ @param YuiContext Pointer to the application context.
+
+ @param MenuId The identifier of the menu item that the user selected.
+
+ @param hWnd The window handle corresponding to the window being acted upon.
+
+ @param dwProcessId The process ID corresponding to the window being acted
+        upon.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YuiMenuExecuteWindowContextById(
+    __in PYUI_CONTEXT YuiContext,
+    __in DWORD MenuId,
+    __in HWND hWnd,
+    __in DWORD dwProcessId
+    )
+{
+    UNREFERENCED_PARAMETER(YuiContext);
+
+    switch(MenuId) {
+        case YUI_MENU_MINIMIZEWINDOW:
+            CloseWindow(hWnd);
+            break;
+        case YUI_MENU_HIDEWINDOW:
+            if (DllUser32.pShowWindowAsync != NULL) {
+                DllUser32.pShowWindowAsync(hWnd, SW_HIDE);
+            } else {
+                ShowWindow(hWnd, SW_HIDE);
+            }
+            break;
+        case YUI_MENU_CLOSEWINDOW:
+            PostMessage(hWnd, WM_CLOSE, 0, 0);
+            break;
+        case YUI_MENU_TERMINATEPROCESS:
+            {
+                HANDLE hProcess;
+                hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, dwProcessId);
+                if (hProcess != NULL) {
+                    TerminateProcess(hProcess, 255);
+                    CloseHandle(hProcess);
+                }
+            }
+            break;
+        default:
+            ASSERT(FALSE);
+    }
+
+    return TRUE;
+}
+
+/**
+ Display a menu corresponding to a right click on a taskbar button.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hWnd The handle of the taskbar window.
+
+ @param hWndApp The window handle that is being right clicked on.
+
+ @param dwProcessId The process ID that is being right clicked on.
+
+ @param CursorX The horizontal position of the mouse cursor in screen
+        coordinates.
+
+ @param CursorY The vertical position of the mouse cursor in screen
+        coordinates.
+
+ @return TRUE to indicate an action was invoked, FALSE if it was not.
+ */
+BOOL
+YuiMenuDisplayWindowContext(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd,
+    __in HWND hWndApp,
+    __in DWORD dwProcessId,
+    __in DWORD CursorX,
+    __in DWORD CursorY
+    )
+{
+    HMENU Menu;
+    DWORD MenuId;
+
+    Menu = CreatePopupMenu();
+
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_MINIMIZEWINDOW, (LPCWSTR)&YuiMenuContext.WinContextMinimize);
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_HIDEWINDOW, (LPCWSTR)&YuiMenuContext.WinContextHide);
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_CLOSEWINDOW, (LPCWSTR)&YuiMenuContext.WinContextClose);
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_TERMINATEPROCESS, (LPCWSTR)&YuiMenuContext.WinContextTerminateProcess);
+
+    //
+    //  We need to make the taskbar the foreground so if the foreground
+    //  changes the menu is dismissed.
+    //
+
+    DllUser32.pSetForegroundWindow(hWnd);
+
+    MenuId = TrackPopupMenu(Menu,
+                            TPM_NONOTIFY | TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_RIGHTALIGN,
+                            CursorX,
+                            CursorY,
+                            0,
+                            hWnd,
+                            NULL);
+
+    PostMessage(hWnd, WM_NULL, 0, 0);
+    DestroyMenu(Menu);
+
+    if (MenuId > 0) {
+        YuiMenuExecuteWindowContextById(YuiContext, MenuId, hWndApp, dwProcessId);
         return TRUE;
     }
 

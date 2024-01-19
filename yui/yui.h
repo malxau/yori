@@ -785,6 +785,26 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
  */
 #define YUI_MENU_SHOW_DESKTOP          (43)
 
+/**
+ An identifier for the menu item to minimize an open window.
+ */
+#define YUI_MENU_MINIMIZEWINDOW        (50)
+
+/**
+ An identifier for the menu item to hide an open window.
+ */
+#define YUI_MENU_HIDEWINDOW            (51)
+
+/**
+ An identifier for the menu item to close an open window.
+ */
+#define YUI_MENU_CLOSEWINDOW           (52)
+
+/**
+ An identifier for the menu item to terminate a process.
+ */
+#define YUI_MENU_TERMINATEPROCESS      (53)
+
 WNDPROC
 YuiGetDefaultButtonWndProc(VOID);
 
@@ -864,6 +884,16 @@ YuiMenuDisplayContext(
     __in DWORD CursorY
     );
 
+BOOL
+YuiMenuDisplayWindowContext(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd,
+    __in HWND hWndApp,
+    __in DWORD dwProcessId,
+    __in DWORD CursorX,
+    __in DWORD CursorY
+    );
+
 VOID
 YuiMenuFreeAll(
     __in PYUI_CONTEXT YuiContext
@@ -934,6 +964,14 @@ VOID
 YuiTaskbarLaunchNewTask(
     __in PYUI_CONTEXT YuiContext,
     __in DWORD CtrlId
+    );
+
+BOOL
+YuiTaskbarDisplayContextMenuForTask(
+    __in PYUI_CONTEXT YuiContext,
+    __in DWORD CtrlId,
+    __in DWORD CursorX,
+    __in DWORD CursorY
     );
 
 VOID
