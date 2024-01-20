@@ -433,6 +433,16 @@ typedef struct _YUI_CONTEXT {
     WORD ShortIconPadding;
 
     /**
+     The number of pixels in width to use for each calendar day.
+     */
+    WORD CalendarCellWidth;
+
+    /**
+     The number of pixels in height to use for each calendar day.
+     */
+    WORD CalendarCellHeight;
+
+    /**
      The number of pixels in height of a tall menu entry.
      */
     WORD TallMenuHeight;
@@ -644,6 +654,20 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
     BOOLEAN AddFlyoutIcon;
 } YUI_MENU_OWNERDRAW_ITEM, *PYUI_MENU_OWNERDRAW_ITEM;
 
+/**
+ The window class name to use for the main taskbar window.
+ */
+#define YUI_TASKBAR_CLASS _T("YuiWnd")
+
+/**
+ The window class name to use for the desktop window.
+ */
+#define YUI_DESKTOP_CLASS _T("YuiDesktop")
+
+/**
+ The window class name to use for the calendar window.
+ */
+#define YUI_CALENDAR_CLASS _T("YuiCalendar")
 
 /**
  The number of pixels to include in the start button.
@@ -659,6 +683,16 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
  The number of pixels to include in the battery indicator.
  */
 #define YUI_BATTERY_WIDTH (38)
+
+/**
+ The number of pixels to use for the width of each calendar cell.
+ */
+#define YUI_CALENDAR_CELL_WIDTH (25)
+
+/**
+ The number of pixels to use for the height of each calendar cell.
+ */
+#define YUI_CALENDAR_CELL_HEIGHT (20)
 
 /**
  The number of pixels to reserve for a submenu flyout icon.
@@ -908,6 +942,22 @@ YuiMenuExecuteById(
 COLORREF
 YuiGetWindowBackgroundColor(VOID);
 
+COLORREF
+YuiGetMenuTextColor(VOID);
+
+COLORREF
+YuiGetMenuSelectedBackgroundColor(VOID);
+
+COLORREF
+YuiGetMenuSelectedTextColor(VOID);
+
+VOID
+YuiDrawThreeDBox(
+    __in HDC hDC,
+    __in PRECT Rect,
+    __in BOOLEAN Pressed
+    );
+
 VOID
 YuiDrawButton(
     __in PYUI_CONTEXT YuiContext,
@@ -926,8 +976,8 @@ YuiTaskbarDrawStatic(
     );
 
 BOOLEAN
-YuiTaskbarDrawFrame(
-    __in PYUI_CONTEXT YuiContext,
+YuiDrawWindowFrame(
+    __in HWND hWnd,
     __in_opt HDC hDC
     );
 
@@ -1038,17 +1088,25 @@ YuiTaskbarSyncWithCurrent(
     );
 
 VOID
-YuiClockDisplayInfo(
-    __in PYUI_CONTEXT YuiContext
-    );
-
-VOID
 YuiClockDisplayBatteryInfo(
     __in PYUI_CONTEXT YuiContext
     );
 
 VOID
 YuiClockUpdate(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+LRESULT CALLBACK
+YuiCalendarWindowProc(
+    __in HWND hwnd,
+    __in UINT uMsg,
+    __in WPARAM wParam,
+    __in LPARAM lParam
+    );
+
+VOID
+YuiCalendar(
     __in PYUI_CONTEXT YuiContext
     );
 

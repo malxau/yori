@@ -440,9 +440,9 @@ YuiTaskbarDrawStatic(
 }
 
 /**
- Draw a 3D effect around the taskbar.
+ Draw a raised 3D effect within a window.
 
- @param YuiContext Pointer to the application context.
+ @param hWnd The window to draw the effect within.
 
  @param hDC Optional device context.  This can be NULL in which case normal
         BeginPaint logic is used.
@@ -450,8 +450,8 @@ YuiTaskbarDrawStatic(
  @return TRUE if painting occurred, FALSE if it did not.
  */
 BOOLEAN
-YuiTaskbarDrawFrame(
-    __in PYUI_CONTEXT YuiContext,
+YuiDrawWindowFrame(
+    __in HWND hWnd,
     __in_opt HDC hDC
     )
 {
@@ -464,7 +464,7 @@ YuiTaskbarDrawFrame(
     //  If the window has no repainting to do, stop.
     //
 
-    if (!GetUpdateRect(YuiContext->hWnd, &ClientRect, FALSE)) {
+    if (!GetUpdateRect(hWnd, &ClientRect, FALSE)) {
         return FALSE;
     }
 
@@ -472,7 +472,7 @@ YuiTaskbarDrawFrame(
     //  If it does, redraw everything.
     //
 
-    hDCPaint = BeginPaint(YuiContext->hWnd, &paintStruct);
+    hDCPaint = BeginPaint(hWnd, &paintStruct);
     if (hDCPaint == NULL) {
         return FALSE;
     }
@@ -482,10 +482,10 @@ YuiTaskbarDrawFrame(
     } else {
         hDCToUse = hDCPaint;
     }
-    GetClientRect(YuiContext->hWnd, &ClientRect);
+    GetClientRect(hWnd, &ClientRect);
     YuiDrawThreeDBox(hDCToUse, &ClientRect, FALSE);
 
-    EndPaint(YuiContext->hWnd, &paintStruct);
+    EndPaint(hWnd, &paintStruct);
     return TRUE;
 }
 

@@ -456,8 +456,6 @@ YuiNotifyResolutionChange(
 
     YuiContext.DisplayResolutionChangeInProgress = TRUE;
 
-    YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
-
     YuiContext.TaskbarHeight = YuiGetTaskbarHeight(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
 
     YuiHideExplorerTaskbar(&YuiContext);
@@ -471,6 +469,8 @@ YuiNotifyResolutionChange(
         FontName = YUI_LARGE_FONT_NAME;
         YuiContext.ExtraPixelsAboveText = 0;
     }
+
+    YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
 
     hDC = GetWindowDC(hWnd);
     hFont = CreateFont(-YoriLibMulDiv(YuiContext.FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
@@ -547,8 +547,10 @@ YuiNotifyResolutionChange(
     YuiContext.MenuSeperatorHeight = 12;
 
     YuiContext.StartButtonWidth = (WORD)(YUI_START_BUTTON_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 10);
-    YuiContext.ClockWidth = (WORD)(YUI_CLOCK_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 10);
-    YuiContext.BatteryWidth = (WORD)(YUI_BATTERY_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 5);
+    YuiContext.ClockWidth = (WORD)(YUI_CLOCK_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 8);
+    YuiContext.BatteryWidth = (WORD)(YUI_BATTERY_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 4);
+    YuiContext.CalendarCellWidth = (WORD)(YUI_CALENDAR_CELL_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 5);
+    YuiContext.CalendarCellHeight = (WORD)(YUI_CALENDAR_CELL_HEIGHT + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 4);
 
     ReleaseDC(hWnd, hDC);
 
@@ -776,7 +778,7 @@ YuiTaskbarWindowProc(
                 if (CtrlId == YUI_START_BUTTON) {
                     YuiDisplayMenu();
                 } else if (CtrlId == YUI_CLOCK_DISPLAY) {
-                    YuiClockDisplayInfo(&YuiContext);
+                    YuiCalendar(&YuiContext);
                 } else if (CtrlId == YUI_BATTERY_DISPLAY) {
                     YuiClockDisplayBatteryInfo(&YuiContext);
                 } else {
@@ -924,7 +926,7 @@ YuiTaskbarWindowProc(
             break;
         case WM_PAINT:
             if (hwnd == YuiContext.hWnd) {
-                if (YuiTaskbarDrawFrame(&YuiContext, (HDC)wParam)) {
+                if (YuiDrawWindowFrame(YuiContext.hWnd, (HDC)wParam)) {
                     return 0;
                 }
             }
@@ -1207,7 +1209,17 @@ YuiCreateWindow(
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = CreateSolidBrush(YuiGetWindowBackgroundColor());
     wc.lpszMenuName = NULL;
-    wc.lpszClassName = _T("YuiWnd");
+    wc.lpszClassName = YUI_TASKBAR_CLASS;
+
+    Result = RegisterClass(&wc);
+    if (!Result) {
+        YuiCleanupGlobalState();
+        return FALSE;
+    }
+
+    wc.lpfnWndProc = YuiCalendarWindowProc;
+    wc.hbrBackground = CreateSolidBrush(YuiGetWindowBackgroundColor());
+    wc.lpszClassName = _T("YuiCalendar");
 
     Result = RegisterClass(&wc);
     if (!Result) {
@@ -1223,7 +1235,7 @@ YuiCreateWindow(
     if (Context->LoginShell && DllUser32.pSetShellWindow != NULL) {
         wc.lpfnWndProc = YuiDesktopWindowProc;
         wc.hbrBackground = CreateSolidBrush(GetSysColor(COLOR_BACKGROUND));
-        wc.lpszClassName = _T("YuiDesktop");
+        wc.lpszClassName = YUI_DESKTOP_CLASS;
         Result = RegisterClass(&wc);
         if (!Result) {
             YuiCleanupGlobalState();
@@ -1255,7 +1267,7 @@ YuiCreateWindow(
 
     while(TRUE) {
         Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | NoActivate,
-                                       _T("YuiWnd"),
+                                       YUI_TASKBAR_CLASS,
                                        _T("Yui"),
                                        WS_POPUP | WS_CLIPCHILDREN,
                                        0,
@@ -1323,7 +1335,7 @@ YuiCreateWindow(
 
         while(TRUE) {
             Context->hWndDesktop = CreateWindowEx(NoActivate,
-                                                  _T("YuiDesktop"),
+                                                  YUI_DESKTOP_CLASS,
                                                   _T(""),
                                                   WS_POPUP | WS_VISIBLE,
                                                   0,
@@ -1404,9 +1416,9 @@ YuiCreateWindow(
                                         _T("STATIC"),
                                         _T(""),
                                         SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
-                                        ClientRect.right - YUI_CLOCK_WIDTH - Context->TaskbarPaddingHorizontal,
+                                        ClientRect.right - Context->ClockWidth - Context->TaskbarPaddingHorizontal,
                                         Context->TaskbarPaddingVertical,
-                                        YUI_CLOCK_WIDTH,
+                                        Context->ClockWidth,
                                         ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
                                         Context->hWnd,
                                         (HMENU)(DWORD_PTR)YUI_CLOCK_DISPLAY,
@@ -1434,9 +1446,9 @@ YuiCreateWindow(
                                                   _T("STATIC"),
                                                   _T(""),
                                                   SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
-                                                  ClientRect.right - YUI_CLOCK_WIDTH - 3 - YUI_BATTERY_WIDTH - Context->TaskbarPaddingHorizontal,
+                                                  ClientRect.right - Context->ClockWidth - 3 - Context->BatteryWidth - Context->TaskbarPaddingHorizontal,
                                                   Context->TaskbarPaddingVertical,
-                                                  YUI_BATTERY_WIDTH,
+                                                  Context->BatteryWidth,
                                                   ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
                                                   Context->hWnd,
                                                   (HMENU)(DWORD_PTR)YUI_BATTERY_DISPLAY,
@@ -1450,7 +1462,7 @@ YuiCreateWindow(
 
             SendMessage(Context->hWndBattery, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
             Context->DisplayBattery = TRUE;
-            Context->RightmostTaskbarOffset = 1 + YUI_CLOCK_WIDTH + 3 + YUI_BATTERY_WIDTH + 1;
+            Context->RightmostTaskbarOffset = 1 + Context->ClockWidth + 3 + Context->BatteryWidth + 1;
         }
     }
 

@@ -11,6 +11,7 @@ LDFLAGS_NT4UP=$(LDFLAGS_GUI:3.10=4.0)
 EXTERNLIBS=$(EXTERNLIBS) user32.lib gdi32.lib comdlg32.lib
 
 BIN_OBJS=\
+	 cal.obj         \
 	 clock.obj       \
 	 draw.obj        \
 	 icons.obj       \
