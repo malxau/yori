@@ -45,6 +45,42 @@ typedef struct _YORI_DLL_NAME_MAP {
 } YORI_DLL_NAME_MAP, *PYORI_DLL_NAME_MAP;
 
 /**
+ Convert a file name into a fully specified path to the System32 directory.
+
+ @param FileName Pointer to a string containing the file name component.
+
+ @param FullPath On successful completion, updated to contain a newly
+        allocated string that is fully specified to the System32 directory.
+        The caller is expected to free this with
+        @ref YoriLibFreeStringContents.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriLibFullPathToSystemDirectory(
+    __in PCYORI_STRING FileName,
+    __out PYORI_STRING FullPath
+    )
+{
+    YORI_ALLOC_SIZE_T LengthRequired;
+    LengthRequired = (YORI_ALLOC_SIZE_T)GetSystemDirectory(NULL, 0);
+
+    if (!YoriLibAllocateString(FullPath, LengthRequired + 1 + FileName->LengthInChars + 1)) {
+        return FALSE;
+    }
+
+    LengthRequired = (YORI_ALLOC_SIZE_T)GetSystemDirectory(FullPath->StartOfString, LengthRequired);
+    if (LengthRequired == 0) {
+        YoriLibFreeStringContents(FullPath);
+        return FALSE;
+    }
+
+    FullPath->LengthInChars = LengthRequired + YoriLibSPrintf(&FullPath->StartOfString[LengthRequired], _T("\\%y"), FileName);
+    return TRUE;
+}
+
+/**
  Load a DLL from the System32 directory.
 
  @param DllName Pointer to the name of the DLL to load.
@@ -56,26 +92,14 @@ YoriLibLoadLibraryFromSystemDirectory(
     __in LPCTSTR DllName
     )
 {
-    YORI_ALLOC_SIZE_T LengthRequired;
     YORI_STRING YsDllName;
     YORI_STRING FullPath;
     HMODULE DllModule;
 
     YoriLibConstantString(&YsDllName, DllName);
-    LengthRequired = (YORI_ALLOC_SIZE_T)GetSystemDirectory(NULL, 0);
-
-    if (!YoriLibAllocateString(&FullPath, LengthRequired + 1 + YsDllName.LengthInChars + 1)) {
+    if (!YoriLibFullPathToSystemDirectory(&YsDllName, &FullPath)) {
         return NULL;
     }
-
-    FullPath.LengthInChars = (YORI_ALLOC_SIZE_T)GetSystemDirectory(FullPath.StartOfString, LengthRequired);
-    if (FullPath.LengthInChars == 0) {
-        YoriLibFreeStringContents(&FullPath);
-        return NULL;
-    }
-
-    FullPath.LengthInChars = FullPath.LengthInChars + YoriLibSPrintf(&FullPath.StartOfString[FullPath.LengthInChars], _T("\\%y"), &YsDllName);
-
 
     DllModule = NULL;
     if (DllKernel32.pLoadLibraryW != NULL) {
@@ -625,6 +649,43 @@ YoriLibLoadWinBrandFunctions(VOID)
     DllWinBrand.pBrandingFormatString = (PBRANDING_FORMAT_STRING)GetProcAddress(DllWinBrand.hDll, "BrandingFormatString");
     return TRUE;
 }
+
+/**
+ A structure containing pointers to wlanapi.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_WLANAPI_FUNCTIONS DllWlanApi;
+
+/**
+ Load pointers to all optional WlanApi.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadWlanApiFunctions(VOID)
+{
+
+    if (DllWlanApi.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllWlanApi.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("WLANAPI.DLL"));
+    if (DllWlanApi.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllWlanApi.pWlanCloseHandle = (PWLAN_CLOSE_HANDLE)GetProcAddress(DllWlanApi.hDll, "WlanCloseHandle");
+    DllWlanApi.pWlanConnect = (PWLAN_CONNECT)GetProcAddress(DllWlanApi.hDll, "WlanConnect");
+    DllWlanApi.pWlanDisconnect = (PWLAN_DISCONNECT)GetProcAddress(DllWlanApi.hDll, "WlanDisconnect");
+    DllWlanApi.pWlanEnumInterfaces = (PWLAN_ENUM_INTERFACES)GetProcAddress(DllWlanApi.hDll, "WlanEnumInterfaces");
+    DllWlanApi.pWlanFreeMemory = (PWLAN_FREE_MEMORY)GetProcAddress(DllWlanApi.hDll, "WlanFreeMemory");
+    DllWlanApi.pWlanGetAvailableNetworkList = (PWLAN_GET_AVAILABLE_NETWORK_LIST)GetProcAddress(DllWlanApi.hDll, "WlanGetAvailableNetworkList");
+    DllWlanApi.pWlanOpenHandle = (PWLAN_OPEN_HANDLE)GetProcAddress(DllWlanApi.hDll, "WlanOpenHandle");
+    DllWlanApi.pWlanRegisterNotification = (PWLAN_REGISTER_NOTIFICATION)GetProcAddress(DllWlanApi.hDll, "WlanRegisterNotification");
+    DllWlanApi.pWlanScan = (PWLAN_SCAN)GetProcAddress(DllWlanApi.hDll, "WlanScan");
+    return TRUE;
+}
+
 
 /**
  A structure containing pointers to wsock32.dll functions that can be used if

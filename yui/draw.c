@@ -159,6 +159,9 @@ YuiDrawGetTextWidth(
  @param Flashing TRUE if the button should have a colored background to
         indicate to the user it is requesting attention.
 
+ @param Disabled TRUE if the button should have a disabled appearence; FALSE
+        for an enabled appearance.
+
  @param Icon Optionally specifies an icon handle to display in the button.
 
  @param Text Pointer to the button text.
@@ -172,6 +175,7 @@ YuiDrawButton(
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
     __in BOOLEAN Flashing,
+    __in BOOLEAN Disabled,
     __in_opt HICON Icon,
     __in PYORI_STRING Text,
     __in BOOLEAN CenterText
@@ -188,6 +192,7 @@ YuiDrawButton(
     COLORREF SecondTopLeft;
     COLORREF BottomRight;
     COLORREF SecondBottomRight;
+    COLORREF TextColor;
     HBRUSH Brush;
     HGDIOBJ OldObject;
     HPEN Pen;
@@ -318,11 +323,53 @@ YuiDrawButton(
     if (TextRect.right - TextRect.left > (INT)(IconWidth) &&
         TextRect.bottom - TextRect.top > 6) {
 
+        TextColor = YuiGetMenuTextColor();
+
+
         TextRect.left = TextRect.left + IconWidth;
         Flags = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
         if (CenterText) {
             Flags = Flags | DT_CENTER;
         }
+        if (Disabled) {
+
+            DWORD MoveAmt;
+
+            MoveAmt = 1;
+            SetBkMode(DrawItemStruct->hDC, TRANSPARENT);
+
+            //
+            //  Make the text region 1px smaller.  Both renders will still
+            //  fill the specified size, but each render gets a smaller area.
+            //
+
+            TextRect.bottom = TextRect.bottom - MoveAmt;
+            TextRect.right = TextRect.right - MoveAmt;
+
+            //
+            //  For the first pass, move everything down and right by 1px
+            //
+
+            TextRect.left = TextRect.left + MoveAmt;
+            TextRect.top = TextRect.top + MoveAmt;
+            TextRect.right = TextRect.right + MoveAmt;
+            TextRect.bottom = TextRect.bottom + MoveAmt;
+
+            TextColor = YuiGetHighlightColor();
+            SetTextColor(DrawItemStruct->hDC, TextColor);
+            DrawText(DrawItemStruct->hDC, Text->StartOfString, Text->LengthInChars, &TextRect, Flags);
+            TextColor = YuiGetShadowColor();
+
+            //
+            //  For the second pass, move everything up and left by 1px
+            //
+
+            TextRect.left = TextRect.left - MoveAmt;
+            TextRect.top = TextRect.top - MoveAmt;
+            TextRect.right = TextRect.right - MoveAmt;
+            TextRect.bottom = TextRect.bottom - MoveAmt;
+        }
+        SetTextColor(DrawItemStruct->hDC, TextColor);
         DrawText(DrawItemStruct->hDC, Text->StartOfString, Text->LengthInChars, &TextRect, Flags);
     }
 }

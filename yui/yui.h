@@ -322,6 +322,11 @@ typedef struct _YUI_CONTEXT {
     HMENU StartMenu;
 
     /**
+     The menu handle for the nested system menu.
+     */
+    HMENU SystemMenu;
+
+    /**
      The menu handle for the nested debug menu.
      */
     HMENU DebugMenu;
@@ -670,6 +675,16 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
 #define YUI_CALENDAR_CLASS _T("YuiCalendar")
 
 /**
+ The window class name to use for the wifi window.
+ */
+#define YUI_WIFI_CLASS _T("YuiWifi")
+
+/**
+ The base/minimum font size.
+ */
+#define YUI_BASE_FONT_SIZE 8
+
+/**
  The number of pixels to include in the start button.
  */
 #define YUI_START_BUTTON_WIDTH (60)
@@ -839,6 +854,31 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
  */
 #define YUI_MENU_TERMINATEPROCESS      (53)
 
+/**
+ An identifier for the menu item to launch wifi settings.
+ */
+#define YUI_MENU_SYSTEM_WIFI           (60)
+
+/**
+ An identifier for the menu item to launch mixer settings.
+ */
+#define YUI_MENU_SYSTEM_MIXER          (61)
+
+/**
+ An identifier for the menu item to launch control panel.
+ */
+#define YUI_MENU_SYSTEM_CONTROL        (62)
+
+/**
+ An identifier for the menu item to launch Task Manager.
+ */
+#define YUI_MENU_SYSTEM_TASKMGR        (63)
+
+/**
+ An identifier for the menu item to launch CMD.
+ */
+#define YUI_MENU_SYSTEM_CMD            (64)
+
 WNDPROC
 YuiGetDefaultButtonWndProc(VOID);
 
@@ -964,6 +1004,7 @@ YuiDrawButton(
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
     __in BOOLEAN Flashing,
+    __in BOOLEAN Disabled,
     __in_opt HICON Icon,
     __in PYORI_STRING Text,
     __in BOOLEAN CenterText
@@ -1107,6 +1148,19 @@ YuiCalendarWindowProc(
 
 VOID
 YuiCalendar(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+LRESULT CALLBACK
+YuiWifiWindowProc(
+    __in HWND hwnd,
+    __in UINT uMsg,
+    __in WPARAM wParam,
+    __in LPARAM lParam
+    );
+
+VOID
+YuiWifi(
     __in PYUI_CONTEXT YuiContext
     );
 

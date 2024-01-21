@@ -1224,6 +1224,13 @@ YoriLibDbgRealAssert(
 
 // *** DYLD.C ***
 
+__success(return)
+BOOLEAN
+YoriLibFullPathToSystemDirectory(
+    __in PCYORI_STRING FileName,
+    __out PYORI_STRING FullPath
+    );
+
 HMODULE
 YoriLibLoadLibraryFromSystemDirectory(
     __in LPCTSTR DllName
@@ -1282,6 +1289,9 @@ YoriLibLoadWinHttpFunctions(VOID);
 
 BOOL
 YoriLibLoadWinInetFunctions(VOID);
+
+BOOL
+YoriLibLoadWlanApiFunctions(VOID);
 
 BOOL
 YoriLibLoadWsock32Functions(VOID);

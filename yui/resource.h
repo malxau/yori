@@ -35,34 +35,69 @@
 #define PROGRAMSICON 3
 
 /**
+ The identifier for the system menu icon.
+ */
+#define SYSTEMICON   4
+
+/**
  The identifier for the debug menu icon.
  */
-#define DEBUGICON    4
+#define DEBUGICON    5
 
 /**
  The identifier for the run menu icon.
  */
-#define RUNICON      5
+#define RUNICON      6
 
 /**
  The identifier for the logoff menu icon.
  */
-#define LOGOFFICON   6
+#define LOGOFFICON   7
 
 /**
  The identifier for the exit menu icon.
  */
-#define EXITICON     7
+#define EXITICON     8
 
 /**
  The identifier for the shut down menu icon.
  */
-#define SHUTDOWNICON 8
+#define SHUTDOWNICON 9
 
 /**
  The identifier for the checked icon.
  */
-#define CHECKEDICON  9
+#define CHECKEDICON  10
+
+/**
+ The identifier for the wifi strength 1 icon.
+ */
+#define WIFI1ICON    11
+
+/**
+ The identifier for the wifi strength 2 icon.
+ */
+#define WIFI2ICON    12
+
+/**
+ The identifier for the wifi strength 3 icon.
+ */
+#define WIFI3ICON    13
+
+/**
+ The identifier for the wifi strength 4 icon.
+ */
+#define WIFI4ICON    14
+
+/**
+ The identifier for the wifi strength 5 icon.
+ */
+#define WIFI5ICON    15
+
+/**
+ The identifier for the wifi connected icon.
+ */
+#define WIFICONNICON 16
 
 /**
  The identifier for the dialog box.

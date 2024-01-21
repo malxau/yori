@@ -39,12 +39,12 @@ PYUI_CONTEXT YuiCalYuiContext;
  The number of days in each month.  This is a static set, but due to leap
  years this static set is re-evaluated for the second month at run time.
  */
-WORD CalStaticDaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+WORD YuiStaticDaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 /**
  A list of names for each month.
  */
-LPTSTR CalMonthNames[12] = {_T("January"),
+LPTSTR YuiMonthNames[12] = {_T("January"),
                             _T("February"),
                             _T("March"),
                             _T("April"),
@@ -60,7 +60,7 @@ LPTSTR CalMonthNames[12] = {_T("January"),
 /**
  A list of names for each day.
  */
-LPTSTR CalDayNames[7] = {_T("Sunday"),
+LPTSTR YuiDayNames[7] = {_T("Sunday"),
                          _T("Monday"),
                          _T("Tuesday"),
                          _T("Wednesday"),
@@ -74,18 +74,18 @@ LPTSTR CalDayNames[7] = {_T("Sunday"),
  is depending on SYSTEMTIME's concept of which day in a week a particular day
  falls.
  */
-#define CAL_DAYS_PER_WEEK  (7)
+#define YUI_DAYS_PER_WEEK  (7)
 
 /**
  The maximum number of days per month.  This is used to calculate the maximum
  number of rows needed to display a given month.
  */
-#define CAL_MAX_DAYS_PER_MONTH   (31)
+#define YUI_MAX_DAYS_PER_MONTH   (31)
 
 /**
  The number of rows needed to display a month.
  */
-#define CAL_ROWS_PER_MONTH       ((CAL_MAX_DAYS_PER_MONTH + 2 * CAL_DAYS_PER_WEEK - 1) / CAL_DAYS_PER_WEEK)
+#define YUI_ROWS_PER_MONTH       ((YUI_MAX_DAYS_PER_MONTH + 2 * YUI_DAYS_PER_WEEK - 1) / YUI_DAYS_PER_WEEK)
 
 /**
  Return the width to use in pixels for each calendar cell.
@@ -276,7 +276,7 @@ YuiCalendarOutputMonth(
     //
 
     for (MonthIndex = 0; MonthIndex < 12; MonthIndex++) {
-        RealDaysInMonth[MonthIndex] = CalStaticDaysInMonth[MonthIndex];
+        RealDaysInMonth[MonthIndex] = YuiStaticDaysInMonth[MonthIndex];
         if (MonthIndex == 1 && (Year % 4) == 0 && (Year % 100) != 0) {
             RealDaysInMonth[MonthIndex] = 29;
         }
@@ -293,7 +293,7 @@ YuiCalendarOutputMonth(
     //  Print the name of the month
     //
 
-    MonthNameLength = (YORI_ALLOC_SIZE_T)_tcslen(CalMonthNames[Month]);
+    MonthNameLength = (YORI_ALLOC_SIZE_T)_tcslen(YuiMonthNames[Month]);
 
     TextRect.top = ClientRect.top + 
                    YuiCalendarGetWindowVertPadding();
@@ -304,16 +304,16 @@ YuiCalendarOutputMonth(
                      YuiCalendarGetWindowHorizPadding();
     TextFlags = DT_SINGLELINE | DT_VCENTER | DT_CENTER;
 
-    DrawText(hDC, CalMonthNames[Month], MonthNameLength, &TextRect, TextFlags);
+    DrawText(hDC, YuiMonthNames[Month], MonthNameLength, &TextRect, TextFlags);
 
     //
     //  Print the day names
     //
 
     Row = 1;
-    for (DayCount = 0; DayCount < CAL_DAYS_PER_WEEK; DayCount++) {
+    for (DayCount = 0; DayCount < YUI_DAYS_PER_WEEK; DayCount++) {
         YuiCalendarTextRectForCell(&ClientRect, Row, DayCount, &TextRect);
-        YoriLibSPrintf(Str, _T("%2s"), CalDayNames[DayCount]);
+        YoriLibSPrintf(Str, _T("%2s"), YuiDayNames[DayCount]);
         DrawText(hDC, Str, 2, &TextRect, TextFlags);
     }
 
@@ -323,10 +323,10 @@ YuiCalendarOutputMonth(
     //
 
     Row = 2;
-    for (LineCount = 0; LineCount < CAL_ROWS_PER_MONTH; LineCount++) {
-        for (DayCount = 0; DayCount < CAL_DAYS_PER_WEEK; DayCount++) {
+    for (LineCount = 0; LineCount < YUI_ROWS_PER_MONTH; LineCount++) {
+        for (DayCount = 0; DayCount < YUI_DAYS_PER_WEEK; DayCount++) {
             if (LineCount > 0 || DayCount >= DayIndexAtStartOfMonth[Month]) {
-                ThisDayNumber = (WORD)(LineCount * CAL_DAYS_PER_WEEK + DayCount - DayIndexAtStartOfMonth[Month] + 1);
+                ThisDayNumber = (WORD)(LineCount * YUI_DAYS_PER_WEEK + DayCount - DayIndexAtStartOfMonth[Month] + 1);
                 if (ThisDayNumber <= RealDaysInMonth[Month]) {
                     YuiCalendarTextRectForCell(&ClientRect, (WORD)(Row + LineCount), DayCount, &TextRect);
                     YoriLibSPrintf(Str, _T("%02i"), ThisDayNumber);
@@ -444,11 +444,11 @@ YuiCalendar(
     WindowHorizPadding = YuiCalendarGetWindowHorizPadding();
     WindowVertPadding = YuiCalendarGetWindowVertPadding();
 
-    WindowWidth = (WORD)(CellWidth * CAL_DAYS_PER_WEEK +
-                         CellHorizPadding * (CAL_DAYS_PER_WEEK - 1) +
+    WindowWidth = (WORD)(CellWidth * YUI_DAYS_PER_WEEK +
+                         CellHorizPadding * (YUI_DAYS_PER_WEEK - 1) +
                          WindowHorizPadding * 2);
-    WindowHeight = (WORD)(CellHeight * (CAL_ROWS_PER_MONTH + 2) +
-                         CellVertPadding * (CAL_ROWS_PER_MONTH + 1) +
+    WindowHeight = (WORD)(CellHeight * (YUI_ROWS_PER_MONTH + 2) +
+                         CellVertPadding * (YUI_ROWS_PER_MONTH + 1) +
                          WindowVertPadding * 2);
 
     hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST,

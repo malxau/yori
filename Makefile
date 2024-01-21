@@ -179,6 +179,7 @@ DIRS2=iconv      \
       vhdtool    \
       vol        \
       which      \
+      wifi       \
       wininfo    \
       winpos     \
       ydbg       \

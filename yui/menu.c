@@ -156,6 +156,36 @@ typedef struct _YUI_MENU_CONTEXT {
      */
     YUI_MENU_OWNERDRAW_ITEM Programs;
 
+    /**
+     Owner draw state for the System menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM System;
+
+    /**
+     Owner draw state for the System Wifi menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM SystemWifi;
+
+    /**
+     Owner draw state for the System Mixer menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM SystemMixer;
+
+    /**
+     Owner draw state for the System Control Panel menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM SystemControlPanel;
+
+    /**
+     Owner draw state for the System TaskMgr menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM SystemTaskMgr;
+
+    /**
+     Owner draw state for the System Cmd menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM SystemCmd;
+
 #if DBG
     /**
      Owner draw state for the Debug menu item.
@@ -322,6 +352,13 @@ YuiMenuCleanupContext(VOID)
     YuiMenuCleanupItem(&YuiMenuContext.Programs);
     YuiMenuCleanupItem(&YuiMenuContext.Seperator);
 
+    YuiMenuCleanupItem(&YuiMenuContext.System);
+    YuiMenuCleanupItem(&YuiMenuContext.SystemWifi);
+    YuiMenuCleanupItem(&YuiMenuContext.SystemMixer);
+    YuiMenuCleanupItem(&YuiMenuContext.SystemControlPanel);
+    YuiMenuCleanupItem(&YuiMenuContext.SystemTaskMgr);
+    YuiMenuCleanupItem(&YuiMenuContext.SystemCmd);
+
 #if DBG
     YuiMenuCleanupItem(&YuiMenuContext.Debug);
     YuiMenuCleanupItem(&YuiMenuContext.DebugRefreshTaskbar);
@@ -385,6 +422,22 @@ YuiMenuInitializeContext(
     YoriLibConstantString(&YuiMenuContext.Programs.Text, _T("Programs"));
     YuiMenuContext.Programs.TallItem = TRUE;
     YuiMenuContext.Programs.WidthByStringLength = FALSE;
+
+    YuiMenuContext.System.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, SYSTEMICON, TRUE);
+    YoriLibConstantString(&YuiMenuContext.System.Text, _T("System"));
+    YuiMenuContext.System.TallItem = TRUE;
+    YuiMenuContext.System.WidthByStringLength = FALSE;
+
+    YuiMenuInitializeItem(&YuiMenuContext.SystemWifi);
+    YoriLibConstantString(&YuiMenuContext.SystemWifi.Text, _T("Wi-fi Configuration"));
+    YuiMenuInitializeItem(&YuiMenuContext.SystemMixer);
+    YoriLibConstantString(&YuiMenuContext.SystemMixer.Text, _T("Audio Mixer"));
+    YuiMenuInitializeItem(&YuiMenuContext.SystemControlPanel);
+    YoriLibConstantString(&YuiMenuContext.SystemControlPanel.Text, _T("Control Panel"));
+    YuiMenuInitializeItem(&YuiMenuContext.SystemTaskMgr);
+    YoriLibConstantString(&YuiMenuContext.SystemTaskMgr.Text, _T("Task Manager"));
+    YuiMenuInitializeItem(&YuiMenuContext.SystemCmd);
+    YoriLibConstantString(&YuiMenuContext.SystemCmd.Text, _T("Command Prompt"));
 
 #if DBG
     YuiMenuContext.Debug.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, DEBUGICON, TRUE);
@@ -1786,6 +1839,17 @@ YuiMenuPopulate(
                                         NULL,
                                         YuiPopulateMenuOnDirectory);
 
+    YuiContext->SystemMenu = CreatePopupMenu();
+    if (YuiContext->SystemMenu == NULL) {
+        return FALSE;
+    }
+
+    AppendMenu(YuiContext->SystemMenu, MF_OWNERDRAW, YUI_MENU_SYSTEM_WIFI, (LPCWSTR)&YuiMenuContext.SystemWifi);
+    AppendMenu(YuiContext->SystemMenu, MF_OWNERDRAW, YUI_MENU_SYSTEM_MIXER, (LPCWSTR)&YuiMenuContext.SystemMixer);
+    AppendMenu(YuiContext->SystemMenu, MF_OWNERDRAW, YUI_MENU_SYSTEM_CONTROL, (LPCWSTR)&YuiMenuContext.SystemControlPanel);
+    AppendMenu(YuiContext->SystemMenu, MF_OWNERDRAW, YUI_MENU_SYSTEM_TASKMGR, (LPCWSTR)&YuiMenuContext.SystemTaskMgr);
+    AppendMenu(YuiContext->SystemMenu, MF_OWNERDRAW, YUI_MENU_SYSTEM_CMD, (LPCWSTR)&YuiMenuContext.SystemCmd);
+
 #if DBG
     YuiContext->DebugMenu = CreatePopupMenu();
     if (YuiContext->DebugMenu == NULL) {
@@ -1805,6 +1869,7 @@ YuiMenuPopulate(
     //
 
     AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiMenuContext.ProgramsDirectory.MenuHandle, (LPCWSTR)&YuiMenuContext.Programs);
+    AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->SystemMenu, (LPCWSTR)&YuiMenuContext.System);
 #if DBG
     AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->DebugMenu, (LPCWSTR)&YuiMenuContext.Debug);
 #endif
@@ -1859,6 +1924,11 @@ YuiMenuFreeAll(
     if (YuiContext->ShutdownMenu != NULL) {
         DestroyMenu(YuiContext->ShutdownMenu);
         YuiContext->ShutdownMenu = NULL;
+    }
+
+    if (YuiContext->SystemMenu != NULL) {
+        DestroyMenu(YuiContext->SystemMenu);
+        YuiContext->SystemMenu = NULL;
     }
 
     if (YuiContext->DebugMenu != NULL) {
@@ -2261,73 +2331,75 @@ RunDialogProc(
 
             return TRUE;
         case WM_COMMAND:
-            switch (LOWORD(wParam)) {
-                case IDC_BROWSE:
-                    if (YoriLibAllocateString(&Cmd, 1024)) {
-                        if (YuiMenuRunBrowse(hDlg, &Cmd)) {
-                            SetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString);
-                        }
-                        YoriLibFreeStringContents(&Cmd);
-                    }
-                    return TRUE;
-                case IDC_OK:
-                    {
-                        YORI_ALLOC_SIZE_T Length;
-                        HINSTANCE hInst;
-                        DWORD Err;
-
-                        EnableWindow(GetDlgItem(hDlg, IDC_OK), FALSE);
-                        EnableWindow(GetDlgItem(hDlg, IDC_CANCEL), FALSE);
-                        EnableWindow(GetDlgItem(hDlg, IDC_RUNCMD), FALSE);
-                        EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
-
-                        Length = (YORI_ALLOC_SIZE_T)GetWindowTextLength(GetDlgItem(hDlg, IDC_RUNCMD));
-                        if (YoriLibAllocateString(&Cmd, Length + 1)) {
-                            PYORI_STRING ArgV;
-                            YORI_ALLOC_SIZE_T Index;
-                            YORI_ALLOC_SIZE_T ArgC;
-                            LPTSTR ArgString;
-
-                            Cmd.LengthInChars = (YORI_ALLOC_SIZE_T)GetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString, Cmd.LengthAllocated);
-
-                            ArgV = YoriLibCmdlineToArgcArgv(Cmd.StartOfString, 2, FALSE, &ArgC);
-                            if (ArgV != NULL) {
-                                ArgString = NULL;
-                                if (ArgC > 1) {
-                                    ArgString = ArgV[1].StartOfString;
-                                }
-                                hInst = DllShell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, ArgString, NULL, SW_SHOWNORMAL);
-                                Err = YoriLibShellExecuteInstanceToError(hInst);
-                                if (Err != ERROR_SUCCESS) {
-                                    LPTSTR WinErrText;
-                                    YORI_STRING ErrText;
-                                    YoriLibInitEmptyString(&ErrText);
-
-                                    WinErrText = YoriLibGetWinErrorText(Err);
-                                    if (WinErrText != NULL) {
-                                        YoriLibYPrintf(&ErrText, _T("Could not execute \"%y\": %s"), &Cmd, YoriLibGetWinErrorText(Err));
-                                        if (ErrText.StartOfString != NULL) {
-                                            MessageBox(hDlg, ErrText.StartOfString, _T("Yui"), MB_ICONSTOP);
-                                            YoriLibFreeStringContents(&ErrText);
-                                        }
-                                        YoriLibFreeWinErrorText(WinErrText);
-                                    }
-                                }
-
-                                YoriLibFreeStringContents(&Cmd);
-                                for (Index = 0; Index < ArgC; Index++) {
-                                    YoriLibFreeStringContents(&ArgV[Index]);
-                                }
-                                YoriLibDereference(ArgV);
+            if (HIWORD(wParam) == BN_CLICKED) {
+                switch (LOWORD(wParam)) {
+                    case IDC_BROWSE:
+                        if (YoriLibAllocateString(&Cmd, 1024)) {
+                            if (YuiMenuRunBrowse(hDlg, &Cmd)) {
+                                SetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString);
                             }
+                            YoriLibFreeStringContents(&Cmd);
                         }
-
-                        EndDialog(hDlg, TRUE);
                         return TRUE;
-                    }
-                case IDC_CANCEL:
-                    EndDialog(hDlg, FALSE);
-                    return TRUE;
+                    case IDC_OK:
+                        {
+                            YORI_ALLOC_SIZE_T Length;
+                            HINSTANCE hInst;
+                            DWORD Err;
+
+                            EnableWindow(GetDlgItem(hDlg, IDC_OK), FALSE);
+                            EnableWindow(GetDlgItem(hDlg, IDC_CANCEL), FALSE);
+                            EnableWindow(GetDlgItem(hDlg, IDC_RUNCMD), FALSE);
+                            EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
+
+                            Length = (YORI_ALLOC_SIZE_T)GetWindowTextLength(GetDlgItem(hDlg, IDC_RUNCMD));
+                            if (YoriLibAllocateString(&Cmd, Length + 1)) {
+                                PYORI_STRING ArgV;
+                                YORI_ALLOC_SIZE_T Index;
+                                YORI_ALLOC_SIZE_T ArgC;
+                                LPTSTR ArgString;
+
+                                Cmd.LengthInChars = (YORI_ALLOC_SIZE_T)GetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString, Cmd.LengthAllocated);
+
+                                ArgV = YoriLibCmdlineToArgcArgv(Cmd.StartOfString, 2, FALSE, &ArgC);
+                                if (ArgV != NULL) {
+                                    ArgString = NULL;
+                                    if (ArgC > 1) {
+                                        ArgString = ArgV[1].StartOfString;
+                                    }
+                                    hInst = DllShell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, ArgString, NULL, SW_SHOWNORMAL);
+                                    Err = YoriLibShellExecuteInstanceToError(hInst);
+                                    if (Err != ERROR_SUCCESS) {
+                                        LPTSTR WinErrText;
+                                        YORI_STRING ErrText;
+                                        YoriLibInitEmptyString(&ErrText);
+
+                                        WinErrText = YoriLibGetWinErrorText(Err);
+                                        if (WinErrText != NULL) {
+                                            YoriLibYPrintf(&ErrText, _T("Could not execute \"%y\": %s"), &Cmd, YoriLibGetWinErrorText(Err));
+                                            if (ErrText.StartOfString != NULL) {
+                                                MessageBox(hDlg, ErrText.StartOfString, _T("Yui"), MB_ICONSTOP);
+                                                YoriLibFreeStringContents(&ErrText);
+                                            }
+                                            YoriLibFreeWinErrorText(WinErrText);
+                                        }
+                                    }
+
+                                    YoriLibFreeStringContents(&Cmd);
+                                    for (Index = 0; Index < ArgC; Index++) {
+                                        YoriLibFreeStringContents(&ArgV[Index]);
+                                    }
+                                    YoriLibDereference(ArgV);
+                                }
+                            }
+
+                            EndDialog(hDlg, TRUE);
+                            return TRUE;
+                        }
+                    case IDC_CANCEL:
+                        EndDialog(hDlg, FALSE);
+                        return TRUE;
+                }
             }
     }
 
@@ -2348,6 +2420,54 @@ YuiMenuRun(
 {
     DialogBoxParam(NULL, MAKEINTRESOURCE(RUNDIALOG), YuiContext->hWnd, (DLGPROC)RunDialogProc, (DWORD_PTR)YuiContext);
     return TRUE;
+}
+
+/**
+ Take a string literal for a program name, and append it to the System32
+ directory, then launch the result as a fully qualified path.
+
+ @param FileName Pointer to a NULL terminated file name to launch.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YuiMenuExecuteSystemProgram(
+    __in LPCTSTR FileName
+    )
+{
+    YORI_STRING FullPath;
+    YORI_STRING YsFileName;
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    BOOL Result;
+
+    YoriLibConstantString(&YsFileName, FileName);
+    if (!YoriLibFullPathToSystemDirectory(&YsFileName, &FullPath)) {
+        return FALSE;
+    }
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+
+    Result = CreateProcess(NULL,
+                           FullPath.StartOfString,
+                           NULL,
+                           NULL,
+                           FALSE,
+                           CREATE_NEW_PROCESS_GROUP | CREATE_DEFAULT_ERROR_MODE,
+                           NULL,
+                           NULL,
+                           &si,
+                           &pi);
+
+    if (Result) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+
+    YoriLibFreeStringContents(&FullPath);
+
+    return Result;
 }
 
 /**
@@ -2412,6 +2532,21 @@ YuiMenuExecuteById(
             break;
         case YUI_MENU_RUN:
             YuiMenuRun(YuiContext);
+            break;
+        case YUI_MENU_SYSTEM_WIFI:
+            YuiWifi(YuiContext);
+            break;
+        case YUI_MENU_SYSTEM_MIXER:
+            YuiMenuExecuteSystemProgram(_T("SndVol.exe"));
+            break;
+        case YUI_MENU_SYSTEM_CONTROL:
+            YuiMenuExecuteSystemProgram(_T("Control.exe"));
+            break;
+        case YUI_MENU_SYSTEM_TASKMGR:
+            YuiMenuExecuteSystemProgram(_T("TaskMgr.exe"));
+            break;
+        case YUI_MENU_SYSTEM_CMD:
+            YuiMenuExecuteSystemProgram(_T("Cmd.exe"));
             break;
         case YUI_MENU_REFRESH:
             YuiTaskbarSyncWithCurrent(YuiContext);

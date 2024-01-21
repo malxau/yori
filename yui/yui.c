@@ -104,11 +104,6 @@ YuiGetDefaultButtonWndProc(VOID)
 }
 
 /**
- The base/minimum font size.
- */
-#define YUI_BASE_FONT_SIZE 8
-
-/**
  The font name to use in the taskbar and menus at size 8.
  */
 #define YUI_SMALL_FONT_NAME _T("MS Sans Serif")
@@ -174,7 +169,6 @@ YuiGetTaskbarHeight(
  */
 WORD
 YuiGetTaskbarMaximumButtonWidth(
-
     __in DWORD ScreenWidth,
     __in DWORD ScreenHeight
     )
@@ -270,6 +264,7 @@ YuiStartDrawButton(
     YuiDrawButton(&YuiContext,
                   DrawItemStruct,
                   YuiContext.MenuActive,
+                  FALSE,
                   FALSE,
                   YuiContext.StartIcon,
                   &Text,
@@ -765,7 +760,7 @@ YuiTaskbarWindowProc(
 
     switch(uMsg) {
         case WM_COMMAND:
-            {
+            if (HIWORD(wParam) == BN_CLICKED) {
                 //
                 //  Explorer won't allow windows without focus to change the
                 //  work area.  Since this user interaction gives us that
@@ -1219,7 +1214,17 @@ YuiCreateWindow(
 
     wc.lpfnWndProc = YuiCalendarWindowProc;
     wc.hbrBackground = CreateSolidBrush(YuiGetWindowBackgroundColor());
-    wc.lpszClassName = _T("YuiCalendar");
+    wc.lpszClassName = YUI_CALENDAR_CLASS;
+
+    Result = RegisterClass(&wc);
+    if (!Result) {
+        YuiCleanupGlobalState();
+        return FALSE;
+    }
+
+    wc.lpfnWndProc = YuiWifiWindowProc;
+    wc.hbrBackground = CreateSolidBrush(YuiGetWindowBackgroundColor());
+    wc.lpszClassName = YUI_WIFI_CLASS;
 
     Result = RegisterClass(&wc);
     if (!Result) {

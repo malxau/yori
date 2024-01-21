@@ -18,6 +18,7 @@ BIN_OBJS=\
 	 menu.obj        \
 	 resource.obj    \
 	 taskbar.obj     \
+	 wifi.obj        \
 	 yui.obj         \
 
 compile: $(BIN_OBJS)

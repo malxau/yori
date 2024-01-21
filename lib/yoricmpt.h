@@ -4346,6 +4346,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define DT_END_ELLIPSIS 0x8000
 #endif
 
+#ifndef WS_EX_CLIENTEDGE
+/**
+ If not defined by the compilation environment, a flag indicating a window 
+ should have a sunken 3D border.
+ */
+#define WS_EX_CLIENTEDGE 0x200
+#endif
+
 #ifndef WS_EX_TOOLWINDOW
 /**
  If not defined by the compilation environment, a flag indicating a window is
@@ -4384,6 +4392,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
  text should be centered.
  */
 #define BS_CENTER 0x300
+#endif
+
+#ifndef BST_PUSHED
+/**
+ If not defined by the compilation environment, the style indicating a push
+ button that is currently "pushed".
+ */
+#define BST_PUSHED 0x04
 #endif
 
 #ifndef SS_OWNERDRAW
@@ -6569,6 +6585,334 @@ typedef struct _RESIZE_VIRTUAL_DISK_PARAMETERS {
  */
 #define HTTP_QUERY_STATUS_CODE (0x13)
 #endif
+
+/**
+ The maximum number of PHY types that can be returned for a single network.
+ */
+#define YORI_WLAN_MAX_PHY_TYPE_NUMBER 8
+
+/**
+ The maximum length of an SSID (wireless network) name.
+ */
+#define YORI_DOT11_SSID_MAX_LENGTH 32
+
+/**
+ The maximum length of a wireless interface or profile name.
+ */
+#define YORI_WLAN_MAX_NAME_LENGTH 256
+
+/**
+ A notification source for the auto configuration module.  This is the only
+ type supported by XP.
+ */
+#define YORI_WLAN_NOTIFICATION_SOURCE_ACM 8
+
+/**
+ A notification type indicating that a network scan has completed.
+ */
+#define YORI_WLAN_ACM_SCAN_COMPLETE 7
+
+/**
+ A notification type indicating that a network scan has failed.
+ */
+#define YORI_WLAN_ACM_SCAN_FAIL 8
+
+/**
+ A flag indicating this network is currently connected to on this adapter.
+ */
+#define YORI_WLAN_AVAILABLE_NETWORK_CONNECTED 1
+
+/**
+ A flag indicating this network is associated with a profile, indicating the
+ network has been configured for use before.
+ */
+#define YORI_WLAN_AVAILABLE_NETWORK_HAS_PROFILE 2
+
+/**
+ A structure describing a wireless network adapter.
+ */
+typedef struct _YORI_WLAN_INTERFACE_INFO {
+
+    /**
+     A GUID to identify this adapter.
+     */
+    GUID InterfaceGuid;
+
+    /**
+     A human readable description for the adapter.
+     */
+    WCHAR InterfaceDescription[YORI_WLAN_MAX_NAME_LENGTH];
+
+    /**
+     The state that the adapter is currently in.
+     */
+    DWORD State;
+} YORI_WLAN_INTERFACE_INFO;
+
+/**
+ A pointer to information describing a wireless network adapter.
+ */
+typedef YORI_WLAN_INTERFACE_INFO *PYORI_WLAN_INTERFACE_INFO;
+
+/**
+ A structure describing a list of wireless network adapaters.  This is
+ allocated by the WLAN APIs and should be freed with WlanFreeMemory.
+ */
+typedef struct _YORI_WLAN_INTERFACE_INFO_LIST {
+
+    /**
+     The number of interfaces that follow this structure.
+     */
+    DWORD NumberOfItems;
+
+    /**
+     A value reserved for applications to describe the index of a list
+     item, which is unused in this program.
+     */
+    DWORD Reserved;
+
+    /**
+     A variable sized array of wireless interfaces.
+     */
+    YORI_WLAN_INTERFACE_INFO InterfaceInfo[1];
+} YORI_WLAN_INTERFACE_INFO_LIST;
+
+/**
+ A pointer to a structure describing a list of wireless network adapters.
+ */
+typedef YORI_WLAN_INTERFACE_INFO_LIST *PYORI_WLAN_INTERFACE_INFO_LIST;
+
+/**
+ Information describing an SSID (wireless network name.)
+ */
+typedef struct _YORI_DOT11_SSID {
+
+    /**
+     The number of characters in the SSID name.
+     */
+    DWORD Length;
+
+    /**
+     A buffer of SSID name characters.  Note this is not NULL terminated.
+     */
+    UCHAR Ssid[YORI_DOT11_SSID_MAX_LENGTH];
+} YORI_DOT11_SSID;
+
+/**
+ Pointer to information describing an SSID.
+ */
+typedef YORI_DOT11_SSID *PYORI_DOT11_SSID;
+
+/**
+ A structure describing an available network that has been found via a scan.
+ */
+typedef struct _YORI_WLAN_AVAILABLE_NETWORK {
+
+    /**
+     A profile name for this network.  A profile name is created when a
+     network is connected to, describing durable state associated with that
+     network.  Many (most?) networks that are detected have not been
+     connected to and will not have a profile name.  This value is NULL
+     terminated.
+     */
+    WCHAR ProfileName[YORI_WLAN_MAX_NAME_LENGTH];
+
+    /**
+     The SSID (wireless network name) for this network.
+     */
+    YORI_DOT11_SSID Ssid;
+
+    /**
+     Specifies whether the network is an infrastructure network or an ad-hoc
+     network.
+     */
+    DWORD BssType;
+
+    /**
+     The number of BSSIDs (access points) for this SSID.
+     */
+    DWORD NumberOfBssids;
+
+    /**
+     TRUE to indicate the network can be connected to, FALSE if it cannot.
+     */
+    BOOL Connectable;
+
+    /**
+     If the network cannot be connected to, specifies the reason for its
+     unavailability.
+     */
+    DWORD NotConnectableReason;
+
+    /**
+     The number of entries in the PhyTypes array below.  If this number is
+     larger than the array size, MorePhyTypes will be TRUE.
+     */
+    DWORD NumberOfPhyTypes;
+
+    /**
+     An array of PHY types for this network.
+     */
+    DWORD PhyTypes[YORI_WLAN_MAX_PHY_TYPE_NUMBER];
+
+    /**
+     TRUE if the array above is incomplete, or FALSE if it contains all PHY
+     types.
+     */
+    BOOL MorePhyTypes;
+
+    /**
+     Signal quality, described as a percentage between 0 and 100.
+     */
+    DWORD SignalQuality;
+
+    /**
+     TRUE if the network has security enabled, FALSE if it is open.
+     */
+    BOOL SecurityEnabled;
+
+    /**
+     The default authentication algorithm (WEP, WPA, etc.)
+     */
+    DWORD DefaultAuthAlgorithm;
+
+    /**
+     The default encryption algorithm to use on this network.
+     */
+    DWORD DefaultCipherAlgorithm;
+
+    /**
+     Flags for the network, including whether it is currently connected, or
+     whether a profile exists for it.
+     */
+    DWORD Flags;
+
+    /**
+     Reserved.
+     */
+    DWORD Reserved;
+} YORI_WLAN_AVAILABLE_NETWORK;
+
+/**
+ Pointer to information describing an available wireless network.
+ */
+typedef YORI_WLAN_AVAILABLE_NETWORK *PYORI_WLAN_AVAILABLE_NETWORK;
+
+/**
+ Structure describing a list of wireless networks.  This is allocated by the
+ WLAN APIs and should be freed with WlanFreeMemory.
+ */
+typedef struct _YORI_WLAN_AVAILABLE_NETWORK_LIST {
+
+    /**
+     The number of entries within the Network array below.
+     */
+    DWORD NumberOfItems;
+
+    /**
+     Used by applications to refer to an element within the list.  Unused in
+     this application.
+     */
+    DWORD Reserved;
+
+    /**
+     An array of available networks that follow this structure.
+     */
+    YORI_WLAN_AVAILABLE_NETWORK Network[1];
+} YORI_WLAN_AVAILABLE_NETWORK_LIST;
+
+/**
+ Pointer to a structure describing a list of available wireless networks.
+ */
+typedef YORI_WLAN_AVAILABLE_NETWORK_LIST *PYORI_WLAN_AVAILABLE_NETWORK_LIST;
+
+/**
+ A structure describing how to connect to a wireless network.  This
+ generally means (as in, XP requires) a profile to describe most
+ connection parameters.  The parameters here are the ones that could change
+ on each connection.
+ */
+typedef struct _YORI_WLAN_CONNECTION_PARAMETERS {
+
+    /**
+     The connection mode.  Note that XP only supports profile.
+     */
+    DWORD ConnectionMode;
+
+    /**
+     The profile name to connect to.
+     */
+    LPCWSTR ProfileName;
+
+    /**
+     Optionally points to an Ssid.  The profile typically already knows this,
+     so this is optional.
+     */
+    PYORI_DOT11_SSID Ssid;
+
+    /**
+     Optionally points to a Bssid list.  This must be NULL on XP.
+     */
+    PVOID DesiredBssidList;
+
+    /**
+     Bss type that must match the profile.
+     */
+    DWORD BssType;
+
+    /**
+     Flags.  XP doesn't support any.
+     */
+    DWORD Flags;
+} YORI_WLAN_CONNECTION_PARAMETERS;
+
+/**
+ Pointer to a structure describing how to connect to a wireless network.
+ */
+typedef YORI_WLAN_CONNECTION_PARAMETERS *PYORI_WLAN_CONNECTION_PARAMETERS;
+
+/**
+ A structure passed to a notification callback indicating when a Wifi event
+ has occurred.
+ */
+typedef struct _YORI_WLAN_NOTIFICATION_DATA {
+
+    /**
+     The source of the event.
+     */
+    DWORD NotificationSource;
+
+    /**
+     The type of the event.
+     */
+    DWORD NotificationCode;
+
+    /**
+     The interface (network adapter) that generated the event.
+     */
+    GUID InterfaceGuid;
+
+    /**
+     The number of bytes in the pData data buffer.
+     */
+    DWORD dwDataSize;
+
+    /**
+     Extra data buffer.  The contents of this buffer depend on the
+     NotificationCode above.
+     */
+    PVOID pData;
+} YORI_WLAN_NOTIFICATION_DATA;
+
+/**
+ Pointer to information about a Wifi event that has occurred.
+ */
+typedef YORI_WLAN_NOTIFICATION_DATA *PYORI_WLAN_NOTIFICATION_DATA;
+
+/**
+ Pointer to a callback function to invoke when Wifi events occur.
+ */
+typedef VOID (WINAPI *YORI_WLAN_NOTIFICATION_CALLBACK) (PYORI_WLAN_NOTIFICATION_DATA, PVOID);
 
 /** 
  A pseudo handle indicating the current terminal server server.
@@ -10553,6 +10897,174 @@ typedef struct _YORI_WININET_FUNCTIONS {
 } YORI_WININET_FUNCTIONS, *PYORI_WININET_FUNCTIONS;
 
 extern YORI_WININET_FUNCTIONS DllWinInet;
+
+/**
+ A prototype for the WlanCloseHandle function.
+ */
+typedef
+DWORD WINAPI
+WLAN_CLOSE_HANDLE(HANDLE, LPVOID);
+
+/**
+ A prototype for a pointer to the WlanCloseHandle function.
+ */
+typedef WLAN_CLOSE_HANDLE *PWLAN_CLOSE_HANDLE;
+
+/**
+ A prototype for the WlanConnect function.
+ */
+typedef
+DWORD WINAPI
+WLAN_CONNECT(HANDLE, const GUID *, PYORI_WLAN_CONNECTION_PARAMETERS, PVOID);
+
+/**
+ A prototype for a pointer to the WlanConnect function.
+ */
+typedef WLAN_CONNECT *PWLAN_CONNECT;
+
+/**
+ A prototype for the WlanDisconnect function.
+ */
+typedef
+DWORD WINAPI
+WLAN_DISCONNECT(HANDLE, const GUID *, PVOID);
+
+/**
+ A prototype for a pointer to the WlanDisconnect function.
+ */
+typedef WLAN_DISCONNECT *PWLAN_DISCONNECT;
+
+/**
+ A prototype for the WlanEnumInterfaces function.
+ */
+typedef
+DWORD WINAPI
+WLAN_ENUM_INTERFACES(HANDLE, LPVOID, LPVOID *);
+
+/**
+ A prototype for a pointer to the WlanEnumInterfaces function.
+ */
+typedef WLAN_ENUM_INTERFACES *PWLAN_ENUM_INTERFACES;
+
+/**
+ A prototype for the WlanFreeMemory function.
+ */
+typedef
+VOID WINAPI
+WLAN_FREE_MEMORY(LPVOID);
+
+/**
+ A prototype for a pointer to the WlanFreeMemory function.
+ */
+typedef WLAN_FREE_MEMORY *PWLAN_FREE_MEMORY;
+
+/**
+ A prototype for the WlanGetAvailableNetworkList function.
+ */
+typedef
+DWORD WINAPI
+WLAN_GET_AVAILABLE_NETWORK_LIST(HANDLE, const GUID *, DWORD, PVOID, PVOID *);
+
+/**
+ A prototype for a pointer to the WlanGetAvailableNetworkList function.
+ */
+typedef WLAN_GET_AVAILABLE_NETWORK_LIST *PWLAN_GET_AVAILABLE_NETWORK_LIST;
+
+/**
+ A prototype for the WlanOpenHandle function.
+ */
+typedef
+DWORD WINAPI
+WLAN_OPEN_HANDLE(DWORD, PVOID, PDWORD, PHANDLE);
+
+/**
+ A prototype for a pointer to the WlanOpenHandle function.
+ */
+typedef WLAN_OPEN_HANDLE *PWLAN_OPEN_HANDLE;
+
+/**
+ A prototype for the WlanRegisterNotification function.
+ */
+typedef
+DWORD WINAPI
+WLAN_REGISTER_NOTIFICATION(HANDLE, DWORD, BOOL, YORI_WLAN_NOTIFICATION_CALLBACK, PVOID, PVOID, PDWORD);
+
+/**
+ A prototype for a pointer to the WlanRegisterNotification function.
+ */
+typedef WLAN_REGISTER_NOTIFICATION *PWLAN_REGISTER_NOTIFICATION;
+
+/**
+ A prototype for the WlanScan function.
+ */
+typedef
+DWORD WINAPI
+WLAN_SCAN(HANDLE, const GUID *, PVOID, PVOID, PVOID);
+
+/**
+ A prototype for a pointer to the WlanScan function.
+ */
+typedef WLAN_SCAN *PWLAN_SCAN;
+
+/**
+ A structure containing optional function pointers to wlanapi.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_WLANAPI_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to WlanCloseHandle.
+     */
+    PWLAN_CLOSE_HANDLE pWlanCloseHandle;
+
+    /**
+     If it's available on the current system, a pointer to WlanConnect.
+     */
+    PWLAN_CONNECT pWlanConnect;
+
+    /**
+     If it's available on the current system, a pointer to WlanDisconnect.
+     */
+    PWLAN_DISCONNECT pWlanDisconnect;
+
+    /**
+     If it's available on the current system, a pointer to WlanEnumInterfaces.
+     */
+    PWLAN_ENUM_INTERFACES pWlanEnumInterfaces;
+
+    /**
+     If it's available on the current system, a pointer to WlanFreeMemory.
+     */
+    PWLAN_FREE_MEMORY pWlanFreeMemory;
+
+    /**
+     If it's available on the current system, a pointer to WlanGetAvailableNetworkList.
+     */
+    PWLAN_GET_AVAILABLE_NETWORK_LIST pWlanGetAvailableNetworkList;
+
+    /**
+     If it's available on the current system, a pointer to WlanOpenHandle.
+     */
+    PWLAN_OPEN_HANDLE pWlanOpenHandle;
+
+    /**
+     If it's available on the current system, a pointer to WlanRegisterNotification.
+     */
+    PWLAN_REGISTER_NOTIFICATION pWlanRegisterNotification;
+
+    /**
+     If it's available on the current system, a pointer to WlanScan.
+     */
+    PWLAN_SCAN pWlanScan;
+
+} YORI_WLANAPI_FUNCTIONS, *PYORI_WLANAPI_FUNCTIONS;
+
+extern YORI_WLANAPI_FUNCTIONS DllWlanApi;
 
 /**
  A prototype for the closesocket function.

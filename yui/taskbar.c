@@ -1415,6 +1415,7 @@ YuiTaskbarDrawButton(
                   DrawItemStruct,
                   ThisButton->WindowActive,
                   ThisButton->Flashing,
+                  FALSE,
                   Icon,
                   &ThisButton->ButtonText,
                   FALSE);
