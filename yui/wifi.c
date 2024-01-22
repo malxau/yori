@@ -656,7 +656,7 @@ YuiWifiPaint(
     }
 
     GetClientRect(hWnd, &ClientRect);
-    YuiDrawThreeDBox(hDC, &ClientRect, FALSE);
+    YuiDrawThreeDBox(hDC, &ClientRect, YuiWifiContext.YuiContext->ControlBorderWidth, FALSE);
 
     //
     //  Find the location of the list within the parent window.
@@ -1131,7 +1131,7 @@ YuiWifi(
     //
 
     ListWidth = (WORD)(ClientRect.right - ClientRect.left - 2 * WindowPaddingHoriz);
-    ButtonHeight = 26;
+    ButtonHeight = (WORD)(YuiContext->TaskbarHeight - 2 * YuiContext->TaskbarPaddingVertical);
     ButtonPadding = (WORD)(WindowPaddingVert - 2);
     ButtonAreaHeight = (WORD)(WindowPaddingVert + ButtonHeight);
 

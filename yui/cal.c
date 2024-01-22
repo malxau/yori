@@ -142,7 +142,7 @@ YuiCalendarGetCellVertPadding(VOID)
 WORD
 YuiCalendarGetWindowHorizPadding(VOID)
 {
-    return 8;
+    return (WORD)(7 + YuiCalYuiContext->ControlBorderWidth);
 }
 
 /**
@@ -154,7 +154,7 @@ YuiCalendarGetWindowHorizPadding(VOID)
 WORD
 YuiCalendarGetWindowVertPadding(VOID)
 {
-    return 8;
+    return (WORD)(7 + YuiCalYuiContext->ControlBorderWidth);
 }
 
 /**
@@ -264,7 +264,7 @@ YuiCalendarOutputMonth(
     }
 
     GetClientRect(hWnd, &ClientRect);
-    YuiDrawThreeDBox(hDC, &ClientRect, FALSE);
+    YuiDrawThreeDBox(hDC, &ClientRect, YuiCalYuiContext->ControlBorderWidth, FALSE);
     OldObject = SelectObject(hDC, YuiCalYuiContext->hFont);
 
     SetBkColor(hDC, BackColor);

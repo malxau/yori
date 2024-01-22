@@ -240,6 +240,12 @@ typedef struct _YUI_CONTEXT {
     WORD TaskbarPaddingHorizontal;
 
     /**
+     The number of pixels to display in 3D borders around the taskbar, static
+     controls, buttons, menus, etc.  This is driven by DPI settings.
+     */
+    WORD ControlBorderWidth;
+
+    /**
      The default window procedure for a push button.  Stored here so we can
      override it and call it recursively.
      */
@@ -685,21 +691,6 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
 #define YUI_BASE_FONT_SIZE 8
 
 /**
- The number of pixels to include in the start button.
- */
-#define YUI_START_BUTTON_WIDTH (60)
-
-/**
- The number of pixels to include in the clock.
- */
-#define YUI_CLOCK_WIDTH (65)
-
-/**
- The number of pixels to include in the battery indicator.
- */
-#define YUI_BATTERY_WIDTH (38)
-
-/**
  The number of pixels to use for the width of each calendar cell.
  */
 #define YUI_CALENDAR_CELL_WIDTH (25)
@@ -995,7 +986,15 @@ VOID
 YuiDrawThreeDBox(
     __in HDC hDC,
     __in PRECT Rect,
+    __in WORD LineWidth,
     __in BOOLEAN Pressed
+    );
+
+DWORD
+YuiDrawGetTextWidth(
+    __in PYUI_CONTEXT YuiContext,
+    __in BOOLEAN UseBold,
+    __in PYORI_STRING Text
     );
 
 VOID
@@ -1012,12 +1011,14 @@ YuiDrawButton(
 
 VOID
 YuiTaskbarDrawStatic(
+    __in PYUI_CONTEXT YuiContext,
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in PYORI_STRING Text
     );
 
 BOOLEAN
 YuiDrawWindowFrame(
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd,
     __in_opt HDC hDC
     );

@@ -116,6 +116,9 @@ YuiGetMenuSelectedTextColor(VOID)
  @param YuiContext Pointer to the application context including font and font
         metrics.
 
+ @param UseBold TRUE to get the width using the bold font; FALSE to get the
+        width of the nonbold font.
+
  @param Text Pointer to the string whose width should be calculated.
 
  @return The width of the string when displayed, in pixels.
@@ -123,6 +126,7 @@ YuiGetMenuSelectedTextColor(VOID)
 DWORD
 YuiDrawGetTextWidth(
     __in PYUI_CONTEXT YuiContext,
+    __in BOOLEAN UseBold,
     __in PYORI_STRING Text
     )
 {
@@ -137,7 +141,11 @@ YuiDrawGetTextWidth(
     //
 
     hDC = GetWindowDC(YuiContext->hWnd);
-    OldObject = SelectObject(hDC, YuiContext->hFont);
+    if (UseBold) {
+        OldObject = SelectObject(hDC, YuiContext->hBoldFont);
+    } else {
+        OldObject = SelectObject(hDC, YuiContext->hFont);
+    }
     GetTextExtentPoint32(hDC, Text->StartOfString, Text->LengthInChars, &Size);
     SelectObject(hDC, OldObject);
     ReleaseDC(YuiContext->hWnd, hDC);
@@ -183,9 +191,10 @@ YuiDrawButton(
 {
     DWORD Flags;
     RECT TextRect;
-    DWORD IconWidth;
-    DWORD IconHeight;
-    DWORD IconOffset;
+    WORD IconWidth;
+    WORD IconHeight;
+    WORD IconTopOffset;
+    WORD IconLeftOffset;
     DWORD ButtonHeight;
     COLORREF ButtonBackground;
     COLORREF TopLeft;
@@ -195,7 +204,11 @@ YuiDrawButton(
     COLORREF TextColor;
     HBRUSH Brush;
     HGDIOBJ OldObject;
-    HPEN Pen;
+    HPEN TopLeftPen;
+    HPEN BottomRightPen;
+    HPEN SecondTopLeftPen;
+    HPEN SecondBottomRightPen;
+    WORD Index;
 
     //
     //  Check if the button should be pressed.
@@ -229,38 +242,66 @@ YuiDrawButton(
         SecondTopLeft = ButtonBackground;
     }
 
-    Pen = CreatePen(PS_SOLID, 0, TopLeft);
-    OldObject = SelectObject(DrawItemStruct->hDC, Pen);
-    MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.bottom - 1, NULL);
-    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.top);
-    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1, DrawItemStruct->rcItem.top);
-    SelectObject(DrawItemStruct->hDC, OldObject);
-    DeleteObject(Pen);
+    TopLeftPen = CreatePen(PS_SOLID, 0, TopLeft);
+    BottomRightPen = CreatePen(PS_SOLID, 0, BottomRight);
+    SecondBottomRightPen = CreatePen(PS_SOLID, 0, SecondBottomRight);
 
-    Pen = CreatePen(PS_SOLID, 0, BottomRight);
-    SelectObject(DrawItemStruct->hDC, Pen);
-    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1, DrawItemStruct->rcItem.bottom - 1);
-    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.bottom - 1);
-    SelectObject(DrawItemStruct->hDC, OldObject);
-    DeleteObject(Pen);
+    if (Pushed) {
+        SecondTopLeftPen = CreatePen(PS_SOLID, 0, SecondTopLeft);
 
-    Pen = CreatePen(PS_SOLID, 0, SecondBottomRight);
-    SelectObject(DrawItemStruct->hDC, Pen);
-    MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1, DrawItemStruct->rcItem.bottom -2, NULL);
-    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2, DrawItemStruct->rcItem.bottom - 2);
-    LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2, DrawItemStruct->rcItem.top - 1);
-    SelectObject(DrawItemStruct->hDC, OldObject);
-    DeleteObject(Pen);
+        OldObject = SelectObject(DrawItemStruct->hDC, TopLeftPen);
+        MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.bottom - 1, NULL);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.top);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1, DrawItemStruct->rcItem.top);
 
-    if (SecondTopLeft != ButtonBackground) {
-        Pen = CreatePen(PS_SOLID, 0, SecondTopLeft);
-        SelectObject(DrawItemStruct->hDC, Pen);
-        MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1, DrawItemStruct->rcItem.bottom - 2, NULL);
-        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1, DrawItemStruct->rcItem.top - 1);
-        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2, DrawItemStruct->rcItem.top - 1);
+        SelectObject(DrawItemStruct->hDC, BottomRightPen);
+
+        for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
+            MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.top + Index, NULL);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.bottom - 1 - Index);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.bottom - 1 - Index);
+        }
+
+        SelectObject(DrawItemStruct->hDC, SecondBottomRightPen);
+        MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.bottom - 1 - Index, NULL);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.bottom - 1 - Index);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.top - Index);
+
+        SelectObject(DrawItemStruct->hDC, SecondTopLeftPen);
+        for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
+            MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1 + Index, DrawItemStruct->rcItem.bottom - 2 - Index, NULL);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1 + Index, DrawItemStruct->rcItem.top - 1 - Index);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.top - 1 - Index);
+        }
         SelectObject(DrawItemStruct->hDC, OldObject);
-        DeleteObject(Pen);
+        DeleteObject(SecondTopLeftPen);
+
+    } else {
+        OldObject = SelectObject(DrawItemStruct->hDC, TopLeftPen);
+        for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
+            MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.bottom - 1 - Index, NULL);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.top + Index);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.top + Index);
+        }
+
+        SelectObject(DrawItemStruct->hDC, BottomRightPen);
+
+        MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1, DrawItemStruct->rcItem.top, NULL);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1, DrawItemStruct->rcItem.bottom - 1);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.bottom - 1);
+
+        SelectObject(DrawItemStruct->hDC, SecondBottomRightPen);
+        for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
+            MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1 + Index, DrawItemStruct->rcItem.bottom - 2 - Index, NULL);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.bottom - 2 - Index);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.top - 1 - Index);
+        }
+        SelectObject(DrawItemStruct->hDC, OldObject);
     }
+
+    DeleteObject(TopLeftPen);
+    DeleteObject(BottomRightPen);
+    DeleteObject(SecondBottomRightPen);
 
     //
     //  If the dimensions are too small to draw text, stop now.
@@ -272,10 +313,10 @@ YuiDrawButton(
         return;
     }
 
-    TextRect.left = DrawItemStruct->rcItem.left + 3;
-    TextRect.right = DrawItemStruct->rcItem.right - 5;
-    TextRect.top = DrawItemStruct->rcItem.top + 1;
-    TextRect.bottom = DrawItemStruct->rcItem.bottom - 1;
+    TextRect.left = DrawItemStruct->rcItem.left + YuiContext->ControlBorderWidth + 2;
+    TextRect.right = DrawItemStruct->rcItem.right - YuiContext->ControlBorderWidth - 4;
+    TextRect.top = DrawItemStruct->rcItem.top + YuiContext->ControlBorderWidth;
+    TextRect.bottom = DrawItemStruct->rcItem.bottom - YuiContext->ControlBorderWidth;
 
     if (Pushed) {
         TextRect.top = TextRect.top + 2;
@@ -299,21 +340,22 @@ YuiDrawButton(
 
     IconWidth = 0;
     if (Icon != NULL) {
-        IconWidth = GetSystemMetrics(SM_CXSMICON);
-        IconHeight = GetSystemMetrics(SM_CYSMICON);
+        IconWidth = YuiContext->SmallTaskbarIconWidth;
+        IconHeight = YuiContext->SmallTaskbarIconHeight;
 
         ButtonHeight = DrawItemStruct->rcItem.bottom - DrawItemStruct->rcItem.top;
-        IconOffset = 1;
+        IconTopOffset = 1;
 
         if (ButtonHeight > IconHeight) {
-            IconOffset = (ButtonHeight - IconHeight) / 2;
+            IconTopOffset = (WORD)((ButtonHeight - IconHeight) / 2);
         }
 
         if (Pushed) {
-            IconOffset = IconOffset + 1;
+            IconTopOffset = (WORD)(IconTopOffset + 1);
         }
-        DllUser32.pDrawIconEx(DrawItemStruct->hDC, 4, IconOffset, Icon, IconWidth, IconHeight, 0, NULL, DI_NORMAL);
-        IconWidth = IconWidth + 4;
+        IconLeftOffset = (WORD)(YuiContext->ControlBorderWidth * 2 + 2);
+        DllUser32.pDrawIconEx(DrawItemStruct->hDC, IconLeftOffset, IconTopOffset, Icon, IconWidth, IconHeight, 0, NULL, DI_NORMAL);
+        IconWidth = (WORD)(IconWidth + IconLeftOffset);
     }
 
     //
@@ -324,7 +366,6 @@ YuiDrawButton(
         TextRect.bottom - TextRect.top > 6) {
 
         TextColor = YuiGetMenuTextColor();
-
 
         TextRect.left = TextRect.left + IconWidth;
         Flags = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
@@ -381,6 +422,8 @@ YuiDrawButton(
 
  @param Rect The dimensions to render the box.
 
+ @param LineWidth The width of the box to draw, in pixels.
+
  @param Pressed If TRUE, display a sunken box.  If FALSE, display a raised
         box.
  */
@@ -388,6 +431,7 @@ VOID
 YuiDrawThreeDBox(
     __in HDC hDC,
     __in PRECT Rect,
+    __in WORD LineWidth,
     __in BOOLEAN Pressed
     )
 {
@@ -395,8 +439,10 @@ YuiDrawThreeDBox(
     COLORREF TopLeft;
     COLORREF BottomRight;
     HBRUSH Brush;
-    HPEN Pen;
+    HPEN TopLeftPen;
+    HPEN BottomRightPen;
     HGDIOBJ OldObject;
+    WORD Index;
 
     //
     //  Check if the button should be pressed.
@@ -421,25 +467,32 @@ YuiDrawThreeDBox(
         BottomRight = YuiGetShadowColor();
     }
 
-    Pen = CreatePen(PS_SOLID, 0, TopLeft);
-    OldObject = SelectObject(hDC, Pen);
-    MoveToEx(hDC, Rect->left, Rect->bottom - 1, NULL);
-    LineTo(hDC, Rect->left, Rect->top);
-    LineTo(hDC, Rect->right - 1, Rect->top);
-    SelectObject(hDC, OldObject);
-    DeleteObject(Pen);
+    TopLeftPen = CreatePen(PS_SOLID, 0, TopLeft);
+    BottomRightPen = CreatePen(PS_SOLID, 0, BottomRight);
+    OldObject = SelectObject(hDC, TopLeftPen);
 
-    Pen = CreatePen(PS_SOLID, 0, BottomRight);
-    SelectObject(hDC, Pen);
-    LineTo(hDC, Rect->right - 1, Rect->bottom - 1);
-    LineTo(hDC, Rect->left, Rect->bottom - 1);
+    for (Index = 0; Index < LineWidth; Index++) {
+        SelectObject(hDC, TopLeftPen);
+        MoveToEx(hDC, Rect->left + Index, Rect->bottom - 1 - Index, NULL);
+        LineTo(hDC, Rect->left + Index, Rect->top + Index);
+        LineTo(hDC, Rect->right - 1 - Index, Rect->top + Index);
+
+        SelectObject(hDC, BottomRightPen);
+        LineTo(hDC, Rect->right - 1 - Index, Rect->bottom - 1 - Index);
+        LineTo(hDC, Rect->left - Index, Rect->bottom - 1 - Index);
+    }
+
     SelectObject(hDC, OldObject);
-    DeleteObject(Pen);
+
+    DeleteObject(TopLeftPen);
+    DeleteObject(BottomRightPen);
 }
 
 /**
  Draw an ownerdraw static control.  Currently this routine assumes it will
  have a sunken appearence.
+
+ @param YuiContext Pointer to the application context.
 
  @param DrawItemStruct Pointer to the struct describing the draw operation.
 
@@ -448,6 +501,7 @@ YuiDrawThreeDBox(
  */
 VOID
 YuiTaskbarDrawStatic(
+    __in PYUI_CONTEXT YuiContext,
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in PYORI_STRING Text
     )
@@ -455,7 +509,7 @@ YuiTaskbarDrawStatic(
     DWORD Flags;
     RECT TextRect;
 
-    YuiDrawThreeDBox(DrawItemStruct->hDC, &DrawItemStruct->rcItem, TRUE);
+    YuiDrawThreeDBox(DrawItemStruct->hDC, &DrawItemStruct->rcItem, YuiContext->ControlBorderWidth, TRUE);
 
     //
     //  If the dimensions are too small to draw text, stop now.
@@ -489,6 +543,8 @@ YuiTaskbarDrawStatic(
 /**
  Draw a raised 3D effect within a window.
 
+ @param YuiContext Pointer to the application context.
+
  @param hWnd The window to draw the effect within.
 
  @param hDC Optional device context.  This can be NULL in which case normal
@@ -498,6 +554,7 @@ YuiTaskbarDrawStatic(
  */
 BOOLEAN
 YuiDrawWindowFrame(
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd,
     __in_opt HDC hDC
     )
@@ -530,7 +587,7 @@ YuiDrawWindowFrame(
         hDCToUse = hDCPaint;
     }
     GetClientRect(hWnd, &ClientRect);
-    YuiDrawThreeDBox(hDCToUse, &ClientRect, FALSE);
+    YuiDrawThreeDBox(hDCToUse, &ClientRect, YuiContext->ControlBorderWidth, FALSE);
 
     EndPaint(hWnd, &paintStruct);
     return TRUE;
@@ -542,6 +599,8 @@ YuiDrawWindowFrame(
  function will fill the menu with a chosen color, and draw a raised 3D box
  around it.
 
+ @param YuiContext Pointer to the application context.
+
  @param DrawItemStruct Pointer to the struct describing a draw operation.
         Note this is for an item within a menu, not the menu itself.  This
         function is responsible for navigating from this to the menu window
@@ -549,6 +608,7 @@ YuiDrawWindowFrame(
  */
 VOID
 YuiDrawEntireMenu(
+    __in PYUI_CONTEXT YuiContext,
     __in LPDRAWITEMSTRUCT DrawItemStruct
     )
 {
@@ -564,7 +624,7 @@ YuiDrawEntireMenu(
     clientRect.right = windowRect.right - windowRect.left;
     clientRect.bottom = windowRect.bottom - windowRect.top;
     menuDC = GetWindowDC(hwndMenu);
-    YuiDrawThreeDBox(menuDC, &clientRect, FALSE);
+    YuiDrawThreeDBox(menuDC, &clientRect, YuiContext->ControlBorderWidth, FALSE);
     ReleaseDC(hwndMenu, menuDC);
 }
 
@@ -588,7 +648,7 @@ YuiDrawMeasureMenuItem(
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
 
     if (ItemContext->WidthByStringLength) {
-        Item->itemWidth = YuiDrawGetTextWidth(YuiContext, &ItemContext->Text) + 
+        Item->itemWidth = YuiDrawGetTextWidth(YuiContext, FALSE, &ItemContext->Text) + 
                           YuiContext->SmallStartIconWidth +
                           2 * YuiContext->ShortIconPadding;
         if (ItemContext->AddFlyoutIcon) {
@@ -655,7 +715,7 @@ YuiDrawMenuItem(
         Item->rcItem.left == 0 &&
         Item->itemAction == ODA_DRAWENTIRE) {
 
-        YuiDrawEntireMenu(Item);
+        YuiDrawEntireMenu(YuiContext, Item);
     }
 
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
@@ -728,12 +788,18 @@ YuiDrawMenuItem(
 
     if (ItemContext->Text.LengthInChars == 0) {
         RECT DrawRect;
+        WORD SeperatorWidth;
+
+        SeperatorWidth = (WORD)(YuiContext->ControlBorderWidth / 2);
+        if (SeperatorWidth == 0) {
+            SeperatorWidth = 1;
+        }
 
         DrawRect.left = Item->rcItem.left;
         DrawRect.right = Item->rcItem.right;
-        DrawRect.top = (Item->rcItem.bottom - Item->rcItem.top) / 2 + Item->rcItem.top - 1;
-        DrawRect.bottom = DrawRect.top + 2;
-        YuiDrawThreeDBox(Item->hDC, &DrawRect, TRUE);
+        DrawRect.top = (Item->rcItem.bottom - Item->rcItem.top) / 2 + Item->rcItem.top - SeperatorWidth;
+        DrawRect.bottom = DrawRect.top + 2 * SeperatorWidth;
+        YuiDrawThreeDBox(Item->hDC, &DrawRect, SeperatorWidth, TRUE);
 
     } else {
 

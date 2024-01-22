@@ -124,34 +124,71 @@ YuiGetDefaultButtonWndProc(VOID)
 #define YUI_BASE_TASKBAR_BUTTON_WIDTH (160)
 
 /**
- Query the taskbar height for this system.  The taskbar is generally 32 pixels
- but can scale upwards slightly on larger displays.
+ Query the taskbar height for this system.  The taskbar is generally 30 pixels
+ or 34 pixels (based on small icon size) but can scale upwards slightly on
+ larger displays.
 
- @param ScreenWidth The width of the screen, in pixels.
-
- @param ScreenHeight The height of the screen, in pixels.
 
  @return The height of the taskbar, in pixels.
  */
-DWORD
+WORD
 YuiGetTaskbarHeight(
-    __in DWORD ScreenWidth,
-    __in DWORD ScreenHeight
+    __in PYUI_CONTEXT Context
     )
 {
-    DWORD TaskbarHeight;
+    WORD TaskbarHeight;
+    WORD ButtonPadding;
+    WORD ExtraPixels;
 
-    UNREFERENCED_PARAMETER(ScreenWidth);
+    Context->TaskbarPaddingVertical = 2;
+    Context->ControlBorderWidth = 1;
+    ButtonPadding = 3;
 
-    TaskbarHeight = YUI_BASE_TASKBAR_HEIGHT;
+    if (Context->SmallTaskbarIconHeight >= 28) {
+        Context->ControlBorderWidth = (WORD)(Context->ControlBorderWidth + 2);
+    } else if (Context->SmallTaskbarIconHeight >= 20) {
+        Context->ControlBorderWidth = (WORD)(Context->ControlBorderWidth + 1);
+    } else {
 
-    //
-    //  Give 1% of any vertical pixels above 800
-    //
+        //
+        //  If no DPI scaling is in effect, see if we should scale a bit
+        //  anyway due to the number of vertical pixels.  This adds 1.25% of
+        //  pixels above 800.
+        //
 
-    if (ScreenHeight > 800) {
-        TaskbarHeight = TaskbarHeight + (ScreenHeight - 800) / 100;
+        ExtraPixels = (WORD)((Context->ScreenHeight - 800) / 80);
+
+        //
+        //  Increasing border width takes 4px, so only do it if we have a
+        //  little extra.  This logic means we'll use a larger font at 4px,
+        //  and at 7px we'll use that same larger font with larger borders,
+        //  and at 10px font size goes up again.
+        //
+
+        if (ExtraPixels >= 7) {
+            Context->ControlBorderWidth = (WORD)(Context->ControlBorderWidth + 1);
+            ExtraPixels = (WORD)(ExtraPixels - 4);
+        } else if (ExtraPixels >= 4) {
+            ExtraPixels = 4;
+        }
+
+        ButtonPadding = (WORD)(ButtonPadding + ExtraPixels / 2);
     }
+
+    Context->TaskbarPaddingVertical = (WORD)(Context->TaskbarPaddingVertical + Context->ControlBorderWidth);
+    Context->TaskbarPaddingHorizontal = Context->TaskbarPaddingVertical;
+
+    //
+    //  First, set the taskbar to be based on the small icon size, with extra
+    //  space for its chrome.  The small icon size is a function of the DPI
+    //  setting of the system, and keeping the icon the same size prevents
+    //  ugly scaling.
+    //
+
+    TaskbarHeight = (WORD)(Context->SmallTaskbarIconHeight +
+                           2 * ButtonPadding +
+                           2 * Context->ControlBorderWidth +
+                           2 * Context->TaskbarPaddingVertical);
 
     return TaskbarHeight;
 }
@@ -180,19 +217,19 @@ YuiGetTaskbarMaximumButtonWidth(
     TaskbarButtonWidth = YUI_BASE_TASKBAR_BUTTON_WIDTH;
 
     //
-    //  Give an extra 20px for every font point size
+    //  Give an extra 50px for every font point size
     //
 
     if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
-        TaskbarButtonWidth = TaskbarButtonWidth + 20 * (YuiContext.FontSize - YUI_BASE_FONT_SIZE);
+        TaskbarButtonWidth = TaskbarButtonWidth + 50 * (YuiContext.FontSize - YUI_BASE_FONT_SIZE);
     }
 
     //
-    //  Give 2% of any horizontal pixels above 800
+    //  Give 3% of any horizontal pixels above 800
     //
 
     if (ScreenWidth > 800) {
-        TaskbarButtonWidth = TaskbarButtonWidth + (ScreenWidth - 800) / 50;
+        TaskbarButtonWidth = TaskbarButtonWidth + (ScreenWidth - 800) / 30;
     }
 
     return (WORD)TaskbarButtonWidth;
@@ -249,6 +286,20 @@ YuiGetScreenDimensions(
 }
 
 /**
+ Get the text to include in the start button (aka "Start").
+
+ @param Text On successful completion, populated with the text to display
+        in the start button.
+ */
+VOID
+YuiStartGetText(
+    __out PYORI_STRING Text
+    )
+{
+    YoriLibConstantString(Text, _T("Start"));
+}
+
+/**
  Draw the start button, including icon and text.
 
  @param DrawItemStruct Pointer to a structure describing the button to
@@ -260,7 +311,7 @@ YuiStartDrawButton(
     )
 {
     YORI_STRING Text;
-    YoriLibConstantString(&Text, _T("Start"));
+    YuiStartGetText(&Text);
     YuiDrawButton(&YuiContext,
                   DrawItemStruct,
                   YuiContext.MenuActive,
@@ -269,6 +320,7 @@ YuiStartDrawButton(
                   YuiContext.StartIcon,
                   &Text,
                   TRUE);
+    YoriLibFreeStringContents(&Text);
 }
 
 /**
@@ -439,11 +491,12 @@ YuiNotifyResolutionChange(
     )
 {
     RECT ClientRect;
-    WORD FontSize;
     HDC hDC;
     HFONT hFont;
     HFONT hBoldFont;
     LPCTSTR FontName;
+    YORI_STRING Text;
+    WORD ButtonHeight;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
@@ -451,15 +504,22 @@ YuiNotifyResolutionChange(
 
     YuiContext.DisplayResolutionChangeInProgress = TRUE;
 
-    YuiContext.TaskbarHeight = YuiGetTaskbarHeight(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
+    YuiContext.TaskbarHeight = YuiGetTaskbarHeight(&YuiContext);
 
     YuiHideExplorerTaskbar(&YuiContext);
 
-    FontSize = YUI_BASE_FONT_SIZE;
     FontName = YUI_SMALL_FONT_NAME;
 
+    ButtonHeight = (WORD)(YuiContext.TaskbarHeight -
+                          2 * YuiContext.TaskbarPaddingVertical -
+                          2 * YuiContext.ControlBorderWidth);
+
+
     YuiContext.ExtraPixelsAboveText = 1;
-    YuiContext.FontSize = (WORD)(FontSize + (YuiContext.TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3);
+    YuiContext.FontSize = (WORD)((ButtonHeight + 1) / 3);
+    if (YuiContext.FontSize < YUI_BASE_FONT_SIZE) {
+        YuiContext.FontSize = YUI_BASE_FONT_SIZE;
+    }
     if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
         FontName = YUI_LARGE_FONT_NAME;
         YuiContext.ExtraPixelsAboveText = 0;
@@ -541,11 +601,30 @@ YuiNotifyResolutionChange(
     YuiContext.ShortMenuHeight = (WORD)(YuiContext.SmallStartIconHeight + 2 * YuiContext.ShortIconPadding);
     YuiContext.MenuSeperatorHeight = 12;
 
-    YuiContext.StartButtonWidth = (WORD)(YUI_START_BUTTON_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 10);
-    YuiContext.ClockWidth = (WORD)(YUI_CLOCK_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 8);
-    YuiContext.BatteryWidth = (WORD)(YUI_BATTERY_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 4);
+    YuiStartGetText(&Text);
+    YuiContext.StartButtonWidth = (WORD)(YuiContext.SmallTaskbarIconWidth +
+                                         4 * YuiContext.ControlBorderWidth +
+                                         YuiDrawGetTextWidth(&YuiContext, TRUE, &Text) +
+                                         16);
+
+    YoriLibFreeStringContents(&Text);
+    YoriLibConstantString(&Text, _T("88:88 PM"));
+    YuiContext.ClockWidth = (WORD)(YuiDrawGetTextWidth(&YuiContext, FALSE, &Text) * 5 / 4 + 2 * YuiContext.ControlBorderWidth);
+    YoriLibConstantString(&Text, _T("100%"));
+    YuiContext.BatteryWidth = (WORD)(YuiDrawGetTextWidth(&YuiContext, FALSE, &Text) * 5 / 4 + 2 * YuiContext.ControlBorderWidth);
     YuiContext.CalendarCellWidth = (WORD)(YUI_CALENDAR_CELL_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 5);
     YuiContext.CalendarCellHeight = (WORD)(YUI_CALENDAR_CELL_HEIGHT + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 4);
+
+#if DBG
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                 _T("Based on screen size %ix%i, font size %i, TaskbarHeight %i, StartButtonWidth %i, TaskbarButtonWidth %i\n"),
+                 YuiContext.ScreenWidth,
+                 YuiContext.ScreenHeight,
+                 YuiContext.FontSize,
+                 YuiContext.TaskbarHeight,
+                 YuiContext.StartButtonWidth,
+                 YuiContext.MaximumTaskbarButtonWidth);
+#endif
 
     ReleaseDC(hWnd, hDC);
 
@@ -908,9 +987,13 @@ YuiTaskbarWindowProc(
                 if (CtrlId == YUI_START_BUTTON) {
                     YuiStartDrawButton(DrawItemStruct);
                 } else if (CtrlId == YUI_BATTERY_DISPLAY) {
-                    YuiTaskbarDrawStatic(DrawItemStruct, &YuiContext.BatteryDisplayedValue);
+                    YuiTaskbarDrawStatic(&YuiContext,
+                                         DrawItemStruct,
+                                         &YuiContext.BatteryDisplayedValue);
                 } else if (CtrlId == YUI_CLOCK_DISPLAY) {
-                    YuiTaskbarDrawStatic(DrawItemStruct, &YuiContext.ClockDisplayedValue);
+                    YuiTaskbarDrawStatic(&YuiContext,
+                                         DrawItemStruct,
+                                         &YuiContext.ClockDisplayedValue);
                 } else if (CtrlId != 0) {
                     ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
                     YuiTaskbarDrawButton(&YuiContext, CtrlId, DrawItemStruct);
@@ -921,7 +1004,7 @@ YuiTaskbarWindowProc(
             break;
         case WM_PAINT:
             if (hwnd == YuiContext.hWnd) {
-                if (YuiDrawWindowFrame(YuiContext.hWnd, (HDC)wParam)) {
+                if (YuiDrawWindowFrame(&YuiContext, YuiContext.hWnd, (HDC)wParam)) {
                     return 0;
                 }
             }
@@ -1256,7 +1339,7 @@ YuiCreateWindow(
         }
     }
 
-    Context->TaskbarHeight = YuiGetTaskbarHeight(Context->ScreenWidth, Context->ScreenHeight);
+    Context->TaskbarHeight = YuiGetTaskbarHeight(Context);
     if (DllUser32.pLoadImageW == NULL) {
         Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
     } else {
@@ -1291,9 +1374,6 @@ YuiCreateWindow(
             return FALSE;
         }
     }
-
-    Context->TaskbarPaddingVertical = 3;
-    Context->TaskbarPaddingHorizontal = 3;
 
     //
     //  Mark minimized windows as invisible.  The taskbar should still have
