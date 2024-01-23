@@ -656,6 +656,7 @@ YuiWifiPaint(
     }
 
     GetClientRect(hWnd, &ClientRect);
+    YuiDrawWindowBackground(hDC, &ClientRect);
     YuiDrawThreeDBox(hDC, &ClientRect, YuiWifiContext.YuiContext->ControlBorderWidth, FALSE);
 
     //

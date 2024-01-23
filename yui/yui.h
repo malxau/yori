@@ -983,6 +983,12 @@ COLORREF
 YuiGetMenuSelectedTextColor(VOID);
 
 VOID
+YuiDrawWindowBackground(
+    __in HDC hDC,
+    __in PRECT Rect
+    );
+
+VOID
 YuiDrawThreeDBox(
     __in HDC hDC,
     __in PRECT Rect,

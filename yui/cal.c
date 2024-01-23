@@ -264,6 +264,7 @@ YuiCalendarOutputMonth(
     }
 
     GetClientRect(hWnd, &ClientRect);
+    YuiDrawWindowBackground(hDC, &ClientRect);
     YuiDrawThreeDBox(hDC, &ClientRect, YuiCalYuiContext->ControlBorderWidth, FALSE);
     OldObject = SelectObject(hDC, YuiCalYuiContext->hFont);
 

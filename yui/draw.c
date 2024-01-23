@@ -416,6 +416,30 @@ YuiDrawButton(
 }
 
 /**
+ Fill a rectangle with the window background color.
+
+ @param hDC The device context to fill.
+
+ @param Rect The dimensions to fill.
+ */
+VOID
+YuiDrawWindowBackground(
+    __in HDC hDC,
+    __in PRECT Rect
+    )
+{
+    COLORREF Background;
+    HBRUSH Brush;
+
+    Background = YuiGetWindowBackgroundColor();
+
+    Brush = CreateSolidBrush(Background);
+    SetBkColor(hDC, Background);
+    FillRect(hDC, Rect, Brush);
+    DeleteObject(Brush);
+}
+
+/**
  Draw a simple, single line 3D box.  This can be raised or sunken.
 
  @param hDC The device context to render the box into.
@@ -435,29 +459,12 @@ YuiDrawThreeDBox(
     __in BOOLEAN Pressed
     )
 {
-    COLORREF Background;
     COLORREF TopLeft;
     COLORREF BottomRight;
-    HBRUSH Brush;
     HPEN TopLeftPen;
     HPEN BottomRightPen;
     HGDIOBJ OldObject;
     WORD Index;
-
-    //
-    //  Check if the button should be pressed.
-    //
-
-    Background = YuiGetWindowBackgroundColor();
-
-    //
-    //  Render the basic button outline.
-    //
-
-    Brush = CreateSolidBrush(Background);
-    SetBkColor(hDC, Background);
-    FillRect(hDC, Rect, Brush);
-    DeleteObject(Brush);
 
     if (Pressed) {
         TopLeft = YuiGetShadowColor();
@@ -466,6 +473,10 @@ YuiDrawThreeDBox(
         TopLeft = YuiGetHighlightColor();
         BottomRight = YuiGetShadowColor();
     }
+
+    //
+    //  Render the outline.
+    //
 
     TopLeftPen = CreatePen(PS_SOLID, 0, TopLeft);
     BottomRightPen = CreatePen(PS_SOLID, 0, BottomRight);
@@ -509,6 +520,7 @@ YuiTaskbarDrawStatic(
     DWORD Flags;
     RECT TextRect;
 
+    YuiDrawWindowBackground(DrawItemStruct->hDC, &DrawItemStruct->rcItem);
     YuiDrawThreeDBox(DrawItemStruct->hDC, &DrawItemStruct->rcItem, YuiContext->ControlBorderWidth, TRUE);
 
     //
@@ -587,6 +599,7 @@ YuiDrawWindowFrame(
         hDCToUse = hDCPaint;
     }
     GetClientRect(hWnd, &ClientRect);
+    YuiDrawWindowBackground(hDCToUse, &ClientRect);
     YuiDrawThreeDBox(hDCToUse, &ClientRect, YuiContext->ControlBorderWidth, FALSE);
 
     EndPaint(hWnd, &paintStruct);
@@ -601,31 +614,64 @@ YuiDrawWindowFrame(
 
  @param YuiContext Pointer to the application context.
 
- @param DrawItemStruct Pointer to the struct describing a draw operation.
-        Note this is for an item within a menu, not the menu itself.  This
-        function is responsible for navigating from this to the menu window
-        and region to draw.
+ @param Item Pointer to the struct describing a draw operation.  Note this is
+        for an item within a menu, not the menu itself.  This function is
+        responsible for navigating from this to the menu window and region to
+        draw.
  */
 VOID
 YuiDrawEntireMenu(
     __in PYUI_CONTEXT YuiContext,
-    __in LPDRAWITEMSTRUCT DrawItemStruct
+    __in LPDRAWITEMSTRUCT Item
     )
 {
     HWND hwndMenu;
-    HDC menuDC;
-    RECT windowRect;
-    RECT clientRect;
+    HDC MenuDC;
+    RECT WindowRect;
+    RECT ClientRect;
+    DWORD WindowHeight;
+    DWORD WindowWidth;
+    WORD Index;
+    WORD MarginX;
+    WORD MarginY;
+    COLORREF Background;
+    HPEN Pen;
+    HGDIOBJ OldObject;
 
-    hwndMenu = WindowFromDC(DrawItemStruct->hDC);
-    GetWindowRect(hwndMenu, &windowRect);
-    clientRect.left = 0;
-    clientRect.top = 0;
-    clientRect.right = windowRect.right - windowRect.left;
-    clientRect.bottom = windowRect.bottom - windowRect.top;
-    menuDC = GetWindowDC(hwndMenu);
-    YuiDrawThreeDBox(menuDC, &clientRect, YuiContext->ControlBorderWidth, FALSE);
-    ReleaseDC(hwndMenu, menuDC);
+
+    hwndMenu = WindowFromDC(Item->hDC);
+    GetWindowRect(hwndMenu, &WindowRect);
+    GetClientRect(hwndMenu, &ClientRect);
+
+    WindowHeight = WindowRect.bottom - WindowRect.top;
+    WindowWidth = WindowRect.right - WindowRect.left;
+    MarginX = (WORD)((WindowWidth - ClientRect.right) / 2);
+    MarginY = (WORD)((WindowHeight - ClientRect.bottom) / 2);
+
+    ClientRect.left = 0;
+    ClientRect.top = 0;
+    ClientRect.right = WindowRect.right - WindowRect.left;
+    ClientRect.bottom = WindowRect.bottom - WindowRect.top;
+    MenuDC = GetWindowDC(hwndMenu);
+    YuiDrawThreeDBox(MenuDC, &ClientRect, YuiContext->ControlBorderWidth, FALSE);
+
+    Background = YuiGetWindowBackgroundColor();
+    Pen = CreatePen(PS_SOLID, 0, Background);
+    OldObject = SelectObject(MenuDC, Pen);
+    for (Index = YuiContext->ControlBorderWidth; Index < MarginX; Index++) {
+        MoveToEx(MenuDC, Index, Index, NULL);
+        LineTo(MenuDC, WindowWidth - Index - 1, Index);
+        MoveToEx(MenuDC, Index, WindowHeight - Index - 1, NULL);
+        LineTo(MenuDC, WindowWidth - Index - 1, WindowHeight - Index - 1);
+    }
+    for (Index = YuiContext->ControlBorderWidth; Index < MarginY; Index++) {
+        MoveToEx(MenuDC, Index, Index, NULL);
+        LineTo(MenuDC, Index, WindowHeight - Index - 1);
+        MoveToEx(MenuDC, WindowWidth - Index - 1, Index, NULL);
+        LineTo(MenuDC, WindowWidth - Index - 1, WindowHeight - Index - 1);
+    }
+    SelectObject(MenuDC, OldObject);
+    ReleaseDC(hwndMenu, MenuDC);
 }
 
 /**
