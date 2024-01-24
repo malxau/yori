@@ -4035,6 +4035,14 @@ typedef struct _YORI_SYSTEM_POWER_STATUS {
 #define GetWindowLongPtr GetWindowLong
 #endif
 
+#ifndef SetClassLongPtr
+/**
+ If not defined by the compilation environment, SetClassLongPtr must refer
+ to SetClassLong (no 64 bit support.)
+ */
+#define SetClassLongPtr SetClassLong
+#endif
+
 #ifndef SetWindowLongPtr
 /**
  If not defined by the compilation environment, SetWindowLongPtr must refer
@@ -4346,6 +4354,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define DT_END_ELLIPSIS 0x8000
 #endif
 
+#ifndef CS_DROPSHADOW
+/**
+ If not defined by the compilation environment, a flag indicating a window 
+ class should have a shadow rendered underneath windows created for the class.
+ */
+#define CS_DROPSHADOW 0x20000
+#endif
+
 #ifndef WS_EX_CLIENTEDGE
 /**
  If not defined by the compilation environment, a flag indicating a window 
@@ -4434,6 +4450,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define SS_SUNKEN 0x1000
 #endif
 
+#ifndef TPM_RECURSE
+/**
+ If not defined by the compilation environment, the flag indicating a popup
+ menu should be opened recursively.
+ */
+#define TPM_RECURSE 0x0001
+#endif
+
 #ifndef TPM_BOTTOMALIGN
 /**
  If not defined by the compilation environment, the flag indicating a popup
@@ -4458,6 +4482,13 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define TPM_RETURNCMD   0x0100
 #endif
 
+#ifndef TPM_NOANIMATION
+/**
+ If not defined by the compilation environment, the flag indicating a popup
+ menu should not be animated.
+ */
+#define TPM_NOANIMATION 0x4000
+#endif
 
 #ifndef MS_DEF_PROV
 /**

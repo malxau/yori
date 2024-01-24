@@ -923,22 +923,68 @@ YuiTaskbarWindowProc(
         case WM_CLOSE:
             PostQuitMessage(0);
             return 0;
+        case WM_INITMENUPOPUP:
+            {
+                HWND hwndMenu;
+                DWORD Style;
+
+                //
+                //  Attempt to clear the window shadow.  This is a property
+                //  of the window class, not the window.  Doing it here allows
+                //  this to happen before the menu window is displayed.
+                //
+
+                hwndMenu = FindWindow(_T("#32768"), NULL);
+                if (hwndMenu != NULL) {
+                    Style = (DWORD)GetClassLongPtr(hwndMenu, GCL_STYLE);
+                    if ((Style & CS_DROPSHADOW) != 0) {
+                        Style = Style & ~(CS_DROPSHADOW);
+                        SetClassLongPtr(hwndMenu, GCL_STYLE, Style);
+                    }
+                }
+            }
+            break;
         case WM_CONTEXTMENU:
             {
                 SHORT XPos;
+                SHORT YPos;
                 SHORT RightmostTaskbarOffset;
-                RECT TaskbarWindowClient;
+                RECT TaskbarWindowRect;
                 XPos = (SHORT)(LOWORD(lParam));
-                DllUser32.pGetClientRect(YuiContext.hWnd, &TaskbarWindowClient);
-                RightmostTaskbarOffset = (SHORT)(TaskbarWindowClient.right - YuiContext.RightmostTaskbarOffset);
-                if (XPos >= (SHORT)YuiContext.LeftmostTaskbarOffset &&
-                    XPos <= RightmostTaskbarOffset) {
+                YPos = (SHORT)(HIWORD(lParam));
 
-                    CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
-                    if (CtrlId < YUI_FIRST_TASKBAR_BUTTON) {
-                        YuiDisplayContextMenu(LOWORD(lParam), HIWORD(lParam));
-                    } else {
-                        YuiTaskbarDisplayContextMenuForTask(&YuiContext, CtrlId, LOWORD(lParam), HIWORD(lParam));
+                //
+                //  Check that the mouse is within the taskbar.  This message
+                //  can also be sent if the user right clicks a menu, which is
+                //  not currently implemented.
+                //
+
+                DllUser32.pGetWindowRect(YuiContext.hWnd, &TaskbarWindowRect);
+                if (XPos >= TaskbarWindowRect.left &&
+                    XPos <= TaskbarWindowRect.right &&
+                    YPos >= TaskbarWindowRect.top &&
+                    YPos <= TaskbarWindowRect.right) {
+
+                    //
+                    //  Convert coordinates into client coordinates
+                    //
+
+                    XPos = (SHORT)(XPos - TaskbarWindowRect.left);
+                    YPos = (SHORT)(YPos - TaskbarWindowRect.top);
+
+                    TaskbarWindowRect.right = TaskbarWindowRect.right - TaskbarWindowRect.left;
+                    TaskbarWindowRect.bottom = TaskbarWindowRect.bottom - TaskbarWindowRect.top;
+
+                    RightmostTaskbarOffset = (SHORT)(TaskbarWindowRect.right - YuiContext.RightmostTaskbarOffset);
+                    if (XPos >= (SHORT)YuiContext.LeftmostTaskbarOffset &&
+                        XPos <= RightmostTaskbarOffset) {
+
+                        CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
+                        if (CtrlId < YUI_FIRST_TASKBAR_BUTTON) {
+                            YuiDisplayContextMenu(LOWORD(lParam), HIWORD(lParam));
+                        } else {
+                            YuiTaskbarDisplayContextMenuForTask(&YuiContext, CtrlId, LOWORD(lParam), HIWORD(lParam));
+                        }
                     }
                 }
             }

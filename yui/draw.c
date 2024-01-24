@@ -614,15 +614,13 @@ YuiDrawWindowFrame(
 
  @param YuiContext Pointer to the application context.
 
- @param Item Pointer to the struct describing a draw operation.  Note this is
-        for an item within a menu, not the menu itself.  This function is
-        responsible for navigating from this to the menu window and region to
-        draw.
+ @param hDC The device context for drawing a single menu item (not necessarily
+        the entire menu.)
  */
 VOID
 YuiDrawEntireMenu(
     __in PYUI_CONTEXT YuiContext,
-    __in LPDRAWITEMSTRUCT Item
+    __in HDC hDC
     )
 {
     HWND hwndMenu;
@@ -634,37 +632,73 @@ YuiDrawEntireMenu(
     WORD Index;
     WORD MarginX;
     WORD MarginY;
+    WORD BorderWidth;
     COLORREF Background;
     HPEN Pen;
     HGDIOBJ OldObject;
 
+    hwndMenu = WindowFromDC(hDC);
 
-    hwndMenu = WindowFromDC(Item->hDC);
-    GetWindowRect(hwndMenu, &WindowRect);
-    GetClientRect(hwndMenu, &ClientRect);
+    //
+    //  When menu animation is in effect, the menu is rendered to a non-window
+    //  DC.  There's not much we can do with it.
+    //
+
+    if (hwndMenu == NULL) {
+        return;
+    }
+
+    if (!DllUser32.pGetWindowRect(hwndMenu, &WindowRect)) {
+        return;
+    }
+    if (!DllUser32.pGetClientRect(hwndMenu, &ClientRect)) {
+        return;
+    }
+
+    //
+    //  Calculate the area outside of the client rect, which will not be drawn
+    //  by menu items.
+    //
 
     WindowHeight = WindowRect.bottom - WindowRect.top;
     WindowWidth = WindowRect.right - WindowRect.left;
     MarginX = (WORD)((WindowWidth - ClientRect.right) / 2);
     MarginY = (WORD)((WindowHeight - ClientRect.bottom) / 2);
 
+    //
+    //  Draw a 3D box there, without filling the background.  Since the margin
+    //  size is out of our control, limit the width of the 3D box to fit in the
+    //  margin.
+    //
+
     ClientRect.left = 0;
     ClientRect.top = 0;
     ClientRect.right = WindowRect.right - WindowRect.left;
     ClientRect.bottom = WindowRect.bottom - WindowRect.top;
     MenuDC = GetWindowDC(hwndMenu);
-    YuiDrawThreeDBox(MenuDC, &ClientRect, YuiContext->ControlBorderWidth, FALSE);
+    BorderWidth = YuiContext->ControlBorderWidth;
+    if (BorderWidth > MarginX) {
+        BorderWidth = MarginX;
+    }
+    if (BorderWidth > MarginY) {
+        BorderWidth = MarginY;
+    }
+    YuiDrawThreeDBox(MenuDC, &ClientRect, BorderWidth, FALSE);
+
+    //
+    //  Draw the window background color in any margin not rendered as 3D.
+    //
 
     Background = YuiGetWindowBackgroundColor();
     Pen = CreatePen(PS_SOLID, 0, Background);
     OldObject = SelectObject(MenuDC, Pen);
-    for (Index = YuiContext->ControlBorderWidth; Index < MarginX; Index++) {
+    for (Index = BorderWidth; Index < MarginX; Index++) {
         MoveToEx(MenuDC, Index, Index, NULL);
         LineTo(MenuDC, WindowWidth - Index - 1, Index);
         MoveToEx(MenuDC, Index, WindowHeight - Index - 1, NULL);
         LineTo(MenuDC, WindowWidth - Index - 1, WindowHeight - Index - 1);
     }
-    for (Index = YuiContext->ControlBorderWidth; Index < MarginY; Index++) {
+    for (Index = BorderWidth; Index < MarginY; Index++) {
         MoveToEx(MenuDC, Index, Index, NULL);
         LineTo(MenuDC, Index, WindowHeight - Index - 1);
         MoveToEx(MenuDC, WindowWidth - Index - 1, Index, NULL);
@@ -761,7 +795,7 @@ YuiDrawMenuItem(
         Item->rcItem.left == 0 &&
         Item->itemAction == ODA_DRAWENTIRE) {
 
-        YuiDrawEntireMenu(YuiContext, Item);
+        YuiDrawEntireMenu(YuiContext, Item->hDC);
     }
 
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;

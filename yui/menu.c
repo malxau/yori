@@ -2653,7 +2653,7 @@ YuiMenuDisplayAndExecute(
     DllUser32.pSetForegroundWindow(hWnd);
 
     MenuId = TrackPopupMenu(YuiContext->StartMenu,
-                            TPM_NONOTIFY | TPM_RETURNCMD | TPM_BOTTOMALIGN,
+                            TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_NOANIMATION | TPM_RECURSE,
                             0,
                             WindowRect.top,
                             0,
@@ -2725,7 +2725,7 @@ YuiMenuDisplayContext(
     DllUser32.pSetForegroundWindow(hWnd);
 
     MenuId = TrackPopupMenu(Menu,
-                            TPM_NONOTIFY | TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_RIGHTALIGN,
+                            TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_NOANIMATION | TPM_RECURSE,
                             CursorX,
                             CursorY,
                             0,
@@ -2845,7 +2845,7 @@ YuiMenuDisplayWindowContext(
     DllUser32.pSetForegroundWindow(hWnd);
 
     MenuId = TrackPopupMenu(Menu,
-                            TPM_NONOTIFY | TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_RIGHTALIGN,
+                            TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_NOANIMATION | TPM_RECURSE,
                             CursorX,
                             CursorY,
                             0,
