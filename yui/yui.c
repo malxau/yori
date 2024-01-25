@@ -148,7 +148,7 @@ YuiGetTaskbarHeight(
         Context->ControlBorderWidth = (WORD)(Context->ControlBorderWidth + 2);
     } else if (Context->SmallTaskbarIconHeight >= 20) {
         Context->ControlBorderWidth = (WORD)(Context->ControlBorderWidth + 1);
-    } else {
+    } else if (Context->ScreenHeight > 800) {
 
         //
         //  If no DPI scaling is in effect, see if we should scale a bit
