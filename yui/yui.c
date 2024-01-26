@@ -678,8 +678,8 @@ YuiNotifyResolutionChange(
     YuiContext.StartLeftOffset = YuiContext.TaskbarPaddingHorizontal;
     YuiContext.StartRightOffset = (WORD)(YuiContext.StartLeftOffset + YuiContext.StartButtonWidth);
 
-    YuiContext.LeftmostTaskbarOffset = YuiContext.TaskbarPaddingHorizontal + YuiContext.StartButtonWidth + 1;
-    YuiContext.RightmostTaskbarOffset = 1 + YuiContext.ClockWidth + YuiContext.TaskbarPaddingHorizontal;
+    YuiContext.LeftmostTaskbarOffset = (WORD)(YuiContext.TaskbarPaddingHorizontal + YuiContext.StartButtonWidth + YuiContext.ControlBorderWidth * 2);
+    YuiContext.RightmostTaskbarOffset = (WORD)(YuiContext.ControlBorderWidth + YuiContext.ClockWidth + YuiContext.TaskbarPaddingHorizontal);
 
     YuiTaskbarNotifyResolutionChange(&YuiContext);
 
@@ -1593,7 +1593,7 @@ YuiCreateWindow(
 
             SendMessage(Context->hWndBattery, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
             Context->DisplayBattery = TRUE;
-            Context->RightmostTaskbarOffset = 1 + Context->ClockWidth + 3 + Context->BatteryWidth + 1;
+            Context->RightmostTaskbarOffset = (WORD)(1 + Context->ClockWidth + 3 + Context->BatteryWidth + 1);
         }
     }
 

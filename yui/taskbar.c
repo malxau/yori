@@ -537,7 +537,7 @@ YuiTaskbarWindowCallback(
 
     YuiContext = (PYUI_CONTEXT)lParam;
 
-#if DBG
+#if 0
     {
         YORI_ALLOC_SIZE_T CharsNeeded;
         YORI_STRING WindowTitle;
@@ -781,12 +781,12 @@ YuiTaskbarNotifyResolutionChange(
 
         if (ThisButton->hWndButton != NULL) {
             SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
-            ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
-            ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
+            ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + YuiContext->ControlBorderWidth);
+            ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2 * YuiContext->ControlBorderWidth);
             DllUser32.pMoveWindow(ThisButton->hWndButton,
                                   ThisButton->LeftOffset,
                                   YuiContext->TaskbarPaddingVertical,
-                                  WidthPerButton - 2,
+                                  WidthPerButton - 2 * YuiContext->ControlBorderWidth,
                                   TaskbarWindowClient.bottom - 2 * YuiContext->TaskbarPaddingVertical,
                                   TRUE);
         }

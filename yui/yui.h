@@ -491,13 +491,13 @@ typedef struct _YUI_CONTEXT {
      The offset in pixels from the beginning of the taskbar window to the
      first task button.  This is to allow space for the start button.
      */
-    DWORD LeftmostTaskbarOffset;
+    WORD LeftmostTaskbarOffset;
 
     /**
      The offset in pixels from the end of the taskbar window to the
      last task button.  This is to allow space for the clock.
      */
-    DWORD RightmostTaskbarOffset;
+    WORD RightmostTaskbarOffset;
 
     /**
      The next control ID to allocate for the next taskbar button.
