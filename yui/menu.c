@@ -1572,13 +1572,16 @@ YuiFileEnumerateErrorCallback(
 
  @return TRUE to indicate changes detected, FALSE if no changes detected.
  */
-BOOL
+BOOLEAN
 YuiMenuCheckForFileSystemChanges(
     __in PYUI_CONTEXT YuiContext
     )
 {
     DWORD WaitStatus;
     DWORD HandleCount;
+    BOOLEAN ChangeFound;
+
+    ChangeFound = FALSE;
 
     HandleCount = sizeof(YuiContext->StartChangeNotifications)/sizeof(YuiContext->StartChangeNotifications[0]);
     while(TRUE) {
@@ -1588,14 +1591,148 @@ YuiMenuCheckForFileSystemChanges(
                                               0,
                                               FALSE);
         if (WaitStatus == WAIT_TIMEOUT) {
-            return FALSE;
+            return ChangeFound;
         }
+
+#if DBG
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Start menu change detected\n"));
+#endif
+
+        ChangeFound = TRUE;
 
         if (WaitStatus < WAIT_OBJECT_0 + HandleCount) {
             FindNextChangeNotification(YuiContext->StartChangeNotifications[WaitStatus - WAIT_OBJECT_0]);
         }
     }
 
+    //
+    //  This can't happen: the loop above never breaks out
+    //
+
+    return TRUE;
+}
+
+/**
+ Start monitoring the start menu directory for changes.
+
+ @param YuiContext Pointer to the application context.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YuiMenuMonitorFileSystemChanges(
+    __in PYUI_CONTEXT YuiContext
+    )
+{
+    YORI_STRING FullPath;
+    YORI_STRING EnumDir;
+
+    ASSERT(YuiContext->StartChangeNotifications[0] == NULL);
+    YoriLibInitEmptyString(&FullPath);
+
+    YoriLibConstantString(&EnumDir, _T("~PROGRAMS"));
+    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
+        return FALSE;
+    }
+
+    if (YuiContext->StartChangeNotifications[0] != NULL) {
+        FindCloseChangeNotification(YuiContext->StartChangeNotifications[0]);
+        YuiContext->StartChangeNotifications[0] = NULL;
+    }
+    YuiContext->StartChangeNotifications[0] =
+        FindFirstChangeNotification(FullPath.StartOfString,
+                                    TRUE,
+                                    FILE_NOTIFY_CHANGE_FILE_NAME |
+                                      FILE_NOTIFY_CHANGE_DIR_NAME |
+                                      FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                                      FILE_NOTIFY_CHANGE_SIZE |
+                                      FILE_NOTIFY_CHANGE_LAST_WRITE);
+    if (YuiContext->StartChangeNotifications[0] == NULL ||
+        YuiContext->StartChangeNotifications[0] == INVALID_HANDLE_VALUE) {
+
+        YuiContext->StartChangeNotifications[0] = NULL;
+        YoriLibFreeStringContents(&FullPath);
+        return FALSE;
+    }
+    YoriLibFreeStringContents(&FullPath);
+
+    YoriLibConstantString(&EnumDir, _T("~START"));
+    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
+        return FALSE;
+    }
+
+    if (YuiContext->StartChangeNotifications[1] != NULL) {
+        FindCloseChangeNotification(YuiContext->StartChangeNotifications[1]);
+        YuiContext->StartChangeNotifications[1] = NULL;
+    }
+    YuiContext->StartChangeNotifications[1] =
+        FindFirstChangeNotification(FullPath.StartOfString,
+                                    TRUE,
+                                    FILE_NOTIFY_CHANGE_FILE_NAME |
+                                      FILE_NOTIFY_CHANGE_DIR_NAME |
+                                      FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                                      FILE_NOTIFY_CHANGE_SIZE |
+                                      FILE_NOTIFY_CHANGE_LAST_WRITE);
+    if (YuiContext->StartChangeNotifications[1] == NULL ||
+        YuiContext->StartChangeNotifications[1] == INVALID_HANDLE_VALUE) {
+
+        YuiContext->StartChangeNotifications[1] = NULL;
+        YoriLibFreeStringContents(&FullPath);
+        return FALSE;
+    }
+    YoriLibFreeStringContents(&FullPath);
+
+    YoriLibConstantString(&EnumDir, _T("~COMMONPROGRAMS"));
+    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
+        return FALSE;
+    }
+
+    if (YuiContext->StartChangeNotifications[2] != NULL) {
+        FindCloseChangeNotification(YuiContext->StartChangeNotifications[2]);
+        YuiContext->StartChangeNotifications[2] = NULL;
+    }
+    YuiContext->StartChangeNotifications[2] =
+        FindFirstChangeNotification(FullPath.StartOfString,
+                                    TRUE,
+                                    FILE_NOTIFY_CHANGE_FILE_NAME |
+                                      FILE_NOTIFY_CHANGE_DIR_NAME |
+                                      FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                                      FILE_NOTIFY_CHANGE_SIZE |
+                                      FILE_NOTIFY_CHANGE_LAST_WRITE);
+    if (YuiContext->StartChangeNotifications[2] == NULL ||
+        YuiContext->StartChangeNotifications[2] == INVALID_HANDLE_VALUE) {
+
+        YuiContext->StartChangeNotifications[2] = NULL;
+        YoriLibFreeStringContents(&FullPath);
+        return FALSE;
+    }
+    YoriLibFreeStringContents(&FullPath);
+
+    YoriLibConstantString(&EnumDir, _T("~COMMONSTART"));
+    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
+        return FALSE;
+    }
+
+    if (YuiContext->StartChangeNotifications[3] != NULL) {
+        FindCloseChangeNotification(YuiContext->StartChangeNotifications[3]);
+        YuiContext->StartChangeNotifications[3] = NULL;
+    }
+    YuiContext->StartChangeNotifications[3] =
+        FindFirstChangeNotification(FullPath.StartOfString,
+                                    TRUE,
+                                    FILE_NOTIFY_CHANGE_FILE_NAME |
+                                      FILE_NOTIFY_CHANGE_DIR_NAME |
+                                      FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                                      FILE_NOTIFY_CHANGE_SIZE |
+                                      FILE_NOTIFY_CHANGE_LAST_WRITE);
+    if (YuiContext->StartChangeNotifications[3] == NULL ||
+        YuiContext->StartChangeNotifications[3] == INVALID_HANDLE_VALUE) {
+
+        YuiContext->StartChangeNotifications[3] = NULL;
+        YoriLibFreeStringContents(&FullPath);
+        return FALSE;
+    }
+    YoriLibFreeStringContents(&FullPath);
     return TRUE;
 }
 
@@ -1615,128 +1752,6 @@ YuiMenuPopulate(
 {
     YORI_STRING EnumDir;
     WORD MatchFlags;
-
-    //
-    //  If no change notifications exist because this is the first pass,
-    //  create them now.  This is done before enumerating so if anything
-    //  changes after this point we may enumerate again.
-    //
-
-    if (YuiContext->StartChangeNotifications[0] == NULL) {
-        YORI_STRING FullPath;
-        YoriLibInitEmptyString(&FullPath);
-
-        YoriLibConstantString(&EnumDir, _T("~PROGRAMS"));
-        if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
-            return FALSE;
-        }
-
-        if (YuiContext->StartChangeNotifications[0] != NULL) {
-            FindCloseChangeNotification(YuiContext->StartChangeNotifications[0]);
-            YuiContext->StartChangeNotifications[0] = NULL;
-        }
-        YuiContext->StartChangeNotifications[0] =
-            FindFirstChangeNotification(FullPath.StartOfString,
-                                        TRUE,
-                                        FILE_NOTIFY_CHANGE_FILE_NAME |
-                                          FILE_NOTIFY_CHANGE_DIR_NAME |
-                                          FILE_NOTIFY_CHANGE_ATTRIBUTES |
-                                          FILE_NOTIFY_CHANGE_SIZE |
-                                          FILE_NOTIFY_CHANGE_LAST_WRITE);
-        if (YuiContext->StartChangeNotifications[0] == NULL ||
-            YuiContext->StartChangeNotifications[0] == INVALID_HANDLE_VALUE) {
-
-            YuiContext->StartChangeNotifications[0] = NULL;
-            YoriLibFreeStringContents(&FullPath);
-            return FALSE;
-        }
-        YoriLibFreeStringContents(&FullPath);
-
-        YoriLibConstantString(&EnumDir, _T("~START"));
-        if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
-            return FALSE;
-        }
-
-        if (YuiContext->StartChangeNotifications[1] != NULL) {
-            FindCloseChangeNotification(YuiContext->StartChangeNotifications[1]);
-            YuiContext->StartChangeNotifications[1] = NULL;
-        }
-        YuiContext->StartChangeNotifications[1] =
-            FindFirstChangeNotification(FullPath.StartOfString,
-                                        TRUE,
-                                        FILE_NOTIFY_CHANGE_FILE_NAME |
-                                          FILE_NOTIFY_CHANGE_DIR_NAME |
-                                          FILE_NOTIFY_CHANGE_ATTRIBUTES |
-                                          FILE_NOTIFY_CHANGE_SIZE |
-                                          FILE_NOTIFY_CHANGE_LAST_WRITE);
-        if (YuiContext->StartChangeNotifications[1] == NULL ||
-            YuiContext->StartChangeNotifications[1] == INVALID_HANDLE_VALUE) {
-
-            YuiContext->StartChangeNotifications[1] = NULL;
-            YoriLibFreeStringContents(&FullPath);
-            return FALSE;
-        }
-        YoriLibFreeStringContents(&FullPath);
-
-        YoriLibConstantString(&EnumDir, _T("~COMMONPROGRAMS"));
-        if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
-            return FALSE;
-        }
-
-        if (YuiContext->StartChangeNotifications[2] != NULL) {
-            FindCloseChangeNotification(YuiContext->StartChangeNotifications[2]);
-            YuiContext->StartChangeNotifications[2] = NULL;
-        }
-        YuiContext->StartChangeNotifications[2] =
-            FindFirstChangeNotification(FullPath.StartOfString,
-                                        TRUE,
-                                        FILE_NOTIFY_CHANGE_FILE_NAME |
-                                          FILE_NOTIFY_CHANGE_DIR_NAME |
-                                          FILE_NOTIFY_CHANGE_ATTRIBUTES |
-                                          FILE_NOTIFY_CHANGE_SIZE |
-                                          FILE_NOTIFY_CHANGE_LAST_WRITE);
-        if (YuiContext->StartChangeNotifications[2] == NULL ||
-            YuiContext->StartChangeNotifications[2] == INVALID_HANDLE_VALUE) {
-
-            YuiContext->StartChangeNotifications[2] = NULL;
-            YoriLibFreeStringContents(&FullPath);
-            return FALSE;
-        }
-        YoriLibFreeStringContents(&FullPath);
-
-        YoriLibConstantString(&EnumDir, _T("~COMMONSTART"));
-        if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
-            return FALSE;
-        }
-
-        if (YuiContext->StartChangeNotifications[3] != NULL) {
-            FindCloseChangeNotification(YuiContext->StartChangeNotifications[3]);
-            YuiContext->StartChangeNotifications[3] = NULL;
-        }
-        YuiContext->StartChangeNotifications[3] =
-            FindFirstChangeNotification(FullPath.StartOfString,
-                                        TRUE,
-                                        FILE_NOTIFY_CHANGE_FILE_NAME |
-                                          FILE_NOTIFY_CHANGE_DIR_NAME |
-                                          FILE_NOTIFY_CHANGE_ATTRIBUTES |
-                                          FILE_NOTIFY_CHANGE_SIZE |
-                                          FILE_NOTIFY_CHANGE_LAST_WRITE);
-        if (YuiContext->StartChangeNotifications[3] == NULL ||
-            YuiContext->StartChangeNotifications[3] == INVALID_HANDLE_VALUE) {
-
-            YuiContext->StartChangeNotifications[3] = NULL;
-            YoriLibFreeStringContents(&FullPath);
-            return FALSE;
-        }
-        YoriLibFreeStringContents(&FullPath);
-
-        //
-        //  Ignore any change notifications since we haven't started parsing
-        //  the file system yet
-        //
-
-        YuiMenuCheckForFileSystemChanges(YuiContext);
-    }
 
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
     MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;

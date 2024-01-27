@@ -913,6 +913,11 @@ YuiMenuInitializeContext(
 VOID
 YuiMenuCleanupContext(VOID);
 
+BOOLEAN
+YuiMenuMonitorFileSystemChanges(
+    __in PYUI_CONTEXT YuiContext
+    );
+
 BOOL
 YuiMenuPopulate(
     __in PYUI_CONTEXT YuiContext

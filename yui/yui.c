@@ -1322,6 +1322,11 @@ YuiCreateWindow(
         YuiCleanupGlobalState();
         return FALSE;
     }
+
+    if (!YuiMenuMonitorFileSystemChanges(Context)) {
+        YuiCleanupGlobalState();
+        return FALSE;
+    }
     YuiMenuPopulateInBackground(Context);
 
     wc.style = 0;
