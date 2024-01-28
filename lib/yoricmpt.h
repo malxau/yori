@@ -10137,6 +10137,18 @@ SHOW_WINDOW_ASYNC(HWND, INT);
 typedef SHOW_WINDOW_ASYNC *PSHOW_WINDOW_ASYNC;
 
 /**
+ A prototype for the SwitchToThisWindow function.
+ */
+typedef
+BOOL WINAPI
+SWITCH_TO_THIS_WINDOW(HWND, BOOL);
+
+/**
+ A prototype for a pointer to the SwitchToThisWindow function.
+ */
+typedef SWITCH_TO_THIS_WINDOW *PSWITCH_TO_THIS_WINDOW;
+
+/**
  A prototype for the TileWindows function.
  */
 typedef
@@ -10347,6 +10359,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to ShowWindowAsync.
      */
     PSHOW_WINDOW_ASYNC pShowWindowAsync;
+
+    /**
+     If it's available on the current system, a pointer to SwitchToThisWindow.
+     */
+    PSWITCH_TO_THIS_WINDOW pSwitchToThisWindow;
 
     /**
      If it's available on the current system, a pointer to TileWindows.

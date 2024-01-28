@@ -1203,15 +1203,20 @@ YuiTaskbarSwitchToButton(
     __in PYUI_TASKBAR_BUTTON ThisButton
     )
 {
-    if (IsIconic(ThisButton->hWndToActivate)) {
-        if (DllUser32.pShowWindowAsync != NULL) {
-            DllUser32.pShowWindowAsync(ThisButton->hWndToActivate, SW_RESTORE);
-        } else {
-            DllUser32.pShowWindow(ThisButton->hWndToActivate, SW_RESTORE);
+
+    if (DllUser32.pSwitchToThisWindow != NULL) {
+        DllUser32.pSwitchToThisWindow(ThisButton->hWndToActivate, TRUE);
+    } else {
+        if (IsIconic(ThisButton->hWndToActivate)) {
+            if (DllUser32.pShowWindowAsync != NULL) {
+                DllUser32.pShowWindowAsync(ThisButton->hWndToActivate, SW_RESTORE);
+            } else {
+                DllUser32.pShowWindow(ThisButton->hWndToActivate, SW_RESTORE);
+            }
         }
+        DllUser32.pSetForegroundWindow(ThisButton->hWndToActivate);
+        SetFocus(ThisButton->hWndToActivate);
     }
-    DllUser32.pSetForegroundWindow(ThisButton->hWndToActivate);
-    SetFocus(ThisButton->hWndToActivate);
 
     //
     //  If the taskbar is polling, force an update now without

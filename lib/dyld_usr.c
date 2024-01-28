@@ -92,6 +92,7 @@ CONST YORI_DLL_NAME_MAP DllUser32Symbols[] = {
     {(FARPROC *)&DllUser32.pSetWindowTextW, "SetWindowTextW"},
     {(FARPROC *)&DllUser32.pShowWindow, "ShowWindow"},
     {(FARPROC *)&DllUser32.pShowWindowAsync, "ShowWindowAsync"},
+    {(FARPROC *)&DllUser32.pSwitchToThisWindow, "SwitchToThisWindow"},
     {(FARPROC *)&DllUser32.pTileWindows, "TileWindows"}
 };
 
