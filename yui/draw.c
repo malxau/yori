@@ -209,6 +209,7 @@ YuiDrawButton(
     HPEN SecondTopLeftPen;
     HPEN SecondBottomRightPen;
     WORD Index;
+    WORD LineCount;
 
     //
     //  Check if the button should be pressed.
@@ -262,16 +263,31 @@ YuiDrawButton(
             LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.bottom - 1 - Index);
         }
 
+        //
+        //  This draws one more pixel left due to the line count reduction
+        //  below.
+        //
+
         SelectObject(DrawItemStruct->hDC, SecondBottomRightPen);
-        MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.bottom - 1 - Index, NULL);
+        MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.top + Index, NULL);
         LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.bottom - 1 - Index);
-        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.top - Index);
+        LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index - 1, DrawItemStruct->rcItem.bottom - 1 - Index);
+
+        //
+        //  One black plus two dark grey is a really strong look.  Dial this
+        //  back by one line for purely cosmetic reasons.
+        //
+
+        LineCount = (WORD)(YuiContext->ControlBorderWidth - 1);
+        if (LineCount == 0) {
+            LineCount = 1;
+        }
 
         SelectObject(DrawItemStruct->hDC, SecondTopLeftPen);
-        for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
+        for (Index = 0; Index < LineCount; Index++) {
             MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1 + Index, DrawItemStruct->rcItem.bottom - 2 - Index, NULL);
-            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1 + Index, DrawItemStruct->rcItem.top - 1 - Index);
-            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.top - 1 - Index);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1 + Index, DrawItemStruct->rcItem.top + 1 + Index);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.top + 1 + Index);
         }
         SelectObject(DrawItemStruct->hDC, OldObject);
         DeleteObject(SecondTopLeftPen);
@@ -294,7 +310,7 @@ YuiDrawButton(
         for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
             MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1 + Index, DrawItemStruct->rcItem.bottom - 2 - Index, NULL);
             LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.bottom - 2 - Index);
-            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.top - 1 - Index);
+            LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.top - 1 + Index);
         }
         SelectObject(DrawItemStruct->hDC, OldObject);
     }
@@ -490,7 +506,7 @@ YuiDrawThreeDBox(
 
         SelectObject(hDC, BottomRightPen);
         LineTo(hDC, Rect->right - 1 - Index, Rect->bottom - 1 - Index);
-        LineTo(hDC, Rect->left - Index, Rect->bottom - 1 - Index);
+        LineTo(hDC, Rect->left + Index, Rect->bottom - 1 - Index);
     }
 
     SelectObject(hDC, OldObject);
@@ -687,6 +703,9 @@ YuiDrawEntireMenu(
 
     //
     //  Draw the window background color in any margin not rendered as 3D.
+    //  Note that LineTo does not draw the final pixel in its range, so
+    //  these calls draw one pixel too far.  Each LineTo is followed by
+    //  a MoveTo so final position is not relevant.
     //
 
     Background = YuiGetWindowBackgroundColor();
@@ -694,15 +713,15 @@ YuiDrawEntireMenu(
     OldObject = SelectObject(MenuDC, Pen);
     for (Index = BorderWidth; Index < MarginX; Index++) {
         MoveToEx(MenuDC, Index, Index, NULL);
-        LineTo(MenuDC, WindowWidth - Index - 1, Index);
+        LineTo(MenuDC, WindowWidth - Index, Index);
         MoveToEx(MenuDC, Index, WindowHeight - Index - 1, NULL);
-        LineTo(MenuDC, WindowWidth - Index - 1, WindowHeight - Index - 1);
+        LineTo(MenuDC, WindowWidth - Index, WindowHeight - Index - 1);
     }
     for (Index = BorderWidth; Index < MarginY; Index++) {
         MoveToEx(MenuDC, Index, Index, NULL);
-        LineTo(MenuDC, Index, WindowHeight - Index - 1);
+        LineTo(MenuDC, Index, WindowHeight - Index);
         MoveToEx(MenuDC, WindowWidth - Index - 1, Index, NULL);
-        LineTo(MenuDC, WindowWidth - Index - 1, WindowHeight - Index - 1);
+        LineTo(MenuDC, WindowWidth - Index - 1, WindowHeight - Index);
     }
     SelectObject(MenuDC, OldObject);
     ReleaseDC(hwndMenu, MenuDC);
