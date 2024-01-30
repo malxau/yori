@@ -780,7 +780,11 @@ YuiTaskbarNotifyResolutionChange(
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
 
         if (ThisButton->hWndButton != NULL) {
-            SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+            if (ThisButton->WindowActive) {
+                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(TRUE, 0));
+            } else {
+                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+            }
             ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + YuiContext->ControlBorderWidth);
             ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2 * YuiContext->ControlBorderWidth);
             DllUser32.pMoveWindow(ThisButton->hWndButton,
