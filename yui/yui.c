@@ -646,11 +646,13 @@ YuiNotifyResolutionChange(
                               TRUE);
     }
 
+    InvalidateRect(hWnd, NULL, TRUE);
+
     DllUser32.pGetClientRect(hWnd, &ClientRect);
 
     if (YuiContext.hWndBattery != NULL) {
         DllUser32.pMoveWindow(YuiContext.hWndBattery,
-                              ClientRect.right - YuiContext.ClockWidth - 3 - YuiContext.BatteryWidth - 1,
+                              ClientRect.right - YuiContext.ClockWidth - 3 - YuiContext.BatteryWidth - YuiContext.TaskbarPaddingHorizontal,
                               YuiContext.TaskbarPaddingVertical,
                               YuiContext.BatteryWidth,
                               ClientRect.bottom - 2 * YuiContext.TaskbarPaddingVertical,
@@ -659,7 +661,7 @@ YuiNotifyResolutionChange(
 
     if (YuiContext.hWndClock != NULL) {
         DllUser32.pMoveWindow(YuiContext.hWndClock,
-                              ClientRect.right - YuiContext.ClockWidth - 1,
+                              ClientRect.right - YuiContext.ClockWidth - YuiContext.TaskbarPaddingHorizontal,
                               YuiContext.TaskbarPaddingVertical,
                               YuiContext.ClockWidth,
                               ClientRect.bottom - 2 * YuiContext.TaskbarPaddingVertical,
