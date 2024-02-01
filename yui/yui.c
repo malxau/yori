@@ -965,7 +965,7 @@ YuiTaskbarWindowProc(
                 if (XPos >= TaskbarWindowRect.left &&
                     XPos <= TaskbarWindowRect.right &&
                     YPos >= TaskbarWindowRect.top &&
-                    YPos <= TaskbarWindowRect.right) {
+                    YPos <= TaskbarWindowRect.bottom) {
 
                     //
                     //  Convert coordinates into client coordinates
