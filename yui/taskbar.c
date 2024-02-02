@@ -1413,13 +1413,32 @@ YuiTaskbarDrawButton(
 {
     PYUI_TASKBAR_BUTTON ThisButton;
     HICON Icon;
+    LRESULT Result;
+    DWORD_PTR MsgResult;
 
     ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
     if (ThisButton == NULL) {
         return;
     }
 
-    Icon = (HICON)GetClassLongPtr(ThisButton->hWndToActivate, GCLP_HICONSM);
+    //
+    //  Try to get the icon for the window.  This can invoke a different
+    //  process window procedure, and we're currently in the rendering path
+    //  of the taskbar.  Set a fairly small timeout - if the remote window
+    //  procedure doesn't respond really fast, just fall back to the class
+    //  icon.
+    //
+
+    Icon = NULL;
+    Result = SendMessageTimeout(ThisButton->hWndToActivate, WM_GETICON, ICON_SMALL, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK, 10, &MsgResult);
+    if (Result) {
+        Icon = (HICON)MsgResult;
+    }
+
+    if (Icon == NULL) {
+        Icon = (HICON)GetClassLongPtr(ThisButton->hWndToActivate, GCLP_HICONSM);
+    }
+
     YuiDrawButton(YuiContext,
                   DrawItemStruct,
                   ThisButton->WindowActive,
