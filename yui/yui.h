@@ -38,6 +38,12 @@ typedef struct _YUI_RECENT_CHILD_PROCESS {
     YORI_LIST_ENTRY ListEntry;
 
     /**
+     TRUE if the process was launched elevated, FALSE if it was launched in
+     regular user context.
+     */
+    BOOLEAN Elevated;
+
+    /**
      The process ID for the child process.
      */
     DWORD ProcessId;

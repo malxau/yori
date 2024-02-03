@@ -1161,6 +1161,7 @@ YuiExecuteShortcut(
             ChildProcess->TaskbarButtonCount = 0;
             ChildProcess->LastModifiedTime = YoriLibGetSystemTimeAsInteger();
             ChildProcess->ProcessId = ProcessId;
+            ChildProcess->Elevated = Elevated;
             YoriLibInitEmptyString(&ChildProcess->FilePath);
             ChildProcess->FilePath.MemoryToFree = ChildProcess;
             YoriLibReference(ChildProcess);

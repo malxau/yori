@@ -1275,6 +1275,7 @@ YuiTaskbarLaunchNewTask(
     YORI_STRING ModuleName;
     HANDLE ProcessHandle;
     HINSTANCE hInst;
+    BOOLEAN Elevated;
 
     ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
     if (ThisButton != NULL) {
@@ -1286,11 +1287,15 @@ YuiTaskbarLaunchNewTask(
         //  from the same shortcut.
         //
 
+        Elevated = FALSE;
+        if (ThisButton->ChildProcess != NULL) {
+            Elevated = ThisButton->ChildProcess->Elevated;
+        }
         if (ThisButton->ShortcutPath.LengthInChars > 0) {
 #if DBG
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Launching shortcut associated with button %y\n"), &ThisButton->ShortcutPath);
 #endif
-            YuiExecuteShortcut(YuiContext, &ThisButton->ShortcutPath, FALSE);
+            YuiExecuteShortcut(YuiContext, &ThisButton->ShortcutPath, Elevated);
             return;
         }
 
