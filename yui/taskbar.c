@@ -107,9 +107,12 @@ YuiTaskbarIncludeWindow(
         return FALSE;
     }
 
-    if (!IsWindowEnabled(hWnd)) {
-        return FALSE;
-    }
+    //
+    //  This used to filter based on IsWindowEnabled.  That still seems to be
+    //  an approximately correct thing to do; unfortunately VirtualBox (based
+    //  on QT5) likes to create disabled windows then enable them, and we
+    //  don't get notification about the enable.  Sigh.
+    //
 
     if (GetWindow(hWnd, GW_OWNER) != NULL) {
         return FALSE;
