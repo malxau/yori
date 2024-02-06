@@ -3179,7 +3179,7 @@ ENTRYPOINT(
     GlobalEditContext.TraditionalNavigation = TRUE;
     GlobalEditContext.AutoIndent = TRUE;
     GlobalEditContext.ExpandTab = FALSE;
-    GlobalEditContext.TrimTrailingWhitespace = TRUE;
+    GlobalEditContext.TrimTrailingWhitespace = FALSE;
 
     EditLoadDefaults(&GlobalEditContext);
 
