@@ -4147,14 +4147,6 @@ typedef struct _YORI_SYSTEM_POWER_STATUS {
 #define SM_CYVIRTUALSCREEN 79
 #endif
 
-#ifndef HSHELL_REDRAW
-/**
- If not defined by the compilation environment, the flag indicating a top
- level window title has changed.
- */
-#define HSHELL_REDRAW 6
-#endif
-
 #ifndef HSHELL_WINDOWACTIVATED
 /**
  If not defined by the compilation environment, the flag indicating the active
@@ -4171,12 +4163,95 @@ typedef struct _YORI_SYSTEM_POWER_STATUS {
 #define HSHELL_RUDEAPPACTIVATED (0x8000 | HSHELL_WINDOWACTIVATED)
 #endif
 
+#ifndef HSHELL_GETMINRECT
+/**
+ If not defined by the compilation environment, the flag indicating a request
+ to find where to draw the minimize animation.
+ */
+#define HSHELL_GETMINRECT 5
+#endif
+
+#ifndef HSHELL_REDRAW
+/**
+ If not defined by the compilation environment, the flag indicating a top
+ level window title has changed.
+ */
+#define HSHELL_REDRAW 6
+#endif
+
 #ifndef HSHELL_FLASH
 /**
  A definition for HSHELL_FLASH if it is not defined by the current compilation
  environment.
  */
 #define HSHELL_FLASH (0x8000 | HSHELL_REDRAW)
+#endif
+
+#ifndef HSHELL_TASKMAN
+/**
+ If not defined by the compilation environment, the flag indicating ... some
+ undocumented thing.
+ */
+#define HSHELL_TASKMAN 7
+#endif
+
+#ifndef HSHELL_LANGUAGE
+/**
+ If not defined by the compilation environment, the flag indicating ... some
+ undocumented thing.
+ */
+#define HSHELL_LANGUAGE 8
+#endif
+
+#ifndef HSHELL_SYSMENU
+/**
+ If not defined by the compilation environment, the flag indicating ... some
+ undocumented thing.
+ */
+#define HSHELL_SYSMENU 9
+#endif
+
+#ifndef HSHELL_ENDTASK
+/**
+ If not defined by the compilation environment, the flag indicating that the
+ taskbar should kill a task (for real?)
+ */
+#define HSHELL_ENDTASK 10
+#endif
+
+#ifndef HSHELL_APPCOMMAND
+/**
+ If not defined by the compilation environment, the flag indicating that an
+ application command was not handled and the taskbar might implement it.
+ See WM_APPCOMMAND for what this is about.
+ */
+#define HSHELL_APPCOMMAND 12
+#endif
+
+#ifndef HSHELL_WINDOWREPLACED
+/**
+ If not defined by the compilation environment, the flag indicating that
+ a window is being taken over by the hung window frame.  This implies one
+ hWnd is logically taking over a previous one.
+ */
+#define HSHELL_WINDOWREPLACED 13
+#endif
+
+#ifndef HSHELL_WINDOWREPLACING
+/**
+ If not defined by the compilation environment, the flag indicating that
+ a window is being taken over by the hung window frame.  This implies one
+ hWnd is logically taking over a previous one.
+ */
+#define HSHELL_WINDOWREPLACING 14
+#endif
+
+#ifndef HSHELL_MONITORCHANGED
+/**
+ A definition for HSHELL_MONITORCHANGED if it is not defined by the current
+ compilation environment.
+ */
+#define HSHELL_MONITORCHANGED 16
 #endif
 
 #ifndef ARW_HIDE

@@ -1108,6 +1108,51 @@ YuiTaskbarWindowProc(
 #endif
                         YuiTaskbarNotifyFlash(&YuiContext, (HWND)lParam);
                         break;
+                    case HSHELL_GETMINRECT:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_GETMINRECT"), wParam, lParam);
+#endif
+                        break;
+                    case HSHELL_TASKMAN:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_TASKMAN"), wParam, lParam);
+#endif
+                        break;
+                    case HSHELL_LANGUAGE:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_LANGUAGE"), wParam, lParam);
+#endif
+                        break;
+                    case HSHELL_SYSMENU:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_SYSMENU"), wParam, lParam);
+#endif
+                        break;
+                    case HSHELL_ENDTASK:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_ENDTASK"), wParam, lParam);
+#endif
+                        break;
+                    case HSHELL_APPCOMMAND:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_APPCOMMAND"), wParam, lParam);
+#endif
+                        break;
+                    case HSHELL_WINDOWREPLACED:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_WINDOWREPLACED"), wParam, lParam);
+#endif
+                        break;
+                    case HSHELL_WINDOWREPLACING:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_WINDOWREPLACING"), wParam, lParam);
+#endif
+                        break;
+                    case HSHELL_MONITORCHANGED:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_MONITORCHANGED"), wParam, lParam);
+#endif
+                        break;
                     default:
 #if DBG
                         YuiPrintShellHookDebugMessage(_T("Unhandled HookMsg"), wParam, lParam);
