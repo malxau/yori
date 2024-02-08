@@ -696,9 +696,4 @@ YoriPkgCreateSourcePackage(
     return TRUE;
 }
 
-#if defined(_MSC_VER) && (_MSC_VER == 1500)
-#pragma warning(pop)
-#endif
-
-
 // vim:sw=4:ts=4:et:
