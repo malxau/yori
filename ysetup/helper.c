@@ -322,7 +322,7 @@ SetupGetDefaultInstallDir(
     }
 
     if (DllAdvApi32.pRegQueryValueExW(hKey, _T("ProgramFilesDir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
-        CharsNeeded = SizeNeeded/sizeof(TCHAR) + sizeof("\\Yori");
+        CharsNeeded = SizeNeeded/sizeof(TCHAR) + sizeof(SETUP_APP_DIR);
         if (!YoriLibIsSizeAllocatable(CharsNeeded)) {
             goto ReturnDefault;
         }
@@ -335,7 +335,7 @@ SetupGetDefaultInstallDir(
             if (RegType != REG_SZ && RegType != REG_EXPAND_SZ) {
                 goto ReturnDefault;
             }
-            InstallDir->LengthInChars = (YORI_ALLOC_SIZE_T)CharsNeeded - 1;
+            InstallDir->LengthInChars = (YORI_ALLOC_SIZE_T)(SizeNeeded / sizeof(TCHAR) - 1);
             if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
                 memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
                 InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
