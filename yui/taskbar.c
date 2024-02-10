@@ -482,28 +482,22 @@ YuiTaskbarFreeButton(
 
  @param TaskbarHwnd The taskbar window (parent.)
 
- @param TopOffset The offset from the top of the parent window, in pixels.
-
- @param Height Height of the new button, in pixels.
-
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YuiTaskbarCreateButtonControl(
     __in PYUI_CONTEXT YuiContext,
     __in PYUI_TASKBAR_BUTTON ThisButton,
-    __in HWND TaskbarHwnd,
-    __in WORD TopOffset,
-    __in WORD Height
+    __in HWND TaskbarHwnd
     )
 {
     ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
                                           _T(""),
                                           BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
                                           ThisButton->LeftOffset,
-                                          TopOffset,
+                                          ThisButton->TopOffset,
                                           (WORD)(ThisButton->RightOffset - ThisButton->LeftOffset),
-                                          Height,
+                                          (WORD)(ThisButton->BottomOffset - ThisButton->TopOffset),
                                           TaskbarHwnd,
                                           (HMENU)(DWORD_PTR)ThisButton->ControlId,
                                           NULL,
@@ -640,6 +634,113 @@ YuiTaskbarCalculateButtonWidth(
 }
 
 /**
+ Move existing buttons on the taskbar.  This attempts to use DeferWindowPos
+ in the hope that Windows can do this efficiently.
+
+ @param YuiContext Pointer to the application context.
+
+ @param TaskbarHwnd The taskbar window.
+ */
+VOID
+YuiTaskbarRepositionExistingButtons(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND TaskbarHwnd
+    )
+{
+    DWORD WidthPerButton;
+    RECT TaskbarWindowClient;
+    DWORD Index;
+    PYORI_LIST_ENTRY ListEntry;
+    PYUI_TASKBAR_BUTTON ThisButton;
+    HDWP WindowPos;
+    HDWP Result;
+    WORD NewLeftOffset;
+    WORD NewRightOffset;
+    WORD NewTopOffset;
+    WORD NewBottomOffset;
+
+    Index = 0;
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    while (ListEntry != NULL) {
+        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        Index++;
+    }
+
+    WindowPos = BeginDeferWindowPos(Index);
+    if (WindowPos == NULL) {
+        return;
+    }
+
+    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
+
+    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+
+    Index = 0;
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    while (ListEntry != NULL) {
+        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+
+        //
+        //  It's possible no button window exists if it's still in the
+        //  process of being created.  When this happens, this function should
+        //  move all of the other windows, allowing the new one to be created
+        //  in available space.
+        //
+
+        if (ThisButton->hWndButton != NULL) {
+
+            //
+            //  Check if the button is actually moving.  If the taskbar is not
+            //  full, new buttons arriving will not move buttons; existing
+            //  buttons being removed only move buttons that follow, etc.
+            //
+
+            NewLeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + YuiContext->ControlBorderWidth);
+            NewRightOffset = (WORD)(NewLeftOffset + WidthPerButton - 2 * YuiContext->ControlBorderWidth);
+            NewTopOffset = YuiContext->TaskbarPaddingVertical;
+            NewBottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical);
+
+            if (NewLeftOffset != ThisButton->LeftOffset ||
+                NewRightOffset != ThisButton->RightOffset ||
+                NewTopOffset != ThisButton->TopOffset ||
+                NewBottomOffset != ThisButton->BottomOffset) {
+
+                ThisButton->LeftOffset = NewLeftOffset;
+                ThisButton->RightOffset = NewRightOffset;
+                ThisButton->TopOffset = NewTopOffset;
+                ThisButton->BottomOffset = NewBottomOffset;
+                Result = DeferWindowPos(WindowPos,
+                                        ThisButton->hWndButton,
+                                        NULL,
+                                        ThisButton->LeftOffset,
+                                        ThisButton->TopOffset,
+                                        WidthPerButton - 2 * YuiContext->ControlBorderWidth, // ThisButton->RightOffset - ThisButton->LeftOffset,
+                                        ThisButton->BottomOffset - ThisButton->TopOffset,
+                                        SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOZORDER);
+
+                if (Result == NULL) {
+
+                    //
+                    //  Per MSDN, we should "abandon" this and not call
+                    //  EndDeferWindowPos.  I hope that means it was already freed
+                    //  as part of the above failure...?
+                    //
+
+                    return;
+                }
+            }
+        }
+
+        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        Index++;
+    }
+
+    EndDeferWindowPos(WindowPos);
+}
+
+/**
  Populate the taskbar with the set of windows that exist at the time the
  taskbar was created.
 
@@ -679,11 +780,11 @@ YuiTaskbarPopulateWindows(
         ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
         ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1),
         ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2),
+        ThisButton->TopOffset = YuiContext->TaskbarPaddingVertical;
+        ThisButton->BottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical);
         YuiTaskbarCreateButtonControl(YuiContext,
                                       ThisButton,
-                                      TaskbarHwnd,
-                                      YuiContext->TaskbarPaddingVertical,
-                                      (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical * 2));
+                                      TaskbarHwnd);
         if (ThisButton->hWndToActivate == ActiveWindow) {
             YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
         }
@@ -788,18 +889,12 @@ YuiTaskbarNotifyResolutionChange(
             } else {
                 SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
             }
-            ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + YuiContext->ControlBorderWidth);
-            ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2 * YuiContext->ControlBorderWidth);
-            DllUser32.pMoveWindow(ThisButton->hWndButton,
-                                  ThisButton->LeftOffset,
-                                  YuiContext->TaskbarPaddingVertical,
-                                  WidthPerButton - 2 * YuiContext->ControlBorderWidth,
-                                  TaskbarWindowClient.bottom - 2 * YuiContext->TaskbarPaddingVertical,
-                                  TRUE);
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
         Index++;
     }
+
+    YuiTaskbarRepositionExistingButtons(YuiContext, TaskbarHwnd);
 }
 
 /**
@@ -836,6 +931,7 @@ YuiTaskbarNotifyNewWindow(
     }
 
     TaskbarHwnd = YuiContext->hWnd;
+    YuiTaskbarRepositionExistingButtons(YuiContext, TaskbarHwnd);
     WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
     DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
 
@@ -844,23 +940,16 @@ YuiTaskbarNotifyNewWindow(
     ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
-        ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
+        if (ThisButton->hWndButton == NULL) {
+            ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
+            ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
+            ThisButton->TopOffset = YuiContext->TaskbarPaddingVertical;
+            ThisButton->BottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical);
 
-        if (ThisButton->hWndButton != NULL) {
-            DllUser32.pMoveWindow(ThisButton->hWndButton,
-                                  ThisButton->LeftOffset,
-                                  YuiContext->TaskbarPaddingVertical,
-                                  WidthPerButton - 2,
-                                  TaskbarWindowClient.bottom - 2 * YuiContext->TaskbarPaddingVertical,
-                                  TRUE);
-        } else {
             ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
             YuiTaskbarCreateButtonControl(YuiContext,
                                           ThisButton,
-                                          TaskbarHwnd,
-                                          YuiContext->TaskbarPaddingVertical,
-                                          (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical * 2));
+                                          TaskbarHwnd);
             if (ThisButton->hWndToActivate == GetForegroundWindow()) {
                 YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
             }
@@ -885,10 +974,6 @@ YuiTaskbarNotifyDestroyWindow(
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
-    DWORD Index;
-    DWORD WidthPerButton;
-    PYORI_LIST_ENTRY ListEntry;
-    RECT TaskbarWindowClient;
     HWND TaskbarHwnd;
 
     if (hWnd == NULL) {
@@ -908,29 +993,7 @@ YuiTaskbarNotifyDestroyWindow(
     YuiContext->TaskbarButtonCount--;
 
     TaskbarHwnd = YuiContext->hWnd;
-    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
-    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
-
-    ListEntry = NULL;
-    Index = 0;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
-        ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
-
-        if (ThisButton->hWndButton != NULL) {
-            DllUser32.pMoveWindow(ThisButton->hWndButton,
-                                  ThisButton->LeftOffset,
-                                  YuiContext->TaskbarPaddingVertical,
-                                  WidthPerButton - 2,
-                                  TaskbarWindowClient.bottom - 2 * YuiContext->TaskbarPaddingVertical,
-                                  TRUE);
-        }
-
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-        Index++;
-    }
+    YuiTaskbarRepositionExistingButtons(YuiContext, TaskbarHwnd);
 }
 
 /**

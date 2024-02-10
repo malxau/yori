@@ -128,6 +128,17 @@ typedef struct _YUI_TASKBAR_BUTTON {
     WORD RightOffset;
 
     /**
+     The top offset of the button, in pixels, relative to the client area.
+     */
+    WORD TopOffset;
+
+    /**
+     The bottom offset of the button, in pixels, relative to the client area.
+     */
+    WORD BottomOffset;
+
+
+    /**
      TRUE if the button is the currently selected button, indicating the
      taskbar believes this window to be active.
      */
