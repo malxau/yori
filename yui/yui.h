@@ -308,6 +308,13 @@ typedef struct _YUI_CONTEXT {
     HWND hWndExplorerTaskbar;
 
     /**
+     A brush to the window background.  This is returned to the system when
+     it is requesting to draw an ownerdraw button.  Note its lifetime is 
+     controlled by the application.
+     */
+    HBRUSH BackgroundBrush;
+
+    /**
      The message identifier used to communicate shell hook messages.  This is
      only meaningful when using SetWindowsHookEx to monitor changes.
      */

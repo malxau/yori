@@ -1050,6 +1050,9 @@ YuiTaskbarWindowProc(
                 }
             }
             break;
+        case WM_CTLCOLORBTN:
+            return (LRESULT)YuiContext.BackgroundBrush;
+            break;
         case WM_PAINT:
             if (hwnd == YuiContext.hWnd) {
                 if (YuiDrawWindowFrame(&YuiContext, YuiContext.hWnd, (HDC)wParam)) {
@@ -1293,6 +1296,11 @@ YuiCleanupGlobalState(VOID)
         YuiContext.StartIcon = NULL;
     }
 
+    if (YuiContext.BackgroundBrush) {
+        DeleteObject(YuiContext.BackgroundBrush);
+        YuiContext.BackgroundBrush = NULL;
+    }
+
     if (YuiContext.SavedMinimizedMetrics.cbSize != 0) {
         SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(YORI_MINIMIZEDMETRICS), &YuiContext.SavedMinimizedMetrics, 0);
     }
@@ -1375,6 +1383,8 @@ YuiCreateWindow(
         return FALSE;
     }
     YuiMenuPopulateInBackground(Context);
+
+    Context->BackgroundBrush = CreateSolidBrush(YuiGetWindowBackgroundColor());
 
     wc.style = 0;
     wc.lpfnWndProc = YuiTaskbarWindowProc;
