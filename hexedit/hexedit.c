@@ -356,6 +356,9 @@ HexEditLoadFile(
 
  @param HexEditContext Pointer to the hexedit context.
 
+ @param WinMgrHandle Handle to the window manager to use when displaying
+        errors.
+
  @param FileName Pointer to the name of the file to save.
 
  @param DataOffset Specifies the offset within the file to store the data.
@@ -370,6 +373,7 @@ HexEditLoadFile(
 BOOLEAN
 HexEditSaveFile(
     __in PHEXEDIT_CONTEXT HexEditContext,
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING FileName,
     __in DWORDLONG DataOffset,
     __in YORI_ALLOC_SIZE_T DataLength
@@ -377,45 +381,79 @@ HexEditSaveFile(
 {
     YORI_ALLOC_SIZE_T Index;
     DWORD Attributes;
+    DWORD Err;
+    LPTSTR ErrText;
     YORI_STRING ParentDirectory;
     YORI_STRING Prefix;
     YORI_STRING TempFileName;
-    HANDLE TempHandle;
+    HANDLE WriteHandle;
     BOOLEAN ReplaceSucceeded;
     PUCHAR Buffer;
     YORI_ALLOC_SIZE_T BufferLength;
     DWORD BufferWritten;
+    YORI_STRING Text;
+    YORI_STRING Title;
+    YORI_STRING ButtonText;
+
+    YoriLibInitEmptyString(&TempFileName);
+    YoriLibInitEmptyString(&Text);
+    YoriLibConstantString(&Title, _T("Save"));
+    YoriLibConstantString(&ButtonText, _T("Ok"));
 
     if (FileName->StartOfString == NULL) {
-        return FALSE;
+        YoriLibConstantString(&Text, _T("Cannot save: file name not specified"));
+        goto DisplayErrorAndFail;
     }
 
     ASSERT(YoriLibIsStringNullTerminated(FileName));
 
-    //
-    //  Find the parent directory of the user specified file so a temporary
-    //  file can be created in the same directory.  This is done to increase
-    //  the chance that the file is written to the same device as the final
-    //  location and to test that the user can write to the location.
-    //
+    if (!YoriLibIsFileNameDeviceName(FileName)) {
 
-    YoriLibInitEmptyString(&ParentDirectory);
-    for (Index = FileName->LengthInChars; Index > 0; Index--) {
-        if (YoriLibIsSep(FileName->StartOfString[Index - 1])) {
-            ParentDirectory.StartOfString = FileName->StartOfString;
-            ParentDirectory.LengthInChars = Index - 1;
-            break;
+        //
+        //  Find the parent directory of the user specified file so a temporary
+        //  file can be created in the same directory.  This is done to increase
+        //  the chance that the file is written to the same device as the final
+        //  location and to test that the user can write to the location.
+        //
+
+        YoriLibInitEmptyString(&ParentDirectory);
+        for (Index = FileName->LengthInChars; Index > 0; Index--) {
+            if (YoriLibIsSep(FileName->StartOfString[Index - 1])) {
+                ParentDirectory.StartOfString = FileName->StartOfString;
+                ParentDirectory.LengthInChars = Index - 1;
+                break;
+            }
         }
-    }
 
-    if (Index == 0) {
-        YoriLibConstantString(&ParentDirectory, _T("."));
-    }
+        if (Index == 0) {
+            YoriLibConstantString(&ParentDirectory, _T("."));
+        }
 
-    YoriLibConstantString(&Prefix, _T("YEDT"));
+        YoriLibConstantString(&Prefix, _T("YEDT"));
 
-    if (!YoriLibGetTempFileName(&ParentDirectory, &Prefix, &TempHandle, &TempFileName)) {
-        return FALSE;
+        if (!YoriLibGetTempFileName(&ParentDirectory, &Prefix, &WriteHandle, &TempFileName)) {
+
+            YoriLibYPrintf(&Text, _T("Could not open temporary file in %y"), &ParentDirectory);
+            goto DisplayErrorAndFail;
+        }
+
+    } else {
+
+        WriteHandle = CreateFile(FileName->StartOfString,
+                                 FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                 NULL,
+                                 OPEN_EXISTING,
+                                 FILE_FLAG_NO_BUFFERING,
+                                 NULL);
+
+        if (WriteHandle == INVALID_HANDLE_VALUE) {
+            Err = GetLastError();
+            ErrText = YoriLibGetWinErrorText(Err);
+            YoriLibYPrintf(&Text, _T("Could not open device %s: %s"), FileName->StartOfString, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            goto DisplayErrorAndFail;
+        }
     }
 
     YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
@@ -423,17 +461,21 @@ HexEditSaveFile(
     if (DataLength != 0 &&
         DataLength != BufferLength) {
 
-        // MSFIX Display warning
+        YoriLibYPrintf(&Text, _T("Device length %i bytes does not match buffer length %i bytes"), DataLength, BufferLength);
+        goto DisplayErrorAndFail;
     }
 
     if (DataOffset != 0) {
         LARGE_INTEGER FileOffset;
         FileOffset.QuadPart = DataOffset;
-        if (!SetFilePointer(TempHandle, FileOffset.LowPart, &FileOffset.HighPart, FILE_BEGIN)) {
-            CloseHandle(TempHandle);
-            DeleteFile(TempFileName.StartOfString);
+        if (!SetFilePointer(WriteHandle, FileOffset.LowPart, &FileOffset.HighPart, FILE_BEGIN)) {
+            CloseHandle(WriteHandle);
+            if (TempFileName.LengthInChars > 0) {
+                DeleteFile(TempFileName.StartOfString);
+            }
             YoriLibFreeStringContents(&TempFileName);
-            return FALSE;
+            YoriLibYPrintf(&Text, _T("Could not seek to offset 0x%llx"), FileOffset.QuadPart);
+            goto DisplayErrorAndFail;
         }
     }
 
@@ -443,63 +485,92 @@ HexEditSaveFile(
         //  MSFIX This is truncating to 4Gb but is probably limited much lower
         //
 
-        if (!WriteFile(TempHandle, Buffer, (DWORD)BufferLength, &BufferWritten, NULL)) {
-            CloseHandle(TempHandle);
-            DeleteFile(TempFileName.StartOfString);
+        if (!WriteFile(WriteHandle, Buffer, (DWORD)BufferLength, &BufferWritten, NULL)) {
+            Err = GetLastError();
+            ErrText = YoriLibGetWinErrorText(Err);
+            CloseHandle(WriteHandle);
+            if (TempFileName.LengthInChars > 0) {
+                DeleteFile(TempFileName.StartOfString);
+            }
             YoriLibFreeStringContents(&TempFileName);
-            return FALSE;
+            YoriLibDereference(Buffer);
+            YoriLibYPrintf(&Text, _T("Could not write to device: %s"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            goto DisplayErrorAndFail;
         }
 
         YoriLibDereference(Buffer);
     }
 
-    //
-    //  Flush the temporary file to ensure it's durable, and rename it over
-    //  the top of the chosen file, replacing if necessary.  This ensures
-    //  that the old contents are not deleted until the new contents are
-    //  successfully written.
-    //
+    if (TempFileName.LengthInChars > 0) {
 
-    if (!FlushFileBuffers(TempHandle)) {
-        CloseHandle(TempHandle);
-        DeleteFile(TempFileName.StartOfString);
-        YoriLibFreeStringContents(&TempFileName);
-        return FALSE;
-    }
+        //
+        //  Flush the temporary file to ensure it's durable, and rename it over
+        //  the top of the chosen file, replacing if necessary.  This ensures
+        //  that the old contents are not deleted until the new contents are
+        //  successfully written.
+        //
 
-    CloseHandle(TempHandle);
-
-    //
-    //  If the file exists and ReplaceFile is present, replace it. Without
-    //  ReplaceFile or if the file doesn't exist, rename the temporary file
-    //  into place.  If ReplaceFile fails for whatever reason, fall back to
-    //  rename, which implicitly prioritizes succeeding the save to preserving
-    //  whatever file metadata ReplaceFile is aiming to retain.
-    //
-
-    ReplaceSucceeded = FALSE;
-    Attributes = GetFileAttributes(FileName->StartOfString);
-    if (Attributes != (DWORD)-1 &&
-        DllKernel32.pReplaceFileW != NULL) {
-
-        if (!DllKernel32.pReplaceFileW(FileName->StartOfString, TempFileName.StartOfString, NULL, 0, NULL, NULL)) {
+        if (!FlushFileBuffers(WriteHandle)) {
+            CloseHandle(WriteHandle);
             DeleteFile(TempFileName.StartOfString);
             YoriLibFreeStringContents(&TempFileName);
-            return FALSE;
+            YoriLibConstantString(&Text, _T("Could not flush temporary file"));
+            goto DisplayErrorAndFail;
         }
-        ReplaceSucceeded = TRUE;
-    }
 
-    if (!ReplaceSucceeded) {
-        if (!MoveFileEx(TempFileName.StartOfString, FileName->StartOfString, MOVEFILE_REPLACE_EXISTING)) {
-            DeleteFile(TempFileName.StartOfString);
-            YoriLibFreeStringContents(&TempFileName);
-            return FALSE;
+        CloseHandle(WriteHandle);
+
+        //
+        //  If the file exists and ReplaceFile is present, replace it. Without
+        //  ReplaceFile or if the file doesn't exist, rename the temporary file
+        //  into place.  If ReplaceFile fails for whatever reason, fall back to
+        //  rename, which implicitly prioritizes succeeding the save to preserving
+        //  whatever file metadata ReplaceFile is aiming to retain.
+        //
+
+        ReplaceSucceeded = FALSE;
+        Attributes = GetFileAttributes(FileName->StartOfString);
+        if (Attributes != (DWORD)-1 &&
+            DllKernel32.pReplaceFileW != NULL) {
+
+            if (!DllKernel32.pReplaceFileW(FileName->StartOfString, TempFileName.StartOfString, NULL, 0, NULL, NULL)) {
+                DeleteFile(TempFileName.StartOfString);
+                YoriLibFreeStringContents(&TempFileName);
+                YoriLibConstantString(&Text, _T("Could not replace file with temporary file"));
+                goto DisplayErrorAndFail;
+            }
+            ReplaceSucceeded = TRUE;
         }
+
+        if (!ReplaceSucceeded) {
+            if (!MoveFileEx(TempFileName.StartOfString, FileName->StartOfString, MOVEFILE_REPLACE_EXISTING)) {
+                DeleteFile(TempFileName.StartOfString);
+                YoriLibFreeStringContents(&TempFileName);
+                YoriLibConstantString(&Text, _T("Could not replace file with temporary file"));
+                goto DisplayErrorAndFail;
+            }
+        }
+    } else {
+        CloseHandle(WriteHandle);
     }
 
     YoriLibFreeStringContents(&TempFileName);
     return TRUE;
+
+DisplayErrorAndFail:
+
+    YoriDlgMessageBox(WinMgrHandle,
+                      &Title,
+                      &Text,
+                      1,
+                      &ButtonText,
+                      0,
+                      0);
+
+    YoriLibFreeStringContents(&Text);
+
+    return FALSE;
 }
 
 VOID
@@ -780,34 +851,21 @@ HexEditSaveButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    YORI_STRING Title;
-    YORI_STRING Text;
-    YORI_STRING ButtonText;
     PHEXEDIT_CONTEXT HexEditContext;
 
     PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(Parent);
 
     if (HexEditContext->OpenFileName.StartOfString == NULL) {
         HexEditSaveAsButtonClicked(Ctrl);
         return;
     }
 
-    YoriLibConstantString(&Title, _T("Save"));
-    YoriLibConstantString(&ButtonText, _T("Ok"));
-
-    if (!HexEditSaveFile(HexEditContext, &HexEditContext->OpenFileName, HexEditContext->DataOffset, HexEditContext->DataLength)) {
-        YoriLibConstantString(&Text, _T("Could not open file for writing"));
-
-        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
-                          &Title,
-                          &Text,
-                          1,
-                          &ButtonText,
-                          0,
-                          0);
-
+    if (!HexEditSaveFile(HexEditContext, WinMgrHandle, &HexEditContext->OpenFileName, HexEditContext->DataOffset, HexEditContext->DataLength)) {
         return;
     }
     YoriWinHexEditSetModifyState(HexEditContext->HexEdit, FALSE);
@@ -829,13 +887,16 @@ HexEditSaveAsButtonClicked(
     PHEXEDIT_CONTEXT HexEditContext;
 
     PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(Parent);
 
     YoriLibConstantString(&Title, _T("Save As"));
     YoriLibInitEmptyString(&Text);
 
-    YoriDlgFile(YoriWinGetWindowManagerHandle(Parent),
+    YoriDlgFile(WinMgrHandle,
                 &Title,
                 0,
                 NULL,
@@ -853,20 +914,7 @@ HexEditSaveAsButtonClicked(
     }
 
     YoriLibFreeStringContents(&Text);
-    if (!HexEditSaveFile(HexEditContext, &FullName, 0, 0)) {
-        YORI_STRING ButtonText;
-
-        YoriLibFreeStringContents(&FullName);
-        YoriLibConstantString(&ButtonText, _T("Ok"));
-        YoriLibConstantString(&Text, _T("Could not open file for writing"));
-
-        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
-                          &Title,
-                          &Text,
-                          1,
-                          &ButtonText,
-                          0,
-                          0);
+    if (!HexEditSaveFile(HexEditContext, WinMgrHandle, &FullName, 0, 0)) {
         return;
     }
 

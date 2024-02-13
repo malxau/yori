@@ -1849,7 +1849,9 @@ YoriLibIsFileNameDeviceName(
     //
 
     if (Prefixed) {
-        if (YoriLibCompareStringWithLiteralInsensitiveCount(File, _T("\\\\.\\PHYSICALDRIVE"), sizeof("\\\\.\\PHYSICALDRIVE") - 1) == 0) {
+        if (YoriLibCompareStringWithLiteralInsensitiveCount(File, _T("\\\\.\\PHYSICALDRIVE"), sizeof("\\\\.\\PHYSICALDRIVE") - 1) == 0 ||
+            YoriLibCompareStringWithLiteralInsensitiveCount(File, _T("\\\\.\\HARDDISK"), sizeof("\\\\.\\HARDDISK") - 1) == 0 ||
+            YoriLibCompareStringWithLiteralInsensitiveCount(File, _T("\\\\.\\CDROM"), sizeof("\\\\.\\CDROM") - 1) == 0) {
             return TRUE;
         }
     }
