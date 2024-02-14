@@ -149,7 +149,7 @@ YoriLibCreateShortcut(
     Scut->Vtbl->QueryInterface(Scut, &IID_IShellLinkDataList, (void **)&ShortcutDataList);
 
     if (MergeWithExisting) {
-        hRes = ScutFile->Vtbl->Load(ScutFile, ShortcutFileName->StartOfString, TRUE);
+        hRes = ScutFile->lpVtbl->Load(ScutFile, ShortcutFileName->StartOfString, TRUE);
         if (!CreateNewIfNeeded && !SUCCEEDED(hRes)) {
             goto Exit;
         }
@@ -204,7 +204,7 @@ YoriLibCreateShortcut(
         }
     }
 
-    hRes = ScutFile->Vtbl->Save(ScutFile, ShortcutFileName->StartOfString, TRUE);
+    hRes = ScutFile->lpVtbl->Save(ScutFile, ShortcutFileName->StartOfString, TRUE);
     if (!SUCCEEDED(hRes)) {
         goto Exit;
     }
@@ -222,7 +222,7 @@ Exit:
     }
 
     if (ScutFile != NULL) {
-        ScutFile->Vtbl->Release(ScutFile);
+        ScutFile->lpVtbl->Release(ScutFile);
     }
 
     return Result;
@@ -285,7 +285,7 @@ YoriLibLoadShortcutIconPath(
         goto Exit;
     }
 
-    hRes = ScutFile->Vtbl->Load(ScutFile, ShortcutFileName->StartOfString, 0);
+    hRes = ScutFile->lpVtbl->Load(ScutFile, ShortcutFileName->StartOfString, 0);
     if (!SUCCEEDED(hRes)) {
         goto Exit;
     }
@@ -393,7 +393,7 @@ Exit:
     YoriLibFreeStringContents(&ExpandedLocation);
 
     if (ScutFile != NULL) {
-        ScutFile->Vtbl->Release(ScutFile);
+        ScutFile->lpVtbl->Release(ScutFile);
         ScutFile = NULL;
     }
 
@@ -481,7 +481,7 @@ YoriLibExecuteShortcut(
         goto Exit;
     }
 
-    hRes = ScutFile->Vtbl->Load(ScutFile, ShortcutFileName->StartOfString, 0);
+    hRes = ScutFile->lpVtbl->Load(ScutFile, ShortcutFileName->StartOfString, 0);
     if (!SUCCEEDED(hRes)) {
         goto Exit;
     }
@@ -812,7 +812,7 @@ Exit:
     }
 
     if (ScutFile != NULL) {
-        ScutFile->Vtbl->Release(ScutFile);
+        ScutFile->lpVtbl->Release(ScutFile);
         ScutFile = NULL;
     }
 

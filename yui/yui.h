@@ -321,6 +321,11 @@ typedef struct _YUI_CONTEXT {
     DWORD ShellHookMsg;
 
     /**
+     An opaque context used to manage drag and drop operations for a taskbar.
+     */
+    PVOID DropHandle;
+
+    /**
      The size of the font being used.
      */
     WORD FontSize;
@@ -1198,6 +1203,18 @@ YuiWifiWindowProc(
 VOID
 YuiWifi(
     __in PYUI_CONTEXT YuiContext
+    );
+
+PVOID
+YuiRegisterDropWindow(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    );
+
+VOID
+YuiUnregisterDropWindow(
+    __in HWND hWnd,
+    __in PVOID DropHandle
     );
 
 // vim:sw=4:ts=4:et:

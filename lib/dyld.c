@@ -443,7 +443,12 @@ YoriLibLoadOle32Functions(VOID)
 
     DllOle32.pCoCreateInstance = (PCO_CREATE_INSTANCE)GetProcAddress(DllOle32.hDll, "CoCreateInstance");
     DllOle32.pCoInitialize = (PCO_INITIALIZE)GetProcAddress(DllOle32.hDll, "CoInitialize");
+    DllOle32.pCoLockObjectExternal = (PCO_LOCK_OBJECT_EXTERNAL)GetProcAddress(DllOle32.hDll, "CoLockObjectExternal");
     DllOle32.pCoTaskMemFree = (PCO_TASK_MEM_FREE)GetProcAddress(DllOle32.hDll, "CoTaskMemFree");
+    DllOle32.pOleInitialize = (POLE_INITIALIZE)GetProcAddress(DllOle32.hDll, "OleInitialize");
+    DllOle32.pOleUninitialize = (POLE_UNINITIALIZE)GetProcAddress(DllOle32.hDll, "OleUninitialize");
+    DllOle32.pRegisterDragDrop = (PREGISTER_DRAG_DROP)GetProcAddress(DllOle32.hDll, "RegisterDragDrop");
+    DllOle32.pRevokeDragDrop = (PREVOKE_DRAG_DROP)GetProcAddress(DllOle32.hDll, "RevokeDragDrop");
 
     return TRUE;
 }

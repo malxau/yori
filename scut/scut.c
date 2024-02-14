@@ -1056,7 +1056,7 @@ ENTRYPOINT(
             OpenMode = 1;
         }
 
-        hRes = savedfile->Vtbl->Load(savedfile, szFile.StartOfString, OpenMode);
+        hRes = savedfile->lpVtbl->Load(savedfile, szFile.StartOfString, OpenMode);
         if (!SUCCEEDED(hRes)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Load failure: %x\n"), hRes);
             goto Exit;
@@ -1351,7 +1351,7 @@ ENTRYPOINT(
 
     if (op == ScutOperationModify ||
         op == ScutOperationCreate) {
-        hRes = savedfile->Vtbl->Save(savedfile, szFile.StartOfString, TRUE);
+        hRes = savedfile->lpVtbl->Save(savedfile, szFile.StartOfString, TRUE);
         if (!SUCCEEDED(hRes)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Save failure: %x\n"), hRes);
             goto Exit;

@@ -1246,6 +1246,11 @@ YuiCleanupGlobalState(VOID)
         UnregisterHotKey(YuiContext.hWnd, YUI_START_BUTTON);
     }
 
+    if (YuiContext.DropHandle != NULL) {
+        YuiUnregisterDropWindow(YuiContext.hWnd, YuiContext.DropHandle);
+        YuiContext.DropHandle = NULL;
+    }
+
     if (YuiContext.ClockTimerId != 0) {
         KillTimer(YuiContext.hWnd, YUI_CLOCK_TIMER);
         YuiContext.ClockTimerId = 0;
@@ -1482,6 +1487,14 @@ YuiCreateWindow(
             return FALSE;
         }
     }
+
+    //
+    //  Attempt to set up drag and drop.  This is done early since it will
+    //  initialize OLE which needs to be done before anything else initializes
+    //  COM.
+    //
+
+    Context->DropHandle = YuiRegisterDropWindow(Context, Context->hWnd);
 
     //
     //  Mark minimized windows as invisible.  The taskbar should still have

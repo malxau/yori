@@ -4326,6 +4326,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define WM_WTSSESSION_CHANGE 0x02b1
 #endif
 
+#ifndef WM_GETICON
+/**
+ A definition for WM_GETICON if it is not defined by the current compilation
+ environment.
+ */
+#define WM_GETICON (0x007F)
+#endif
+
 #ifndef WM_SETICON
 /**
  A definition for WM_SETICON if it is not defined by the current compilation
@@ -5646,6 +5654,8 @@ typedef ULONG STDMETHODCALLTYPE IUnknown_Release (PVOID This);
  */
 #define CLSCTX_LOCAL_SERVER 0x4
 
+#ifndef __IPersistFile_INTERFACE_DEFINED__
+
 /**
  The IPersistFile interface, composed of a pointer to a set of functions.
  */
@@ -5654,7 +5664,7 @@ typedef struct IPersistFile {
     /**
      The function pointer table associated with this object.
      */
-     struct IPersistFileVtbl *Vtbl;
+     struct IPersistFileVtbl *lpVtbl;
 } IPersistFile;
 
 /**
@@ -5741,6 +5751,8 @@ typedef struct IPersistFileVtbl {
     IPersistFile_GetCurFile * GetCurFile;
 
 } IPersistFileVtbl;
+
+#endif
 
 /**
  An instance of the IShellLink interface, consisting only of function pointers.
@@ -9522,6 +9534,18 @@ CO_INITIALIZE(LPVOID);
 typedef CO_INITIALIZE *PCO_INITIALIZE;
 
 /**
+ A prototype for the CoLockObjectExternal function.
+ */
+typedef
+HRESULT WINAPI
+CO_LOCK_OBJECT_EXTERNAL(PVOID, BOOL, BOOL);
+
+/**
+ A prototype for a pointer to the CoLockObjectExternal function.
+ */
+typedef CO_LOCK_OBJECT_EXTERNAL *PCO_LOCK_OBJECT_EXTERNAL;
+
+/**
  A prototype for the CoTaskMemFree function.
  */
 typedef
@@ -9532,6 +9556,54 @@ CO_TASK_MEM_FREE(PVOID);
  A prototype for a pointer to the CoTaskMemFree function.
  */
 typedef CO_TASK_MEM_FREE *PCO_TASK_MEM_FREE;
+
+/**
+ A prototype for the OleInitialize function.
+ */
+typedef
+HRESULT WINAPI
+OLE_INITIALIZE(LPVOID);
+
+/**
+ A prototype for a pointer to the OleInitialize function.
+ */
+typedef OLE_INITIALIZE *POLE_INITIALIZE;
+
+/**
+ A prototype for the OleUninitialize function.
+ */
+typedef
+VOID WINAPI
+OLE_UNINITIALIZE(VOID);
+
+/**
+ A prototype for a pointer to the OleUnInitialize function.
+ */
+typedef OLE_UNINITIALIZE *POLE_UNINITIALIZE;
+
+/**
+ A prototype for the RegisterDragDrop function.
+ */
+typedef
+HRESULT WINAPI
+REGISTER_DRAG_DROP(HWND, LPVOID);
+
+/**
+ A prototype for a pointer to the RegisterDragDrop function.
+ */
+typedef REGISTER_DRAG_DROP *PREGISTER_DRAG_DROP;
+
+/**
+ A prototype for the RevokeDragDrop function.
+ */
+typedef
+HRESULT WINAPI
+REVOKE_DRAG_DROP(HWND);
+
+/**
+ A prototype for a pointer to the RevokeDragDrop function.
+ */
+typedef REVOKE_DRAG_DROP *PREVOKE_DRAG_DROP;
 
 /**
  A structure containing optional function pointers to ole32.dll exported
@@ -9554,9 +9626,35 @@ typedef struct _YORI_OLE32_FUNCTIONS {
     PCO_INITIALIZE pCoInitialize;
 
     /**
+     If it's available on the current system, a pointer to CoLockObjectExternal.
+     */
+    PCO_LOCK_OBJECT_EXTERNAL pCoLockObjectExternal;
+
+    /**
      If it's available on the current system, a pointer to CoTaskMemFree.
      */
     PCO_TASK_MEM_FREE pCoTaskMemFree;
+
+    /**
+     If it's available on the current system, a pointer to OleInitialize.
+     */
+    POLE_INITIALIZE pOleInitialize;
+
+    /**
+     If it's available on the current system, a pointer to OleUninitialize.
+     */
+    POLE_UNINITIALIZE pOleUninitialize;
+
+    /**
+     If it's available on the current system, a pointer to RegisterDragDrop.
+     */
+    PREGISTER_DRAG_DROP pRegisterDragDrop;
+
+    /**
+     If it's available on the current system, a pointer to RevokeDragDrop.
+     */
+    PREVOKE_DRAG_DROP pRevokeDragDrop;
+
 } YORI_OLE32_FUNCTIONS, *PYORI_OLE32_FUNCTIONS;
 
 extern YORI_OLE32_FUNCTIONS DllOle32;
