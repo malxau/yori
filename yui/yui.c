@@ -1145,11 +1145,13 @@ YuiTaskbarWindowProc(
 #if DBG
                         YuiPrintShellHookDebugMessage(_T("HSHELL_WINDOWREPLACED"), wParam, lParam);
 #endif
+                        YuiTaskbarNotifyDestroyWindow(&YuiContext, (HWND)lParam);
                         break;
                     case HSHELL_WINDOWREPLACING:
 #if DBG
                         YuiPrintShellHookDebugMessage(_T("HSHELL_WINDOWREPLACING"), wParam, lParam);
 #endif
+                        YuiTaskbarNotifyNewWindow(&YuiContext, (HWND)lParam);
                         break;
                     case HSHELL_MONITORCHANGED:
 #if DBG
