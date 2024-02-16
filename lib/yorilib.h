@@ -3435,7 +3435,7 @@ __success(return == S_OK)
 HRESULT
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName,
-    __in BOOLEAN Elevate,
+    __in BOOLEAN ForceElevate,
     __out_opt PDWORD LaunchedProcessId
     );
 

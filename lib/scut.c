@@ -410,8 +410,9 @@ Exit:
 
  @param ShortcutFileName Pointer to the shortcut file to execute.
 
- @param Elevate TRUE if the program should be run as an Administrator;
-        FALSE to run in current user context.
+ @param ForceElevate TRUE if the program should be run as an Administrator;
+        FALSE to apply the shortcut's flag.  A shortcut can also request to
+        run as Administrator.
 
  @param LaunchedProcessId On successful completion, populated with the process
         ID of the child process.  Note that this cannot be guaranteed due to
@@ -423,7 +424,7 @@ __success(return == S_OK)
 HRESULT
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName,
-    __in BOOLEAN Elevate,
+    __in BOOLEAN ForceElevate,
     __out_opt PDWORD LaunchedProcessId
     )
 {
@@ -443,8 +444,12 @@ YoriLibExecuteShortcut(
     YORI_ALLOC_SIZE_T SizeNeeded;
     LPTSTR Extension;
     DWORD LocalProcessId;
+    BOOLEAN ShortcutElevateFlag;
+    BOOLEAN Elevate;
 
     LocalProcessId = 0;
+    ShortcutElevateFlag = FALSE;
+    Elevate = ForceElevate;
     ASSERT(YoriLibIsStringNullTerminated(ShortcutFileName));
 
     YoriLibLoadAdvApi32Functions();
@@ -492,33 +497,45 @@ YoriLibExecuteShortcut(
     //  to resolve it to find the "real" target of the shortcut.
     //
 
-    if (DllAdvApi32.pCommandLineFromMsiDescriptor != NULL) {
-        Scut->Vtbl->QueryInterface(Scut, &IID_IShellLinkDataList, (void **)&ShortcutDataList);
-        if (ShortcutDataList != NULL) {
-            PISHELLLINKDATALIST_MSI_PROPS MsiLink = NULL;
-            DWORD dwResult;
-            hRes = ShortcutDataList->Vtbl->CopyDataBlock(ShortcutDataList, ISHELLLINKDATALIST_MSI_PROPS_SIG, &MsiLink);
-            if (SUCCEEDED(hRes)) {
-                DWORD Length;
-                Length = 0;
-                dwResult = DllAdvApi32.pCommandLineFromMsiDescriptor(MsiLink->szwDarwinID, NULL, &Length);
-                if (dwResult != ERROR_SUCCESS) {
-                    hRes = HRESULT_FROM_WIN32(dwResult);
-                    goto Exit;
-                }
-                if (!YoriLibAllocateString(&FileTarget, (YORI_ALLOC_SIZE_T)(Length + 1))) {
-                    hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
-                    goto Exit;
-                }
-                Length = FileTarget.LengthAllocated;
-                dwResult = DllAdvApi32.pCommandLineFromMsiDescriptor(MsiLink->szwDarwinID, FileTarget.StartOfString, &Length);
-                if (dwResult != ERROR_SUCCESS) {
-                    hRes = HRESULT_FROM_WIN32(dwResult);
-                    goto Exit;
-                }
-                FileTarget.LengthInChars = (YORI_ALLOC_SIZE_T)Length;
-                LocalFree(MsiLink);
+    Scut->Vtbl->QueryInterface(Scut, &IID_IShellLinkDataList, (void **)&ShortcutDataList);
+    if (DllAdvApi32.pCommandLineFromMsiDescriptor != NULL &&
+        ShortcutDataList != NULL) {
+
+        PISHELLLINKDATALIST_MSI_PROPS MsiLink = NULL;
+        DWORD dwResult;
+
+        hRes = ShortcutDataList->Vtbl->CopyDataBlock(ShortcutDataList, ISHELLLINKDATALIST_MSI_PROPS_SIG, &MsiLink);
+        if (SUCCEEDED(hRes)) {
+            DWORD Length;
+            Length = 0;
+            dwResult = DllAdvApi32.pCommandLineFromMsiDescriptor(MsiLink->szwDarwinID, NULL, &Length);
+            if (dwResult != ERROR_SUCCESS) {
+                hRes = HRESULT_FROM_WIN32(dwResult);
+                goto Exit;
             }
+            if (!YoriLibAllocateString(&FileTarget, (YORI_ALLOC_SIZE_T)(Length + 1))) {
+                hRes = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
+                goto Exit;
+            }
+            Length = FileTarget.LengthAllocated;
+            dwResult = DllAdvApi32.pCommandLineFromMsiDescriptor(MsiLink->szwDarwinID, FileTarget.StartOfString, &Length);
+            if (dwResult != ERROR_SUCCESS) {
+                hRes = HRESULT_FROM_WIN32(dwResult);
+                goto Exit;
+            }
+            FileTarget.LengthInChars = (YORI_ALLOC_SIZE_T)Length;
+            LocalFree(MsiLink);
+        }
+    }
+
+    if (ShortcutDataList != NULL) {
+        DWORD dwShortcutFlags;
+        hRes = ShortcutDataList->Vtbl->GetFlags(ShortcutDataList, &dwShortcutFlags);
+        if (SUCCEEDED(hRes) &&
+            (dwShortcutFlags & SHELLDATALIST_FLAG_RUNASADMIN) != 0) {
+
+            ShortcutElevateFlag = TRUE;
+            Elevate = TRUE;
         }
     }
 

@@ -6058,6 +6058,11 @@ struct IShellLinkDataListVtbl {
 };
 
 /**
+ A flag to indicate that a shortcut should run as Administrator.
+ */
+#define SHELLDATALIST_FLAG_RUNASADMIN 0x2000
+
+/**
  A structure defining extra information which can be attached to a
  shortcut to configure console state.
  */
