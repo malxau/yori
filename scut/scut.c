@@ -3,7 +3,7 @@
  *
  * A command line tool to manipulate shortcuts
  *
- * Copyright (c) 2004-2023 Malcolm Smith
+ * Copyright (c) 2004-2024 Malcolm Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -71,10 +71,10 @@ CHAR strScutHelpText[] =
         "SCUT -license\n"
         "SCUT -create|-modify <filename> [-target target] [-args args] [-autoposition]\n"
         "     [-bold] [-buffersize X*Y] [-desc description] [-deleteconsolesettings]\n"
-        "     [-deleteinstallersettings] [-font name] [-fontsize size] [-hotkey hotkey]\n"
-        "     [-iconpath filename [-iconindex index]] [-nonbold] [-scheme file]\n"
-        "     [-show showcmd] [-windowposition X*Y] [-windowsize X*Y]\n"
-        "     [-workingdir workingdir]\n"
+        "     [-deleteinstallersettings] [-elevate] [-font name] [-fontsize size]\n"
+        "     [-hotkey hotkey] [-iconpath filename [-iconindex index]] [-noelevate]\n"
+        "     [-nonbold] [-scheme file] [-show showcmd] [-windowposition X*Y]\n"
+        "     [-windowsize X*Y] [-workingdir workingdir]\n"
         "SCUT -exec <filename> [-target target] [-args args] [-show showcmd]\n"
         "     [-workingdir workingdir]\n"
         "SCUT [-f fmt] -dump <filename>\n"
@@ -181,6 +181,12 @@ typedef struct _SCUT_EXPAND_CONTEXT {
      Pointer to the shortcut.
      */
     IShellLinkW *ShellLink;
+
+    /**
+     Shell data list flags attached to the shortcut.  May be -1 if flags
+     have not been loaded or are not meaningful.
+     */
+    DWORD ShortcutFlags;
 
     /**
      Optionally points to extra console properties.  May be NULL if the
@@ -294,6 +300,14 @@ ScutExpandVariables(
             return 0;
         }
         dwDisplay = ShortTemp;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ELEVATE")) == 0) {
+        if (ExpandContext->ShortcutFlags != (DWORD)-1 &&
+            ExpandContext->ShortcutFlags & SHELLDATALIST_FLAG_RUNASADMIN) {
+            dwDisplay = 1;
+        } else {
+            dwDisplay = 0;
+        }
         Numeric = TRUE;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("INSTALLERID")) == 0) {
         if (MsiProps == NULL) {
@@ -645,7 +659,8 @@ LPCTSTR ScutDefaultFormatString = _T("Target:                $TARGET$\n")
                                   _T("Icon Path:             $ICONPATH$\n")
                                   _T("Icon Index:            $ICONINDEX$\n")
                                   _T("Show State:            $SHOW$\n")
-                                  _T("Hotkey:                $HOTKEY$\n");
+                                  _T("Hotkey:                $HOTKEY$\n")
+                                  _T("Elevate:               $ELEVATE$\n");
 
 /**
  If the default format string is used, an extra default string for installer
@@ -739,6 +754,7 @@ ENTRYPOINT(
     YORI_STRING szIcon;
     WORD    wIcon           = 0;
     WORD    wShow           = (WORD)-1;
+    DWORD   dwShortcutFlags = (DWORD)-1;
     TCHAR * szTarget        = NULL;
     YORI_STRING szWorkingDir;
     YORI_STRING szSchemeFile;
@@ -769,6 +785,8 @@ ENTRYPOINT(
     BOOLEAN AutoPosition = FALSE;
     BOOLEAN FullScreen = FALSE;
     BOOLEAN FullScreenSet = FALSE;
+    BOOLEAN Elevate = FALSE;
+    BOOLEAN NoElevate = FALSE;
 
     YoriLibInitEmptyString(&szFile);
     YoriLibInitEmptyString(&szIcon);
@@ -799,7 +817,7 @@ ENTRYPOINT(
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2004-2023"));
+                YoriLibDisplayMitLicense(_T("2004-2024"));
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("create")) == 0) {
@@ -874,6 +892,11 @@ ENTRYPOINT(
                     DeleteInstallerSettings = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("elevate")) == 0) {
+                if (op == ScutOperationModify || op == ScutOperationCreate) {
+                    Elevate = TRUE;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (i + 1 < ArgC) {
                     FormatString.StartOfString = ArgV[i + 1].StartOfString;
@@ -936,6 +959,11 @@ ENTRYPOINT(
                         ArgumentUnderstood = TRUE;
                         i++;
                     }
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("noelevate")) == 0) {
+                if (op == ScutOperationModify || op == ScutOperationCreate) {
+                    NoElevate = TRUE;
+                    ArgumentUnderstood = TRUE;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nonbold")) == 0) {
                 wFontWeight = FW_NORMAL;
@@ -1063,6 +1091,10 @@ ENTRYPOINT(
         }
 
         if (ShortcutDataList != NULL) {
+            hRes = ShortcutDataList->Vtbl->GetFlags(ShortcutDataList, &dwShortcutFlags);
+            if (!SUCCEEDED(hRes)) {
+                dwShortcutFlags = (DWORD)-1;
+            }
             hRes = ShortcutDataList->Vtbl->CopyDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG, &ConsoleProps);
             if (SUCCEEDED(hRes)) {
                 ASSERT(ConsoleProps != NULL);
@@ -1121,6 +1153,7 @@ ENTRYPOINT(
 
         YoriLibInitEmptyString(&DisplayString);
         ExpandContext.ShellLink = scut;
+        ExpandContext.ShortcutFlags = dwShortcutFlags;
         ExpandContext.ConsoleProperties = ConsoleProps;
         ExpandContext.MsiProperties = MsiProps;
         ExpandContext.MsiTarget = &szMsiTarget;
@@ -1182,6 +1215,29 @@ ENTRYPOINT(
         goto Exit;
     }
 
+    if (Elevate || NoElevate) {
+        if (dwShortcutFlags == (DWORD)-1) {
+            dwShortcutFlags = 0;
+        }
+
+        if (Elevate) {
+            dwShortcutFlags = dwShortcutFlags | SHELLDATALIST_FLAG_RUNASADMIN;
+        } else {
+            dwShortcutFlags = dwShortcutFlags & ~(SHELLDATALIST_FLAG_RUNASADMIN);
+        }
+    } 
+
+    if (dwShortcutFlags != (DWORD)-1 &&
+        ShortcutDataList != NULL &&
+        (op == ScutOperationModify || op == ScutOperationCreate)) {
+
+        hRes = ShortcutDataList->Vtbl->SetFlags(ShortcutDataList, dwShortcutFlags);
+        if (hRes != NOERROR && hRes != S_FALSE) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetFlags failure\n"));
+            goto Exit;
+        }
+    }
+
     if (szTarget) {
         if (scut->Vtbl->SetPath(scut, szTarget) != NOERROR) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetPath failure\n"));
@@ -1230,6 +1286,7 @@ ENTRYPOINT(
             goto Exit;
         }
     }
+
 
     if ((op == ScutOperationModify ||
          op == ScutOperationCreate) &&
@@ -1357,11 +1414,14 @@ ENTRYPOINT(
             goto Exit;
         }
     } else if (op == ScutOperationExec) {
+        YORI_SHELLEXECUTEINFO sei;
         TCHAR szFileBuf[MAX_PATH];
         TCHAR szArgsBuf[MAX_PATH];
         TCHAR szDir[MAX_PATH];
         INT nShow;
         HINSTANCE hApp;
+        LPTSTR ErrText;
+
         if (scut->Vtbl->GetWorkingDirectory(scut, szDir, MAX_PATH) != NOERROR) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("GetWorkingDirectory failure\n"));
             goto Exit;
@@ -1386,10 +1446,47 @@ ENTRYPOINT(
             goto Exit;
         }
 
-        hApp = DllShell32.pShellExecuteW(NULL, NULL, szFileBuf, szArgsBuf, szDir, nShow);
-        if ((ULONG_PTR)hApp <= 32) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecute failure: %i\n"), (int)(ULONG_PTR)hApp);
-            goto Exit;
+        ZeroMemory(&sei, sizeof(sei));
+        sei.cbSize = sizeof(sei);
+        sei.fMask = SEE_MASK_FLAG_NO_UI |
+                    SEE_MASK_NOZONECHECKS |
+                    SEE_MASK_UNICODE;
+
+        sei.lpFile = szFileBuf;
+        sei.lpParameters = szArgsBuf;
+        sei.lpDirectory = szDir;
+        sei.nShow = nShow;
+
+        if (DllShell32.pShellExecuteExW != NULL) {
+
+            if (dwShortcutFlags != (DWORD)-1 &&
+                (dwShortcutFlags & SHELLDATALIST_FLAG_RUNASADMIN) != 0) {
+                sei.lpVerb = _T("runas");
+            }
+
+            if (!DllShell32.pShellExecuteExW(&sei)) {
+                ErrText = YoriLibGetWinErrorText(GetLastError());
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecuteEx failed: %s: %s"), szFileBuf, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                goto Exit;
+            }
+
+            hRes = S_OK;
+        } else if (DllShell32.pShellExecuteW != NULL) {
+            hApp = DllShell32.pShellExecuteW(NULL,
+                                             NULL,
+                                             sei.lpFile,
+                                             sei.lpParameters,
+                                             sei.lpDirectory,
+                                             sei.nShow);
+            if ((ULONG_PTR)hApp <= 32) {
+                ErrText = YoriLibGetWinErrorText(YoriLibShellExecuteInstanceToError(hApp));
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecute failed: %s: %s"), szFileBuf, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                goto Exit;
+            }
+
+            hRes = S_OK;
         }
     }
 
