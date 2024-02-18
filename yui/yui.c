@@ -497,6 +497,7 @@ YuiNotifyResolutionChange(
     LPCTSTR FontName;
     YORI_STRING Text;
     WORD ButtonHeight;
+    INT ScaledFontSize;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
@@ -514,21 +515,30 @@ YuiNotifyResolutionChange(
                           2 * YuiContext.TaskbarPaddingVertical -
                           2 * YuiContext.ControlBorderWidth);
 
-
+    YuiContext.FontSize = YUI_BASE_FONT_SIZE;
     YuiContext.ExtraPixelsAboveText = 1;
-    YuiContext.FontSize = (WORD)((ButtonHeight + 1) / 3);
-    if (YuiContext.FontSize < YUI_BASE_FONT_SIZE) {
-        YuiContext.FontSize = YUI_BASE_FONT_SIZE;
+    if (ButtonHeight > 24) {
+        YuiContext.FontSize = (WORD)(YuiContext.FontSize + (ButtonHeight - 24) / 2);
     }
+
     if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
         FontName = YUI_LARGE_FONT_NAME;
         YuiContext.ExtraPixelsAboveText = 0;
     }
 
+    //
+    //  The font was scaled based on button size above, and should not be
+    //  scaled based on DPI again or it'd get scaled up twice.  Calculate
+    //  the font size based on a fixed 96 DPI display.
+    //
+
+    ScaledFontSize = YuiContext.FontSize;
+    ScaledFontSize = ScaledFontSize * 96 / 72;
+
     YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
 
     hDC = GetWindowDC(hWnd);
-    hFont = CreateFont(-YoriLibMulDiv(YuiContext.FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+    hFont = CreateFont(-ScaledFontSize,
                        0,
                        0,
                        0,
@@ -543,7 +553,7 @@ YuiNotifyResolutionChange(
                        FF_DONTCARE,
                        FontName);
 
-    hBoldFont = CreateFont(-YoriLibMulDiv(YuiContext.FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+    hBoldFont = CreateFont(-ScaledFontSize,
                            0,
                            0,
                            0,
@@ -617,11 +627,13 @@ YuiNotifyResolutionChange(
 
 #if DBG
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
-                 _T("Based on screen size %ix%i, font size %i, TaskbarHeight %i, StartButtonWidth %i, TaskbarButtonWidth %i\n"),
+                 _T("Based on screen size %ix%i, font size %i, TaskbarHeight %i, ButtonHeight %i\n")
+                 _T("StartButtonWidth %i, TaskbarButtonWidth %i\n"),
                  YuiContext.ScreenWidth,
                  YuiContext.ScreenHeight,
                  YuiContext.FontSize,
                  YuiContext.TaskbarHeight,
+                 ButtonHeight,
                  YuiContext.StartButtonWidth,
                  YuiContext.MaximumTaskbarButtonWidth);
 #endif
