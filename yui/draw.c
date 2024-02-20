@@ -713,15 +713,15 @@ YuiDrawEntireMenu(
     OldObject = SelectObject(MenuDC, Pen);
     for (Index = BorderWidth; Index < MarginX; Index++) {
         MoveToEx(MenuDC, Index, Index, NULL);
-        LineTo(MenuDC, WindowWidth - Index, Index);
-        MoveToEx(MenuDC, Index, WindowHeight - Index - 1, NULL);
-        LineTo(MenuDC, WindowWidth - Index, WindowHeight - Index - 1);
-    }
-    for (Index = BorderWidth; Index < MarginY; Index++) {
-        MoveToEx(MenuDC, Index, Index, NULL);
         LineTo(MenuDC, Index, WindowHeight - Index);
         MoveToEx(MenuDC, WindowWidth - Index - 1, Index, NULL);
         LineTo(MenuDC, WindowWidth - Index - 1, WindowHeight - Index);
+    }
+    for (Index = BorderWidth; Index < MarginY; Index++) {
+        MoveToEx(MenuDC, Index, Index, NULL);
+        LineTo(MenuDC, WindowWidth - Index, Index);
+        MoveToEx(MenuDC, Index, WindowHeight - Index - 1, NULL);
+        LineTo(MenuDC, WindowWidth - Index, WindowHeight - Index - 1);
     }
     SelectObject(MenuDC, OldObject);
     ReleaseDC(hwndMenu, MenuDC);
