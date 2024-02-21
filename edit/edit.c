@@ -558,6 +558,86 @@ EditPopulateFromStream(
 }
 
 /**
+ Check if a file has the read only bit set.  If it does, we won't be able to
+ overwrite it.  Prompt the user to remove the read only bit, and if it can
+ be removed successfully, allow the save to continue.
+
+ @param Parent Pointer to the control describing the main window.
+
+ @param FileName The file that may be overwritten.
+
+ @return TRUE to indicate that the file is still write protected and cannot
+         be overwritten.  FALSE to indicate that the file doesn't exist or
+         is not write protected, so save can continue.
+ */
+BOOLEAN
+EditIsFileWriteProtected(
+    __in PYORI_WIN_CTRL_HANDLE Parent,
+    __in PYORI_STRING FileName
+    )
+{
+    DWORD Attributes;
+    DWORD ButtonPressed;
+    YORI_STRING UnescapedPath;
+    YORI_STRING Text;
+    YORI_STRING Title;
+    YORI_STRING ButtonText[2];
+    BOOLEAN WriteProtected;
+
+    WriteProtected = FALSE;
+    ASSERT(YoriLibIsStringNullTerminated(FileName));
+    Attributes = GetFileAttributes(FileName->StartOfString);
+    if (Attributes != (DWORD)-1 &&
+        (Attributes & FILE_ATTRIBUTE_READONLY) != 0) {
+
+        WriteProtected = TRUE;
+        YoriLibConstantString(&Title, _T("Overwrite read only file"));
+
+        YoriLibInitEmptyString(&UnescapedPath);
+        if (!YoriLibUnescapePath(FileName, &UnescapedPath)) {
+            UnescapedPath.StartOfString = FileName->StartOfString;
+            UnescapedPath.LengthInChars = FileName->LengthInChars;
+        }
+
+        YoriLibInitEmptyString(&Text);
+        YoriLibYPrintf(&Text,
+                       _T("%y is read only.  Overwrite?"),
+                       &UnescapedPath);
+
+        YoriLibFreeStringContents(&UnescapedPath);
+        YoriLibConstantString(&ButtonText[0], _T("&Overwrite"));
+        YoriLibConstantString(&ButtonText[1], _T("Do&n't save"));
+        ButtonPressed = YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                                          &Title,
+                                          &Text,
+                                          2,
+                                          ButtonText,
+                                          0,
+                                          0);
+        YoriLibFreeStringContents(&Text);
+
+        if (ButtonPressed == 1) {
+            Attributes = Attributes & ~(FILE_ATTRIBUTE_READONLY);
+            if (SetFileAttributes(FileName->StartOfString, Attributes)) {
+                WriteProtected = FALSE;
+            } else {
+                YoriLibConstantString(&Text, _T("Could not remove read only attribute."));
+                YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+                YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                                  &Title,
+                                  &Text,
+                                  1,
+                                  ButtonText,
+                                  0,
+                                  0);
+            }
+        }
+    }
+
+    return WriteProtected;
+}
+
+/**
  Load the contents of the specified file into the edit window.
 
  @param EditContext Pointer to the edit context.
@@ -1244,6 +1324,10 @@ EditSaveButtonClicked(
         return;
     }
 
+    if (EditIsFileWriteProtected(Parent, &EditContext->OpenFileName)) {
+        return;
+    }
+
     YoriLibConstantString(&Title, _T("Save"));
     YoriLibConstantString(&ButtonText, _T("Ok"));
 
@@ -1353,6 +1437,10 @@ EditSaveAsButtonClicked(
         case 2:
             YoriLibConstantString(&EditContext->Newline, _T("\r"));
             break;
+    }
+
+    if (EditIsFileWriteProtected(Parent, &FullName)) {
+        return;
     }
 
     YoriLibFreeStringContents(&Text);
