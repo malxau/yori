@@ -1804,7 +1804,8 @@ YoriLibStringToDate(
 
     TotalCharsConsumed = TotalCharsConsumed + CurrentCharsConsumed;
 
-    if (CurrentCharsConsumed < Substring.LengthInChars && Substring.StartOfString[CurrentCharsConsumed] == '/') {
+    if (CurrentCharsConsumed < Substring.LengthInChars &&
+        (Substring.StartOfString[CurrentCharsConsumed] == '/' || Substring.StartOfString[CurrentCharsConsumed] == '-')) {
         Substring.LengthInChars -= CurrentCharsConsumed + 1;
         Substring.StartOfString += CurrentCharsConsumed + 1;
 
@@ -1815,7 +1816,8 @@ YoriLibStringToDate(
         Date->wMonth = (WORD)llTemp;
         TotalCharsConsumed = TotalCharsConsumed + CurrentCharsConsumed + 1;
 
-        if (CurrentCharsConsumed < Substring.LengthInChars && Substring.StartOfString[CurrentCharsConsumed] == '/') {
+        if (CurrentCharsConsumed < Substring.LengthInChars &&
+            (Substring.StartOfString[CurrentCharsConsumed] == '/' || Substring.StartOfString[CurrentCharsConsumed] == '-')) {
             Substring.LengthInChars -= CurrentCharsConsumed + 1;
             Substring.StartOfString += CurrentCharsConsumed + 1;
 
