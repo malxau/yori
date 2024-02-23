@@ -478,6 +478,12 @@ ForBreakArgumentsAsNeeded(
                     //  Char.LengthInChars is zero, and continue.
                     //
 
+
+                    //
+                    //  MSFIX This should probably use
+                    //  YoriLibShExpandCmdContext now it exists
+                    //
+
                     if (TerminateNextArg) {
                         NewArgCount = ArgCount + 2;
                     } else {
@@ -542,7 +548,8 @@ ForBreakArgumentsAsNeeded(
                     CmdContext->ArgC = NewArgCount;
                     CmdContext->ArgV = NewCmd.ArgV;
                     CmdContext->ArgContexts = NewCmd.ArgContexts;
-                    CmdContext->MemoryToFree = NewCmd.MemoryToFree;
+                    CmdContext->MemoryToFreeArgV = NewCmd.MemoryToFreeArgV;
+                    CmdContext->MemoryToFreeArgContexts = NewCmd.MemoryToFreeArgContexts;
 
                     ArgCount = NewArgCount;
                     Arg = NewCmd.ArgV;

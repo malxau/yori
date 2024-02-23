@@ -677,21 +677,26 @@ YoriLibShBuildCmdContextForCmdBuckPass (
 {
     YORI_STRING Arg;
     YORI_STRING FoundInPath;
+    PVOID MemoryToFree;
 
     //
     //  Allocate three components, for "cmd", "/c" and "CmdLine"
     //
 
     CmdContext->ArgC = 3;
-    CmdContext->MemoryToFree = YoriLibReferencedMalloc(CmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
-    if (CmdContext->MemoryToFree == NULL) {
+    MemoryToFree = YoriLibReferencedMalloc(CmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
+    if (MemoryToFree == NULL) {
         return FALSE;
     }
 
-    CmdContext->ArgV = CmdContext->MemoryToFree;
+    CmdContext->ArgV = MemoryToFree;
+    CmdContext->MemoryToFreeArgV = MemoryToFree;
 
     CmdContext->ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, sizeof(YORI_STRING) * CmdContext->ArgC);
     ZeroMemory(CmdContext->ArgContexts, sizeof(YORI_LIBSH_ARG_CONTEXT) * CmdContext->ArgC);
+
+    YoriLibReference(MemoryToFree);
+    CmdContext->MemoryToFreeArgContexts = MemoryToFree;
 
     //
     //  Locate "cmd" in PATH

@@ -1472,6 +1472,7 @@ YoriShDeleteArgument(
     YORI_STRING NewString;
     YORI_ALLOC_SIZE_T BeginCurrentArg;
     YORI_ALLOC_SIZE_T EndCurrentArg;
+    PVOID MemoryToFree;
 
     if (!YoriLibShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
         return;
@@ -1483,16 +1484,20 @@ YoriShDeleteArgument(
     }
 
     memcpy(&NewCmdContext, &CmdContext, sizeof(CmdContext));
-    NewCmdContext.MemoryToFree = YoriLibReferencedMalloc((CmdContext.ArgC - 1) * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
-    if (NewCmdContext.MemoryToFree == NULL) {
+    MemoryToFree = YoriLibReferencedMalloc((CmdContext.ArgC - 1) * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
+    if (MemoryToFree == NULL) {
         YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
-    NewCmdContext.ArgC = CmdContext.ArgC - 1;
-    NewCmdContext.ArgV = NewCmdContext.MemoryToFree;
-    NewCmdContext.ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(NewCmdContext.ArgV, NewCmdContext.ArgC * sizeof(YORI_STRING));
 
+    NewCmdContext.ArgC = CmdContext.ArgC - 1;
+    NewCmdContext.ArgV = MemoryToFree;
+    NewCmdContext.MemoryToFreeArgV = MemoryToFree;
+
+    YoriLibReference(MemoryToFree);
+    NewCmdContext.ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(NewCmdContext.ArgV, NewCmdContext.ArgC * sizeof(YORI_STRING));
+    NewCmdContext.MemoryToFreeArgContexts = MemoryToFree;
 
     DestArg = 0;
     for (SrcArg = 0; SrcArg < CmdContext.ArgC; SrcArg++) {

@@ -163,18 +163,27 @@ YoriLibShAllocateArgCount(
     __out_opt PVOID *ExtraData
     )
 {
-    CmdContext->MemoryToFree = YoriLibReferencedMalloc((ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT))) +
+    PVOID MemoryToFree;
+    MemoryToFree = YoriLibReferencedMalloc((ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT))) +
                                                        ExtraByteCount);
-    if (CmdContext->MemoryToFree == NULL) {
+    if (MemoryToFree == NULL) {
         return FALSE;
     }
 
-    ZeroMemory(CmdContext->MemoryToFree, ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
+    ZeroMemory(MemoryToFree, ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
 
     CmdContext->ArgC = ArgCount;
-    CmdContext->ArgV = CmdContext->MemoryToFree;
+    CmdContext->ArgV = MemoryToFree;
+    CmdContext->MemoryToFreeArgV = MemoryToFree;
 
+    YoriLibReference(MemoryToFree);
     CmdContext->ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, ArgCount * sizeof(YORI_STRING));
+    CmdContext->MemoryToFreeArgContexts = MemoryToFree;
+
+    //
+    //  MSFIX: No explicit reference on ExtraData - is it needed?
+    //
+
     if (ExtraData != NULL) {
         if (ExtraByteCount != 0) {
             *ExtraData = YoriLibAddToPointer(CmdContext->ArgContexts, ArgCount * sizeof(YORI_LIBSH_ARG_CONTEXT));
@@ -574,8 +583,8 @@ YoriLibParseMoveToNextArgumentPopulate(
         *LookingForFirstQuote = FALSE;
     }
     CmdContext->ArgContexts[ArgCount].QuoteTerminated = FALSE;
-    YoriLibReference(CmdContext->MemoryToFree);
-    Arg->MemoryToFree = CmdContext->MemoryToFree;
+    YoriLibReference(CmdContext->ArgV);
+    Arg->MemoryToFree = CmdContext->ArgV;
     *FirstQuoteEndOffset = YORI_MAX_ALLOC_SIZE;
     *PreviousCharWasQuote = FALSE;
 }
@@ -664,8 +673,9 @@ YoriLibShParseCmdlineToCmdContext(
     CmdContext->ArgC = 0;
     CmdContext->ArgV = NULL;
     CmdContext->ArgContexts = NULL;
-    CmdContext->MemoryToFree = NULL;
     CmdContext->TrailingChars = FALSE;
+    CmdContext->MemoryToFreeArgV = NULL;
+    CmdContext->MemoryToFreeArgContexts = NULL;
 
     YoriLibInitEmptyString(&Char);
     Char.StartOfString = CmdLine->StartOfString;
@@ -951,9 +961,10 @@ YoriLibShParseCmdlineToCmdContext(
     CmdContext->ArgC = ArgCount;
 
     if (ArgCount == 0) {
-        CmdContext->MemoryToFree = NULL;
         CmdContext->ArgV = NULL;
         CmdContext->ArgContexts = NULL;
+        CmdContext->MemoryToFreeArgV = NULL;
+        CmdContext->MemoryToFreeArgContexts = NULL;
         return TRUE;
     }
 
@@ -961,7 +972,7 @@ YoriLibShParseCmdlineToCmdContext(
         return FALSE;
     }
 
-    __analysis_assume(CmdContext->MemoryToFree != NULL);
+    __analysis_assume(CmdContext->ArgV != NULL);
 
     ArgCount = 0;
     QuoteOpen = FALSE;
@@ -970,8 +981,8 @@ YoriLibShParseCmdlineToCmdContext(
     CmdContext->ArgV[ArgCount].StartOfString = OutputString;
     CmdContext->ArgContexts[ArgCount].Quoted = FALSE;
     CmdContext->ArgContexts[ArgCount].QuoteTerminated = FALSE;
-    YoriLibReference(CmdContext->MemoryToFree);
-    CmdContext->ArgV[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
+    YoriLibReference(CmdContext->ArgV);
+    CmdContext->ArgV[ArgCount].MemoryToFree = CmdContext->ArgV;
 
     //
     //  Consume all spaces.  After this, we're either at
@@ -1481,6 +1492,72 @@ YoriLibShCopyCmdContext(
 }
 
 /**
+ Add extra arguments into a CmdContext.  This routine can reallocate the
+ ArgV and ArgContexts arrays to the specified size.
+
+ @param CmdContext Pointer to the command context to expand.
+
+ @param NewArgOffset Indicates the insertion point of any new argument. The
+        newly allocated argument at this offset will be empty, and any
+        existing argument at this offset will be moved.
+
+ @param NewArgCount Specifies the new number of arguments to insert.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibShExpandCmdContext(
+    __inout PYORI_LIBSH_CMD_CONTEXT CmdContext,
+    __in DWORD NewArgOffset,
+    __in DWORD NewArgCount
+    )
+{
+    YORI_ALLOC_SIZE_T Count;
+    YORI_LIBSH_CMD_CONTEXT OldCmdContext;
+    DWORD NewArgC;
+
+    ZeroMemory(&OldCmdContext, sizeof(OldCmdContext));
+
+    OldCmdContext.ArgC = CmdContext->ArgC;
+    OldCmdContext.ArgV = CmdContext->ArgV;
+    OldCmdContext.ArgContexts = CmdContext->ArgContexts;
+    OldCmdContext.MemoryToFreeArgV = CmdContext->MemoryToFreeArgV;
+    OldCmdContext.MemoryToFreeArgContexts = CmdContext->MemoryToFreeArgContexts;
+
+    NewArgC = CmdContext->ArgC + NewArgCount;
+
+    CmdContext->ArgV = NULL;
+    CmdContext->ArgContexts = NULL;
+    CmdContext->MemoryToFreeArgV = NULL;
+    CmdContext->MemoryToFreeArgContexts = NULL;
+
+    if (!YoriLibShAllocateArgCount(CmdContext, NewArgC, 0, NULL)) {
+        CmdContext->ArgV = OldCmdContext.ArgV;
+        CmdContext->ArgContexts = OldCmdContext.ArgContexts;
+        CmdContext->MemoryToFreeArgV = OldCmdContext.MemoryToFreeArgV;
+        CmdContext->MemoryToFreeArgContexts = OldCmdContext.MemoryToFreeArgContexts;
+        return FALSE;
+    }
+
+    if (CmdContext->CurrentArg >= NewArgOffset) {
+        CmdContext->CurrentArg = CmdContext->CurrentArg + NewArgCount;
+    }
+
+    for (Count = 0; Count < OldCmdContext.ArgC; Count++) {
+        if (Count >= NewArgOffset) {
+            YoriLibShCopyArg(&OldCmdContext, Count, CmdContext, Count + NewArgOffset);
+        } else {
+            YoriLibShCopyArg(&OldCmdContext, Count, CmdContext, Count);
+        }
+    }
+
+    YoriLibShFreeCmdContext(&OldCmdContext);
+
+    return TRUE;
+}
+
+/**
  Check if an argument contains spaces and now requires quoting.  Previously
  quoted arguments retain quotes.  This function is used when the contents of
  an argument have changed such as via tab completion.  If the argument
@@ -1525,8 +1602,15 @@ YoriLibShFreeCmdContext(
             YoriLibFreeStringContents(&CmdContext->ArgV[Count]);
         }
     }
-    if (CmdContext->MemoryToFree) {
-        YoriLibDereference(CmdContext->MemoryToFree);
+
+    if (CmdContext->MemoryToFreeArgV) {
+        YoriLibDereference(CmdContext->MemoryToFreeArgV);
+        CmdContext->MemoryToFreeArgV = NULL;
+    }
+
+    if (CmdContext->MemoryToFreeArgContexts) {
+        YoriLibDereference(CmdContext->MemoryToFreeArgContexts);
+        CmdContext->MemoryToFreeArgContexts = NULL;
     }
 }
 

@@ -87,17 +87,25 @@ typedef struct _YORI_LIBSH_CMD_CONTEXT {
     YORI_ALLOC_SIZE_T CurrentArgOffset;
 
     /**
-     Memory to dereference when the context is torn down.  Typically this
-     single allocation backs the argv and ArgContexts array, and often backs
-     the contents of each of the arguments also.
+     Memory to dereference corresponding to the ArgV array allocation when the
+     context is torn down.  Typically this is the same as the ArgContexts
+     allocation, but this is not guaranteed.
      */
-    PVOID MemoryToFree;
+    PVOID MemoryToFreeArgV;
+
+    /**
+     Memory to dereference corresponding to the ArgContexts array allocation
+     when the context is torn down.  Typically this is the same as the
+     ArgContexts allocation, but this is not guaranteed.
+     */
+    PVOID MemoryToFreeArgContexts;
 
     /**
      TRUE if there are characters in the string following the final argument.
      FALSE if the final character in the string is part of an argument.
      */
     BOOLEAN TrailingChars;
+
 } YORI_LIBSH_CMD_CONTEXT, *PYORI_LIBSH_CMD_CONTEXT;
 
 /**
@@ -708,6 +716,14 @@ YoriLibShCopyArg(
     __in YORI_ALLOC_SIZE_T SrcArgument,
     __in PYORI_LIBSH_CMD_CONTEXT DestCmdContext,
     __in YORI_ALLOC_SIZE_T DestArgument
+    );
+
+__success(return)
+BOOL
+YoriLibShExpandCmdContext(
+    __inout PYORI_LIBSH_CMD_CONTEXT CmdContext,
+    __in DWORD NewArgOffset,
+    __in DWORD NewArgCount
     );
 
 VOID
