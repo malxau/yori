@@ -338,10 +338,13 @@ YoriLibHtmlGenerateTextString(
                 memcpy(&TextString->StartOfString[DestOffset], SrcPoint, SrcOffset * sizeof(TCHAR));
             }
 
-            AddToDestOffset = SrcOffset;
-
             SrcPoint = SrcPoint + SrcOffset;
             SrcConsumed = SrcConsumed + SrcOffset;
+
+            DestOffset = YoriLibIsAllocationExtendable(DestOffset, SrcOffset, SrcOffset);
+            if (DestOffset == 0) {
+                return FALSE;
+            }
         }
 
         if (SrcConsumed < SrcString->LengthInChars) {
