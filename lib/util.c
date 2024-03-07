@@ -46,6 +46,28 @@ YoriLibIsEscapeChar(
 }
 
 /**
+ Set an unsigned value into a large integer.  This is an abstraction to allow
+ the large integer to be larger than the compiler's native type.
+
+ @param Li Pointer to the large integer to assign a value to.
+
+ @param Value The value to assign.
+ */
+VOID
+YoriLibLiAssignUnsigned(
+    __out PLARGE_INTEGER Li,
+    __in YORI_MAX_UNSIGNED_T Value
+    )
+{
+#if YORI_LARGE_INT_NO_QUADPART
+    Li->LowPart = Value;
+    Li->HighPart = 0;
+#else
+    Li->QuadPart = Value;
+#endif
+}
+
+/**
  Convert a noninheritable handle into an inheritable handle.
 
  @param OriginalHandle A handle to convert, which is presumably not
@@ -630,7 +652,8 @@ YoriLibGetFileOrDeviceSize(
     }
 
     if (DeviceIoControl(FileHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &DiskGeometry, sizeof(DiskGeometry), &BytesReturned, NULL)) {
-        FileSize.QuadPart = DiskGeometry.Cylinders.QuadPart;
+        FileSize.HighPart = DiskGeometry.Cylinders.HighPart;
+        FileSize.LowPart = DiskGeometry.Cylinders.LowPart;
         FileSize.QuadPart = FileSize.QuadPart * DiskGeometry.TracksPerCylinder * DiskGeometry.SectorsPerTrack * DiskGeometry.BytesPerSector;
         *FileSizePtr = FileSize.QuadPart;
         return ERROR_SUCCESS;

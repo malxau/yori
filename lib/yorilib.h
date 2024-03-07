@@ -4080,6 +4080,12 @@ YoriLibIsEscapeChar(
     __in TCHAR Char
     );
 
+VOID
+YoriLibLiAssignUnsigned(
+    __out PLARGE_INTEGER Li,
+    __in YORI_MAX_UNSIGNED_T Value
+    );
+
 __success(return)
 BOOL
 YoriLibMakeInheritableHandle(

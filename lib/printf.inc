@@ -53,7 +53,7 @@
 
 #else // PRINTF_SIZEONLY
 
-#ifdef UNICODE
+#if !defined(PRINTF_UNICODE_SUPPORTED) || defined(UNICODE)
 #define PRINTF_FN YoriLibVSPrintf
 #else
 #define PRINTF_FN YoriLibVSPrintfA
@@ -64,7 +64,7 @@
 
 #endif // PRINTF_SIZEONLY
 
-YORI_SIGNED_ALLOC_SIZE_T
+YORI_SIGNED_ALLOC_SIZE_T CDECL
 PRINTF_FN(
 #ifndef PRINTF_SIZEONLY
         __out_ecount(len) LPTSTR szDest,
@@ -93,7 +93,9 @@ PRINTF_FN(
             leadingzero = FALSE;
             leftalign = FALSE;
             long_prefix = FALSE;
+#if _INTEGRAL_MAX_BITS >= 64
             longlong_prefix = FALSE;
+#endif
             short_prefix = FALSE;
             element_len = 0;
 
@@ -112,9 +114,11 @@ PRINTF_FN(
             if (szFmt[src_offset] == 'h') {
                 short_prefix = TRUE;
                 src_offset++;
+#if _INTEGRAL_MAX_BITS >= 64
             } else if (szFmt[src_offset] == 'l' && szFmt[src_offset + 1] == 'l') {
                 longlong_prefix = TRUE;
                 src_offset += 2;
+#endif
             } else if (szFmt[src_offset] == 'l') {
                 long_prefix = TRUE;
                 src_offset++;
@@ -127,9 +131,11 @@ PRINTF_FN(
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
 #pragma warning(suppress: 6240) // Conditional is constant
 #endif
+#if _INTEGRAL_MAX_BITS >= 64
             if (szFmt[src_offset] == 'p' && sizeof(PVOID) == sizeof(DWORDLONG)) {
                 longlong_prefix = TRUE;
             }
+#endif
 
             switch(szFmt[src_offset]) {
                 case '%':
@@ -164,7 +170,9 @@ PRINTF_FN(
                     {
                         LPTSTR str = va_arg(marker, LPTSTR);
                         LPSTR  short_str = (LPSTR)str;
+#if PRINTF_UNICODE_SUPPORTED
                         LPWSTR long_str = (LPWSTR)str;
+#endif
 
                         if (str == NULL) {
                             short_str = "(null)";
@@ -182,11 +190,15 @@ PRINTF_FN(
 
                         if (element_len != (YORI_ALLOC_SIZE_T)-1 && !leftalign) {
                             YORI_ALLOC_SIZE_T str_len = 0;
+#if PRINTF_UNICODE_SUPPORTED
                             if (short_prefix) {
+#endif
                                 while (short_str[str_len] != '\0') str_len++;
+#if PRINTF_UNICODE_SUPPORTED
                             } else if (long_prefix) {
                                 while (long_str[str_len] != '\0') str_len++;
                             }
+#endif
 
                             while (element_len > str_len) {
                                 if (PRINTF_DESTLENGTH()) {
@@ -197,7 +209,9 @@ PRINTF_FN(
                                 element_len--;
                             }
                         }
+#if PRINTF_UNICODE_SUPPORTED
                         if (short_prefix) {
+#endif
                             while (*short_str != '\0' && element_len) {
                                 if (PRINTF_DESTLENGTH()) {
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
@@ -214,6 +228,7 @@ PRINTF_FN(
                                 short_str++;
                                 element_len--;
                             }
+#if PRINTF_UNICODE_SUPPORTED
                         } else if (long_prefix) {
                             while (*long_str != '\0' && element_len) {
                                 if (PRINTF_DESTLENGTH()) {
@@ -232,6 +247,7 @@ PRINTF_FN(
                                 element_len--;
                             }
                         }
+#endif
 
                         if (leftalign) {
                             while (element_len--) {
@@ -248,7 +264,9 @@ PRINTF_FN(
                     {
                         PYORI_STRING str = va_arg(marker, PYORI_STRING);
                         LPSTR  short_str = (LPSTR)str->StartOfString;
+#if PRINTF_UNICODE_SUPPORTED
                         LPWSTR long_str = (LPWSTR)str->StartOfString;
+#endif
                         YORI_ALLOC_SIZE_T str_offset;
 
                         if (!short_prefix && !long_prefix) {
@@ -270,7 +288,9 @@ PRINTF_FN(
                             }
                         }
                         str_offset = 0;
+#if PRINTF_UNICODE_SUPPORTED
                         if (short_prefix) {
+#endif
                             while (str_offset < str->LengthInChars && element_len) {
                                 if (PRINTF_DESTLENGTH()) {
 #ifdef UNICODE
@@ -284,6 +304,7 @@ PRINTF_FN(
                                 str_offset++;
                                 element_len--;
                             }
+#if PRINTF_UNICODE_SUPPORTED
                         } else if (long_prefix) {
                             while (str_offset < str->LengthInChars && element_len) {
                                 if (PRINTF_DESTLENGTH()) {
@@ -299,6 +320,7 @@ PRINTF_FN(
                                 element_len--;
                             }
                         }
+#endif
 
                         if (leftalign) {
                             while (element_len--) {
@@ -389,6 +411,7 @@ PRINTF_FN(
 
                         } while(digits > 0);
 
+#if _INTEGRAL_MAX_BITS >= 64
                     } else {
                         DWORDLONG num, tempnum;
                         DWORD digits;
@@ -462,6 +485,7 @@ PRINTF_FN(
 
                             digits--;
                         } while (digits > 0);
+#endif
                     }
                     break;
                 default:

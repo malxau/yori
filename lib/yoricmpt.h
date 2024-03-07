@@ -25,6 +25,23 @@
  * THE SOFTWARE.
  */
 
+#ifndef _INTEGRAL_MAX_BITS
+#if defined(_MSC_VER) && _MSC_VER >= 900
+
+/**
+ Indicate the maximum integer size if not defined by the compilation
+ environment.
+*/
+#define _INTEGRAL_MAX_BITS 64
+#else
+/**
+ Indicate the maximum integer size if not defined by the compilation
+ environment.
+*/
+#define _INTEGRAL_MAX_BITS 32
+#endif
+#endif
+
 #ifndef FILE_SHARE_DELETE
 /**
  Definition for share delete for compilers that don't contain it.

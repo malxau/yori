@@ -355,7 +355,8 @@ YoriLibStringToNumberSpecifyBase(
     __out PYORI_ALLOC_SIZE_T CharsConsumed
     )
 {
-    YORI_MAX_SIGNED_T Result;
+    YORI_MAX_SIGNED_T SignedResult;
+    YORI_MAX_UNSIGNED_T Result;
     YORI_ALLOC_SIZE_T Index;
     BOOL Negative = FALSE;
 
@@ -412,11 +413,13 @@ YoriLibStringToNumberSpecifyBase(
     }
 
     if (Negative) {
-        Result = 0 - Result;
+        SignedResult = (YORI_MAX_SIGNED_T)0 - (YORI_MAX_SIGNED_T)Result;
+    } else {
+        SignedResult = (YORI_MAX_SIGNED_T)Result;
     }
 
     *CharsConsumed = Index;
-    *Number = Result;
+    *Number = SignedResult;
     return TRUE;
 }
 
@@ -815,7 +818,7 @@ YoriLibCompareStringWithLiteral(
     __in LPCTSTR str2
     )
 {
-    return YoriLibCompareStringWithLiteralCount(Str1, str2, (DWORD)-1);
+    return YoriLibCompareStringWithLiteralCount(Str1, str2, (YORI_ALLOC_SIZE_T)-1);
 }
 
 /**
@@ -911,7 +914,7 @@ YoriLibCompareStringWithLiteralInsensitive(
     __in LPCTSTR str2
     )
 {
-    return YoriLibCompareStringWithLiteralInsensitiveCount(Str1, str2, (DWORD)-1);
+    return YoriLibCompareStringWithLiteralInsensitiveCount(Str1, str2, (YORI_ALLOC_SIZE_T)-1);
 }
 
 /**
@@ -988,7 +991,7 @@ YoriLibCompareString(
     __in PCYORI_STRING Str2
     )
 {
-    return YoriLibCompareStringCount(Str1, Str2, (DWORD)-1);
+    return YoriLibCompareStringCount(Str1, Str2, (YORI_ALLOC_SIZE_T)-1);
 }
 
 /**
@@ -1066,7 +1069,7 @@ YoriLibCompareStringInsensitive(
     __in PCYORI_STRING Str2
     )
 {
-    return YoriLibCompareStringInsensitiveCount(Str1, Str2, (DWORD)-1);
+    return YoriLibCompareStringInsensitiveCount(Str1, Str2, (YORI_ALLOC_SIZE_T)-1);
 }
 
 /**
@@ -1667,10 +1670,10 @@ YoriLibStringToFileSize(
 
     llTemp = 0;
     if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed)) {
-        FileSize.QuadPart = llTemp;
+        YoriLibLiAssignUnsigned(&FileSize, llTemp);
         return FileSize;
     }
-    FileSize.QuadPart = llTemp;
+    YoriLibLiAssignUnsigned(&FileSize, llTemp);
 
     if (CharsConsumed < String->LengthInChars) {
         TCHAR SuffixChar = String->StartOfString[CharsConsumed];
@@ -1719,8 +1722,10 @@ YoriLibFileSizeToString(
     LARGE_INTEGER Size;
     LARGE_INTEGER OldSize;
 
-    Size.QuadPart = FileSize->QuadPart;
-    OldSize.QuadPart = Size.QuadPart;
+    Size.HighPart = FileSize->HighPart;
+    Size.LowPart = FileSize->LowPart;
+    OldSize.HighPart = Size.HighPart;
+    OldSize.LowPart = Size.LowPart;
 
     if (String->LengthAllocated < sizeof("12.3k")) {
         return FALSE;
@@ -1729,7 +1734,8 @@ YoriLibFileSizeToString(
 
     while (Size.HighPart != 0 || Size.LowPart > 9999) {
         SuffixLevel++;
-        OldSize.QuadPart = Size.QuadPart;
+        OldSize.HighPart = Size.HighPart;
+        OldSize.LowPart = Size.LowPart;
 
         //
         //  Conceptually we want to divide by 1024.  We do this

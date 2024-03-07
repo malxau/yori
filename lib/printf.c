@@ -44,6 +44,12 @@
 #pragma disable_message(302)
 #endif
 
+/**
+ Indicate to the printf code that whether we're compiling for unicode or not,
+ the system supports unicode, so conversions should be included.
+ */
+#define PRINTF_UNICODE_SUPPORTED 1
+
 #include "printf.inc"
 
 /**
