@@ -1603,6 +1603,7 @@ typedef struct _YORI_LIB_CSIDL_MAP {
  */
 CONST YORI_LIB_CSIDL_MAP YoriLibSpecialDirectoryMap[] = {
     {_T("~APPDATA"),            CSIDL_APPDATA},
+    {_T("~APPDATALOCAL"),       CSIDL_LOCALAPPDATA},
     {_T("~COMMONAPPDATA"),      CSIDL_COMMON_APPDATA},
     {_T("~COMMONDESKTOP"),      CSIDL_COMMON_DESKTOPDIRECTORY},
     {_T("~COMMONDOCUMENTS"),    CSIDL_COMMON_DOCUMENTS},
@@ -1717,7 +1718,34 @@ YoriLibExpandHomeSymbol(
     } else if (YoriLibExpandDirectoryFromMap(SymbolToExpand, ExpandedSymbol)) {
         return TRUE;
     } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~DOWNLOADS")) == 0) {
-        return YoriLibExpandShellDirectoryGuid(&FOLDERID_Downloads, ExpandedSymbol);
+        BOOL Result;
+
+        //
+        //  If a Vista era function to find the Downloads folder exists,
+        //  use it.
+        //
+
+        YoriLibLoadShell32Functions();
+        if (DllShell32.pSHGetKnownFolderPath != NULL) {
+            return YoriLibExpandShellDirectoryGuid(&FOLDERID_Downloads, ExpandedSymbol);
+        }
+
+        //
+        //  If not, Downloads is a subdirectory of Documents.  This function
+        //  allocates a MAX_PATH buffer because the underlying API doesn't
+        //  specify a length.
+        //
+
+        Result = YoriLibExpandShellDirectory(CSIDL_PERSONAL, ExpandedSymbol);
+        if (Result) {
+            if (ExpandedSymbol->LengthInChars + sizeof("\\Downloads") < ExpandedSymbol->LengthAllocated) {
+                memcpy(&ExpandedSymbol->StartOfString[ExpandedSymbol->LengthInChars],
+                       _T("\\Downloads"),
+                       (sizeof("\\Downloads") - 1) * sizeof(TCHAR));
+                ExpandedSymbol->LengthInChars = ExpandedSymbol->LengthInChars + sizeof("\\Downloads") - 1;
+                return TRUE;
+            }
+        }
     }
 
     ExpandedSymbol->StartOfString = SymbolToExpand->StartOfString;
