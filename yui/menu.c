@@ -2439,6 +2439,36 @@ YuiMenuRun(
 }
 
 /**
+ Check if a specified file exists in the system directory.
+
+ @param FileName Pointer to the file name to check for.
+
+ @return TRUE to indicate the file exists, FALSE if it does not.
+ */
+BOOLEAN
+YuiMenuCheckIfSystemProgramExists(
+    __in LPCTSTR FileName
+    )
+{
+    YORI_STRING FullPath;
+    YORI_STRING YsFileName;
+    DWORD Attributes;
+
+    YoriLibConstantString(&YsFileName, FileName);
+    if (!YoriLibFullPathToSystemDirectory(&YsFileName, &FullPath)) {
+        return FALSE;
+    }
+
+    Attributes = GetFileAttributes(FullPath.StartOfString);
+    YoriLibFreeStringContents(&FullPath);
+    if (Attributes != (DWORD)-1) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Take a string literal for a program name, and append it to the System32
  directory, then launch the result as a fully qualified path.
 
@@ -2553,7 +2583,11 @@ YuiMenuExecuteById(
             YuiWifi(YuiContext);
             break;
         case YUI_MENU_SYSTEM_MIXER:
-            YuiMenuExecuteSystemProgram(_T("SndVol.exe"));
+            if (YuiMenuCheckIfSystemProgramExists(_T("SndVol.exe"))) {
+                YuiMenuExecuteSystemProgram(_T("SndVol.exe"));
+            } else if (YuiMenuCheckIfSystemProgramExists(_T("SndVol32.exe"))) {
+                YuiMenuExecuteSystemProgram(_T("SndVol32.exe"));
+            }
             break;
         case YUI_MENU_SYSTEM_CONTROL:
             YuiMenuExecuteSystemProgram(_T("Control.exe"));
