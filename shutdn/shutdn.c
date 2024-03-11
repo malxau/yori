@@ -3,7 +3,7 @@
  *
  * Yori shell shutdown the system.
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2024 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,8 +35,9 @@ CHAR strShutdownHelpText[] =
         "\n"
         "Shutdown the system.\n"
         "\n"
-        "SHUTDN [-license] [-f] [-k|-l|-r|-s [-p]]\n"
+        "SHUTDN [-license] [-f] [-d|-k|-l|-r|-s [-p]]\n"
         "\n"
+        "   -d             Disconnect the current session\n"
         "   -f             Force the action without waiting for programs to close cleanly\n"
         "   -k             Lock the current session\n"
         "   -l             Log off the current user\n"
@@ -66,7 +67,8 @@ typedef enum _SHUTDN_OP {
     ShutdownOpLogoff = 1,
     ShutdownOpShutdown = 2,
     ShutdownOpReboot = 3,
-    ShutdownOpLock = 4
+    ShutdownOpLock = 4,
+    ShutdownOpDisconnect = 5
 } SHUTDN_OP;
 
 #ifdef YORI_BUILTIN
@@ -124,8 +126,11 @@ ENTRYPOINT(
                 ShutdownHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019"));
+                YoriLibDisplayMitLicense(_T("2019-2024"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                Op = ShutdownOpDisconnect;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 Force = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -182,6 +187,7 @@ ENTRYPOINT(
                 ErrText = YoriLibGetWinErrorText(GetLastError());
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Logoff failed: %s"), ErrText);
                 YoriLibFreeWinErrorText(ErrText);
+                return EXIT_FAILURE;
             }
             break;
         case ShutdownOpReboot:
@@ -210,6 +216,7 @@ ENTRYPOINT(
                 ErrText = YoriLibGetWinErrorText(Err);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Reboot failed: %s"), ErrText);
                 YoriLibFreeWinErrorText(ErrText);
+                return EXIT_FAILURE;
             }
             break;
         case ShutdownOpShutdown:
@@ -226,7 +233,8 @@ ENTRYPOINT(
                 if (Powerdown) {
                     ShutdownOptions = ShutdownOptions | EWX_POWEROFF;
                 }
-                if (!DllUser32.pExitWindowsEx(ShutdownOptions, 0)) {
+                Result = DllUser32.pExitWindowsEx(ShutdownOptions, 0);
+                if (!Result) {
                     Err = GetLastError();
                 }
             } else {
@@ -244,6 +252,7 @@ ENTRYPOINT(
                 ErrText = YoriLibGetWinErrorText(Err);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Shutdown failed: %s"), ErrText);
                 YoriLibFreeWinErrorText(ErrText);
+                return EXIT_FAILURE;
             }
             break;
         case ShutdownOpLock:
@@ -253,6 +262,22 @@ ENTRYPOINT(
             }
             DllUser32.pLockWorkStation();
             break;
+        case ShutdownOpDisconnect:
+            YoriLibLoadWtsApi32Functions();
+            if (DllWtsApi32.pWTSDisconnectSession == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: OS support not present\n"));
+                return EXIT_FAILURE;
+            }
+
+            Result = DllWtsApi32.pWTSDisconnectSession(WTS_CURRENT_SERVER_HANDLE, WTS_CURRENT_SESSION, FALSE);
+            if (!Result) {
+                Err = GetLastError();
+                ErrText = YoriLibGetWinErrorText(Err);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Disconnect failed: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                return EXIT_FAILURE;
+            }
+            
     }
 
     return EXIT_SUCCESS;
