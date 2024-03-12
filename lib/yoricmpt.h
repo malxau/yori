@@ -4590,6 +4590,74 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define TPM_NOANIMATION 0x4000
 #endif
 
+/**
+ A prototype for EnumDisplayMonitors callback.
+ */
+typedef
+BOOL WINAPI
+YORIMONITORENUMPROC(HANDLE, HDC, LPRECT, LPARAM);
+
+/**
+ A prototype for a pointer to EnumDisplayMonitors status callback.
+ */
+typedef YORIMONITORENUMPROC *PYORIMONITORENUMPROC;
+
+/**
+ A context block of information returned from GetMonitorInfoW.
+ */
+typedef struct _YORI_MONITORINFO {
+
+    /**
+     The number of bytes in this structure.  Must be initialized before the
+     call to GetMonitorInfoW.
+     */
+    DWORD cbSize;
+
+    /**
+     The region of the virtual display occupied by this monitor.
+     */
+    RECT rcMonitor;
+
+    /**
+     The active work area within this monitor.
+     */
+    RECT rcWork;
+
+    /**
+     Flags.
+     */
+    DWORD dwFlags;
+} YORI_MONITORINFO, *PYORI_MONITORINFO;
+
+#ifndef MONITORINFOF_PRIMARY
+/**
+ A definition for the flag indicating a primary monitor if it is not defined
+ by the current compilation environment.
+ */
+#define MONITORINFOF_PRIMARY 0x01
+#endif
+
+#ifndef MONITOR_DEFAULTTONULL
+/**
+ If the window is not clearly on a monitor, return NULL.
+ */
+#define MONITOR_DEFAULTTONULL 0x00
+#endif
+
+#ifndef MONITOR_DEFAULTTOPRIMARY
+/**
+ If the window is not clearly on a monitor, return the primary monitor.
+ */
+#define MONITOR_DEFAULTTOPRIMARY 0x01
+#endif
+
+#ifndef MONITOR_DEFAULTTONEAREST
+/**
+ If the window is not clearly on a monitor, return the closest monitor.
+ */
+#define MONITOR_DEFAULTTONEAREST 0x02
+#endif
+
 #ifndef MS_DEF_PROV
 /**
  A definition for the base crypto provider if it is not defined by the current
@@ -10032,6 +10100,18 @@ ENUM_CLIPBOARD_FORMATS(DWORD);
 typedef ENUM_CLIPBOARD_FORMATS *PENUM_CLIPBOARD_FORMATS;
 
 /**
+ A prototype for the EnumDisplayMonitors function.
+ */
+typedef
+BOOL WINAPI
+ENUM_DISPLAY_MONITORS(HDC, LPRECT, PYORIMONITORENUMPROC, LPARAM);
+
+/**
+ A prototype for a pointer to the EnumDisplayMonitors function.
+ */
+typedef ENUM_DISPLAY_MONITORS *PENUM_DISPLAY_MONITORS;
+
+/**
  A prototype for the ExitWindowsEx function.
  */
 typedef
@@ -10116,6 +10196,18 @@ GET_KEYBOARD_LAYOUT(DWORD);
 typedef GET_KEYBOARD_LAYOUT *PGET_KEYBOARD_LAYOUT;
 
 /**
+ A prototype for the GetMonitorInfoW function.
+ */
+typedef
+BOOL WINAPI
+GET_MONITOR_INFOW(HANDLE, PYORI_MONITORINFO);
+
+/**
+ A prototype for a pointer to the GetMonitorInfoW function.
+ */
+typedef GET_MONITOR_INFOW *PGET_MONITOR_INFOW;
+
+/**
  A prototype for the GetShellWindow function.
  */
 typedef
@@ -10174,6 +10266,18 @@ LOCK_WORKSTATION(VOID);
  A prototype for a pointer to the LockWorkStation function.
  */
 typedef LOCK_WORKSTATION *PLOCK_WORKSTATION;
+
+/**
+ A prototype for the MonitorFromWindow function.
+ */
+typedef
+HANDLE WINAPI
+MONITOR_FROM_WINDOW(HWND, DWORD);
+
+/**
+ A prototype for a pointer to the MonitorFromWindow function.
+ */
+typedef MONITOR_FROM_WINDOW *PMONITOR_FROM_WINDOW;
 
 /**
  A prototype for the MoveWindow function.
@@ -10431,6 +10535,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PENUM_CLIPBOARD_FORMATS pEnumClipboardFormats;
 
     /**
+     If it's available on the current system, a pointer to EnumDisplayMonitors.
+     */
+    PENUM_DISPLAY_MONITORS pEnumDisplayMonitors;
+
+    /**
      If it's available on the current system, a pointer to ExitWindowsEx.
      */
     PEXIT_WINDOWS_EX pExitWindowsEx;
@@ -10466,6 +10575,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PGET_KEYBOARD_LAYOUT pGetKeyboardLayout;
 
     /**
+     If it's available on the current system, a pointer to GetMonitorInfoW
+     */
+    PGET_MONITOR_INFOW pGetMonitorInfoW;
+
+    /**
      If it's available on the current system, a pointer to GetShellWindow.
      */
     PGET_SHELL_WINDOW pGetShellWindow;
@@ -10489,6 +10603,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to LockWorkStation.
      */
     PLOCK_WORKSTATION pLockWorkStation;
+
+    /**
+     If it's available on the current system, a pointer to MonitorFromWindow.
+     */
+    PMONITOR_FROM_WINDOW pMonitorFromWindow;
 
     /**
      If it's available on the current system, a pointer to MoveWindow.

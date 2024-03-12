@@ -37,9 +37,9 @@
 typedef struct _YUI_MENU_FIND_EXEC_CONTEXT {
 
     /**
-     Pointer to the application context.
+     Pointer to the monitor context.
      */
-    PYUI_CONTEXT YuiContext;
+    PYUI_MONITOR YuiMonitor;
 
     /**
      The menu control to search for.
@@ -1105,8 +1105,9 @@ YuiPopulateMenuOnDirectory(
  recently opened process in case a taskbar button arrives with the same
  process ID.
 
- @param YuiContext Pointer to the application context including a list of
-        recently opened programs.
+ @param YuiMonitor Pointer to the monitor context.  Indirectly this points to
+        the application context including a list of recently opened programs;
+        the monitor is only used to display error messages.
 
  @param FilePath Pointer to the shortcut to execute.
 
@@ -1117,14 +1118,16 @@ YuiPopulateMenuOnDirectory(
  */
 BOOL
 YuiExecuteShortcut(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PYORI_STRING FilePath,
     __in BOOLEAN Elevated
     )
 {
     DWORD ProcessId;
     HRESULT hRes;
+    PYUI_CONTEXT YuiContext;
 
+    YuiContext = YuiMonitor->YuiContext;
     hRes = YoriLibExecuteShortcut(FilePath, Elevated, &ProcessId);
     if (!SUCCEEDED(hRes)) {
         YORI_STRING Error;
@@ -1147,7 +1150,10 @@ YuiExecuteShortcut(
             YoriLibYPrintf(&Error, _T("Could not execute shortcut: %08x"), hRes);
         }
         if (Error.StartOfString != NULL) {
-            MessageBox(YuiContext->hWnd, Error.StartOfString, _T("Error"), MB_ICONSTOP);
+            MessageBox(YuiMonitor->hWndTaskbar,
+                       Error.StartOfString,
+                       _T("Error"),
+                       MB_ICONSTOP);
         }
         YoriLibFreeStringContents(&Error);
         return FALSE;
@@ -1218,7 +1224,7 @@ YuiFindMenuCommandToExecute(
         Elevated = TRUE;
     }
 
-    YuiExecuteShortcut(FindContext->YuiContext, &Item->FilePath, Elevated);
+    YuiExecuteShortcut(FindContext->YuiMonitor, &Item->FilePath, Elevated);
     return FALSE;
 }
 
@@ -2083,6 +2089,7 @@ YuiShowDesktopCallback(
     PYUI_CONTEXT YuiContext;
     DWORD WinStyle;
     DWORD ExStyle;
+    PYUI_MONITOR YuiMonitor;
 
     YuiContext = (PYUI_CONTEXT)lParam;
 
@@ -2113,7 +2120,13 @@ YuiShowDesktopCallback(
         return TRUE;
     }
 
-    if (hWnd == YuiContext->hWnd) {
+    //
+    //  Look for a taskbar on any monitor matching this hWnd.  No taskbar
+    //  should be hidden as part of this operation.
+    //
+
+    YuiMonitor = YuiMonitorFromTaskbarHwnd(YuiContext, hWnd);
+    if (YuiMonitor != NULL) {
         return TRUE;
     }
 
@@ -2312,7 +2325,7 @@ YuiMenuRunBrowse(
  Context that is preserved from when the run dialog is initialized so long
  as it remains active.  Currently this just points to the global context.
  */
-PYUI_CONTEXT RunDlgContext;
+PYUI_MONITOR RunDlgContext;
 
 /**
  A callback function which processes notifications about actions that the user
@@ -2340,7 +2353,7 @@ RunDialogProc(
 
     switch (uMsg) {
         case WM_INITDIALOG:
-            RunDlgContext = (PYUI_CONTEXT)lParam;
+            RunDlgContext = (PYUI_MONITOR)lParam;
             if (DllShell32.pShellExecuteW == NULL) {
                 return FALSE;
             }
@@ -2425,16 +2438,20 @@ RunDialogProc(
 /**
  Display the run dialog box to allow the user to launch a custom program.
 
- @param YuiContext Pointer the global context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YuiMenuRun(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     )
 {
-    DialogBoxParam(NULL, MAKEINTRESOURCE(RUNDIALOG), YuiContext->hWnd, (DLGPROC)RunDialogProc, (DWORD_PTR)YuiContext);
+    DialogBoxParam(NULL,
+                   MAKEINTRESOURCE(RUNDIALOG),
+                   YuiMonitor->hWndTaskbar,
+                   (DLGPROC)RunDialogProc,
+                   (DWORD_PTR)YuiMonitor);
     return TRUE;
 }
 
@@ -2519,7 +2536,7 @@ YuiMenuExecuteSystemProgram(
 /**
  Execute the item selected from the start menu.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param MenuId The identifier of the menu item that the user selected.
 
@@ -2527,7 +2544,7 @@ YuiMenuExecuteSystemProgram(
  */
 BOOL
 YuiMenuExecuteById(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD MenuId
     )
 {
@@ -2577,10 +2594,10 @@ YuiMenuExecuteById(
             }
             break;
         case YUI_MENU_RUN:
-            YuiMenuRun(YuiContext);
+            YuiMenuRun(YuiMonitor);
             break;
         case YUI_MENU_SYSTEM_WIFI:
-            YuiWifi(YuiContext);
+            YuiWifi(YuiMonitor);
             break;
         case YUI_MENU_SYSTEM_MIXER:
             if (YuiMenuCheckIfSystemProgramExists(_T("SndVol.exe"))) {
@@ -2599,17 +2616,17 @@ YuiMenuExecuteById(
             YuiMenuExecuteSystemProgram(_T("Cmd.exe"));
             break;
         case YUI_MENU_REFRESH:
-            YuiTaskbarSyncWithCurrent(YuiContext);
+            YuiRefreshMonitors(YuiMonitor->YuiContext);
             break;
 #if DBG
         case YUI_MENU_LOGGING:
-            YuiMenuToggleLogging(YuiContext);
+            YuiMenuToggleLogging(YuiMonitor->YuiContext);
             break;
         case YUI_MENU_LAUNCHWINLOGONSHELL:
-            YuiExitAndLaunchWinlogonShell(YuiContext);
+            YuiExitAndLaunchWinlogonShell(YuiMonitor->YuiContext);
             break;
         case YUI_MENU_DISPLAYCHANGE:
-            YuiNotifyResolutionChange(YuiContext->hWnd);
+            YuiNotifyResolutionChange(YuiMonitor);
             break;
 #endif
         case YUI_MENU_CASCADE:
@@ -2641,7 +2658,7 @@ YuiMenuExecuteById(
             break;
 
         case YUI_MENU_SHOW_DESKTOP:
-            YuiShowDesktop(YuiContext);
+            YuiShowDesktop(YuiMonitor->YuiContext);
             break;
 
         default:
@@ -2649,7 +2666,7 @@ YuiMenuExecuteById(
 
             {
                 YUI_MENU_FIND_EXEC_CONTEXT FindContext;
-                FindContext.YuiContext = YuiContext;
+                FindContext.YuiMonitor = YuiMonitor;
                 FindContext.CtrlId = MenuId;
                 FindContext.ProcessId = 0;
 
@@ -2672,7 +2689,7 @@ YuiMenuExecuteById(
 /**
  Display the start menu and execute any item selected.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hWnd The handle of the taskbar window.
 
@@ -2680,13 +2697,15 @@ YuiMenuExecuteById(
  */
 BOOL
 YuiMenuDisplayAndExecute(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd
     )
 {
     RECT WindowRect;
     DWORD MenuId;
+    PYUI_CONTEXT YuiContext;
 
+    YuiContext = YuiMonitor->YuiContext;
     YuiMenuWaitForBackgroundReload(YuiContext);
 
     if (!YuiMenuReloadIfChanged(YuiContext)) {
@@ -2704,7 +2723,7 @@ YuiMenuDisplayAndExecute(
 
     MenuId = TrackPopupMenu(YuiContext->StartMenu,
                             TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_NOANIMATION | TPM_RECURSE,
-                            0,
+                            WindowRect.left,
                             WindowRect.top,
                             0,
                             hWnd,
@@ -2720,11 +2739,11 @@ YuiMenuDisplayAndExecute(
 
     if (YuiContext->MenuActive) {
         YuiContext->MenuActive = FALSE;
-        SendMessage(YuiContext->hWndStart, BM_SETSTATE, FALSE, 0);
+        SendMessage(YuiMonitor->hWndStart, BM_SETSTATE, FALSE, 0);
     }
 
     if (MenuId > 0) {
-        YuiMenuExecuteById(YuiContext, MenuId);
+        YuiMenuExecuteById(YuiMonitor, MenuId);
     } else {
         YuiTaskbarSwitchToActiveTask(YuiContext);
     }
@@ -2735,7 +2754,7 @@ YuiMenuDisplayAndExecute(
 /**
  Display a menu corresponding to a right click on the taskbar.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hWnd The handle of the taskbar window.
 
@@ -2749,7 +2768,7 @@ YuiMenuDisplayAndExecute(
  */
 BOOL
 YuiMenuDisplayContext(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd,
     __in DWORD CursorX,
     __in DWORD CursorY
@@ -2786,7 +2805,7 @@ YuiMenuDisplayContext(
     DestroyMenu(Menu);
 
     if (MenuId > 0) {
-        YuiMenuExecuteById(YuiContext, MenuId);
+        YuiMenuExecuteById(YuiMonitor, MenuId);
         return TRUE;
     }
 
@@ -2796,7 +2815,7 @@ YuiMenuDisplayContext(
 /**
  Execute the item selected from window context menu.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param MenuId The identifier of the menu item that the user selected.
 
@@ -2809,13 +2828,13 @@ YuiMenuDisplayContext(
  */
 BOOL
 YuiMenuExecuteWindowContextById(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD MenuId,
     __in HWND hWnd,
     __in DWORD dwProcessId
     )
 {
-    UNREFERENCED_PARAMETER(YuiContext);
+    UNREFERENCED_PARAMETER(YuiMonitor);
 
     switch(MenuId) {
         case YUI_MENU_MINIMIZEWINDOW:
@@ -2851,7 +2870,7 @@ YuiMenuExecuteWindowContextById(
 /**
  Display a menu corresponding to a right click on a taskbar button.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hWnd The handle of the taskbar window.
 
@@ -2869,7 +2888,7 @@ YuiMenuExecuteWindowContextById(
  */
 BOOL
 YuiMenuDisplayWindowContext(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd,
     __in HWND hWndApp,
     __in DWORD dwProcessId,
@@ -2906,7 +2925,7 @@ YuiMenuDisplayWindowContext(
     DestroyMenu(Menu);
 
     if (MenuId > 0) {
-        YuiMenuExecuteWindowContextById(YuiContext, MenuId, hWndApp, dwProcessId);
+        YuiMenuExecuteWindowContextById(YuiMonitor, MenuId, hWndApp, dwProcessId);
         return TRUE;
     }
 

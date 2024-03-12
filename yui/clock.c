@@ -31,11 +31,11 @@
 /**
  Display additional information about battery state.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
  */
 VOID
 YuiClockDisplayBatteryInfo(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     YORI_SYSTEM_POWER_STATUS PowerStatus;
@@ -75,7 +75,10 @@ YuiClockDisplayBatteryInfo(
         YoriLibFreeStringContents(&TimeRemaining);
     }
 
-    MessageBox(YuiContext->hWnd, Text.StartOfString, _T("Battery"), MB_ICONINFORMATION);
+    MessageBox(YuiMonitor->hWndTaskbar,
+               Text.StartOfString,
+               _T("Battery"),
+               MB_ICONINFORMATION);
     YoriLibFreeStringContents(&Text);
 }
 
@@ -97,6 +100,7 @@ YuiClockUpdate(
     SYSTEMTIME CurrentLocalTime;
     WORD DisplayHour;
     YORI_SYSTEM_POWER_STATUS PowerStatus;
+    PYUI_MONITOR YuiMonitor;
 
     YoriLibInitEmptyString(&DisplayTime);
     DisplayTime.StartOfString = DisplayTimeBuffer;
@@ -124,14 +128,20 @@ YuiClockUpdate(
             YuiContext->ClockDisplayedValue.LengthInChars = DisplayTime.LengthInChars;
         }
 
-        //
-        //  YoriLibYPrintf will NULL terminate, but that is hard to express
-        //  given that yori strings are not always NULL terminated
-        //
+        YuiMonitor = NULL;
+        YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+        while (YuiMonitor != NULL) {
+
+            //
+            //  YoriLibYPrintf will NULL terminate, but that is hard to express
+            //  given that yori strings are not always NULL terminated
+            //
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
 #pragma warning(suppress: 6054)
 #endif
-        DllUser32.pSetWindowTextW(YuiContext->hWndClock, DisplayTime.StartOfString);
+            DllUser32.pSetWindowTextW(YuiMonitor->hWndClock, DisplayTime.StartOfString);
+            YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+        }
     }
     YoriLibFreeStringContents(&DisplayTime);
 
@@ -149,14 +159,20 @@ YuiClockUpdate(
                 YuiContext->BatteryDisplayedValue.LengthInChars = BatteryString.LengthInChars;
             }
 
-            //
-            //  YoriLibYPrintf will NULL terminate, but that is hard to express
-            //  given that yori strings are not always NULL terminated
-            //
+            YuiMonitor = NULL;
+            YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+            while (YuiMonitor != NULL) {
+
+                //
+                //  YoriLibYPrintf will NULL terminate, but that is hard to express
+                //  given that yori strings are not always NULL terminated
+                //
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
 #pragma warning(suppress: 6054)
 #endif
-            DllUser32.pSetWindowTextW(YuiContext->hWndBattery, BatteryString.StartOfString);
+                DllUser32.pSetWindowTextW(YuiMonitor->hWndBattery, BatteryString.StartOfString);
+                YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+            }
         }
 
         YoriLibFreeStringContents(&BatteryString);

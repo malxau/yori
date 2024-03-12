@@ -3,7 +3,7 @@
  *
  * Yori shell display lightweight graphical UI
  *
- * Copyright (c) 2019-2023 Malcolm J. Smith
+ * Copyright (c) 2019-2024 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -133,22 +133,26 @@ YuiGetDefaultButtonWndProc(VOID)
  */
 WORD
 YuiGetTaskbarHeight(
-    __in PYUI_CONTEXT Context
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     WORD TaskbarHeight;
     WORD ButtonPadding;
     WORD ExtraPixels;
 
-    Context->TaskbarPaddingVertical = 2;
-    Context->ControlBorderWidth = 1;
+    YuiMonitor->TaskbarPaddingVertical = 2;
+    YuiMonitor->ControlBorderWidth = 1;
     ButtonPadding = 3;
 
-    if (Context->SmallTaskbarIconHeight >= 28) {
-        Context->ControlBorderWidth = (WORD)(Context->ControlBorderWidth + 2);
-    } else if (Context->SmallTaskbarIconHeight >= 20) {
-        Context->ControlBorderWidth = (WORD)(Context->ControlBorderWidth + 1);
-    } else if (Context->ScreenHeight > 800) {
+    //
+    //  MSFIX Seems like time for per-monitor DPI scaling
+    //
+
+    if (YuiMonitor->YuiContext->SmallTaskbarIconHeight >= 28) {
+        YuiMonitor->ControlBorderWidth = (WORD)(YuiMonitor->ControlBorderWidth + 2);
+    } else if (YuiMonitor->YuiContext->SmallTaskbarIconHeight >= 20) {
+        YuiMonitor->ControlBorderWidth = (WORD)(YuiMonitor->ControlBorderWidth + 1);
+    } else if (YuiMonitor->ScreenHeight > 800) {
 
         //
         //  If no DPI scaling is in effect, see if we should scale a bit
@@ -156,7 +160,7 @@ YuiGetTaskbarHeight(
         //  pixels above 800.
         //
 
-        ExtraPixels = (WORD)((Context->ScreenHeight - 800) / 80);
+        ExtraPixels = (WORD)((YuiMonitor->ScreenHeight - 800) / 80);
 
         //
         //  Increasing border width takes 4px, so only do it if we have a
@@ -166,7 +170,7 @@ YuiGetTaskbarHeight(
         //
 
         if (ExtraPixels >= 7) {
-            Context->ControlBorderWidth = (WORD)(Context->ControlBorderWidth + 1);
+            YuiMonitor->ControlBorderWidth = (WORD)(YuiMonitor->ControlBorderWidth + 1);
             ExtraPixels = (WORD)(ExtraPixels - 4);
         } else if (ExtraPixels >= 4) {
             ExtraPixels = 4;
@@ -175,8 +179,8 @@ YuiGetTaskbarHeight(
         ButtonPadding = (WORD)(ButtonPadding + ExtraPixels / 2);
     }
 
-    Context->TaskbarPaddingVertical = (WORD)(Context->TaskbarPaddingVertical + Context->ControlBorderWidth);
-    Context->TaskbarPaddingHorizontal = Context->TaskbarPaddingVertical;
+    YuiMonitor->TaskbarPaddingVertical = (WORD)(YuiMonitor->TaskbarPaddingVertical + YuiMonitor->ControlBorderWidth);
+    YuiMonitor->TaskbarPaddingHorizontal = YuiMonitor->TaskbarPaddingVertical;
 
     //
     //  First, set the taskbar to be based on the small icon size, with extra
@@ -185,10 +189,10 @@ YuiGetTaskbarHeight(
     //  ugly scaling.
     //
 
-    TaskbarHeight = (WORD)(Context->SmallTaskbarIconHeight +
+    TaskbarHeight = (WORD)(YuiMonitor->YuiContext->SmallTaskbarIconHeight +
                            2 * ButtonPadding +
-                           2 * Context->ControlBorderWidth +
-                           2 * Context->TaskbarPaddingVertical);
+                           2 * YuiMonitor->ControlBorderWidth +
+                           2 * YuiMonitor->TaskbarPaddingVertical);
 
     return TaskbarHeight;
 }
@@ -198,21 +202,17 @@ YuiGetTaskbarHeight(
  generally uses 180 pixel buttons but can scale upwards slightly on larger
  displays.
 
- @param ScreenWidth The width of the screen, in pixels.
-
- @param ScreenHeight The height of the screen, in pixels.
+ @param YuiMonitor Pointer to the monitor context describing the screen
+        resolution of the monitor.
 
  @return The maximum width of a taskbar button, in pixels.
  */
 WORD
 YuiGetTaskbarMaximumButtonWidth(
-    __in DWORD ScreenWidth,
-    __in DWORD ScreenHeight
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     DWORD TaskbarButtonWidth;
-
-    UNREFERENCED_PARAMETER(ScreenHeight);
 
     TaskbarButtonWidth = YUI_BASE_TASKBAR_BUTTON_WIDTH;
 
@@ -220,69 +220,19 @@ YuiGetTaskbarMaximumButtonWidth(
     //  Give an extra 50px for every font point size
     //
 
-    if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
-        TaskbarButtonWidth = TaskbarButtonWidth + 50 * (YuiContext.FontSize - YUI_BASE_FONT_SIZE);
+    if (YuiMonitor->FontSize > YUI_BASE_FONT_SIZE) {
+        TaskbarButtonWidth = TaskbarButtonWidth + 50 * (YuiMonitor->FontSize - YUI_BASE_FONT_SIZE);
     }
 
     //
     //  Give 3% of any horizontal pixels above 800
     //
 
-    if (ScreenWidth > 800) {
-        TaskbarButtonWidth = TaskbarButtonWidth + (ScreenWidth - 800) / 30;
+    if (YuiMonitor->ScreenWidth > 800) {
+        TaskbarButtonWidth = TaskbarButtonWidth + (YuiMonitor->ScreenWidth - 800) / 30;
     }
 
     return (WORD)TaskbarButtonWidth;
-}
-
-/**
- Capture the current screen dimensions and store them in the application
- context.
-
- @param Context Pointer to the application context.
-
- @param ExplicitWidth If nonzero, specifies the width of the primary display.
-        If zero, this is queried from the system.
-
- @param ExplicitHeight If nonzero, specifies the height of the primary
-        display.  If zero, this is queried from the system.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YuiGetScreenDimensions(
-    __in PYUI_CONTEXT Context,
-    __in DWORD ExplicitWidth,
-    __in DWORD ExplicitHeight
-    )
-{
-    if (ExplicitWidth != 0) {
-        Context->ScreenWidth = ExplicitWidth;
-    } else {
-        Context->ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
-    }
-
-    if (ExplicitHeight != 0) {
-        Context->ScreenHeight = ExplicitHeight;
-    } else {
-        Context->ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
-    }
-
-    Context->VirtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-    Context->VirtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-    Context->VirtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    Context->VirtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-
-    if (Context->VirtualScreenWidth == 0 ||
-        Context->VirtualScreenHeight == 0) {
-
-        Context->VirtualScreenLeft = 0;
-        Context->VirtualScreenTop = 0;
-        Context->VirtualScreenWidth = Context->ScreenWidth;
-        Context->VirtualScreenHeight = Context->ScreenHeight;
-    }
-
-    return TRUE;
 }
 
 /**
@@ -302,17 +252,21 @@ YuiStartGetText(
 /**
  Draw the start button, including icon and text.
 
+ @param YuiMonitor Pointer to the monitor context.
+
  @param DrawItemStruct Pointer to a structure describing the button to
         redraw, including its bounds and device context.
  */
 VOID
 YuiStartDrawButton(
+    __in PYUI_MONITOR YuiMonitor,
     __in PDRAWITEMSTRUCT DrawItemStruct
     )
 {
     YORI_STRING Text;
+
     YuiStartGetText(&Text);
-    YuiDrawButton(&YuiContext,
+    YuiDrawButton(YuiMonitor,
                   DrawItemStruct,
                   YuiContext.MenuActive,
                   FALSE,
@@ -321,106 +275,6 @@ YuiStartDrawButton(
                   &Text,
                   TRUE);
     YoriLibFreeStringContents(&Text);
-}
-
-/**
- Set the work area to its desired size.  This function assumes that the task
- bar must be at the bottom of the primary display, and the explorer task bar
- is not present.
-
- @param Context Pointer to the global application context.
-
- @param Notify If TRUE, notify running applications of the work area update.
-        If FALSE, suppress notifications.
-
- @return TRUE to indicate the work area was updated, FALSE if it was not.
- */
-BOOLEAN
-YuiResetWorkArea(
-    __in PYUI_CONTEXT Context,
-    __in BOOLEAN Notify
-    )
-{
-    RECT NewWorkArea;
-    RECT OldWorkArea;
-
-    //
-    //  Ideally this would be done via AppBars.  Unfortunately this code runs
-    //  in two cases: when explorer isn't running (so no AppBar support) and
-    //  where explorer is running (so it's aware of its own AppBar which we
-    //  want to hide.)  So, we do this the hard way.
-    //
-
-    if (SystemParametersInfo(SPI_GETWORKAREA, 0, &OldWorkArea, 0)) {
-
-        NewWorkArea.left = OldWorkArea.left;
-        NewWorkArea.right = OldWorkArea.right;
-        NewWorkArea.top = OldWorkArea.top;
-        NewWorkArea.bottom = Context->ScreenHeight - Context->TaskbarHeight - 1;
-
-        if (NewWorkArea.bottom != OldWorkArea.bottom) {
-            DWORD Flags;
-
-            Flags = 0;
-            if (Notify) {
-                Flags = SPIF_SENDWININICHANGE;
-            }
-#if DBG
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
-                          _T("Updating work area, OldWorkArea %i,%i-%i,%i, NewWorkArea %i,%i-%i,%i\n"),
-                          OldWorkArea.left,
-                          OldWorkArea.top,
-                          OldWorkArea.right,
-                          OldWorkArea.bottom,
-                          NewWorkArea.left,
-                          NewWorkArea.top,
-                          NewWorkArea.right,
-                          NewWorkArea.bottom);
-#endif
-            SystemParametersInfo(SPI_SETWORKAREA, 0, &NewWorkArea, Flags);
-            return TRUE;
-        }
-    }
-
-    return FALSE;
-}
-
-/**
- If the explorer taskbar is visible, hide it and update the screen work
- area to indicate that it's not present.
-
- @param Context Pointer to the application context which contains a handle to
-        the explorer taskbar.
-
- @return TRUE to indicate an explorer taskbar window was hidden or the work
-         area was changed, FALSE if no state change occurred.
- */
-BOOLEAN
-YuiHideExplorerTaskbar(
-    __in PYUI_CONTEXT Context
-    )
-{
-    RECT ExplorerTaskbarRect;
-    BOOLEAN RetVal;
-
-    if (Context->hWndExplorerTaskbar == NULL) {
-        return FALSE;
-    }
-
-    DllUser32.pGetWindowRect(Context->hWndExplorerTaskbar, &ExplorerTaskbarRect);
-
-    RetVal = FALSE;
-
-    if (YuiResetWorkArea(Context, FALSE)) {
-        RetVal = TRUE;
-    }
-
-    if (IsWindowVisible(Context->hWndExplorerTaskbar)) {
-        DllUser32.pShowWindow(Context->hWndExplorerTaskbar, SW_HIDE);
-        RetVal = TRUE;
-    }
-
-    return RetVal;
 }
 
 /**
@@ -481,13 +335,13 @@ YuiStartButtonWndProc(
  Indicates that the screen resolution has changed and the taskbar needs to be
  repositioned accordingly.
 
- @param hWnd The taskbar window to reposition.
+ @param YuiMonitor The monitor structure that should be refreshed.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YuiNotifyResolutionChange(
-    __in HWND hWnd
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     RECT ClientRect;
@@ -498,32 +352,33 @@ YuiNotifyResolutionChange(
     YORI_STRING Text;
     WORD ButtonHeight;
     INT ScaledFontSize;
+    HWND hWnd;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
     }
 
+    hWnd = YuiMonitor->hWndTaskbar;
+
     YuiContext.DisplayResolutionChangeInProgress = TRUE;
 
-    YuiContext.TaskbarHeight = YuiGetTaskbarHeight(&YuiContext);
-
-    YuiHideExplorerTaskbar(&YuiContext);
+    YuiMonitor->TaskbarHeight = YuiGetTaskbarHeight(YuiMonitor);
 
     FontName = YUI_SMALL_FONT_NAME;
 
-    ButtonHeight = (WORD)(YuiContext.TaskbarHeight -
-                          2 * YuiContext.TaskbarPaddingVertical -
-                          2 * YuiContext.ControlBorderWidth);
+    ButtonHeight = (WORD)(YuiMonitor->TaskbarHeight -
+                          2 * YuiMonitor->TaskbarPaddingVertical -
+                          2 * YuiMonitor->ControlBorderWidth);
 
-    YuiContext.FontSize = YUI_BASE_FONT_SIZE;
-    YuiContext.ExtraPixelsAboveText = 1;
+    YuiMonitor->FontSize = YUI_BASE_FONT_SIZE;
+    YuiMonitor->ExtraPixelsAboveText = 1;
     if (ButtonHeight > 24) {
-        YuiContext.FontSize = (WORD)(YuiContext.FontSize + (ButtonHeight - 24) / 2);
+        YuiMonitor->FontSize = (WORD)(YuiMonitor->FontSize + (ButtonHeight - 24) / 2);
     }
 
-    if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
+    if (YuiMonitor->FontSize > YUI_BASE_FONT_SIZE) {
         FontName = YUI_LARGE_FONT_NAME;
-        YuiContext.ExtraPixelsAboveText = 0;
+        YuiMonitor->ExtraPixelsAboveText = 0;
     }
 
     //
@@ -532,10 +387,10 @@ YuiNotifyResolutionChange(
     //  the font size based on a fixed 96 DPI display.
     //
 
-    ScaledFontSize = YuiContext.FontSize;
+    ScaledFontSize = YuiMonitor->FontSize;
     ScaledFontSize = ScaledFontSize * 96 / 72;
 
-    YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
+    YuiMonitor->MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(YuiMonitor);
 
     hDC = GetWindowDC(hWnd);
     hFont = CreateFont(-ScaledFontSize,
@@ -570,36 +425,48 @@ YuiNotifyResolutionChange(
 
     if (hFont != NULL) {
 
-        if (YuiContext.hFont != NULL) {
-            DeleteObject(YuiContext.hFont);
+        if (YuiMonitor->hFont != NULL) {
+            DeleteObject(YuiMonitor->hFont);
         }
-        YuiContext.hFont = hFont;
+        YuiMonitor->hFont = hFont;
 
-        if (YuiContext.hWnd != NULL) {
-            SendMessage(YuiContext.hWnd, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
+        if (YuiMonitor->hWndTaskbar != NULL) {
+            SendMessage(YuiMonitor->hWndTaskbar,
+                        WM_SETFONT,
+                        (WPARAM)YuiMonitor->hFont,
+                        MAKELPARAM(TRUE, 0));
         }
 
-        if (YuiContext.hWndBattery != NULL) {
-            SendMessage(YuiContext.hWndBattery, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
+        if (YuiMonitor->hWndBattery != NULL) {
+            SendMessage(YuiMonitor->hWndBattery,
+                        WM_SETFONT,
+                        (WPARAM)YuiMonitor->hFont,
+                        MAKELPARAM(TRUE, 0));
         }
 
-        if (YuiContext.hWndClock != NULL) {
-            SendMessage(YuiContext.hWndClock, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
+        if (YuiMonitor->hWndClock != NULL) {
+            SendMessage(YuiMonitor->hWndClock,
+                        WM_SETFONT,
+                        (WPARAM)YuiMonitor->hFont,
+                        MAKELPARAM(TRUE, 0));
         }
     }
 
     if (hBoldFont != NULL) {
-        if (YuiContext.hBoldFont != NULL) {
-            DeleteObject(YuiContext.hBoldFont);
+        if (YuiMonitor->hBoldFont != NULL) {
+            DeleteObject(YuiMonitor->hBoldFont);
         }
-        YuiContext.hBoldFont = hBoldFont;
+        YuiMonitor->hBoldFont = hBoldFont;
 
-        if (YuiContext.hWndStart != NULL) {
-            SendMessage(YuiContext.hWndStart, WM_SETFONT, (WPARAM)YuiContext.hBoldFont, MAKELPARAM(TRUE, 0));
+        if (YuiMonitor->hWndStart != NULL) {
+            SendMessage(YuiMonitor->hWndStart,
+                        WM_SETFONT,
+                        (WPARAM)YuiMonitor->hBoldFont,
+                        MAKELPARAM(TRUE, 0));
         }
     }
 
-    if (YuiContext.FontSize > YUI_BASE_FONT_SIZE) {
+    if (YuiMonitor->FontSize > YUI_BASE_FONT_SIZE) {
         YuiContext.TallIconPadding = 6;
         YuiContext.ShortIconPadding = 4;
     } else {
@@ -612,42 +479,42 @@ YuiNotifyResolutionChange(
     YuiContext.MenuSeperatorHeight = 12;
 
     YuiStartGetText(&Text);
-    YuiContext.StartButtonWidth = (WORD)(YuiContext.SmallTaskbarIconWidth +
-                                         4 * YuiContext.ControlBorderWidth +
-                                         YuiDrawGetTextWidth(&YuiContext, TRUE, &Text) +
-                                         16);
+    YuiMonitor->StartButtonWidth = (WORD)(YuiContext.SmallTaskbarIconWidth +
+                                          4 * YuiMonitor->ControlBorderWidth +
+                                          YuiDrawGetTextWidth(YuiMonitor, TRUE, &Text) +
+                                          16);
 
     YoriLibFreeStringContents(&Text);
     YoriLibConstantString(&Text, _T("88:88 PM"));
-    YuiContext.ClockWidth = (WORD)(YuiDrawGetTextWidth(&YuiContext, FALSE, &Text) * 5 / 4 + 2 * YuiContext.ControlBorderWidth);
+    YuiMonitor->ClockWidth = (WORD)(YuiDrawGetTextWidth(YuiMonitor, FALSE, &Text) * 5 / 4 + 2 * YuiMonitor->ControlBorderWidth);
     YoriLibConstantString(&Text, _T("100%"));
-    YuiContext.BatteryWidth = (WORD)(YuiDrawGetTextWidth(&YuiContext, FALSE, &Text) * 5 / 4 + 2 * YuiContext.ControlBorderWidth);
-    YuiContext.CalendarCellWidth = (WORD)(YUI_CALENDAR_CELL_WIDTH + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 5);
-    YuiContext.CalendarCellHeight = (WORD)(YUI_CALENDAR_CELL_HEIGHT + (YuiContext.FontSize - YUI_BASE_FONT_SIZE) * 4);
+    YuiMonitor->BatteryWidth = (WORD)(YuiDrawGetTextWidth(YuiMonitor, FALSE, &Text) * 5 / 4 + 2 * YuiMonitor->ControlBorderWidth);
+    YuiMonitor->CalendarCellWidth = (WORD)(YUI_CALENDAR_CELL_WIDTH + (YuiMonitor->FontSize - YUI_BASE_FONT_SIZE) * 5);
+    YuiMonitor->CalendarCellHeight = (WORD)(YUI_CALENDAR_CELL_HEIGHT + (YuiMonitor->FontSize - YUI_BASE_FONT_SIZE) * 4);
 
 #if DBG
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
-                 _T("Based on screen size %ix%i, font size %i, TaskbarHeight %i, ButtonHeight %i\n")
-                 _T("StartButtonWidth %i, TaskbarButtonWidth %i\n"),
-                 YuiContext.ScreenWidth,
-                 YuiContext.ScreenHeight,
-                 YuiContext.FontSize,
-                 YuiContext.TaskbarHeight,
-                 ButtonHeight,
-                 YuiContext.StartButtonWidth,
-                 YuiContext.MaximumTaskbarButtonWidth);
+    if (YuiContext.DebugLogEnabled) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                     _T("Based on screen size %ix%i, font size %i, TaskbarHeight %i, ButtonHeight %i\n")
+                     _T("StartButtonWidth %i, TaskbarButtonWidth %i\n"),
+                     YuiMonitor->ScreenWidth,
+                     YuiMonitor->ScreenHeight,
+                     YuiMonitor->FontSize,
+                     YuiMonitor->TaskbarHeight,
+                     ButtonHeight,
+                     YuiMonitor->StartButtonWidth,
+                     YuiMonitor->MaximumTaskbarButtonWidth);
+    }
 #endif
 
     ReleaseDC(hWnd, hDC);
 
     DllUser32.pMoveWindow(hWnd,
-                          0,
-                          YuiContext.ScreenHeight - YuiContext.TaskbarHeight,
-                          YuiContext.ScreenWidth,
-                          YuiContext.TaskbarHeight,
+                          YuiMonitor->ScreenLeft,
+                          YuiMonitor->ScreenTop + YuiMonitor->ScreenHeight - YuiMonitor->TaskbarHeight,
+                          YuiMonitor->ScreenWidth,
+                          YuiMonitor->TaskbarHeight,
                           TRUE);
-
-    YuiResetWorkArea(&YuiContext, TRUE);
 
     if (YuiContext.hWndDesktop != NULL) {
         DllUser32.pMoveWindow(YuiContext.hWndDesktop,
@@ -662,42 +529,43 @@ YuiNotifyResolutionChange(
 
     DllUser32.pGetClientRect(hWnd, &ClientRect);
 
-    if (YuiContext.hWndBattery != NULL) {
-        DllUser32.pMoveWindow(YuiContext.hWndBattery,
-                              ClientRect.right - YuiContext.ClockWidth - 3 - YuiContext.BatteryWidth - YuiContext.TaskbarPaddingHorizontal,
-                              YuiContext.TaskbarPaddingVertical,
-                              YuiContext.BatteryWidth,
-                              ClientRect.bottom - 2 * YuiContext.TaskbarPaddingVertical,
+    if (YuiMonitor->hWndBattery != NULL) {
+        DllUser32.pMoveWindow(YuiMonitor->hWndBattery,
+                              ClientRect.right - YuiMonitor->ClockWidth - 3 - YuiMonitor->BatteryWidth - YuiMonitor->TaskbarPaddingHorizontal,
+                              YuiMonitor->TaskbarPaddingVertical,
+                              YuiMonitor->BatteryWidth,
+                              ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
                               TRUE);
     }
 
-    if (YuiContext.hWndClock != NULL) {
-        DllUser32.pMoveWindow(YuiContext.hWndClock,
-                              ClientRect.right - YuiContext.ClockWidth - YuiContext.TaskbarPaddingHorizontal,
-                              YuiContext.TaskbarPaddingVertical,
-                              YuiContext.ClockWidth,
-                              ClientRect.bottom - 2 * YuiContext.TaskbarPaddingVertical,
+    if (YuiMonitor->hWndClock != NULL) {
+        DllUser32.pMoveWindow(YuiMonitor->hWndClock,
+                              ClientRect.right - YuiMonitor->ClockWidth - YuiMonitor->TaskbarPaddingHorizontal,
+                              YuiMonitor->TaskbarPaddingVertical,
+                              YuiMonitor->ClockWidth,
+                              ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
                               TRUE);
     }
 
-    if (YuiContext.hWndStart != NULL) {
-        DllUser32.pMoveWindow(YuiContext.hWndStart,
-                              YuiContext.TaskbarPaddingHorizontal,
-                              YuiContext.TaskbarPaddingVertical,
-                              YuiContext.StartButtonWidth,
-                              ClientRect.bottom - 2 * YuiContext.TaskbarPaddingVertical,
+    if (YuiMonitor->hWndStart != NULL) {
+        DllUser32.pMoveWindow(YuiMonitor->hWndStart,
+                              YuiMonitor->TaskbarPaddingHorizontal,
+                              YuiMonitor->TaskbarPaddingVertical,
+                              YuiMonitor->StartButtonWidth,
+                              ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
                               TRUE);
     }
 
-    YuiContext.StartLeftOffset = YuiContext.TaskbarPaddingHorizontal;
-    YuiContext.StartRightOffset = (WORD)(YuiContext.StartLeftOffset + YuiContext.StartButtonWidth);
+    YuiMonitor->StartLeftOffset = YuiMonitor->TaskbarPaddingHorizontal;
+    YuiMonitor->StartRightOffset = (WORD)(YuiMonitor->StartLeftOffset + YuiMonitor->StartButtonWidth);
 
-    YuiContext.LeftmostTaskbarOffset = (WORD)(YuiContext.TaskbarPaddingHorizontal + YuiContext.StartButtonWidth + YuiContext.ControlBorderWidth * 2);
-    YuiContext.RightmostTaskbarOffset = (WORD)(YuiContext.ControlBorderWidth + YuiContext.ClockWidth + YuiContext.TaskbarPaddingHorizontal);
+    YuiMonitor->LeftmostTaskbarOffset = (WORD)(YuiMonitor->TaskbarPaddingHorizontal + YuiMonitor->StartButtonWidth + YuiMonitor->ControlBorderWidth * 2);
+    YuiMonitor->RightmostTaskbarOffset = (WORD)(YuiMonitor->ControlBorderWidth + YuiMonitor->ClockWidth + YuiMonitor->TaskbarPaddingHorizontal);
 
-    YuiTaskbarNotifyResolutionChange(&YuiContext);
+    YuiTaskbarNotifyResolutionChange(YuiMonitor);
 
     YuiContext.DisplayResolutionChangeInProgress = FALSE;
+    YuiMonitor->DimensionsChanged = FALSE;
 
     return TRUE;
 }
@@ -708,18 +576,20 @@ YuiNotifyResolutionChange(
  @return TRUE to indicate the start menu was displayed successfully.
  */
 BOOL
-YuiDisplayMenu(VOID)
+YuiDisplayMenu(
+    __in PYUI_MONITOR YuiMonitor
+    )
 {
     if (YuiContext.MenuActive) {
         return TRUE;
     }
-    YuiTaskbarSuppressFullscreenHiding(&YuiContext);
+    YuiTaskbarSuppressFullscreenHiding(YuiMonitor);
     YuiContext.MenuActive = TRUE;
-    SendMessage(YuiContext.hWndStart, BM_SETSTATE, TRUE, 0);
-    YuiMenuDisplayAndExecute(&YuiContext, YuiContext.hWnd);
+    SendMessage(YuiMonitor->hWndStart, BM_SETSTATE, TRUE, 0);
+    YuiMenuDisplayAndExecute(YuiMonitor, YuiMonitor->hWndTaskbar);
     if (YuiContext.MenuActive) {
         YuiContext.MenuActive = FALSE;
-        SendMessage(YuiContext.hWndStart, BM_SETSTATE, FALSE, 0);
+        SendMessage(YuiMonitor->hWndStart, BM_SETSTATE, FALSE, 0);
     }
     return TRUE;
 }
@@ -727,10 +597,17 @@ YuiDisplayMenu(VOID)
 /**
  Display the taskbar context menu and perform any action requested.
 
+ @param YuiMonitor Pointer to the monitor context.
+
+ @param CursorX The horizontal position of the mouse cursor.
+
+ @param CursorY The vertical position of the mouse cursor.
+
  @return TRUE to indicate the context menu was displayed successfully.
  */
 BOOL
 YuiDisplayContextMenu(
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CursorX,
     __in DWORD CursorY
     )
@@ -738,8 +615,8 @@ YuiDisplayContextMenu(
     if (YuiContext.MenuActive) {
         return FALSE;
     }
-    YuiTaskbarSuppressFullscreenHiding(&YuiContext);
-    YuiMenuDisplayContext(&YuiContext, YuiContext.hWnd, CursorX, CursorY);
+    YuiTaskbarSuppressFullscreenHiding(YuiMonitor);
+    YuiMenuDisplayContext(YuiMonitor, YuiMonitor->hWndTaskbar, CursorX, CursorY);
     return TRUE;
 }
 
@@ -777,6 +654,7 @@ YuiPrintShellHookDebugMessage(
         case HSHELL_WINDOWDESTROYED:
         case HSHELL_REDRAW:
         case HSHELL_FLASH:
+        case HSHELL_MONITORCHANGED:
             hWnd = (HWND)lParam;
             break;
     }
@@ -849,32 +727,37 @@ YuiTaskbarWindowProc(
     __in LPARAM lParam
     )
 {
+    PYUI_MONITOR YuiMonitor;
     WORD CtrlId;
 
     switch(uMsg) {
         case WM_COMMAND:
             if (HIWORD(wParam) == BN_CLICKED) {
+
+                YuiMonitor = YuiMonitorFromTaskbarHwnd(&YuiContext, hwnd);
+                ASSERT(YuiMonitor != NULL);
+
                 //
                 //  Explorer won't allow windows without focus to change the
                 //  work area.  Since this user interaction gives us that
                 //  power, fix things now if needed.
                 //
 
-                YuiResetWorkArea(&YuiContext, FALSE);
+                YuiResetWorkArea(YuiMonitor, FALSE);
 
                 CtrlId = LOWORD(wParam);
                 if (CtrlId == YUI_START_BUTTON) {
-                    YuiDisplayMenu();
+                    YuiDisplayMenu(YuiMonitor);
                 } else if (CtrlId == YUI_CLOCK_DISPLAY) {
-                    YuiCalendar(&YuiContext);
+                    YuiCalendar(YuiMonitor);
                 } else if (CtrlId == YUI_BATTERY_DISPLAY) {
-                    YuiClockDisplayBatteryInfo(&YuiContext);
+                    YuiClockDisplayBatteryInfo(YuiMonitor);
                 } else {
                     ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
                     if (GetKeyState(VK_SHIFT) < 0) {
-                        YuiTaskbarLaunchNewTask(&YuiContext, CtrlId);
+                        YuiTaskbarLaunchNewTask(YuiMonitor, CtrlId);
                     } else {
-                        YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
+                        YuiTaskbarSwitchToTask(YuiMonitor, CtrlId);
                     }
                 }
             }
@@ -883,13 +766,16 @@ YuiTaskbarWindowProc(
             {
                 SHORT XPos;
 
+                YuiMonitor = YuiMonitorFromTaskbarHwnd(&YuiContext, hwnd);
+                ASSERT(YuiMonitor != NULL);
+
                 //
                 //  Explorer won't allow windows without focus to change the
                 //  work area.  Since this user interaction gives us that
                 //  power, fix things now if needed.
                 //
 
-                YuiResetWorkArea(&YuiContext, FALSE);
+                YuiResetWorkArea(YuiMonitor, FALSE);
 
                 //
                 //  Get the signed horizontal position.  Note that because
@@ -898,15 +784,15 @@ YuiTaskbarWindowProc(
                 //
 
                 XPos = (SHORT)(LOWORD(lParam));
-                if (XPos <= YuiContext.StartRightOffset) {
-                    YuiDisplayMenu();
+                if (YuiTaskbarIsPositionOverStart(YuiMonitor, XPos)) {
+                    YuiDisplayMenu(YuiMonitor);
                 } else {
-                    CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
+                    CtrlId = YuiTaskbarFindByOffset(YuiMonitor, XPos);
                     if (CtrlId >= YUI_FIRST_TASKBAR_BUTTON) {
                         if (GetKeyState(VK_SHIFT) < 0) {
-                            YuiTaskbarLaunchNewTask(&YuiContext, CtrlId);
+                            YuiTaskbarLaunchNewTask(YuiMonitor, CtrlId);
                         } else {
-                            YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
+                            YuiTaskbarSwitchToTask(YuiMonitor, CtrlId);
                         }
                     } else {
                         YuiTaskbarSwitchToActiveTask(&YuiContext);
@@ -964,6 +850,10 @@ YuiTaskbarWindowProc(
                 SHORT YPos;
                 SHORT RightmostTaskbarOffset;
                 RECT TaskbarWindowRect;
+
+                YuiMonitor = YuiMonitorFromTaskbarHwnd(&YuiContext, hwnd);
+                ASSERT(YuiMonitor != NULL);
+
                 XPos = (SHORT)(LOWORD(lParam));
                 YPos = (SHORT)(HIWORD(lParam));
 
@@ -973,7 +863,7 @@ YuiTaskbarWindowProc(
                 //  not currently implemented.
                 //
 
-                DllUser32.pGetWindowRect(YuiContext.hWnd, &TaskbarWindowRect);
+                DllUser32.pGetWindowRect(YuiMonitor->hWndTaskbar, &TaskbarWindowRect);
                 if (XPos >= TaskbarWindowRect.left &&
                     XPos <= TaskbarWindowRect.right &&
                     YPos >= TaskbarWindowRect.top &&
@@ -989,15 +879,15 @@ YuiTaskbarWindowProc(
                     TaskbarWindowRect.right = TaskbarWindowRect.right - TaskbarWindowRect.left;
                     TaskbarWindowRect.bottom = TaskbarWindowRect.bottom - TaskbarWindowRect.top;
 
-                    RightmostTaskbarOffset = (SHORT)(TaskbarWindowRect.right - YuiContext.RightmostTaskbarOffset);
-                    if (XPos >= (SHORT)YuiContext.LeftmostTaskbarOffset &&
+                    RightmostTaskbarOffset = (SHORT)(TaskbarWindowRect.right - YuiMonitor->RightmostTaskbarOffset);
+                    if (XPos >= (SHORT)YuiMonitor->LeftmostTaskbarOffset &&
                         XPos <= RightmostTaskbarOffset) {
 
-                        CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
+                        CtrlId = YuiTaskbarFindByOffset(YuiMonitor, XPos);
                         if (CtrlId < YUI_FIRST_TASKBAR_BUTTON) {
-                            YuiDisplayContextMenu(LOWORD(lParam), HIWORD(lParam));
+                            YuiDisplayContextMenu(YuiMonitor, LOWORD(lParam), HIWORD(lParam));
                         } else {
-                            YuiTaskbarDisplayContextMenuForTask(&YuiContext, CtrlId, LOWORD(lParam), HIWORD(lParam));
+                            YuiTaskbarDisplayContextMenuForTask(YuiMonitor, CtrlId, LOWORD(lParam), HIWORD(lParam));
                         }
                     }
                 }
@@ -1009,11 +899,13 @@ YuiTaskbarWindowProc(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("WM_HOTKEY               %016llx %016llx\n"), wParam, lParam);
             }
 #endif
+            YuiMonitor = YuiMonitorFromTaskbarHwnd(&YuiContext, hwnd);
+            ASSERT(YuiMonitor != NULL);
             DllUser32.pSetForegroundWindow(hwnd);
             if ((DWORD)wParam == YUI_MENU_START) {
-                YuiDisplayMenu();
+                YuiDisplayMenu(YuiMonitor);
             } else {
-                YuiMenuExecuteById(&YuiContext, (DWORD)wParam);
+                YuiMenuExecuteById(YuiMonitor, (DWORD)wParam);
             }
             PostMessage(hwnd, WM_NULL, 0, 0);
             break;
@@ -1023,42 +915,45 @@ YuiTaskbarWindowProc(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Display change          %016llx %016llx\n"), wParam, lParam);
             }
 #endif
-            YuiGetScreenDimensions(&YuiContext, LOWORD(lParam), HIWORD(lParam));
-            YuiNotifyResolutionChange(YuiContext.hWnd);
+            YuiRefreshMonitors(&YuiContext);
             break;
         case WM_WTSSESSION_CHANGE:
 #if DBG
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Session change          %016llx %016llx\n"), wParam, lParam);
-#endif
-            if (YuiHideExplorerTaskbar(&YuiContext)) {
-                YuiGetScreenDimensions(&YuiContext, 0, 0);
-                YuiNotifyResolutionChange(YuiContext.hWnd);
+            if (YuiContext.DebugLogEnabled) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Session change          %016llx %016llx\n"), wParam, lParam);
             }
+#endif
+            YuiRefreshMonitors(&YuiContext);
             break;
         case WM_MEASUREITEM:
-            return YuiDrawMeasureMenuItem(&YuiContext, (LPMEASUREITEMSTRUCT)lParam);
+            YuiMonitor = YuiMonitorFromTaskbarHwnd(&YuiContext, hwnd);
+            ASSERT(YuiMonitor != NULL);
+            return YuiDrawMeasureMenuItem(YuiMonitor, (LPMEASUREITEMSTRUCT)lParam);
         case WM_DRAWITEM:
             {
                 PDRAWITEMSTRUCT DrawItemStruct;
+
+                YuiMonitor = YuiMonitorFromTaskbarHwnd(&YuiContext, hwnd);
+                ASSERT(YuiMonitor != NULL);
 
                 DrawItemStruct = (PDRAWITEMSTRUCT)lParam;
 
                 CtrlId = LOWORD(wParam);
                 if (CtrlId == YUI_START_BUTTON) {
-                    YuiStartDrawButton(DrawItemStruct);
+                    YuiStartDrawButton(YuiMonitor, DrawItemStruct);
                 } else if (CtrlId == YUI_BATTERY_DISPLAY) {
-                    YuiTaskbarDrawStatic(&YuiContext,
+                    YuiTaskbarDrawStatic(YuiMonitor,
                                          DrawItemStruct,
                                          &YuiContext.BatteryDisplayedValue);
                 } else if (CtrlId == YUI_CLOCK_DISPLAY) {
-                    YuiTaskbarDrawStatic(&YuiContext,
+                    YuiTaskbarDrawStatic(YuiMonitor,
                                          DrawItemStruct,
                                          &YuiContext.ClockDisplayedValue);
                 } else if (CtrlId != 0) {
                     ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
-                    YuiTaskbarDrawButton(&YuiContext, CtrlId, DrawItemStruct);
+                    YuiTaskbarDrawButton(YuiMonitor, CtrlId, DrawItemStruct);
                 } else {
-                    YuiDrawMenuItem(&YuiContext, DrawItemStruct);
+                    YuiDrawMenuItem(YuiMonitor, DrawItemStruct);
                 }
             }
             break;
@@ -1066,8 +961,10 @@ YuiTaskbarWindowProc(
             return (LRESULT)YuiContext.BackgroundBrush;
             break;
         case WM_PAINT:
-            if (hwnd == YuiContext.hWnd) {
-                if (YuiDrawWindowFrame(&YuiContext, YuiContext.hWnd, (HDC)wParam)) {
+            YuiMonitor = YuiMonitorFromTaskbarHwnd(&YuiContext, hwnd);
+            ASSERT(YuiMonitor != NULL);
+            if (hwnd == YuiMonitor->hWndTaskbar) {
+                if (YuiDrawWindowFrame(YuiMonitor, YuiMonitor->hWndTaskbar, (HDC)wParam)) {
                     return 0;
                 }
             }
@@ -1169,6 +1066,7 @@ YuiTaskbarWindowProc(
 #if DBG
                         YuiPrintShellHookDebugMessage(_T("HSHELL_MONITORCHANGED"), wParam, lParam);
 #endif
+                        YuiTaskbarNotifyMonitorChanged(&YuiContext, (HWND)lParam);
                         break;
                     default:
 #if DBG
@@ -1179,32 +1077,6 @@ YuiTaskbarWindowProc(
             }
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-
-/**
- Find the explorer taskbar.
-
- @param Context Pointer to the application context to update with a handle
-        to the explore taskbar window so it can be restored on exit.
-
- @return TRUE to indicate an explorer taskbar window was found, FALSE if it
-         was not.
- */
-BOOLEAN
-YuiFindExplorerTaskbar(
-    __in PYUI_CONTEXT Context
-    )
-{
-    HWND hWndFound;
-
-    hWndFound = FindWindow(_T("Shell_TrayWnd"), NULL);
-
-    if (hWndFound == NULL) {
-        return FALSE;
-    }
-
-    Context->hWndExplorerTaskbar = hWndFound;
-    return TRUE;
 }
 
 /**
@@ -1219,6 +1091,10 @@ YuiCleanupGlobalState(VOID)
     DWORD Count;
     PYORI_LIST_ENTRY ListEntry;
     PYUI_RECENT_CHILD_PROCESS ChildProcess;
+    PYUI_MONITOR YuiMonitor;
+    PYUI_MONITOR NextMonitor;
+    PYUI_EXPLORER_TASKBAR ExplorerTaskbar;
+    HWND hWndPrimaryTaskbar;
 
     YuiMenuWaitForBackgroundReload(&YuiContext);
     YuiMenuFreeAll(&YuiContext);
@@ -1246,68 +1122,43 @@ YuiCleanupGlobalState(VOID)
         }
     }
 
+    hWndPrimaryTaskbar = YuiContext.PrimaryMon->hWndTaskbar;
+
     if (DllWtsApi32.pWTSUnRegisterSessionNotification &&
         YuiContext.RegisteredSessionNotifications) {
 
-        DllWtsApi32.pWTSUnRegisterSessionNotification(YuiContext.hWnd);
+        DllWtsApi32.pWTSUnRegisterSessionNotification(hWndPrimaryTaskbar);
     }
 
     if (YuiContext.RunHotKeyRegistered) {
-        UnregisterHotKey(YuiContext.hWnd, YUI_MENU_RUN);
+        UnregisterHotKey(hWndPrimaryTaskbar, YUI_MENU_RUN);
     }
 
     if (YuiContext.StartHotKeyRegistered) {
-        UnregisterHotKey(YuiContext.hWnd, YUI_START_BUTTON);
-    }
-
-    if (YuiContext.DropHandle != NULL) {
-        YuiUnregisterDropWindow(YuiContext.hWnd, YuiContext.DropHandle);
-        YuiContext.DropHandle = NULL;
+        UnregisterHotKey(hWndPrimaryTaskbar, YUI_START_BUTTON);
     }
 
     if (YuiContext.ClockTimerId != 0) {
-        KillTimer(YuiContext.hWnd, YUI_CLOCK_TIMER);
+        KillTimer(hWndPrimaryTaskbar, YUI_CLOCK_TIMER);
         YuiContext.ClockTimerId = 0;
     }
 
     if (YuiContext.SyncTimerId != 0) {
-        KillTimer(YuiContext.hWnd, YUI_WINDOW_POLL_TIMER);
+        KillTimer(hWndPrimaryTaskbar, YUI_WINDOW_POLL_TIMER);
         YuiContext.SyncTimerId = 0;
     }
 
-    if (YuiContext.hWndClock != NULL) {
-        DestroyWindow(YuiContext.hWndClock);
-        YuiContext.hWndClock = NULL;
-    }
-
-    if (YuiContext.hWndBattery != NULL) {
-        DestroyWindow(YuiContext.hWndBattery);
-        YuiContext.hWndBattery = NULL;
-    }
-
-    if (YuiContext.hWndStart != NULL) {
-        DestroyWindow(YuiContext.hWndStart);
-        YuiContext.hWndStart = NULL;
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(&YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        NextMonitor = YuiGetNextMonitor(&YuiContext, YuiMonitor);
+        YuiCleanupMonitor(YuiMonitor);
+        YuiMonitor = NextMonitor;
     }
 
     if (YuiContext.hWndDesktop != NULL) {
         DestroyWindow(YuiContext.hWndDesktop);
         YuiContext.hWndDesktop = NULL;
-    }
-
-    if (YuiContext.hWnd != NULL) {
-        DestroyWindow(YuiContext.hWnd);
-        YuiContext.hWnd = NULL;
-    }
-
-    if (YuiContext.hFont) {
-        DeleteObject(YuiContext.hFont);
-        YuiContext.hFont = NULL;
-    }
-
-    if (YuiContext.hBoldFont) {
-        DeleteObject(YuiContext.hBoldFont);
-        YuiContext.hBoldFont = NULL;
     }
 
     if (YuiContext.StartIcon) {
@@ -1324,10 +1175,177 @@ YuiCleanupGlobalState(VOID)
         SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(YORI_MINIMIZEDMETRICS), &YuiContext.SavedMinimizedMetrics, 0);
     }
 
-    if (YuiContext.hWndExplorerTaskbar != NULL) {
-        DllUser32.pShowWindow(YuiContext.hWndExplorerTaskbar, SW_SHOW);
-        YuiContext.hWndExplorerTaskbar = NULL;
+    if (YuiContext.OleInitialized) {
+        YuiOleUninitialize();
     }
+
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(&YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        NextMonitor = YuiGetNextMonitor(&YuiContext, YuiMonitor);
+        YoriLibFree(YuiMonitor);
+        YuiMonitor = NextMonitor;
+    }
+
+    ListEntry = YoriLibGetNextListEntry(&YuiContext.ExplorerTaskbarList, NULL);
+    while (ListEntry != NULL) {
+        ExplorerTaskbar = CONTAINING_RECORD(ListEntry, YUI_EXPLORER_TASKBAR, ListEntry);
+        YoriLibRemoveListItem(ListEntry);
+        if (ExplorerTaskbar->Hidden) {
+            DllUser32.pShowWindow(ExplorerTaskbar->hWnd, SW_SHOW);
+        }
+        YoriLibFree(ExplorerTaskbar);
+        ListEntry = YoriLibGetNextListEntry(&YuiContext.ExplorerTaskbarList, NULL);
+    }
+}
+
+/**
+ Create a taskbar and its children for a particular monitor.
+
+ @param YuiMonitor Pointer to the monitor to create windows on.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YuiInitializeMonitor(
+    __in PYUI_MONITOR YuiMonitor
+    )
+{
+    PYUI_CONTEXT Context;
+    DWORD NoActivate;
+    RECT ClientRect;
+
+    Context = YuiMonitor->YuiContext;
+    YuiMonitor->TaskbarHeight = YuiGetTaskbarHeight(YuiMonitor);
+
+#if DBG
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Creating taskbar on monitor %p\n"), YuiMonitor->MonitorHandle);
+#endif
+
+    NoActivate = WS_EX_NOACTIVATE;
+
+    //
+    //  Try to create the taskbar window.  If this fails, remove
+    //  WS_EX_NOACTIVATE and try again.
+    //
+
+    while(TRUE) {
+        YuiMonitor->hWndTaskbar = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | NoActivate,
+                                                 YUI_TASKBAR_CLASS,
+                                                 _T("Yui"),
+                                                 WS_POPUP | WS_CLIPCHILDREN,
+                                                 YuiMonitor->ScreenLeft,
+                                                 YuiMonitor->ScreenTop + YuiMonitor->ScreenHeight - YuiMonitor->TaskbarHeight,
+                                                 YuiMonitor->ScreenWidth,
+                                                 YuiMonitor->TaskbarHeight,
+                                                 NULL, NULL, NULL, 0);
+        if (YuiMonitor->hWndTaskbar != NULL) {
+            break;
+        }
+
+        if (NoActivate != 0) {
+            NoActivate = 0;
+        } else {
+            return FALSE;
+        }
+    }
+
+    //
+    //  Attempt to set up drag and drop.
+    //
+
+    if (Context->OleInitialized) {
+        YuiMonitor->DropHandle = YuiRegisterDropWindow(YuiMonitor, YuiMonitor->hWndTaskbar);
+
+#if DBG
+        if (YuiMonitor->DropHandle == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("RegisterDropWindow failed for monitor %p\n"), YuiMonitor->MonitorHandle);
+        }
+#endif
+    }
+
+    YuiNotifyResolutionChange(YuiMonitor);
+    if (YuiMonitor->hFont == NULL || YuiMonitor->hBoldFont == NULL) {
+        return FALSE;
+    }
+
+    SendMessage(YuiMonitor->hWndTaskbar, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+
+    DllUser32.pGetClientRect(YuiMonitor->hWndTaskbar, &ClientRect);
+
+    YuiMonitor->hWndStart = CreateWindow(_T("BUTTON"),
+                                         _T("Start"),
+                                         BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
+                                         YuiMonitor->TaskbarPaddingHorizontal,
+                                         YuiMonitor->TaskbarPaddingVertical,
+                                         YuiMonitor->StartButtonWidth,
+                                         ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
+                                         YuiMonitor->hWndTaskbar,
+                                         (HMENU)(DWORD_PTR)YUI_START_BUTTON,
+                                         NULL,
+                                         NULL);
+
+    if (YuiMonitor->hWndStart == NULL) {
+        return FALSE;
+    }
+
+    if (Context->DefaultButtonWndProc == NULL) {
+        Context->DefaultButtonWndProc = (WNDPROC)GetWindowLongPtr(YuiMonitor->hWndStart, GWLP_WNDPROC);
+        if (Context->DefaultButtonWndProc == NULL) {
+            return FALSE;
+        }
+    }
+    SetWindowLongPtr(YuiMonitor->hWndStart, GWLP_WNDPROC, (LONG_PTR)YuiStartButtonWndProc);
+
+    SendMessage(YuiMonitor->hWndStart, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(TRUE, 0));
+
+    YuiMonitor->hWndClock = CreateWindowEx(0,
+                                           _T("STATIC"),
+                                           _T(""),
+                                           SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
+                                           ClientRect.right - YuiMonitor->ClockWidth - YuiMonitor->TaskbarPaddingHorizontal,
+                                           YuiMonitor->TaskbarPaddingVertical,
+                                           YuiMonitor->ClockWidth,
+                                           ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
+                                           YuiMonitor->hWndTaskbar,
+                                           (HMENU)(DWORD_PTR)YUI_CLOCK_DISPLAY,
+                                           NULL,
+                                           NULL);
+
+    if (YuiMonitor->hWndClock == NULL) {
+        YuiCleanupGlobalState();
+        return FALSE;
+    }
+
+    SendMessage(YuiMonitor->hWndClock, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+
+    if (Context->DisplayBattery) {
+        YuiMonitor->hWndBattery = CreateWindowEx(0,
+                                                 _T("STATIC"),
+                                                 _T(""),
+                                                 SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
+                                                 ClientRect.right - YuiMonitor->ClockWidth - 3 - YuiMonitor->BatteryWidth - YuiMonitor->TaskbarPaddingHorizontal,
+                                                 YuiMonitor->TaskbarPaddingVertical,
+                                                 YuiMonitor->BatteryWidth,
+                                                 ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
+                                                 YuiMonitor->hWndTaskbar,
+                                                 (HMENU)(DWORD_PTR)YUI_BATTERY_DISPLAY,
+                                                 NULL,
+                                                 NULL);
+
+        if (YuiMonitor->hWndBattery == NULL) {
+            YuiCleanupGlobalState();
+            return FALSE;
+        }
+
+        SendMessage(YuiMonitor->hWndBattery,
+                    WM_SETFONT,
+                    (WPARAM)YuiMonitor->hFont,
+                    MAKELPARAM(TRUE, 0));
+        YuiMonitor->RightmostTaskbarOffset = (WORD)(1 + YuiMonitor->ClockWidth + 3 + YuiMonitor->BatteryWidth + 1);
+    }
+
+    return TRUE;
 }
 
 /**
@@ -1339,15 +1357,43 @@ YuiCleanupGlobalState(VOID)
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YuiCreateWindow(
+YuiInitializeApplication(
     __in PYUI_CONTEXT Context
     )
 {
     WNDCLASS wc;
     BOOL Result;
-    RECT ClientRect;
     YORI_MINIMIZEDMETRICS MinimizedMetrics;
+    PYUI_MONITOR YuiMonitor;
     DWORD NoActivate;
+    DWORD MajorVersion;
+    DWORD MinorVersion;
+    DWORD BuildNumber;
+    HWND hWnd;
+
+    //
+    //  Multiple monitor functions have existed since Windows 2000, but only
+    //  Windows 8 indicates window movement across monitors which is necessary
+    //  to support multiple taskbars.
+    //
+
+    YoriLibGetOsVersion(&MajorVersion, &MinorVersion, &BuildNumber);
+    if (DllUser32.pGetMonitorInfoW != NULL &&
+        DllUser32.pEnumDisplayMonitors != NULL &&
+        DllUser32.pMonitorFromWindow != NULL &&
+        BuildNumber >= 9600) {
+
+        Context->MultiTaskbarsSupported = TRUE;
+    }
+
+    //
+    //  Initialize OLE early with the options we want to support dragging
+    //  and dropping.
+    //
+
+    if (YuiOleInitialize()) {
+        Context->OleInitialized = TRUE;
+    }
 
     //
     //  Explorer or other shells will register as a magic "Taskman" window.
@@ -1458,57 +1504,16 @@ YuiCreateWindow(
         }
     }
 
-    YuiGetScreenDimensions(Context, 0, 0);
-
-    if (!Context->LoginShell) {
-        if (YuiFindExplorerTaskbar(Context)) {
-            YuiHideExplorerTaskbar(Context);
-        }
-    }
-
-    Context->TaskbarHeight = YuiGetTaskbarHeight(Context);
     if (DllUser32.pLoadImageW == NULL) {
         Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
     } else {
-        Context->StartIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON), IMAGE_ICON, Context->SmallStartIconWidth, Context->SmallStartIconHeight, 0);
+        Context->StartIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL),
+                                                   MAKEINTRESOURCE(STARTICON),
+                                                   IMAGE_ICON,
+                                                   Context->SmallStartIconWidth,
+                                                   Context->SmallStartIconHeight,
+                                                   0);
     }
-
-    NoActivate = WS_EX_NOACTIVATE;
-
-    //
-    //  Try to create the taskbar window.  If this fails, remove
-    //  WS_EX_NOACTIVATE and try again.
-    //
-
-    while(TRUE) {
-        Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | NoActivate,
-                                       YUI_TASKBAR_CLASS,
-                                       _T("Yui"),
-                                       WS_POPUP | WS_CLIPCHILDREN,
-                                       0,
-                                       Context->ScreenHeight - Context->TaskbarHeight,
-                                       Context->ScreenWidth,
-                                       Context->TaskbarHeight,
-                                       NULL, NULL, NULL, 0);
-        if (Context->hWnd != NULL) {
-            break;
-        }
-
-        if (NoActivate != 0) {
-            NoActivate = 0;
-        } else {
-            YuiCleanupGlobalState();
-            return FALSE;
-        }
-    }
-
-    //
-    //  Attempt to set up drag and drop.  This is done early since it will
-    //  initialize OLE which needs to be done before anything else initializes
-    //  COM.
-    //
-
-    Context->DropHandle = YuiRegisterDropWindow(Context, Context->hWnd);
 
     //
     //  Mark minimized windows as invisible.  The taskbar should still have
@@ -1535,14 +1540,26 @@ YuiCreateWindow(
         Context->SavedMinimizedMetrics.cbSize = 0;
     }
 
-    //
-    //  Register as the Task Manager window.  This is required for
-    //  notification about window state changes.
-    //
+    YoriLibInitEmptyString(&Context->ClockDisplayedValue);
+    Context->ClockDisplayedValue.StartOfString = Context->ClockDisplayedValueBuffer;
+    Context->ClockDisplayedValue.LengthAllocated = sizeof(Context->ClockDisplayedValueBuffer)/sizeof(Context->ClockDisplayedValueBuffer[0]);
 
-    if (DllUser32.pSetTaskmanWindow != NULL) {
-        DllUser32.pSetTaskmanWindow(Context->hWnd);
+    YoriLibInitEmptyString(&Context->BatteryDisplayedValue);
+    Context->BatteryDisplayedValue.StartOfString = Context->BatteryDisplayedValueBuffer;
+    Context->BatteryDisplayedValue.LengthAllocated = sizeof(Context->BatteryDisplayedValueBuffer)/sizeof(Context->BatteryDisplayedValueBuffer[0]);
+
+    if (DllKernel32.pGetSystemPowerStatus != NULL) {
+        YORI_SYSTEM_POWER_STATUS PowerStatus;
+
+        if (DllKernel32.pGetSystemPowerStatus(&PowerStatus) &&
+            (PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) == 0) {
+
+            Context->DisplayBattery = TRUE;
+        }
     }
+
+    YuiInitializeMonitors(Context);
+    NoActivate = WS_EX_NOACTIVATE;
 
     //
     //  If this is the first shell instance, and the OS supports shell
@@ -1558,10 +1575,10 @@ YuiCreateWindow(
                                                   YUI_DESKTOP_CLASS,
                                                   _T(""),
                                                   WS_POPUP | WS_VISIBLE,
-                                                  0,
-                                                  0,
-                                                  Context->ScreenWidth,
-                                                  Context->ScreenHeight - Context->TaskbarHeight,
+                                                  Context->VirtualScreenLeft,
+                                                  Context->VirtualScreenTop,
+                                                  Context->VirtualScreenWidth,
+                                                  Context->VirtualScreenHeight,
                                                   NULL, NULL, NULL, 0);
 
             if (Context->hWndDesktop != NULL) {
@@ -1584,112 +1601,41 @@ YuiCreateWindow(
         DllUser32.pSetShellWindow(Context->hWndDesktop);
     }
 
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(&YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        if (!YuiInitializeMonitor(YuiMonitor)) {
+            YuiCleanupGlobalState();
+            return FALSE;
+        }
+        YuiMonitor = YuiGetNextMonitor(&YuiContext, YuiMonitor);
+    }
+
+    //
+    //  Grab a random window for application wide state initialization
+    //
+
+    hWnd = Context->PrimaryMon->hWndTaskbar;
+
+    //
+    //  Register as the Task Manager window.  This is required for
+    //  notification about window state changes.
+    //
+
+    if (DllUser32.pSetTaskmanWindow != NULL) {
+        DllUser32.pSetTaskmanWindow(hWnd);
+    }
+
+
     if (DllWtsApi32.pWTSRegisterSessionNotification) {
-        if (DllWtsApi32.pWTSRegisterSessionNotification(Context->hWnd, 0)) {
+        if (DllWtsApi32.pWTSRegisterSessionNotification(hWnd, 0)) {
             Context->RegisteredSessionNotifications = TRUE;
         }
     }
 
-    YuiNotifyResolutionChange(Context->hWnd);
-    if (Context->hFont == NULL || Context->hBoldFont == NULL) {
-        YuiCleanupGlobalState();
-        return FALSE;
-    }
+    Context->ClockTimerId = SetTimer(hWnd, YUI_CLOCK_TIMER, 5000, NULL);
 
-    SendMessage(Context->hWnd, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
-
-    DllUser32.pGetClientRect(Context->hWnd, &ClientRect);
-
-    Context->hWndStart = CreateWindow(_T("BUTTON"),
-                                      _T("Start"),
-                                      BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
-                                      Context->TaskbarPaddingHorizontal,
-                                      Context->TaskbarPaddingVertical,
-                                      Context->StartButtonWidth,
-                                      ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
-                                      Context->hWnd,
-                                      (HMENU)(DWORD_PTR)YUI_START_BUTTON,
-                                      NULL,
-                                      NULL);
-
-    if (Context->hWndStart == NULL) {
-        YuiCleanupGlobalState();
-        return FALSE;
-    }
-
-    if (Context->DefaultButtonWndProc == NULL) {
-        Context->DefaultButtonWndProc = (WNDPROC)GetWindowLongPtr(Context->hWndStart, GWLP_WNDPROC);
-        if (Context->DefaultButtonWndProc == NULL) {
-            YuiCleanupGlobalState();
-            return FALSE;
-        }
-    }
-    SetWindowLongPtr(Context->hWndStart, GWLP_WNDPROC, (LONG_PTR)YuiStartButtonWndProc);
-
-    SendMessage(Context->hWndStart, WM_SETFONT, (WPARAM)Context->hBoldFont, MAKELPARAM(TRUE, 0));
-
-    YoriLibInitEmptyString(&Context->ClockDisplayedValue);
-    Context->ClockDisplayedValue.StartOfString = Context->ClockDisplayedValueBuffer;
-    Context->ClockDisplayedValue.LengthAllocated = sizeof(Context->ClockDisplayedValueBuffer)/sizeof(Context->ClockDisplayedValueBuffer[0]);
-
-    Context->hWndClock = CreateWindowEx(0,
-                                        _T("STATIC"),
-                                        _T(""),
-                                        SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
-                                        ClientRect.right - Context->ClockWidth - Context->TaskbarPaddingHorizontal,
-                                        Context->TaskbarPaddingVertical,
-                                        Context->ClockWidth,
-                                        ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
-                                        Context->hWnd,
-                                        (HMENU)(DWORD_PTR)YUI_CLOCK_DISPLAY,
-                                        NULL,
-                                        NULL);
-
-    if (Context->hWndClock == NULL) {
-        YuiCleanupGlobalState();
-        return FALSE;
-    }
-
-    SendMessage(Context->hWndClock, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
-
-    YoriLibInitEmptyString(&Context->BatteryDisplayedValue);
-    Context->BatteryDisplayedValue.StartOfString = Context->BatteryDisplayedValueBuffer;
-    Context->BatteryDisplayedValue.LengthAllocated = sizeof(Context->BatteryDisplayedValueBuffer)/sizeof(Context->BatteryDisplayedValueBuffer[0]);
-
-    if (DllKernel32.pGetSystemPowerStatus != NULL) {
-        YORI_SYSTEM_POWER_STATUS PowerStatus;
-
-        if (DllKernel32.pGetSystemPowerStatus(&PowerStatus) &&
-            (PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) == 0) {
-
-            Context->hWndBattery = CreateWindowEx(0,
-                                                  _T("STATIC"),
-                                                  _T(""),
-                                                  SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
-                                                  ClientRect.right - Context->ClockWidth - 3 - Context->BatteryWidth - Context->TaskbarPaddingHorizontal,
-                                                  Context->TaskbarPaddingVertical,
-                                                  Context->BatteryWidth,
-                                                  ClientRect.bottom - 2 * Context->TaskbarPaddingVertical,
-                                                  Context->hWnd,
-                                                  (HMENU)(DWORD_PTR)YUI_BATTERY_DISPLAY,
-                                                  NULL,
-                                                  NULL);
-
-            if (Context->hWndBattery == NULL) {
-                YuiCleanupGlobalState();
-                return FALSE;
-            }
-
-            SendMessage(Context->hWndBattery, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
-            Context->DisplayBattery = TRUE;
-            Context->RightmostTaskbarOffset = (WORD)(1 + Context->ClockWidth + 3 + Context->BatteryWidth + 1);
-        }
-    }
-
-    YuiClockUpdate(Context);
-    Context->ClockTimerId = SetTimer(Context->hWnd, YUI_CLOCK_TIMER, 5000, NULL);
-
-    YuiTaskbarPopulateWindows(Context, Context->hWnd);
+    YuiTaskbarPopulateWindows(Context);
 
     //
     //  Check if we're running on a platform that doesn't support
@@ -1708,7 +1654,7 @@ YuiCreateWindow(
 
     if (Context->TaskbarRefreshFrequency == 0) {
         Context->ShellHookMsg = RegisterWindowMessage(_T("SHELLHOOK"));
-        if (!DllUser32.pRegisterShellHookWindow(Context->hWnd)) {
+        if (!DllUser32.pRegisterShellHookWindow(hWnd)) {
             Context->TaskbarRefreshFrequency = 250;
         }
     }
@@ -1720,19 +1666,31 @@ YuiCreateWindow(
     //
 
     if (Context->TaskbarRefreshFrequency != 0) {
-        Context->SyncTimerId = SetTimer(Context->hWnd, YUI_WINDOW_POLL_TIMER, Context->TaskbarRefreshFrequency, NULL);
+        Context->SyncTimerId = SetTimer(hWnd,
+                                        YUI_WINDOW_POLL_TIMER,
+                                        Context->TaskbarRefreshFrequency,
+                                        NULL);
     }
 
     if (Context->LoginShell) {
-        if (RegisterHotKey(Context->hWnd, YUI_MENU_RUN, MOD_WIN, 'R')) {
+        if (RegisterHotKey(hWnd, YUI_MENU_RUN, MOD_WIN, 'R')) {
             Context->RunHotKeyRegistered = TRUE;
         }
-        if (RegisterHotKey(Context->hWnd, YUI_MENU_START, MOD_WIN, VK_LWIN)) {
+        if (RegisterHotKey(hWnd, YUI_MENU_START, MOD_WIN, VK_LWIN)) {
             Context->StartHotKeyRegistered = TRUE;
         }
     }
 
-    DllUser32.pShowWindow(Context->hWnd, SW_SHOW);
+    YuiClockUpdate(Context);
+
+    YuiAdjustAllWorkAreasAndHideExplorer(Context);
+
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(Context, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        DllUser32.pShowWindow(YuiMonitor->hWndTaskbar, SW_SHOW);
+        YuiMonitor = YuiGetNextMonitor(Context, YuiMonitor);
+    }
 
     return TRUE;
 }
@@ -1831,8 +1789,8 @@ ymain(
 
     ZeroMemory(&YuiContext, sizeof(YuiContext));
     YoriLibInitializeListHead(&YuiContext.RecentProcessList);
-    YoriLibInitializeListHead(&YuiContext.TaskbarButtons);
-    YuiContext.TaskbarButtonCount = 0;
+    YoriLibInitializeListHead(&YuiContext.MonitorList);
+    YoriLibInitializeListHead(&YuiContext.ExplorerTaskbarList);
 
     YoriLibLoadUser32Functions();
     YoriLibLoadShell32Functions();
@@ -1848,7 +1806,7 @@ ymain(
                 YuiHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YuiDisplayMitLicense(_T("2019-2023"));
+                YuiDisplayMitLicense(_T("2019-2024"));
                 return EXIT_SUCCESS;
 #if DBG
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
@@ -1893,7 +1851,7 @@ ymain(
         return EXIT_FAILURE;
     }
 
-    if (!YuiCreateWindow(&YuiContext)) {
+    if (!YuiInitializeApplication(&YuiContext)) {
         return EXIT_FAILURE;
     }
 

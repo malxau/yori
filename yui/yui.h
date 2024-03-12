@@ -75,7 +75,7 @@ typedef struct _YUI_TASKBAR_BUTTON {
 
     /**
      The entry for this taskbar button within the list of taskbar buttons.
-     Paired with @ref YUI_CONTEXT::TaskbarButtons .
+     Paired with @ref YUI_MONITOR::TaskbarButtons .
      */
     YORI_LIST_ENTRY ListEntry;
 
@@ -163,9 +163,270 @@ typedef struct _YUI_TASKBAR_BUTTON {
 } YUI_TASKBAR_BUTTON, *PYUI_TASKBAR_BUTTON;
 
 /**
+ A structure to track information about each discovered Explorer taskbar.
+ Note that while Yui tracks these to hide them, there is no association
+ between taskbars and monitors.
+ */
+typedef struct _YUI_EXPLORER_TASKBAR {
+
+    /**
+     The entry of this taskbar on the global explorer taskbar list.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     Window handle to the taskbar.
+     */
+    HWND hWnd;
+
+    /**
+     TRUE if Yui has hidden this taskbar.  If this is set on exit, Yui will
+     attempt to make it visible again.
+     */
+    BOOLEAN Hidden;
+
+    /**
+     Explorer has a single primary taskbar and many secondary taskbars.
+     This is set for the primary taskbar.  When hiding taskbars, the primary
+     must be hidden before the secondaries (the act of hiding the primary
+     causes Explorer to display the secondaries.)
+     */
+    BOOLEAN Primary;
+
+    /**
+     Set to FALSE when rescanning for Explorer taskbars, and set to TRUE if
+     the rescan finds this taskbar.  Any that are still FALSE at the end of
+     the rescan has been removed by Explorer.
+     */
+    BOOLEAN Found;
+
+} YUI_EXPLORER_TASKBAR, *PYUI_EXPLORER_TASKBAR;
+
+/**
+ Context describing taskbar state for each monitor.
+ */
+typedef struct _YUI_MONITOR {
+
+    /**
+     Pointer to the global application context.
+     */
+    struct _YUI_CONTEXT *YuiContext;
+
+    /**
+     The entry of this monitor on the global monitor list.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The list of currently known taskbar buttons.
+     */
+    YORI_LIST_ENTRY TaskbarButtons;
+
+    /**
+     Handle to this monitor.  On multi-taskbar systems, this is used to
+     associate the monitor of an application window with the monitor of a
+     taskbar.
+     */
+    HANDLE MonitorHandle;
+
+    /**
+     The left of the screen, in pixels.
+     */
+    LONG ScreenLeft;
+
+    /**
+     The top of the screen, in pixels.
+     */
+    LONG ScreenTop;
+
+    /**
+     The width of the screen, in pixels.
+     */
+    DWORD ScreenWidth;
+
+    /**
+     The height of the screen, in pixels.
+     */
+    DWORD ScreenHeight;
+
+    /**
+     The height of the taskbar, in pixels.
+     */
+    DWORD TaskbarHeight;
+
+    /**
+     The number of pixels of padding to leave in the taskbar window above
+     and below buttons and other controls in the taskbar.
+     */
+    WORD TaskbarPaddingVertical;
+
+    /**
+     The number of pixels of padding to leave in the taskbar window to the
+     left of the start menu and right of the clock.
+     */
+    WORD TaskbarPaddingHorizontal;
+
+    /**
+     The number of pixels to display in 3D borders around the taskbar, static
+     controls, buttons, menus, etc.  This is driven by DPI settings.
+     */
+    WORD ControlBorderWidth;
+
+    /**
+     The size of the font being used.
+     */
+    WORD FontSize;
+
+    /**
+     Extra pixels to add above text on the taskbar.  This happens because not
+     all fonts use the same bounding rectangles.
+     */
+    WORD ExtraPixelsAboveText;
+
+    /**
+     A handle to a font used to display buttons on the task bar.
+     */
+    HFONT hFont;
+
+    /**
+     A handle to a bold font used to display buttons on the task bar.
+     */
+    HFONT hBoldFont;
+
+    /**
+     The window handle for the taskbar.
+     */
+    HWND hWndTaskbar;
+
+    /**
+     The window handle for the start button.
+     */
+    HWND hWndStart;
+
+    /**
+     The window handle for the clock.
+     */
+    HWND hWndClock;
+
+    /**
+     The window handle for the battery indicator.
+     */
+    HWND hWndBattery;
+
+    /**
+     An opaque context used to manage drag and drop operations for a taskbar.
+     */
+    PVOID DropHandle;
+
+    /**
+     Width of the start button, in pixels.
+     */
+    WORD StartButtonWidth;
+
+    /**
+     Width of the clock, in pixels.
+     */
+    WORD ClockWidth;
+
+    /**
+     Width of the battery indicator, in pixels.
+     */
+    WORD BatteryWidth;
+
+    /**
+     The number of pixels in width to use for each calendar day.
+     */
+    WORD CalendarCellWidth;
+
+    /**
+     The number of pixels in height to use for each calendar day.
+     */
+    WORD CalendarCellHeight;
+
+    /**
+     The left offset of the start button, in pixels, relative to the client
+     area.  This is used to detect clicks that are in the parent window
+     outside of the button area.
+     */
+    WORD StartLeftOffset;
+
+    /**
+     The right offset of the start button, in pixels, relative to the client
+     area.  This is used to detect clicks that are in the parent window
+     outside of the button area.
+     */
+    WORD StartRightOffset;
+
+    /**
+     The maximum width for a taskbar button in pixels.  This scales up a
+     little with monitor size.  Taskbar buttons can always be less than
+     this value once the bar becomes full.
+     */
+    WORD MaximumTaskbarButtonWidth;
+
+    /**
+     The number of buttons currently displayed in the task bar.
+     */
+    WORD TaskbarButtonCount;
+
+    /**
+     The next control ID to allocate for the next taskbar button.
+     */
+    WORD NextTaskbarId;
+
+    /**
+     The offset in pixels from the beginning of the taskbar window to the
+     first task button.  This is to allow space for the start button.
+     */
+    WORD LeftmostTaskbarOffset;
+
+    /**
+     The offset in pixels from the end of the taskbar window to the
+     last task button.  This is to allow space for the clock.
+     */
+    WORD RightmostTaskbarOffset;
+
+    /**
+     Set to TRUE if a fullscreen window is active, meaning the taskbar is
+     hidden.  Set to FALSE if the taskbar is visible.
+     */
+    BOOLEAN FullscreenModeActive;
+
+    /**
+     Set to TRUE during monitor enumeration to indicate that this structure
+     has a corresponding monitor.  Any monitor with this set as FALSE needs
+     to be removed.
+     */
+    BOOLEAN AssociatedMonitorFound;
+
+    /**
+     Set to TRUE during monitor enumeration if the location of the monitor
+     has changed.  This indicates that its window needs to be repositioned
+     at a minimum, and more invasive changes are also possible.
+     */
+    BOOLEAN DimensionsChanged;
+
+} YUI_MONITOR, *PYUI_MONITOR;
+
+/**
  Context passed to the callback which is invoked for each file found.
  */
 typedef struct _YUI_CONTEXT {
+
+    /**
+     The list of monitors.
+     */
+    YORI_LIST_ENTRY MonitorList;
+
+    /**
+     Structure describing the primary monitor.
+     */
+    PYUI_MONITOR PrimaryMon;
+
+    /**
+     The list of Explorer taskbars.
+     */
+    YORI_LIST_ENTRY ExplorerTaskbarList;
 
     /**
      The directory to filter from enumerate.  This is the "Programs" directory
@@ -188,8 +449,6 @@ typedef struct _YUI_CONTEXT {
     /**
      A list of recently launched processes.  This is used to look for a
      shortcut that launched newly arriving taskbar buttons.
-
-     MSFIX This is not initialized or cleaned up
      */
     YORI_LIST_ENTRY RecentProcessList;
 
@@ -230,39 +489,6 @@ typedef struct _YUI_CONTEXT {
     LONG VirtualScreenHeight;
 
     /**
-     The width of the screen, in pixels.
-     */
-    DWORD ScreenWidth;
-
-    /**
-     The height of the screen, in pixels.
-     */
-    DWORD ScreenHeight;
-
-    /**
-     The height of the taskbar, in pixels.
-     */
-    DWORD TaskbarHeight;
-
-    /**
-     The number of pixels of padding to leave in the taskbar window above
-     and below buttons and other controls in the taskbar.
-     */
-    WORD TaskbarPaddingVertical;
-
-    /**
-     The number of pixels of padding to leave in the taskbar window to the
-     left of the start menu and right of the clock.
-     */
-    WORD TaskbarPaddingHorizontal;
-
-    /**
-     The number of pixels to display in 3D borders around the taskbar, static
-     controls, buttons, menus, etc.  This is driven by DPI settings.
-     */
-    WORD ControlBorderWidth;
-
-    /**
      The default window procedure for a push button.  Stored here so we can
      override it and call it recursively.
      */
@@ -274,38 +500,12 @@ typedef struct _YUI_CONTEXT {
     HICON StartIcon;
 
     /**
-     The window handle for the taskbar.
-     */
-    HWND hWnd;
-
-    /**
      The window handle for the "Desktop."  This isn't really a desktop in the
      user32 sense; it's a window created by this application for the purpose
      of rendering a background color.  Newer versions of Windows won't do this
      automatically on the real desktop.
      */
     HWND hWndDesktop;
-
-    /**
-     The window handle for the start button.
-     */
-    HWND hWndStart;
-
-    /**
-     The window handle for the clock.
-     */
-    HWND hWndClock;
-
-    /**
-     The window handle for the battery indicator.
-     */
-    HWND hWndBattery;
-
-    /**
-     A window handle hidden on program start describing the explorer taskbar.
-     If non-NULL, this can be displayed again on exit.
-     */
-    HWND hWndExplorerTaskbar;
 
     /**
      A brush to the window background.  This is returned to the system when
@@ -319,32 +519,6 @@ typedef struct _YUI_CONTEXT {
      only meaningful when using SetWindowsHookEx to monitor changes.
      */
     DWORD ShellHookMsg;
-
-    /**
-     An opaque context used to manage drag and drop operations for a taskbar.
-     */
-    PVOID DropHandle;
-
-    /**
-     The size of the font being used.
-     */
-    WORD FontSize;
-
-    /**
-     Extra pixels to add above text on the taskbar.  This happens because not
-     all fonts use the same bounding rectangles.
-     */
-    WORD ExtraPixelsAboveText;
-
-    /**
-     A handle to a font used to display buttons on the task bar.
-     */
-    HFONT hFont;
-
-    /**
-     A handle to a bold font used to display buttons on the task bar.
-     */
-    HFONT hBoldFont;
 
     /**
      Handle to a background thread that is populating the start menu.
@@ -370,11 +544,6 @@ typedef struct _YUI_CONTEXT {
      The menu handle for the nested shutdown menu.
      */
     HMENU ShutdownMenu;
-
-    /**
-     The list of currently known taskbar buttons.
-     */
-    YORI_LIST_ENTRY TaskbarButtons;
 
     /**
      An identifier for a periodic timer used to refresh taskbar buttons.  This
@@ -408,21 +577,6 @@ typedef struct _YUI_CONTEXT {
      The buffer containing the current displayed battery value.
      */
     TCHAR BatteryDisplayedValueBuffer[16];
-
-    /**
-     Width of the start button, in pixels.
-     */
-    WORD StartButtonWidth;
-
-    /**
-     Width of the clock, in pixels.
-     */
-    WORD ClockWidth;
-
-    /**
-     Width of the battery indicator, in pixels.
-     */
-    WORD BatteryWidth;
 
     /**
      The number of pixels in height of a small icon obtained from an open
@@ -473,16 +627,6 @@ typedef struct _YUI_CONTEXT {
     WORD ShortIconPadding;
 
     /**
-     The number of pixels in width to use for each calendar day.
-     */
-    WORD CalendarCellWidth;
-
-    /**
-     The number of pixels in height to use for each calendar day.
-     */
-    WORD CalendarCellHeight;
-
-    /**
      The number of pixels in height of a tall menu entry.
      */
     WORD TallMenuHeight;
@@ -496,49 +640,6 @@ typedef struct _YUI_CONTEXT {
      The number of pixels in height of a menu seperator.
      */
     WORD MenuSeperatorHeight;
-
-    /**
-     The left offset of the start button, in pixels, relative to the client
-     area.  This is used to detect clicks that are in the parent window
-     outside of the button area.
-     */
-    WORD StartLeftOffset;
-
-    /**
-     The right offset of the start button, in pixels, relative to the client
-     area.  This is used to detect clicks that are in the parent window
-     outside of the button area.
-     */
-    WORD StartRightOffset;
-
-    /**
-     The number of buttons currently displayed in the task bar.
-     */
-    DWORD TaskbarButtonCount;
-
-    /**
-     The offset in pixels from the beginning of the taskbar window to the
-     first task button.  This is to allow space for the start button.
-     */
-    WORD LeftmostTaskbarOffset;
-
-    /**
-     The offset in pixels from the end of the taskbar window to the
-     last task button.  This is to allow space for the clock.
-     */
-    WORD RightmostTaskbarOffset;
-
-    /**
-     The next control ID to allocate for the next taskbar button.
-     */
-    WORD NextTaskbarId;
-
-    /**
-     The maximum width for a taskbar button in pixels.  This scales up a
-     little with monitor size.  Taskbar buttons can always be less than
-     this value once the bar becomes full.
-     */
-    WORD MaximumTaskbarButtonWidth;
 
     /**
      A timer frequency of how often to poll for window changes to refresh
@@ -587,12 +688,6 @@ typedef struct _YUI_CONTEXT {
     BOOLEAN LaunchWinlogonShell;
 
     /**
-     Set to TRUE if a fullscreen window is active, meaning the taskbar is
-     hidden.  Set to FALSE if the taskbar is visible.
-     */
-    BOOLEAN FullscreenModeActive;
-
-    /**
      Set to TRUE if RegisterHotKey has succeeded for the run command.  This
      is only attempted if LoginShell is TRUE and may still fail if another
      application is handling it.
@@ -616,6 +711,20 @@ typedef struct _YUI_CONTEXT {
      Set to TRUE if battery status is displayed on the task bar.
      */
     BOOLEAN DisplayBattery;
+
+    /**
+     TRUE if the system has full multiple monitor support.  This implies it
+     can support notification of window movements across monitors.  FALSE if
+     it can only support a single taskbar.  Note that there are many systems
+     which can support multiple monitors without multiple taskbars.
+     */
+    BOOLEAN MultiTaskbarsSupported;
+
+    /**
+     TRUE if the process was able to initialize OLE successfully to support
+     drag and drop.  FALSE if OLE was not initialized.
+     */
+    BOOLEAN OleInitialized;
 
 } YUI_CONTEXT, *PYUI_CONTEXT;
 
@@ -899,17 +1008,40 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
  */
 #define YUI_MENU_SYSTEM_CMD            (64)
 
+PYUI_MONITOR
+YuiGetNextMonitor(
+    __in PYUI_CONTEXT Context,
+    __in_opt PYUI_MONITOR PreviousMonitor
+    );
+
+PYUI_MONITOR
+YuiMonitorFromTaskbarHwnd(
+    __in PYUI_CONTEXT Context,
+    __in HWND hWnd
+    );
+
+PYUI_MONITOR
+YuiMonitorFromApplicationHwnd(
+    __in PYUI_CONTEXT Context,
+    __in HWND hWnd
+    );
+
 WNDPROC
 YuiGetDefaultButtonWndProc(VOID);
 
+BOOLEAN
+YuiRefreshMonitors(
+    __in PYUI_CONTEXT Context
+    );
+
 BOOL
 YuiNotifyResolutionChange(
-    __in HWND hWnd
+    __in PYUI_MONITOR YuiMonitor
     );
 
 BOOLEAN
 YuiResetWorkArea(
-    __in PYUI_CONTEXT Context,
+    __in PYUI_MONITOR YuiMonitor,
     __in BOOLEAN Notify
     );
 
@@ -964,20 +1096,20 @@ YuiMenuWaitForBackgroundReload(
 
 BOOL
 YuiExecuteShortcut(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PYORI_STRING FilePath,
     __in BOOLEAN Elevated
     );
 
 BOOL
 YuiMenuDisplayAndExecute(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd
     );
 
 BOOL
 YuiMenuDisplayContext(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd,
     __in DWORD CursorX,
     __in DWORD CursorY
@@ -985,7 +1117,7 @@ YuiMenuDisplayContext(
 
 BOOL
 YuiMenuDisplayWindowContext(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd,
     __in HWND hWndApp,
     __in DWORD dwProcessId,
@@ -1000,7 +1132,7 @@ YuiMenuFreeAll(
 
 BOOL
 YuiMenuExecuteById(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD MenuId
     );
 
@@ -1032,14 +1164,14 @@ YuiDrawThreeDBox(
 
 DWORD
 YuiDrawGetTextWidth(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in BOOLEAN UseBold,
     __in PYORI_STRING Text
     );
 
 VOID
 YuiDrawButton(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
     __in BOOLEAN Flashing,
@@ -1051,56 +1183,55 @@ YuiDrawButton(
 
 VOID
 YuiTaskbarDrawStatic(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in PYORI_STRING Text
     );
 
 BOOLEAN
 YuiDrawWindowFrame(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd,
     __in_opt HDC hDC
     );
 
 BOOL
 YuiDrawMeasureMenuItem(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in LPMEASUREITEMSTRUCT Item
     );
 
 BOOL
 YuiDrawMenuItem(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in LPDRAWITEMSTRUCT Item
     );
 
 BOOLEAN
 YuiTaskbarSuppressFullscreenHiding(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     );
 
 BOOL
 YuiTaskbarPopulateWindows(
-    __in PYUI_CONTEXT YuiContext,
-    __in HWND TaskbarHwnd
+    __in PYUI_CONTEXT YuiContext
     );
 
 VOID
 YuiTaskbarSwitchToTask(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId
     );
 
 VOID
 YuiTaskbarLaunchNewTask(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId
     );
 
 BOOL
 YuiTaskbarDisplayContextMenuForTask(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId,
     __in DWORD CursorX,
     __in DWORD CursorY
@@ -1113,7 +1244,7 @@ YuiTaskbarSwitchToActiveTask(
 
 VOID
 YuiTaskbarNotifyResolutionChange(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     );
 
 VOID
@@ -1146,17 +1277,34 @@ YuiTaskbarNotifyFlash(
     __in HWND hWnd
     );
 
+VOID
+YuiTaskbarNotifyMonitorChanged(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    );
+
+BOOLEAN
+YuiTaskbarIsPositionOverStart(
+    __in PYUI_MONITOR YuiMonitor,
+    __in SHORT XPos
+    );
+
 WORD
 YuiTaskbarFindByOffset(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in SHORT XPos
     );
 
 VOID
 YuiTaskbarDrawButton(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId,
     __in PDRAWITEMSTRUCT DrawItemStruct
+    );
+
+VOID
+YuiTaskbarFreeButtonsOneMonitor(
+    __in PYUI_MONITOR YuiMonitor
     );
 
 VOID
@@ -1171,7 +1319,7 @@ YuiTaskbarSyncWithCurrent(
 
 VOID
 YuiClockDisplayBatteryInfo(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     );
 
 VOID
@@ -1189,7 +1337,7 @@ YuiCalendarWindowProc(
 
 VOID
 YuiCalendar(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     );
 
 LRESULT CALLBACK
@@ -1202,12 +1350,18 @@ YuiWifiWindowProc(
 
 VOID
 YuiWifi(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     );
+
+BOOLEAN
+YuiOleInitialize(VOID);
+
+VOID
+YuiOleUninitialize(VOID);
 
 PVOID
 YuiRegisterDropWindow(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd
     );
 
@@ -1215,6 +1369,28 @@ VOID
 YuiUnregisterDropWindow(
     __in HWND hWnd,
     __in PVOID DropHandle
+    );
+
+// MSFIX This layering seems backwards (multimon calling yui.)
+// Probably a lot of the rendering stuff belongs in multimon.
+BOOL
+YuiInitializeMonitor(
+    __in PYUI_MONITOR YuiMonitor
+    );
+
+BOOLEAN
+YuiInitializeMonitors(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+VOID
+YuiCleanupMonitor(
+    __in PYUI_MONITOR YuiMonitor
+    );
+
+BOOLEAN
+YuiAdjustAllWorkAreasAndHideExplorer(
+    __in PYUI_CONTEXT YuiContext
     );
 
 // vim:sw=4:ts=4:et:

@@ -54,9 +54,9 @@ typedef struct _YUI_DROPTARGET {
     WORD PreviouslyActivatedCtrl;
 
     /**
-     Pointer to the application context.
+     Pointer to the monitor context.
      */
-    PYUI_CONTEXT YuiContext;
+    PYUI_MONITOR YuiMonitor;
 
     /**
      The taskbar window handle associated with this drag and drop context.
@@ -290,9 +290,9 @@ YuiDropTargetDragEnter(
     UNREFERENCED_PARAMETER(dwKeyState);
     UNREFERENCED_PARAMETER(pdwEffect);
 
-    CtrlId = YuiTaskbarFindByOffset(This->YuiContext, (SHORT)pt.x);
+    CtrlId = YuiTaskbarFindByOffset(This->YuiMonitor, (SHORT)pt.x);
     if (CtrlId != 0) {
-        YuiTaskbarSwitchToTask(This->YuiContext, CtrlId);
+        YuiTaskbarSwitchToTask(This->YuiMonitor, CtrlId);
         This->PreviouslyActivatedCtrl = CtrlId;
     }
 
@@ -325,11 +325,11 @@ YuiDropTargetDragOver(
     UNREFERENCED_PARAMETER(dwKeyState);
     UNREFERENCED_PARAMETER(pdwEffect);
 
-    CtrlId = YuiTaskbarFindByOffset(This->YuiContext, (SHORT)pt.x);
+    CtrlId = YuiTaskbarFindByOffset(This->YuiMonitor, (SHORT)pt.x);
     if (CtrlId != 0 &&
         CtrlId != This->PreviouslyActivatedCtrl) {
 
-        YuiTaskbarSwitchToTask(This->YuiContext, CtrlId);
+        YuiTaskbarSwitchToTask(This->YuiMonitor, CtrlId);
         This->PreviouslyActivatedCtrl = CtrlId;
     }
 
@@ -386,6 +386,44 @@ YuiDropTargetDrop(
 }
 
 /**
+ Initialize OLE for the process.  This must be called early during process
+ initialization to ensure that COM is not initialized with different values.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YuiOleInitialize(VOID)
+{
+    HRESULT hr;
+
+    YoriLibLoadOle32Functions();
+
+    if (DllOle32.pOleInitialize == NULL ||
+        DllOle32.pOleUninitialize == NULL) {
+
+        return FALSE;
+    }
+
+    hr = DllOle32.pOleInitialize(NULL);
+    if (hr != S_OK) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ Uninitialize OLE for the process.  This should only be called if it was
+ successfully initialized previously.
+ */
+VOID
+YuiOleUninitialize(VOID)
+{
+    DllOle32.pOleUninitialize();
+}
+
+
+/**
  An application global function table.  This is implementing the IDropTarget
  interface and functions here must match those signatures.
  */
@@ -403,7 +441,7 @@ YuiDropTargetVtbl = {
 /**
  Register a window's drop support so objects can be dragged to the taskbar.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hWnd The window handle.
 
@@ -413,17 +451,14 @@ YuiDropTargetVtbl = {
  */
 PVOID
 YuiRegisterDropWindow(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd
     )
 {
     PYUI_DROPTARGET DropTarget;
     HRESULT hr;
 
-    YoriLibLoadOle32Functions();
-    if (DllOle32.pOleInitialize == NULL ||
-        DllOle32.pOleUninitialize == NULL ||
-        DllOle32.pCoLockObjectExternal == NULL ||
+    if (DllOle32.pCoLockObjectExternal == NULL ||
         DllOle32.pRegisterDragDrop == NULL ||
         DllOle32.pRevokeDragDrop == NULL) {
 
@@ -437,17 +472,11 @@ YuiRegisterDropWindow(
 
     DropTarget->Vtbl = &YuiDropTargetVtbl;
     DropTarget->ReferenceCount = 1;
-    DropTarget->YuiContext = YuiContext;
+    DropTarget->YuiMonitor = YuiMonitor;
     DropTarget->hWnd = hWnd;
-
-    hr = DllOle32.pOleInitialize(NULL);
-    if (hr != S_OK) {
-        return NULL;
-    }
 
     hr = DllOle32.pCoLockObjectExternal(DropTarget, TRUE, FALSE);
     if (hr != S_OK) {
-        DllOle32.pOleUninitialize();
         YuiDropTargetRelease(DropTarget);
         return NULL;
     }
@@ -455,14 +484,9 @@ YuiRegisterDropWindow(
     hr = DllOle32.pRegisterDragDrop(hWnd, DropTarget);
     if (hr != S_OK) {
         DllOle32.pCoLockObjectExternal(DropTarget, FALSE, TRUE);
-        DllOle32.pOleUninitialize();
         YuiDropTargetRelease(DropTarget);
         return NULL;
     }
-
-#if DBG
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("RegisterDragDrop success\n"));
-#endif
 
     return DropTarget;
 }
@@ -491,7 +515,6 @@ YuiUnregisterDropWindow(
     DropTarget = (PYUI_DROPTARGET)DropHandle;
     DllOle32.pCoLockObjectExternal(DropTarget, FALSE, TRUE);
     YuiDropTargetRelease(DropHandle);
-    DllOle32.pOleUninitialize();
 }
 
 

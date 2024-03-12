@@ -80,9 +80,9 @@ typedef YUI_WIFI_NETWORK *PYUI_WIFI_NETWORK;
 typedef struct _YUI_WIFI_CONTEXT {
 
     /**
-     Pointer to the application context.
+     Pointer to the monitor context.
      */
-    PYUI_CONTEXT YuiContext;
+    PYUI_MONITOR YuiMonitor;
 
     /**
      A window handle for the main Wifi network window, which is a flyout on
@@ -657,7 +657,7 @@ YuiWifiPaint(
 
     GetClientRect(hWnd, &ClientRect);
     YuiDrawWindowBackground(hDC, &ClientRect);
-    YuiDrawThreeDBox(hDC, &ClientRect, YuiWifiContext.YuiContext->ControlBorderWidth, FALSE);
+    YuiDrawThreeDBox(hDC, &ClientRect, YuiWifiContext.YuiMonitor->ControlBorderWidth, FALSE);
 
     //
     //  Find the location of the list within the parent window.
@@ -933,7 +933,7 @@ YuiWifiWindowProc(
                     if (DrawItemStruct->itemState & ODS_DISABLED) {
                         Disabled = TRUE;
                     }
-                    YuiDrawButton(YuiWifiContext.YuiContext,
+                    YuiDrawButton(YuiWifiContext.YuiMonitor,
                                   DrawItemStruct,
                                   Pushed,
                                   FALSE,
@@ -956,11 +956,11 @@ YuiWifiWindowProc(
 /**
  Display the Yui wifi controls.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
  */
 VOID
 YuiWifi(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     HWND hWnd;
@@ -984,7 +984,7 @@ YuiWifi(
     BOOLEAN AirplaneModeEnabled;
     BOOLEAN AirplaneModeChangable;
 
-    YuiWifiContext.YuiContext = YuiContext;
+    YuiWifiContext.YuiMonitor = YuiMonitor;
     
     //
     //  If the window is already open for some reason, don't open it again.
@@ -1079,18 +1079,18 @@ YuiWifi(
     //  Give an extra 30px for every increase in font size
     //
 
-    if (YuiContext->FontSize > YUI_BASE_FONT_SIZE) {
-        WindowWidth = (WORD)(WindowWidth + 30 * (YuiContext->FontSize - YUI_BASE_FONT_SIZE));
+    if (YuiMonitor->FontSize > YUI_BASE_FONT_SIZE) {
+        WindowWidth = (WORD)(WindowWidth + 30 * (YuiMonitor->FontSize - YUI_BASE_FONT_SIZE));
     }
 
     //
     //  Give an extra 5% of any pixels above 800
     //
 
-    if (YuiContext->ScreenWidth > 800) {
-        WindowWidth = (WORD)(WindowWidth + (YuiContext->ScreenWidth - 800) / 20);
+    if (YuiMonitor->ScreenWidth > 800) {
+        WindowWidth = (WORD)(WindowWidth + (YuiMonitor->ScreenWidth - 800) / 20);
     }
-    WindowHeight = (WORD)(YuiContext->ScreenHeight - YuiContext->TaskbarHeight);
+    WindowHeight = (WORD)(YuiMonitor->ScreenHeight - YuiMonitor->TaskbarHeight);
     WindowPaddingHoriz = 12;
     WindowPaddingVert = 12;
 
@@ -1102,8 +1102,8 @@ YuiWifi(
                           YUI_WIFI_CLASS,
                           _T(""),
                           WS_POPUP | WS_CLIPCHILDREN,
-                          YuiContext->ScreenWidth - WindowWidth,
-                          YuiContext->ScreenHeight - YuiContext->TaskbarHeight - WindowHeight,
+                          YuiMonitor->ScreenLeft + YuiMonitor->ScreenWidth - WindowWidth,
+                          YuiMonitor->ScreenTop + YuiMonitor->ScreenHeight - YuiMonitor->TaskbarHeight - WindowHeight,
                           WindowWidth,
                           WindowHeight,
                           NULL, NULL, NULL, 0);
@@ -1132,7 +1132,7 @@ YuiWifi(
     //
 
     ListWidth = (WORD)(ClientRect.right - ClientRect.left - 2 * WindowPaddingHoriz);
-    ButtonHeight = (WORD)(YuiContext->TaskbarHeight - 2 * YuiContext->TaskbarPaddingVertical);
+    ButtonHeight = (WORD)(YuiMonitor->TaskbarHeight - 2 * YuiMonitor->TaskbarPaddingVertical);
     ButtonPadding = (WORD)(WindowPaddingVert - 2);
     ButtonAreaHeight = (WORD)(WindowPaddingVert + ButtonHeight);
 
@@ -1152,7 +1152,7 @@ YuiWifi(
         return;
     }
 
-    SendMessage(hWndButtonAirplane, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+    SendMessage(hWndButtonAirplane, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
     if (AirplaneModeEnabled) {
         SendMessage(hWndButtonAirplane, BM_SETSTATE, TRUE, 0);
     }
@@ -1186,7 +1186,7 @@ YuiWifi(
     }
     EnableWindow(hWndButtonConnect, FALSE);
 
-    SendMessage(hWndButtonConnect, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+    SendMessage(hWndButtonConnect, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
     ButtonAreaHeight = (WORD)(ButtonAreaHeight + ButtonPadding);
 
@@ -1214,7 +1214,7 @@ YuiWifi(
         return;
     }
 
-    SendMessage(hWndList, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+    SendMessage(hWndList, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
     ShowWindow(hWnd, SW_SHOW);
     DllUser32.pSetForegroundWindow(hWnd);

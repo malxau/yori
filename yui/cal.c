@@ -30,10 +30,10 @@
 #include "resource.h"
 
 /**
- Hack - keep a global pointer to the application context so the message pump
+ Hack - keep a global pointer to the monitor context so the message pump
  can find it.  Ideally this would be part of extra window state or somesuch.
  */
-PYUI_CONTEXT YuiCalYuiContext;
+PYUI_MONITOR YuiCalYuiMonitor;
 
 /**
  The number of days in each month.  This is a static set, but due to leap
@@ -95,7 +95,7 @@ LPTSTR YuiDayNames[7] = {_T("Sunday"),
 WORD
 YuiCalendarGetCellWidth(VOID)
 {
-    return YuiCalYuiContext->CalendarCellWidth;
+    return YuiCalYuiMonitor->CalendarCellWidth;
 }
 
 /**
@@ -106,7 +106,7 @@ YuiCalendarGetCellWidth(VOID)
 WORD
 YuiCalendarGetCellHeight(VOID)
 {
-    return YuiCalYuiContext->CalendarCellHeight;
+    return YuiCalYuiMonitor->CalendarCellHeight;
 }
 
 /**
@@ -142,7 +142,7 @@ YuiCalendarGetCellVertPadding(VOID)
 WORD
 YuiCalendarGetWindowHorizPadding(VOID)
 {
-    return (WORD)(7 + YuiCalYuiContext->ControlBorderWidth);
+    return (WORD)(7 + YuiCalYuiMonitor->ControlBorderWidth);
 }
 
 /**
@@ -154,7 +154,7 @@ YuiCalendarGetWindowHorizPadding(VOID)
 WORD
 YuiCalendarGetWindowVertPadding(VOID)
 {
-    return (WORD)(7 + YuiCalYuiContext->ControlBorderWidth);
+    return (WORD)(7 + YuiCalYuiMonitor->ControlBorderWidth);
 }
 
 /**
@@ -265,8 +265,8 @@ YuiCalendarOutputMonth(
 
     GetClientRect(hWnd, &ClientRect);
     YuiDrawWindowBackground(hDC, &ClientRect);
-    YuiDrawThreeDBox(hDC, &ClientRect, YuiCalYuiContext->ControlBorderWidth, FALSE);
-    OldObject = SelectObject(hDC, YuiCalYuiContext->hFont);
+    YuiDrawThreeDBox(hDC, &ClientRect, YuiCalYuiMonitor->ControlBorderWidth, FALSE);
+    OldObject = SelectObject(hDC, YuiCalYuiMonitor->hFont);
 
     SetBkColor(hDC, BackColor);
     SetTextColor(hDC, ForeColor);
@@ -419,11 +419,11 @@ YuiCalendarWindowProc(
 /**
  Display the Yui calendar window.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
  */
 VOID
 YuiCalendar(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     HWND hWnd;
@@ -436,7 +436,7 @@ YuiCalendar(
     WORD WindowHorizPadding;
     WORD WindowVertPadding;
 
-    YuiCalYuiContext = YuiContext;
+    YuiCalYuiMonitor = YuiMonitor;
 
     CellWidth = YuiCalendarGetCellWidth();
     CellHeight = YuiCalendarGetCellHeight();
@@ -456,8 +456,8 @@ YuiCalendar(
                           YUI_CALENDAR_CLASS,
                           _T(""),
                           WS_POPUP | WS_CLIPCHILDREN,
-                          YuiContext->ScreenWidth - WindowWidth,
-                          YuiContext->ScreenHeight - YuiContext->TaskbarHeight - WindowHeight,
+                          YuiMonitor->ScreenLeft + YuiMonitor->ScreenWidth - WindowWidth,
+                          YuiMonitor->ScreenTop + YuiMonitor->ScreenHeight - YuiMonitor->TaskbarHeight - WindowHeight,
                           WindowWidth,
                           WindowHeight,
                           NULL, NULL, NULL, 0);

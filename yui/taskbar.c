@@ -178,7 +178,7 @@ YuiTaskbarIncludeWindow(
 /**
  Check if a window is full screen.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hWnd Handle to the window to check.
 
@@ -186,7 +186,7 @@ YuiTaskbarIncludeWindow(
  */
 BOOLEAN
 YuiTaskbarFullscreenWindow(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd
     )
 {
@@ -208,10 +208,10 @@ YuiTaskbarFullscreenWindow(
         //  approximates the screen size.
         //
 
-        if (WindowRect.left > 2 ||
-            WindowRect.top > 2 ||
-            WindowRect.bottom < (INT)(YuiContext->ScreenHeight - 2) ||
-            WindowRect.right < (INT)(YuiContext->ScreenWidth - 2)) {
+        if (WindowRect.left > (INT)(YuiMonitor->ScreenLeft + 2) ||
+            WindowRect.top > (INT)(YuiMonitor->ScreenTop + 2) ||
+            WindowRect.bottom < (INT)(YuiMonitor->ScreenTop + YuiMonitor->ScreenHeight - 2) ||
+            WindowRect.right < (INT)(YuiMonitor->ScreenLeft + YuiMonitor->ScreenWidth - 2)) {
 
             return FALSE;
         }
@@ -227,7 +227,7 @@ YuiTaskbarFullscreenWindow(
 #if DBG
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Fullscreen window is maximized, resetting work area\n"));
 #endif
-            YuiResetWorkArea(YuiContext, TRUE);
+            YuiResetWorkArea(YuiMonitor, TRUE);
         } else {
             break;
         }
@@ -241,7 +241,7 @@ YuiTaskbarFullscreenWindow(
  taskbar.  If the taskbar is currently hidden and the new window is not
  full screen, un-hide the taskbar.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitorcontext.
 
  @param hWnd Handle to the currently active window.
  
@@ -249,28 +249,28 @@ YuiTaskbarFullscreenWindow(
  */
 BOOLEAN
 YuiTaskbarUpdateFullscreenStatus(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd
     )
 {
     BOOLEAN FullscreenWindowActive;
 
-    FullscreenWindowActive = YuiTaskbarFullscreenWindow(YuiContext, hWnd);
+    FullscreenWindowActive = YuiTaskbarFullscreenWindow(YuiMonitor, hWnd);
 
-    if (YuiContext->FullscreenModeActive) {
+    if (YuiMonitor->FullscreenModeActive) {
         if (!FullscreenWindowActive) {
 #if DBG
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Window %08x not fullscreen, displaying taskbar\n"), hWnd);
 #endif
-            DllUser32.pShowWindow(YuiContext->hWnd, SW_SHOW);
-            YuiContext->FullscreenModeActive = FullscreenWindowActive;
+            DllUser32.pShowWindow(YuiMonitor->hWndTaskbar, SW_SHOW);
+            YuiMonitor->FullscreenModeActive = FullscreenWindowActive;
         }
     } else if (FullscreenWindowActive) {
 #if DBG
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Window %08x fullscreen, hiding taskbar\n"), hWnd);
 #endif
-        DllUser32.pShowWindow(YuiContext->hWnd, SW_HIDE);
-        YuiContext->FullscreenModeActive = FullscreenWindowActive;
+        DllUser32.pShowWindow(YuiMonitor->hWndTaskbar, SW_HIDE);
+        YuiMonitor->FullscreenModeActive = FullscreenWindowActive;
     }
 
     return FullscreenWindowActive;
@@ -281,19 +281,19 @@ YuiTaskbarUpdateFullscreenStatus(
  This is to allow hotkeys to render the taskbar when the start menu is being
  displayed.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @return TRUE if a full screen mode was disabled; FALSE if no action was
          taken.
  */
 BOOLEAN
 YuiTaskbarSuppressFullscreenHiding(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     )
 {
-    if (YuiContext->FullscreenModeActive) {
-        DllUser32.pShowWindow(YuiContext->hWnd, SW_SHOW);
-        YuiContext->FullscreenModeActive = FALSE;
+    if (YuiMonitor->FullscreenModeActive) {
+        DllUser32.pShowWindow(YuiMonitor->hWndTaskbar, SW_SHOW);
+        YuiMonitor->FullscreenModeActive = FALSE;
         return TRUE;
     }
 
@@ -304,17 +304,17 @@ YuiTaskbarSuppressFullscreenHiding(
  Allocate a unique identifier for a button control that will be displayed
  on the taskbar.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @return The identifier for the button control.
  */
 WORD
 YuiTaskbarGetNewCtrlId(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     )
 {
-    YuiContext->NextTaskbarId++;
-    return YuiContext->NextTaskbarId;
+    YuiMonitor->NextTaskbarId++;
+    return YuiMonitor->NextTaskbarId;
 }
 
 /**
@@ -346,7 +346,7 @@ YuiTaskbarMungeButtonText(
  Allocate memory for the structure that describes a taskbar button.  Note
  this does not create the button control itself.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hWnd The window handle to the taskbar window.
 
@@ -354,7 +354,7 @@ YuiTaskbarMungeButtonText(
  */
 BOOL
 YuiTaskbarAllocateAndAddButton(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd
     )
 {
@@ -364,6 +364,9 @@ YuiTaskbarAllocateAndAddButton(
     PYUI_RECENT_CHILD_PROCESS ChildProcess;
     LONGLONG CurrentTime;
     LONGLONG ExpireTime;
+    PYUI_CONTEXT YuiContext;
+
+    YuiContext = YuiMonitor->YuiContext;
 
     WindowTitleLength = (YORI_ALLOC_SIZE_T)GetWindowTextLength(hWnd);
 
@@ -436,8 +439,8 @@ YuiTaskbarAllocateAndAddButton(
         }
     }
 
-    YoriLibAppendList(&YuiContext->TaskbarButtons, &NewButton->ListEntry);
-    YuiContext->TaskbarButtonCount++;
+    YoriLibAppendList(&YuiMonitor->TaskbarButtons, &NewButton->ListEntry);
+    YuiMonitor->TaskbarButtonCount++;
 
     return TRUE;
 }
@@ -475,20 +478,17 @@ YuiTaskbarFreeButton(
 /**
  Create a button window for the specified button.
 
- @param YuiContext Pointer to the Yui context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param ThisButton Pointer to the button structure indicating its text,
         location, and control ID.
-
- @param TaskbarHwnd The taskbar window (parent.)
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YuiTaskbarCreateButtonControl(
-    __in PYUI_CONTEXT YuiContext,
-    __in PYUI_TASKBAR_BUTTON ThisButton,
-    __in HWND TaskbarHwnd
+    __in PYUI_MONITOR YuiMonitor,
+    __in PYUI_TASKBAR_BUTTON ThisButton
     )
 {
     ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
@@ -498,7 +498,7 @@ YuiTaskbarCreateButtonControl(
                                           ThisButton->TopOffset,
                                           (WORD)(ThisButton->RightOffset - ThisButton->LeftOffset),
                                           (WORD)(ThisButton->BottomOffset - ThisButton->TopOffset),
-                                          TaskbarHwnd,
+                                          YuiMonitor->hWndTaskbar,
                                           (HMENU)(DWORD_PTR)ThisButton->ControlId,
                                           NULL,
                                           NULL);
@@ -508,7 +508,7 @@ YuiTaskbarCreateButtonControl(
     }
 
     SetWindowLongPtr(ThisButton->hWndButton, GWLP_WNDPROC, (LONG_PTR)YuiTaskbarButtonWndProc);
-    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
     return TRUE;
 }
@@ -531,10 +531,15 @@ YuiTaskbarWindowCallback(
     )
 {
     PYUI_CONTEXT YuiContext;
+    PYUI_MONITOR YuiMonitor;
 
     YuiContext = (PYUI_CONTEXT)lParam;
+    if (!YuiTaskbarIncludeWindow(hWnd)) {
+        return TRUE;
+    }
+    YuiMonitor = YuiMonitorFromApplicationHwnd(YuiContext, hWnd);
 
-#if 0
+#if DBG
     {
         YORI_ALLOC_SIZE_T CharsNeeded;
         YORI_STRING WindowTitle;
@@ -543,16 +548,16 @@ YuiTaskbarWindowCallback(
         if (YoriLibAllocateString(&WindowTitle, CharsNeeded + 1)) {
             WindowTitle.LengthInChars = (YORI_ALLOC_SIZE_T)GetWindowText(hWnd, WindowTitle.StartOfString, WindowTitle.LengthAllocated);
         }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Enumerated window %08x %y\n"), hWnd, &WindowTitle);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                      _T("Enumerated window %08x on %08x %y\n"),
+                      hWnd,
+                      YuiMonitor->MonitorHandle,
+                      &WindowTitle);
         YoriLibFreeStringContents(&WindowTitle);
     }
 #endif
 
-    if (!YuiTaskbarIncludeWindow(hWnd)) {
-        return TRUE;
-    }
-
-    YuiTaskbarAllocateAndAddButton(YuiContext, hWnd);
+    YuiTaskbarAllocateAndAddButton(YuiMonitor, hWnd);
 
     return TRUE;
 }
@@ -561,19 +566,19 @@ YuiTaskbarWindowCallback(
  Mark the button as hosting the active window.  This updates internal state,
  sets the font, and updates button to the pressed appearance.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param ThisButton Pointer to the button to mark as active.
  */
 VOID
 YuiTaskbarMarkButtonActive(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PYUI_TASKBAR_BUTTON ThisButton
     )
 {
     ThisButton->Flashing = FALSE;
     ThisButton->WindowActive = TRUE;
-    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(FALSE, 0));
+    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(FALSE, 0));
     SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
 }
 
@@ -581,18 +586,18 @@ YuiTaskbarMarkButtonActive(
  Mark the button as not hosting the active window.  This updates internal
  state, sets the font, and updates button to the raised appearance.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param ThisButton Pointer to the button to mark as inactive.
  */
 VOID
 YuiTaskbarMarkButtonInactive(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PYUI_TASKBAR_BUTTON ThisButton
     )
 {
     ThisButton->WindowActive = FALSE;
-    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(FALSE, 0));
+    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(FALSE, 0));
     SendMessage(ThisButton->hWndButton, BM_SETSTATE, FALSE, 0);
 }
 
@@ -602,31 +607,30 @@ YuiTaskbarMarkButtonInactive(
  number of buttons, with a maximum size per button to prevent a single
  window occupying the entire bar, etc.
 
- @param YuiContext Pointer to the application context.
-
- @param TaskbarHwnd The taskbar window.
+ @param YuiMonitor Pointer to the monitor context.
 
  @return The number of pixels in each taskbar button.
  */
 DWORD
 YuiTaskbarCalculateButtonWidth(
-    __in PYUI_CONTEXT YuiContext,
-    __in HWND TaskbarHwnd
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     RECT TaskbarWindowClient;
     DWORD TotalWidthForButtons;
     DWORD WidthPerButton;
 
-    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
-    TotalWidthForButtons = TaskbarWindowClient.right - YuiContext->LeftmostTaskbarOffset - YuiContext->RightmostTaskbarOffset - 1;
+    DllUser32.pGetClientRect(YuiMonitor->hWndTaskbar, &TaskbarWindowClient);
+    TotalWidthForButtons = TaskbarWindowClient.right -
+                           YuiMonitor->LeftmostTaskbarOffset -
+                           YuiMonitor->RightmostTaskbarOffset - 1;
 
-    if (YuiContext->TaskbarButtonCount == 0) {
-        WidthPerButton = YuiContext->MaximumTaskbarButtonWidth;
+    if (YuiMonitor->TaskbarButtonCount == 0) {
+        WidthPerButton = YuiMonitor->MaximumTaskbarButtonWidth;
     } else {
-        WidthPerButton = TotalWidthForButtons / YuiContext->TaskbarButtonCount;
-        if (WidthPerButton > YuiContext->MaximumTaskbarButtonWidth) {
-            WidthPerButton = YuiContext->MaximumTaskbarButtonWidth;
+        WidthPerButton = TotalWidthForButtons / YuiMonitor->TaskbarButtonCount;
+        if (WidthPerButton > YuiMonitor->MaximumTaskbarButtonWidth) {
+            WidthPerButton = YuiMonitor->MaximumTaskbarButtonWidth;
         }
     }
 
@@ -637,14 +641,11 @@ YuiTaskbarCalculateButtonWidth(
  Move existing buttons on the taskbar.  This attempts to use DeferWindowPos
  in the hope that Windows can do this efficiently.
 
- @param YuiContext Pointer to the application context.
-
- @param TaskbarHwnd The taskbar window.
+ @param YuiMonitor Pointer to the monitor context.
  */
 VOID
 YuiTaskbarRepositionExistingButtons(
-    __in PYUI_CONTEXT YuiContext,
-    __in HWND TaskbarHwnd
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     DWORD WidthPerButton;
@@ -661,9 +662,9 @@ YuiTaskbarRepositionExistingButtons(
 
     Index = 0;
     ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
         Index++;
     }
 
@@ -672,13 +673,13 @@ YuiTaskbarRepositionExistingButtons(
         return;
     }
 
-    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
+    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiMonitor);
 
-    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+    DllUser32.pGetClientRect(YuiMonitor->hWndTaskbar, &TaskbarWindowClient);
 
     Index = 0;
     ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
 
@@ -697,10 +698,10 @@ YuiTaskbarRepositionExistingButtons(
             //  buttons being removed only move buttons that follow, etc.
             //
 
-            NewLeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + YuiContext->ControlBorderWidth);
-            NewRightOffset = (WORD)(NewLeftOffset + WidthPerButton - 2 * YuiContext->ControlBorderWidth);
-            NewTopOffset = YuiContext->TaskbarPaddingVertical;
-            NewBottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical);
+            NewLeftOffset = (WORD)(YuiMonitor->LeftmostTaskbarOffset + Index * WidthPerButton + YuiMonitor->ControlBorderWidth);
+            NewRightOffset = (WORD)(NewLeftOffset + WidthPerButton - 2 * YuiMonitor->ControlBorderWidth);
+            NewTopOffset = YuiMonitor->TaskbarPaddingVertical;
+            NewBottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiMonitor->TaskbarPaddingVertical);
 
             if (NewLeftOffset != ThisButton->LeftOffset ||
                 NewRightOffset != ThisButton->RightOffset ||
@@ -716,7 +717,7 @@ YuiTaskbarRepositionExistingButtons(
                                         NULL,
                                         ThisButton->LeftOffset,
                                         ThisButton->TopOffset,
-                                        WidthPerButton - 2 * YuiContext->ControlBorderWidth, // ThisButton->RightOffset - ThisButton->LeftOffset,
+                                        WidthPerButton - 2 * YuiMonitor->ControlBorderWidth,
                                         ThisButton->BottomOffset - ThisButton->TopOffset,
                                         SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOZORDER);
 
@@ -733,7 +734,7 @@ YuiTaskbarRepositionExistingButtons(
             }
         }
 
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
         Index++;
     }
 
@@ -746,14 +747,11 @@ YuiTaskbarRepositionExistingButtons(
 
  @param YuiContext Pointer to the application context.
 
- @param TaskbarHwnd The taskbar window.
-
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YuiTaskbarPopulateWindows(
-    __in PYUI_CONTEXT YuiContext,
-    __in HWND TaskbarHwnd
+    __in PYUI_CONTEXT YuiContext
     )
 {
     DWORD WidthPerButton;
@@ -762,34 +760,39 @@ YuiTaskbarPopulateWindows(
     PYUI_TASKBAR_BUTTON ThisButton;
     HWND ActiveWindow;
     RECT TaskbarWindowClient;
+    PYUI_MONITOR YuiMonitor;
 
     EnumWindows(YuiTaskbarWindowCallback, (LPARAM)YuiContext);
 
-    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
-
-    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
-
-    ListEntry = NULL;
-    Index = 0;
     ActiveWindow = GetForegroundWindow();
-    YuiContext->NextTaskbarId = YUI_FIRST_TASKBAR_BUTTON;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
 
-        ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
-        ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1),
-        ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2),
-        ThisButton->TopOffset = YuiContext->TaskbarPaddingVertical;
-        ThisButton->BottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical);
-        YuiTaskbarCreateButtonControl(YuiContext,
-                                      ThisButton,
-                                      TaskbarHwnd);
-        if (ThisButton->hWndToActivate == ActiveWindow) {
-            YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+
+        WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiMonitor);
+    
+        DllUser32.pGetClientRect(YuiMonitor->hWndTaskbar, &TaskbarWindowClient);
+    
+        ListEntry = NULL;
+        Index = 0;
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+        while (ListEntry != NULL) {
+            ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+    
+            ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiMonitor);
+            ThisButton->LeftOffset = (WORD)(YuiMonitor->LeftmostTaskbarOffset + Index * WidthPerButton + 1),
+            ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2),
+            ThisButton->TopOffset = YuiMonitor->TaskbarPaddingVertical;
+            ThisButton->BottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiMonitor->TaskbarPaddingVertical);
+            YuiTaskbarCreateButtonControl(YuiMonitor, ThisButton);
+            if (ThisButton->hWndToActivate == ActiveWindow) {
+                YuiTaskbarMarkButtonActive(YuiMonitor, ThisButton);
+            }
+            ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+            Index++;
         }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-        Index++;
+        YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
     }
 
     return TRUE;
@@ -798,13 +801,13 @@ YuiTaskbarPopulateWindows(
 /**
  Find a button structure from a specified control ID.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param CtrlId The control ID to find.
  */
 PYUI_TASKBAR_BUTTON
 YuiTaskbarFindButtonFromCtrlId(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId
     )
 {
@@ -812,13 +815,13 @@ YuiTaskbarFindButtonFromCtrlId(
     PYUI_TASKBAR_BUTTON ThisButton;
 
     ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
         if (ThisButton->ControlId == CtrlId) {
             return ThisButton;
         }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     }
 
     return NULL;
@@ -827,13 +830,13 @@ YuiTaskbarFindButtonFromCtrlId(
 /**
  Find a button structure from a specified application window.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hWndToActivate The application window to find the button for.
  */
 PYUI_TASKBAR_BUTTON
 YuiTaskbarFindButtonFromHwndToActivate(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWndToActivate
     )
 {
@@ -841,13 +844,13 @@ YuiTaskbarFindButtonFromHwndToActivate(
     PYUI_TASKBAR_BUTTON ThisButton;
 
     ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
         if (ThisButton->hWndToActivate == hWndToActivate) {
             return ThisButton;
         }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     }
 
     return NULL;
@@ -858,12 +861,12 @@ YuiTaskbarFindButtonFromHwndToActivate(
  which implies the taskbar is not the same size as previously and buttons may
  need to be moved around.
 
- @param YuiContext Pointer to the context containing the taskbar buttons to
+ @param YuiMonitor Pointer to the context containing the taskbar buttons to
         move.
  */
 VOID
 YuiTaskbarNotifyResolutionChange(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_MONITOR YuiMonitor
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
@@ -871,30 +874,28 @@ YuiTaskbarNotifyResolutionChange(
     DWORD WidthPerButton;
     PYORI_LIST_ENTRY ListEntry;
     RECT TaskbarWindowClient;
-    HWND TaskbarHwnd;
 
-    TaskbarHwnd = YuiContext->hWnd;
-    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
-    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiMonitor);
+    DllUser32.pGetClientRect(YuiMonitor->hWndTaskbar, &TaskbarWindowClient);
 
     ListEntry = NULL;
     Index = 0;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
 
         if (ThisButton->hWndButton != NULL) {
             if (ThisButton->WindowActive) {
-                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(TRUE, 0));
+                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(TRUE, 0));
             } else {
-                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
             }
         }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
         Index++;
     }
 
-    YuiTaskbarRepositionExistingButtons(YuiContext, TaskbarHwnd);
+    YuiTaskbarRepositionExistingButtons(YuiMonitor);
 }
 
 /**
@@ -915,47 +916,45 @@ YuiTaskbarNotifyNewWindow(
     DWORD WidthPerButton;
     PYORI_LIST_ENTRY ListEntry;
     RECT TaskbarWindowClient;
-    HWND TaskbarHwnd;
+    PYUI_MONITOR YuiMonitor;
 
     if (!YuiTaskbarIncludeWindow(hWnd)) {
         return;
     }
 
-    YuiTaskbarUpdateFullscreenStatus(YuiContext, hWnd);
+    YuiMonitor = YuiMonitorFromApplicationHwnd(YuiContext, hWnd);
+    YuiTaskbarUpdateFullscreenStatus(YuiMonitor, hWnd);
 
-    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiMonitor, hWnd);
     if (ThisButton == NULL) {
-        if (!YuiTaskbarAllocateAndAddButton(YuiContext, hWnd)) {
+        if (!YuiTaskbarAllocateAndAddButton(YuiMonitor, hWnd)) {
             return;
         }
     }
 
-    TaskbarHwnd = YuiContext->hWnd;
-    YuiTaskbarRepositionExistingButtons(YuiContext, TaskbarHwnd);
-    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
-    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+    YuiTaskbarRepositionExistingButtons(YuiMonitor);
+    WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiMonitor);
+    DllUser32.pGetClientRect(YuiMonitor->hWndTaskbar, &TaskbarWindowClient);
 
     ListEntry = NULL;
     Index = 0;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
         if (ThisButton->hWndButton == NULL) {
-            ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
+            ThisButton->LeftOffset = (WORD)(YuiMonitor->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
             ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
-            ThisButton->TopOffset = YuiContext->TaskbarPaddingVertical;
-            ThisButton->BottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiContext->TaskbarPaddingVertical);
+            ThisButton->TopOffset = YuiMonitor->TaskbarPaddingVertical;
+            ThisButton->BottomOffset = (WORD)(TaskbarWindowClient.bottom - YuiMonitor->TaskbarPaddingVertical);
 
-            ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
-            YuiTaskbarCreateButtonControl(YuiContext,
-                                          ThisButton,
-                                          TaskbarHwnd);
+            ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiMonitor);
+            YuiTaskbarCreateButtonControl(YuiMonitor, ThisButton);
             if (ThisButton->hWndToActivate == GetForegroundWindow()) {
-                YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
+                YuiTaskbarMarkButtonActive(YuiMonitor, ThisButton);
             }
         }
 
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
         Index++;
     }
 }
@@ -974,26 +973,34 @@ YuiTaskbarNotifyDestroyWindow(
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
-    HWND TaskbarHwnd;
+    PYUI_MONITOR YuiMonitor;
 
     if (hWnd == NULL) {
         return;
     }
 
-    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
-    if (ThisButton == NULL) {
-        return;
+    //
+    //  Rather than ask where the window is (was?), clean up all monitors
+    //  that might have heard of it.
+    //
+
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiMonitor, hWnd);
+        if (ThisButton != NULL) {
+
+            DestroyWindow(ThisButton->hWndButton);
+            ThisButton->hWndButton = NULL;
+            YuiTaskbarFreeButton(ThisButton);
+        
+            ASSERT(YuiMonitor->TaskbarButtonCount > 0);
+            YuiMonitor->TaskbarButtonCount--;
+        
+            YuiTaskbarRepositionExistingButtons(YuiMonitor);
+        }
+        YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
     }
-
-    DestroyWindow(ThisButton->hWndButton);
-    ThisButton->hWndButton = NULL;
-    YuiTaskbarFreeButton(ThisButton);
-
-    ASSERT(YuiContext->TaskbarButtonCount > 0);
-    YuiContext->TaskbarButtonCount--;
-
-    TaskbarHwnd = YuiContext->hWnd;
-    YuiTaskbarRepositionExistingButtons(YuiContext, TaskbarHwnd);
 }
 
 /**
@@ -1011,29 +1018,42 @@ YuiTaskbarNotifyActivateWindow(
 {
     PYUI_TASKBAR_BUTTON ThisButton;
     PYORI_LIST_ENTRY ListEntry;
+    PYUI_MONITOR YuiMonitor;
 
     if (hWnd == NULL) {
         return;
     }
 
-    YuiTaskbarUpdateFullscreenStatus(YuiContext, hWnd);
+    //
+    //  MSFIX Really want to ensure we've called UpdateFullscreenStatus on
+    //  the old window before the new one.  We don't currently know the old
+    //  one without scanning first though.
+    //
 
-    ListEntry = NULL;
-    ThisButton = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        if (ThisButton->hWndToActivate == hWnd) {
-            if (!ThisButton->WindowActive) {
-                YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
-            }
-        } else {
-            if (ThisButton->WindowActive) {
-                YuiTaskbarMarkButtonInactive(YuiContext, ThisButton);
-            }
-        }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+    
+        ListEntry = NULL;
         ThisButton = NULL;
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+        while (ListEntry != NULL) {
+            ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+            if (ThisButton->hWndToActivate == hWnd) {
+                if (!ThisButton->WindowActive) {
+                    YuiTaskbarMarkButtonActive(YuiMonitor, ThisButton);
+                    YuiTaskbarUpdateFullscreenStatus(YuiMonitor, hWnd);
+                }
+            } else {
+                if (ThisButton->WindowActive) {
+                    YuiTaskbarMarkButtonInactive(YuiMonitor, ThisButton);
+                    YuiTaskbarUpdateFullscreenStatus(YuiMonitor, hWnd);
+                }
+            }
+            ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+            ThisButton = NULL;
+        }
+        YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
     }
 }
 
@@ -1051,6 +1071,7 @@ YuiTaskbarNotifyTitleChange(
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
+    PYUI_MONITOR YuiMonitor;
 
     if (hWnd == NULL) {
         return;
@@ -1066,9 +1087,10 @@ YuiTaskbarNotifyTitleChange(
         return;
     }
 
-    YuiTaskbarUpdateFullscreenStatus(YuiContext, hWnd);
+    YuiMonitor = YuiMonitorFromApplicationHwnd(YuiContext, hWnd);
+    YuiTaskbarUpdateFullscreenStatus(YuiMonitor, hWnd);
 
-    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiMonitor, hWnd);
     if (ThisButton == NULL) {
 
         //
@@ -1106,12 +1128,15 @@ YuiTaskbarNotifyFlash(
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
+    PYUI_MONITOR YuiMonitor;
 
     if (hWnd == NULL) {
         return;
     }
 
-    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
+    YuiMonitor = YuiMonitorFromApplicationHwnd(YuiContext, hWnd);
+
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiMonitor, hWnd);
     if (ThisButton == NULL) {
         return;
     }
@@ -1124,6 +1149,23 @@ YuiTaskbarNotifyFlash(
         ThisButton->Flashing = TRUE;
         RedrawWindow(ThisButton->hWndButton, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);
     }
+}
+
+/**
+ A function invoked to indicate that a window has changed monitors.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hWnd The window which has moved to a new monitor.
+ */
+VOID
+YuiTaskbarNotifyMonitorChanged(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    )
+{
+    YuiTaskbarNotifyDestroyWindow(YuiContext, hWnd);
+    YuiTaskbarNotifyNewWindow(YuiContext, hWnd);
 }
 
 /**
@@ -1143,6 +1185,7 @@ YuiTaskbarSyncWindowCallback(
     )
 {
     PYUI_CONTEXT YuiContext;
+    PYUI_MONITOR YuiMonitor;
     PYUI_TASKBAR_BUTTON ThisButton;
 
     YuiContext = (PYUI_CONTEXT)lParam;
@@ -1151,7 +1194,14 @@ YuiTaskbarSyncWindowCallback(
         return TRUE;
     }
 
-    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
+    //
+    //  MSFIX Might want lower level helper functions since we've already
+    //  determined the monitor and the child functions here will do it
+    //  again
+    //
+
+    YuiMonitor = YuiMonitorFromApplicationHwnd(YuiContext, hWnd);
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiMonitor, hWnd);
     if (ThisButton == NULL) {
 
         // 
@@ -1184,20 +1234,26 @@ YuiTaskbarSyncWithCurrent(
 {
     PYUI_TASKBAR_BUTTON ThisButton;
     PYORI_LIST_ENTRY ListEntry;
+    PYUI_MONITOR YuiMonitor;
 
     //
     //  Enumerate the set of buttons and indicate that none of them have been
     //  confirmed to exist with any currently open window.
     //
 
-    ListEntry = NULL;
-    ThisButton = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        ThisButton->AssociatedWindowFound = FALSE;
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        ListEntry = NULL;
         ThisButton = NULL;
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+        while (ListEntry != NULL) {
+            ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+            ThisButton->AssociatedWindowFound = FALSE;
+            ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+            ThisButton = NULL;
+        }
+        YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
     }
 
     //
@@ -1211,17 +1267,24 @@ YuiTaskbarSyncWithCurrent(
     //  Enumerate the set of windows that are on the taskbar, and if any have
     //  not been found in the most recent enumerate, tear them down.
     //
+    //  MSFIX Do buttons need to identify their owning taskbar?
+    //
 
-    ListEntry = NULL;
-    ThisButton = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-        if (!ThisButton->AssociatedWindowFound) {
-            YuiTaskbarNotifyDestroyWindow(YuiContext, ThisButton->hWndToActivate);
-        }
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        ListEntry = NULL;
         ThisButton = NULL;
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+        while (ListEntry != NULL) {
+            ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+            if (!ThisButton->AssociatedWindowFound) {
+                YuiTaskbarNotifyDestroyWindow(YuiContext, ThisButton->hWndToActivate);
+            }
+            ThisButton = NULL;
+        }
+        YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
     }
 
     //
@@ -1229,6 +1292,35 @@ YuiTaskbarSyncWithCurrent(
     //
 
     YuiTaskbarNotifyActivateWindow(YuiContext, GetForegroundWindow());
+}
+
+/**
+ Free all taskbar buttons attached to a single monitor.  This is used when
+ cleaning up all monitors, or where a specific monitor is being removed.
+
+ @param YuiMonitor Pointer to the monitor to clean up.
+ */
+VOID
+YuiTaskbarFreeButtonsOneMonitor(
+    __in PYUI_MONITOR YuiMonitor
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_LIST_ENTRY NextEntry;
+    PYUI_TASKBAR_BUTTON ThisButton;
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+    while (ListEntry != NULL) {
+        NextEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+        if (ThisButton->hWndButton != NULL) {
+            DestroyWindow(ThisButton->hWndButton);
+            ThisButton->hWndButton = NULL;
+        }
+        YuiTaskbarFreeButton(ThisButton);
+        ListEntry = NextEntry;
+    }
 }
 
 /**
@@ -1242,34 +1334,26 @@ YuiTaskbarFreeButtons(
     __in PYUI_CONTEXT YuiContext
     )
 {
-    PYORI_LIST_ENTRY ListEntry;
-    PYORI_LIST_ENTRY NextEntry;
-    PYUI_TASKBAR_BUTTON ThisButton;
+    PYUI_MONITOR YuiMonitor;
 
-    ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        NextEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        if (ThisButton->hWndButton != NULL) {
-            DestroyWindow(ThisButton->hWndButton);
-            ThisButton->hWndButton = NULL;
-        }
-        YuiTaskbarFreeButton(ThisButton);
-        ListEntry = NextEntry;
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        YuiTaskbarFreeButtonsOneMonitor(YuiMonitor);
+        YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
     }
 }
 
 /**
  Switch to the application described by a taskbar button.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param ThisButton Pointer to the taskbar button description.
  */
 VOID
 YuiTaskbarSwitchToButton(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PYUI_TASKBAR_BUTTON ThisButton
     )
 {
@@ -1295,30 +1379,30 @@ YuiTaskbarSwitchToButton(
     //  notification (so it's only repainted once.)
     //
 
-    if (YuiContext->TaskbarRefreshFrequency != 0) {
-        YuiTaskbarNotifyActivateWindow(YuiContext, ThisButton->hWndToActivate);
+    if (YuiMonitor->YuiContext->TaskbarRefreshFrequency != 0) {
+        YuiTaskbarNotifyActivateWindow(YuiMonitor->YuiContext, ThisButton->hWndToActivate);
     }
 }
 
 /**
  Switch to the window associated with the specified control identifier.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param CtrlId The identifier of the button that was pressed indicating a
         desire to change to the associated window.
  */
 VOID
 YuiTaskbarSwitchToTask(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
 
-    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
+    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiMonitor, CtrlId);
     if (ThisButton != NULL) {
-        YuiTaskbarSwitchToButton(YuiContext, ThisButton);
+        YuiTaskbarSwitchToButton(YuiMonitor, ThisButton);
     }
 }
 
@@ -1326,14 +1410,14 @@ YuiTaskbarSwitchToTask(
  Attempt to launch a new instance of a running program.  This is invoked if
  the user shift-clicks a taskbar button.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param CtrlId The identifier of the button that was pressed indicating a
         desire to relaunch the associated window.
  */
 VOID
 YuiTaskbarLaunchNewTask(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId
     )
 {
@@ -1343,7 +1427,7 @@ YuiTaskbarLaunchNewTask(
     HINSTANCE hInst;
     BOOLEAN Elevated;
 
-    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
+    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiMonitor, CtrlId);
     if (ThisButton != NULL) {
 
         //
@@ -1361,7 +1445,7 @@ YuiTaskbarLaunchNewTask(
 #if DBG
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Launching shortcut associated with button %y\n"), &ThisButton->ShortcutPath);
 #endif
-            YuiExecuteShortcut(YuiContext, &ThisButton->ShortcutPath, Elevated);
+            YuiExecuteShortcut(YuiMonitor, &ThisButton->ShortcutPath, Elevated);
             return;
         }
 
@@ -1409,7 +1493,7 @@ YuiTaskbarLaunchNewTask(
 /**
  Display the context menu associated with a specific taskbar button.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param CtrlId A control ID for the taskbar button.
 
@@ -1423,7 +1507,7 @@ YuiTaskbarLaunchNewTask(
  */
 BOOL
 YuiTaskbarDisplayContextMenuForTask(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId,
     __in DWORD CursorX,
     __in DWORD CursorY
@@ -1431,9 +1515,14 @@ YuiTaskbarDisplayContextMenuForTask(
 {
     PYUI_TASKBAR_BUTTON ThisButton;
 
-    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
+    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiMonitor, CtrlId);
     if (ThisButton != NULL) {
-        return YuiMenuDisplayWindowContext(YuiContext, YuiContext->hWnd, ThisButton->hWndToActivate, ThisButton->ProcessId, CursorX, CursorY);
+        return YuiMenuDisplayWindowContext(YuiMonitor,
+                                           YuiMonitor->hWndTaskbar,
+                                           ThisButton->hWndToActivate,
+                                           ThisButton->ProcessId,
+                                           CursorX,
+                                           CursorY);
     }
 
     return FALSE;
@@ -1452,23 +1541,29 @@ YuiTaskbarSwitchToActiveTask(
 {
     PYORI_LIST_ENTRY ListEntry;
     PYUI_TASKBAR_BUTTON ThisButton;
+    PYUI_MONITOR YuiMonitor;
 
-    ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        if (ThisButton->WindowActive) {
-            YuiTaskbarSwitchToButton(YuiContext, ThisButton);
-            break;
+    YuiMonitor = NULL;
+    YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+    while (YuiMonitor != NULL) {
+        ListEntry = NULL;
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
+        while (ListEntry != NULL) {
+            ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+            if (ThisButton->WindowActive) {
+                YuiTaskbarSwitchToButton(YuiMonitor, ThisButton);
+                break;
+            }
+            ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
         }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
     }
 }
 
 /**
  Draw a taskbar button.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param CtrlId The identifier of the button that should be redrawn.
 
@@ -1477,7 +1572,7 @@ YuiTaskbarSwitchToActiveTask(
  */
 VOID
 YuiTaskbarDrawButton(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId,
     __in PDRAWITEMSTRUCT DrawItemStruct
     )
@@ -1487,7 +1582,7 @@ YuiTaskbarDrawButton(
     LRESULT Result;
     DWORD_PTR MsgResult;
 
-    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
+    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiMonitor, CtrlId);
     if (ThisButton == NULL) {
         return;
     }
@@ -1510,7 +1605,7 @@ YuiTaskbarDrawButton(
         Icon = (HICON)GetClassLongPtr(ThisButton->hWndToActivate, GCLP_HICONSM);
     }
 
-    YuiDrawButton(YuiContext,
+    YuiDrawButton(YuiMonitor,
                   DrawItemStruct,
                   ThisButton->WindowActive,
                   ThisButton->Flashing,
@@ -1521,18 +1616,41 @@ YuiTaskbarDrawButton(
 }
 
 /**
+ Check if the specified position overlaps with the start button.
+
+ @param YuiMonitor Pointer to the monitor context.
+
+ @param XPos The horizontal coordinate, relative to the client area.
+
+ @return TRUE if the coordinate overlaps with the start button, FALSE if it
+         does not.
+ */
+BOOLEAN
+YuiTaskbarIsPositionOverStart(
+    __in PYUI_MONITOR YuiMonitor,
+    __in SHORT XPos
+    )
+{
+    if (XPos <= YuiMonitor->StartRightOffset) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Find a taskbar button based on the horizontal coordinate relative to the
  client area.  This is used to activate buttons if the user clicks outside
  of the button area.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param XPos The horizontal coordinate, relative to the client area.
 
  */
 WORD
 YuiTaskbarFindByOffset(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in SHORT XPos
     )
 {
@@ -1541,13 +1659,13 @@ YuiTaskbarFindByOffset(
 
     ListEntry = NULL;
     ThisButton = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
         if (XPos >= ThisButton->LeftOffset && XPos <= ThisButton->RightOffset) {
             return ThisButton->ControlId;
         }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);
         ThisButton = NULL;
     }
     return 0;

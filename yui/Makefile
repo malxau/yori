@@ -17,6 +17,7 @@ BIN_OBJS=\
 	 draw.obj        \
 	 icons.obj       \
 	 menu.obj        \
+	 multimon.obj    \
 	 resource.obj    \
 	 taskbar.obj     \
 	 wifi.obj        \

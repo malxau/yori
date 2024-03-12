@@ -113,7 +113,7 @@ YuiGetMenuSelectedTextColor(VOID)
 /**
  Calculate the width of a string in the current font, in pixels.
 
- @param YuiContext Pointer to the application context including font and font
+ @param YuiMonitor Pointer to the monitor context including font and font
         metrics.
 
  @param UseBold TRUE to get the width using the bold font; FALSE to get the
@@ -125,7 +125,7 @@ YuiGetMenuSelectedTextColor(VOID)
  */
 DWORD
 YuiDrawGetTextWidth(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in BOOLEAN UseBold,
     __in PYORI_STRING Text
     )
@@ -140,15 +140,15 @@ YuiDrawGetTextWidth(
     //  approximately the same as the menu window.
     //
 
-    hDC = GetWindowDC(YuiContext->hWnd);
+    hDC = GetWindowDC(YuiMonitor->hWndTaskbar);
     if (UseBold) {
-        OldObject = SelectObject(hDC, YuiContext->hBoldFont);
+        OldObject = SelectObject(hDC, YuiMonitor->hBoldFont);
     } else {
-        OldObject = SelectObject(hDC, YuiContext->hFont);
+        OldObject = SelectObject(hDC, YuiMonitor->hFont);
     }
     GetTextExtentPoint32(hDC, Text->StartOfString, Text->LengthInChars, &Size);
     SelectObject(hDC, OldObject);
-    ReleaseDC(YuiContext->hWnd, hDC);
+    ReleaseDC(YuiMonitor->hWndTaskbar, hDC);
 
     return (DWORD)Size.cx;
 }
@@ -156,7 +156,7 @@ YuiDrawGetTextWidth(
 /**
  Draw an owner draw button.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param DrawItemStruct Pointer to a structure describing the button to
         redraw, including its bounds and device context.
@@ -179,7 +179,7 @@ YuiDrawGetTextWidth(
  */
 VOID
 YuiDrawButton(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
     __in BOOLEAN Flashing,
@@ -210,6 +210,7 @@ YuiDrawButton(
     HPEN SecondBottomRightPen;
     WORD Index;
     WORD LineCount;
+    PYUI_CONTEXT YuiContext;
 
     //
     //  Check if the button should be pressed.
@@ -257,7 +258,7 @@ YuiDrawButton(
 
         SelectObject(DrawItemStruct->hDC, BottomRightPen);
 
-        for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
+        for (Index = 0; Index < YuiMonitor->ControlBorderWidth; Index++) {
             MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.top + Index, NULL);
             LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.bottom - 1 - Index);
             LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.bottom - 1 - Index);
@@ -278,7 +279,7 @@ YuiDrawButton(
         //  back by one line for purely cosmetic reasons.
         //
 
-        LineCount = (WORD)(YuiContext->ControlBorderWidth - 1);
+        LineCount = (WORD)(YuiMonitor->ControlBorderWidth - 1);
         if (LineCount == 0) {
             LineCount = 1;
         }
@@ -294,7 +295,7 @@ YuiDrawButton(
 
     } else {
         OldObject = SelectObject(DrawItemStruct->hDC, TopLeftPen);
-        for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
+        for (Index = 0; Index < YuiMonitor->ControlBorderWidth; Index++) {
             MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.bottom - 1 - Index, NULL);
             LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + Index, DrawItemStruct->rcItem.top + Index);
             LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 1 - Index, DrawItemStruct->rcItem.top + Index);
@@ -307,7 +308,7 @@ YuiDrawButton(
         LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.left, DrawItemStruct->rcItem.bottom - 1);
 
         SelectObject(DrawItemStruct->hDC, SecondBottomRightPen);
-        for (Index = 0; Index < YuiContext->ControlBorderWidth; Index++) {
+        for (Index = 0; Index < YuiMonitor->ControlBorderWidth; Index++) {
             MoveToEx(DrawItemStruct->hDC, DrawItemStruct->rcItem.left + 1 + Index, DrawItemStruct->rcItem.bottom - 2 - Index, NULL);
             LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.bottom - 2 - Index);
             LineTo(DrawItemStruct->hDC, DrawItemStruct->rcItem.right - 2 - Index, DrawItemStruct->rcItem.top - 1 + Index);
@@ -329,15 +330,15 @@ YuiDrawButton(
         return;
     }
 
-    TextRect.left = DrawItemStruct->rcItem.left + YuiContext->ControlBorderWidth + 2;
-    TextRect.right = DrawItemStruct->rcItem.right - YuiContext->ControlBorderWidth - 4;
-    TextRect.top = DrawItemStruct->rcItem.top + YuiContext->ControlBorderWidth;
-    TextRect.bottom = DrawItemStruct->rcItem.bottom - YuiContext->ControlBorderWidth;
+    TextRect.left = DrawItemStruct->rcItem.left + YuiMonitor->ControlBorderWidth + 2;
+    TextRect.right = DrawItemStruct->rcItem.right - YuiMonitor->ControlBorderWidth - 4;
+    TextRect.top = DrawItemStruct->rcItem.top + YuiMonitor->ControlBorderWidth;
+    TextRect.bottom = DrawItemStruct->rcItem.bottom - YuiMonitor->ControlBorderWidth;
 
     if (Pushed) {
         TextRect.top = TextRect.top + 2;
     } else {
-        TextRect.top = TextRect.top + YuiContext->ExtraPixelsAboveText;
+        TextRect.top = TextRect.top + YuiMonitor->ExtraPixelsAboveText;
         TextRect.bottom = TextRect.bottom - 2;
     }
 
@@ -354,6 +355,7 @@ YuiDrawButton(
     //  is pushed, move the icon down a pixel.
     //
 
+    YuiContext = YuiMonitor->YuiContext;
     IconWidth = 0;
     if (Icon != NULL) {
         IconWidth = YuiContext->SmallTaskbarIconWidth;
@@ -369,7 +371,7 @@ YuiDrawButton(
         if (Pushed) {
             IconTopOffset = (WORD)(IconTopOffset + 1);
         }
-        IconLeftOffset = (WORD)(YuiContext->ControlBorderWidth * 2 + 2);
+        IconLeftOffset = (WORD)(YuiMonitor->ControlBorderWidth * 2 + 2);
         DllUser32.pDrawIconEx(DrawItemStruct->hDC, IconLeftOffset, IconTopOffset, Icon, IconWidth, IconHeight, 0, NULL, DI_NORMAL);
         IconWidth = (WORD)(IconWidth + IconLeftOffset);
     }
@@ -519,7 +521,7 @@ YuiDrawThreeDBox(
  Draw an ownerdraw static control.  Currently this routine assumes it will
  have a sunken appearence.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param DrawItemStruct Pointer to the struct describing the draw operation.
 
@@ -528,7 +530,7 @@ YuiDrawThreeDBox(
  */
 VOID
 YuiTaskbarDrawStatic(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in PYORI_STRING Text
     )
@@ -537,7 +539,7 @@ YuiTaskbarDrawStatic(
     RECT TextRect;
 
     YuiDrawWindowBackground(DrawItemStruct->hDC, &DrawItemStruct->rcItem);
-    YuiDrawThreeDBox(DrawItemStruct->hDC, &DrawItemStruct->rcItem, YuiContext->ControlBorderWidth, TRUE);
+    YuiDrawThreeDBox(DrawItemStruct->hDC, &DrawItemStruct->rcItem, YuiMonitor->ControlBorderWidth, TRUE);
 
     //
     //  If the dimensions are too small to draw text, stop now.
@@ -571,7 +573,7 @@ YuiTaskbarDrawStatic(
 /**
  Draw a raised 3D effect within a window.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hWnd The window to draw the effect within.
 
@@ -582,7 +584,7 @@ YuiTaskbarDrawStatic(
  */
 BOOLEAN
 YuiDrawWindowFrame(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HWND hWnd,
     __in_opt HDC hDC
     )
@@ -616,7 +618,7 @@ YuiDrawWindowFrame(
     }
     GetClientRect(hWnd, &ClientRect);
     YuiDrawWindowBackground(hDCToUse, &ClientRect);
-    YuiDrawThreeDBox(hDCToUse, &ClientRect, YuiContext->ControlBorderWidth, FALSE);
+    YuiDrawThreeDBox(hDCToUse, &ClientRect, YuiMonitor->ControlBorderWidth, FALSE);
 
     EndPaint(hWnd, &paintStruct);
     return TRUE;
@@ -628,14 +630,14 @@ YuiDrawWindowFrame(
  function will fill the menu with a chosen color, and draw a raised 3D box
  around it.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param hDC The device context for drawing a single menu item (not necessarily
         the entire menu.)
  */
 VOID
 YuiDrawEntireMenu(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in HDC hDC
     )
 {
@@ -692,7 +694,7 @@ YuiDrawEntireMenu(
     ClientRect.right = WindowRect.right - WindowRect.left;
     ClientRect.bottom = WindowRect.bottom - WindowRect.top;
     MenuDC = GetWindowDC(hwndMenu);
-    BorderWidth = YuiContext->ControlBorderWidth;
+    BorderWidth = YuiMonitor->ControlBorderWidth;
     if (BorderWidth > MarginX) {
         BorderWidth = MarginX;
     }
@@ -730,7 +732,7 @@ YuiDrawEntireMenu(
 /**
  Determint the size of a an owner draw menu item.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param Item Pointer to the item to draw.
 
@@ -738,16 +740,18 @@ YuiDrawEntireMenu(
  */
 BOOL
 YuiDrawMeasureMenuItem(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in LPMEASUREITEMSTRUCT Item
     )
 {
     PYUI_MENU_OWNERDRAW_ITEM ItemContext;
+    PYUI_CONTEXT YuiContext;
 
+    YuiContext = YuiMonitor->YuiContext;
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
 
     if (ItemContext->WidthByStringLength) {
-        Item->itemWidth = YuiDrawGetTextWidth(YuiContext, FALSE, &ItemContext->Text) + 
+        Item->itemWidth = YuiDrawGetTextWidth(YuiMonitor, FALSE, &ItemContext->Text) + 
                           YuiContext->SmallStartIconWidth +
                           2 * YuiContext->ShortIconPadding;
         if (ItemContext->AddFlyoutIcon) {
@@ -762,8 +766,8 @@ YuiDrawMeasureMenuItem(
         //
 
         Item->itemWidth = 245;
-        if (YuiContext->ScreenWidth > 800) {
-            Item->itemWidth = Item->itemWidth + (YuiContext->ScreenWidth - 800) / 20;
+        if (YuiMonitor->ScreenWidth > 800) {
+            Item->itemWidth = Item->itemWidth + (YuiMonitor->ScreenWidth - 800) / 20;
         }
     }
 
@@ -780,8 +784,8 @@ YuiDrawMeasureMenuItem(
     //  800 pixels just so there's extra room in case the font gets larger.
     //
 
-    if (YuiContext->ScreenHeight > 800) {
-        Item->itemHeight = Item->itemHeight + (YuiContext->ScreenHeight - 800) / 100;
+    if (YuiMonitor->ScreenHeight > 800) {
+        Item->itemHeight = Item->itemHeight + (YuiMonitor->ScreenHeight - 800) / 100;
     }
 
     return TRUE;
@@ -790,7 +794,7 @@ YuiDrawMeasureMenuItem(
 /**
  Draw an owner draw menu item.
 
- @param YuiContext Pointer to the application context.
+ @param YuiMonitor Pointer to the monitor context.
 
  @param Item Pointer to the item to draw.
 
@@ -799,7 +803,7 @@ YuiDrawMeasureMenuItem(
  */
 BOOL
 YuiDrawMenuItem(
-    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_MONITOR YuiMonitor,
     __in LPDRAWITEMSTRUCT Item
     )
 {
@@ -809,12 +813,13 @@ YuiDrawMenuItem(
     RECT TextRect;
     PYUI_MENU_OWNERDRAW_ITEM ItemContext;
     DWORD IconPadding;
+    PYUI_CONTEXT YuiContext;
 
     if (Item->rcItem.top == 0 &&
         Item->rcItem.left == 0 &&
         Item->itemAction == ODA_DRAWENTIRE) {
 
-        YuiDrawEntireMenu(YuiContext, Item->hDC);
+        YuiDrawEntireMenu(YuiMonitor, Item->hDC);
     }
 
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
@@ -830,6 +835,8 @@ YuiDrawMenuItem(
     Brush = CreateSolidBrush(BackColor);
     FillRect(Item->hDC, &Item->rcItem, Brush);
     DeleteObject(Brush);
+
+    YuiContext = YuiMonitor->YuiContext;
 
     if (ItemContext->Icon != NULL || (Item->itemState & ODS_CHECKED)) {
         DWORD IconLeft;
@@ -889,7 +896,7 @@ YuiDrawMenuItem(
         RECT DrawRect;
         WORD SeperatorWidth;
 
-        SeperatorWidth = (WORD)(YuiContext->ControlBorderWidth / 2);
+        SeperatorWidth = (WORD)(YuiMonitor->ControlBorderWidth / 2);
         if (SeperatorWidth == 0) {
             SeperatorWidth = 1;
         }
@@ -915,7 +922,7 @@ YuiDrawMenuItem(
 
         SetBkColor(Item->hDC, BackColor);
         SetTextColor(Item->hDC, ForeColor);
-        OldObject = SelectObject(Item->hDC, YuiContext->hFont);
+        OldObject = SelectObject(Item->hDC, YuiMonitor->hFont);
         DrawText(Item->hDC, ItemContext->Text.StartOfString, ItemContext->Text.LengthInChars, &TextRect, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
         SelectObject(Item->hDC, OldObject);
     }
