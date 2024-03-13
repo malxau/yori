@@ -6,7 +6,7 @@ BINARIES=sdir.exe
 LINKPDB=/Pdb:sdir.pdb
 
 BIN_OBJS=\
-		 callbacks.obj \
+		 callback.obj  \
 		 color.obj     \
 		 display.obj   \
 		 init.obj      \
@@ -15,7 +15,7 @@ BIN_OBJS=\
 		 utils.obj
 
 MOD_OBJS=\
-		 callbacks.obj \
+		 callback.obj  \
 		 color.obj     \
 		 display.obj   \
 		 init.obj      \

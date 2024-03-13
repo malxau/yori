@@ -755,7 +755,7 @@ extern YORILIB_COLOR_ATTRIBUTES SdirDefaultColor;
     SdirPasteStrAndPad(str, src, attr, count, count)
 
 //
-//  Functions from callbacks.c
+//  Functions from callback.c
 //
 
 YORI_ALLOC_SIZE_T

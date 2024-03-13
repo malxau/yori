@@ -32,7 +32,7 @@
 #define YORI_CUSTOM_MANIFEST 1
 #include "../lib/yoriver.inc"
 
-CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "ysetup.manifest"
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "ysetup.man"
 
 //
 //  NT 3.5 doesn't support DIALOGEX, and DIALOG appears to work correctly
