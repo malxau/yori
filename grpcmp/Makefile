@@ -9,7 +9,7 @@ BIN_OBJS=\
 	 grpcmp.obj        \
 
 MOD_OBJS=\
-	 mod_grpcmp.obj    \
+	 mgrpcmp.obj    \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -17,7 +17,7 @@ grpcmp.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_grpcmp.obj: grpcmp.c
+mgrpcmp.obj: grpcmp.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ grpcmp.c
 

@@ -12,7 +12,7 @@ BIN_OBJS=\
 	for.obj        \
 
 MOD_OBJS=\
-	mod_for.obj    \
+	mfor.obj    \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -20,7 +20,7 @@ yfor.exe: $(BIN_OBJS) $(YORILIBS) $(YORISH) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_for.obj: for.c
+mfor.obj: for.c
 	@echo $@
 	@cl -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ for.c
 

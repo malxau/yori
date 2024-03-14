@@ -9,7 +9,7 @@ BIN_OBJS=\
 	 stride.obj         \
 
 MOD_OBJS=\
-	 mod_stride.obj     \
+	 mstride.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -17,7 +17,7 @@ ystride.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_stride.obj: stride.c
+mstride.obj: stride.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ stride.c
 

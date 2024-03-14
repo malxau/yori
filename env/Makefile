@@ -9,7 +9,7 @@ BIN_OBJS=\
 	 env.obj         \
 
 MOD_OBJS=\
-	 mod_env.obj     \
+	 menv.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -17,7 +17,7 @@ yenv.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_env.obj: env.c
+menv.obj: env.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ env.c
 

@@ -9,7 +9,7 @@ BIN_OBJS=\
 	 dir.obj         \
 
 MOD_OBJS=\
-	 mod_dir.obj     \
+	 mdir.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -17,7 +17,7 @@ ydir.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_dir.obj: dir.c
+mdir.obj: dir.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ dir.c
 

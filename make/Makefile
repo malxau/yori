@@ -18,7 +18,7 @@ BIN_OBJS=\
 MOD_OBJS=\
 	 alloc.obj        \
 	 exec.obj         \
-	 mod_make.obj     \
+	 mmake.obj     \
 	 minish.obj       \
 	 preproc.obj      \
 	 scope.obj        \
@@ -33,7 +33,7 @@ ymake.exe: $(BIN_OBJS) $(MAKE_LIBS)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(MAKE_LIBS) $(EXTERNLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_make.obj: make.c
+mmake.obj: make.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ make.c
 

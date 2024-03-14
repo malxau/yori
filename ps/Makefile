@@ -9,7 +9,7 @@ BIN_OBJS=\
 	 ps.obj         \
 
 MOD_OBJS=\
-	 mod_ps.obj     \
+	 mps.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -17,7 +17,7 @@ yps.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_ps.obj: ps.c
+mps.obj: ps.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ ps.c
 

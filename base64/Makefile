@@ -9,7 +9,7 @@ BIN_OBJS=\
 	 base64.obj         \
 
 MOD_OBJS=\
-	 mod_base64.obj     \
+	 mbase64.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -17,7 +17,7 @@ ybase64.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_base64.obj: base64.c
+mbase64.obj: base64.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ base64.c
 

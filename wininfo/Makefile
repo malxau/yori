@@ -12,7 +12,7 @@ BIN_OBJS=\
 	 resource.obj        \
 
 MOD_OBJS=\
-	 mod_wininfo.obj     \
+	 mwininfo.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -20,7 +20,7 @@ wininfo.exe: $(BIN_OBJS) $(YORILIBS)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_wininfo.obj: wininfo.c
+mwininfo.obj: wininfo.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ wininfo.c
 

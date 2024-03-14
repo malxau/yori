@@ -19,7 +19,7 @@ MOD_OBJS=\
 		 color.obj     \
 		 display.obj   \
 		 init.obj      \
-		 mod_sdir.obj  \
+		 msdir.obj     \
 		 usage.obj     \
 		 utils.obj
 
@@ -30,7 +30,7 @@ sdir.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_sdir.obj: sdir.c
+msdir.obj: sdir.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ sdir.c
 

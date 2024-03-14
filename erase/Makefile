@@ -9,7 +9,7 @@ BIN_OBJS=\
 	 erase.obj        \
 
 MOD_OBJS=\
-	 mod_erase.obj    \
+	 merase.obj    \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -17,7 +17,7 @@ yerase.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_erase.obj: erase.c
+merase.obj: erase.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ erase.c
 

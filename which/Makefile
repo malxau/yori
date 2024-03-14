@@ -15,7 +15,7 @@ BIN_OBJS=\
 	 resource.obj      \
 
 MOD_OBJS=\
-	 mod_which.obj     \
+	 mwhich.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
 
@@ -23,7 +23,7 @@ which.exe: $(BIN_OBJS) $(YORILIBS)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_which.obj: which.c
+mwhich.obj: which.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ which.c
 

@@ -15,7 +15,7 @@ BIN_OBJS=\
 MOD_OBJS=\
 	 ingest.obj       \
 	 moreinit.obj     \
-	 mod_more.obj     \
+	 mmore.obj     \
 	 lines.obj        \
 	 viewport.obj     \
 
@@ -25,7 +25,7 @@ ymore.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_more.obj: more.c
+mmore.obj: more.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ more.c
 

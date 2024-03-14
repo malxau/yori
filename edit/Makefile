@@ -10,7 +10,7 @@ BIN_OBJS=\
 	 options.obj      \
 
 MOD_OBJS=\
-	 mod_edit.obj     \
+	 medit.obj        \
 	 options.obj      \
 
 compile: $(BIN_OBJS) builtins.lib
@@ -19,7 +19,7 @@ yedit.exe: $(BIN_OBJS) $(YORILIBS) $(YORIWIN) $(YORIDLG) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIWIN) $(YORIDLG) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-mod_edit.obj: edit.c
+medit.obj: edit.c
 	@echo $@
 	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ edit.c
 
