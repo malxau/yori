@@ -187,6 +187,7 @@ MountMountVhd(
     }
 
     if (!YoriLibEnableManageVolumePrivilege()) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: privilege not held\n"));
         return FALSE;
     }
 
