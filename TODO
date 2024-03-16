@@ -2,7 +2,6 @@
 At this point, the TODO is more a list of tasks that might be useful and/or
 fun to write.
 
- - Make date parsing more forgiving/tolerant
  - Replace a lot of LONGLONG/DWORDLONG with max int types
  - Scroll around input line on tiny windows, where the entire line doesn't
    fit in the window
@@ -27,7 +26,6 @@ fun to write.
  - Edit reposition viewport after paste
  - Edit horizontal scroll bar
  - Edit parse vim tags
- - Edit prompt to save over readonly files
 
  - Environment variable editor UI
  - TUI start menu - Point & Shoot?
@@ -46,10 +44,7 @@ fun to write.
  - Yui should look deeper for background color
  - Win+X menu
  - Start button context menu
- - If SndVol.exe not found, look for SndVol32.exe
  - See how explorer dir show desktop due to elevated
- - Hide explorer taskbars on secondary monitors
- - When menus need to scroll, border calculation is wrong
  - Windows 10 taskbar unhides itself very aggressively
  - Yui advertize minimize location for animation rendering
  - Audio mixer/volume tray
