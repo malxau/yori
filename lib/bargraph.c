@@ -164,8 +164,10 @@ YoriLibDisplayBarGraph(
 
     if (SupportsColor) {
         Subset.LengthInChars = (YORI_ALLOC_SIZE_T)YoriLibSPrintf(Subset.StartOfString, _T("%c[0m]\n"), 27);
-        Line.LengthInChars = (YORI_ALLOC_SIZE_T)(Line.LengthInChars + Subset.LengthInChars);
+    } else {
+        Subset.LengthInChars = (YORI_ALLOC_SIZE_T)YoriLibSPrintf(Subset.StartOfString, _T("]\n"));
     }
+    Line.LengthInChars = (YORI_ALLOC_SIZE_T)(Line.LengthInChars + Subset.LengthInChars);
 
     YoriLibOutputToDevice(hOutput, 0, _T("%y"), &Line);
     YoriLibFreeStringContents(&Line);
