@@ -377,6 +377,9 @@ ENTRYPOINT(
                         ArgumentUnderstood = TRUE;
                         i++;
                     }
+                } else {
+                    TypeContext.HeadLines = 10;
+                    ArgumentUnderstood = TRUE;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 TypeContext.DisplayLineNumbers = TRUE;
