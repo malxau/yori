@@ -35,7 +35,7 @@ CHAR strBase64HelpText[] =
         "\n"
         "Base64 encode or decode a file or standard input.\n"
         "\n"
-        "HASH [-license] [-d] [<file>]\n"
+        "BASE64 [-license] [-d] [<file>]\n"
         "\n"
         "   -d             Decode the file or standard input.  Default is encode.\n";
 
