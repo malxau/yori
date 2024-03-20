@@ -1,5 +1,5 @@
 /**
- * @file sdir/callbacks.c
+ * @file sdir/callback.c
  *
  * Colorful, sorted and optionally rich directory enumeration
  * for Windows.
