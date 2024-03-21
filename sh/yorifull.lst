@@ -69,6 +69,7 @@
 ..\shutdn\builtins.lib
 ..\sleep\builtins.lib
 ..\slmenu\builtins.lib
+..\speak\builtins.lib
 ..\split\builtins.lib
 ..\sponge\builtins.lib
 ..\start\builtins.lib

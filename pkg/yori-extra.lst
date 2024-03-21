@@ -5,6 +5,7 @@
 ..\make\ymake.exe|ymake.exe
 ..\regedit\yregedit.exe|yregedit.exe
 ..\shutdn\yshutdn.exe|yshutdn.exe
+..\speak\yspeak.exe|yspeak.exe
 ..\strcmp\ystrcmp.exe|ystrcmp.exe
 ..\stride\ystride.exe|ystride.exe
 ..\yui\yui.exe|yui.exe

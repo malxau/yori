@@ -449,6 +449,11 @@ YORI_CMD_BUILTIN YoriCmd_SLMENU;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YSPEAK;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YSPLIT;
 
 /**
@@ -672,6 +677,7 @@ YoriShBuiltins[] = {
                     {_T("YRMDIR"),    YoriCmd_YRMDIR},
                     {_T("YS"),        YoriCmd_YS},
                     {_T("YSHUTDN"),   YoriCmd_YSHUTDN},
+                    {_T("YSPEAK"),    YoriCmd_YSPEAK},
                     {_T("YSPLIT"),    YoriCmd_YSPLIT},
                     {_T("YSPONGE"),   YoriCmd_YSPONGE},
                     {_T("YSTART"),    YoriCmd_YSTART},
@@ -746,6 +752,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("sha384sum"),_T("yhash -a sha384 $*$")},
     {_T("sha512sum"),_T("yhash -a sha512 $*$")},
     {_T("shutdn"),   _T("yshutdn $*$")},
+    {_T("speak"),    _T("yspeak $*$")},
     {_T("split"),    _T("ysplit $*$")},
     {_T("sponge"),   _T("ysponge $*$")},
     {_T("start"),    _T("ystart $*$")},

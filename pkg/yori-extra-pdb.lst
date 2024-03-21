@@ -5,6 +5,7 @@
 ..\make\ymake.pdb|ymake.pdb
 ..\regedit\yregedit.pdb|yregedit.pdb
 ..\shutdn\yshutdn.pdb|yshutdn.pdb
+..\speak\yspeak.pdb|yspeak.pdb
 ..\strcmp\ystrcmp.pdb|ystrcmp.pdb
 ..\stride\ystride.pdb|ystride.pdb
 ..\yui\yui.pdb|yui.pdb

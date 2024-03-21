@@ -5735,6 +5735,11 @@ typedef ULONG STDMETHODCALLTYPE IUnknown_Release (PVOID This);
 #define CLSCTX_INPROC_SERVER 0x1
 
 /**
+ The in process type identifier when instantiating objects.
+ */
+#define CLSCTX_INPROC_HANDLER 0x2
+
+/**
  The local type identifier when instantiating objects.
  */
 #define CLSCTX_LOCAL_SERVER 0x4
@@ -6381,6 +6386,58 @@ typedef struct IRadioManagerVtbl {
 
 } IRadioManagerVtbl;
 
+/**
+ An instance of the ISpVoice interface, consisting only of function pointers.
+ */
+typedef struct ISpVoice {
+
+    /**
+     The function pointer table associated with this object.
+     */
+    struct ISpVoiceVtbl * Vtbl;
+} ISpVoice;
+
+/**
+ Prototype for a method to output text as speech.
+ */
+typedef HRESULT STDMETHODCALLTYPE ISpVoice_Speak (ISpVoice * This, LPCWSTR String, DWORD Flags, DWORD *pStreamNumber);
+
+/**
+ A set of functions defined by the ISpVoice interface.
+ */
+typedef struct ISpVoiceVtbl {
+
+    /**
+     Standard COM QueryInterface method.
+     */
+    IUnknown_QueryInterface * QueryInterface;
+
+    /**
+     Standard COM AddRef method.
+     */
+    IUnknown_AddRef * AddRef;
+
+    /**
+     Standard COM Release method.
+     */
+    IUnknown_Release * Release;
+
+    /**
+     Unused methods in this application.
+     */
+    PVOID Reserved1[17];
+
+    /**
+     Output text as audio.
+     */
+    ISpVoice_Speak * Speak;
+
+    /**
+     Unused methods in this application.
+     */
+    PVOID Reserved2[17];
+
+} ISpVoiceVtbl;
 
 #ifndef _VIRTUAL_STORAGE_TYPE_DEFINED
 /**

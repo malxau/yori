@@ -163,6 +163,7 @@ DIRS2=iconv      \
       shutdn     \
       sleep      \
       slmenu     \
+      speak      \
       split      \
       sponge     \
       start      \
