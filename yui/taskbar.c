@@ -990,6 +990,8 @@ YuiTaskbarNotifyDestroyWindow(
         ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiMonitor, hWnd);
         if (ThisButton != NULL) {
 
+            ASSERT(ThisButton->hWndButton != NULL);
+            __analysis_assume(ThisButton->hWndButton != NULL);
             DestroyWindow(ThisButton->hWndButton);
             ThisButton->hWndButton = NULL;
             YuiTaskbarFreeButton(ThisButton);

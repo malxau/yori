@@ -139,7 +139,7 @@ YuiMonitorFromTaskbarHwnd(
 PYUI_MONITOR
 YuiMonitorFromHMonitor(
     __in PYUI_CONTEXT YuiContext,
-    __in HANDLE hMonitor
+    __in_opt HANDLE hMonitor
     )
 {
     PYUI_MONITOR YuiMonitor;
@@ -250,7 +250,7 @@ YuiGetNextExplorerTaskbar(
 PYUI_MONITOR
 YuiCreateOrInitializeMonitor(
     __in PYUI_CONTEXT YuiContext,
-    __in HANDLE hMonitor,
+    __in_opt HANDLE hMonitor,
     __in LPRECT MonitorRect,
     __in BOOLEAN IsPrimary
     )
