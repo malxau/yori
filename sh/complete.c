@@ -668,6 +668,7 @@ YoriShPerformEnvironmentTabCompletion(
     YORI_ALLOC_SIZE_T Index;
     YORI_ALLOC_SIZE_T MatchCount;
     YORI_ALLOC_SIZE_T VarNameLength;
+    YORI_MAX_UNSIGNED_T BytesRequired;
     YORI_STRING EnvVarPrefix;
     YORI_STRING EnvironmentStrings;
     LPTSTR ThisVar;
@@ -736,7 +737,12 @@ YoriShPerformEnvironmentTabCompletion(
                 //  a trailing '%', and a NULL.
                 //
 
-                Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (VarNameLength + Index + 1 + 1) * sizeof(TCHAR));
+                BytesRequired = sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (VarNameLength + Index + 1 + 1) * sizeof(TCHAR);
+                if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+                    break;
+                }
+
+                Match = YoriLibReferencedMalloc((YORI_ALLOC_SIZE_T)BytesRequired);
                 if (Match == NULL) {
                     break;
                 }
