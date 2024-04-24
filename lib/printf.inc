@@ -341,6 +341,7 @@ PRINTF_FN(
                     if (!longlong_prefix) {
                         DWORD num, tempnum;
                         DWORD divisor, digits;
+                        DWORD padsize;
                         DWORD radix = 10;
 
                         //
@@ -375,10 +376,12 @@ PRINTF_FN(
                         //  If the field specifier is too small, output more
                         //  characters than the field specifier specifies.
                         //
-
+                        padsize = 0;
                         if (element_len != (YORI_ALLOC_SIZE_T)-1 && digits < element_len) {
-                            tempnum = element_len - digits;
-                            while (tempnum > 0) {
+                            padsize = element_len - digits;
+                        }
+                        if (padsize > 0 && (leadingzero || !leftalign)) {
+                            while (padsize > 0) {
                                 if (!PRINTF_DESTLENGTH()) {
                                     truncated_due_to_space = TRUE;
                                     break;
@@ -388,7 +391,7 @@ PRINTF_FN(
                                 } else {
                                     PRINTF_PUSHCHAR(' ');
                                 }
-                                tempnum--;
+                                padsize--;
                             }
                         }
 
@@ -411,9 +414,19 @@ PRINTF_FN(
 
                         } while(digits > 0);
 
+                        while (padsize > 0) {
+                            if (!PRINTF_DESTLENGTH()) {
+                                truncated_due_to_space = TRUE;
+                                break;
+                            }
+                            PRINTF_PUSHCHAR(' ');
+                            padsize--;
+                        }
+
 #if _INTEGRAL_MAX_BITS >= 64
                     } else {
                         DWORDLONG num, tempnum;
+                        DWORD padsize;
                         DWORD digits;
                         DWORD digitcount;
                         DWORD radix = 10;
@@ -449,9 +462,13 @@ PRINTF_FN(
                         //  characters than the field specifier specifies.
                         //
 
+                        padsize = 0;
                         if (element_len != (YORI_ALLOC_SIZE_T)-1 && digits < element_len) {
-                            tempnum = element_len - digits;
-                            while (tempnum > 0) {
+                            padsize = element_len - digits;
+                        }
+
+                        if (padsize > 0 && (leadingzero || !leftalign)) {
+                            while (padsize > 0) {
                                 if (!PRINTF_DESTLENGTH()) {
                                     truncated_due_to_space = TRUE;
                                     break;
@@ -461,7 +478,7 @@ PRINTF_FN(
                                 } else {
                                     PRINTF_PUSHCHAR(' ');
                                 }
-                                tempnum--;
+                                padsize--;
                             }
                         }
 
@@ -485,6 +502,15 @@ PRINTF_FN(
 
                             digits--;
                         } while (digits > 0);
+
+                        while (padsize > 0) {
+                            if (!PRINTF_DESTLENGTH()) {
+                                truncated_due_to_space = TRUE;
+                                break;
+                            }
+                            PRINTF_PUSHCHAR(' ');
+                            padsize--;
+                        }
 #endif
                     }
                     break;
