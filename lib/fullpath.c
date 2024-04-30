@@ -2172,6 +2172,41 @@ YoriLibGetVolumePathName(
         VolumeName->LengthInChars = (YORI_ALLOC_SIZE_T)_tcslen(VolumeName->StartOfString);
 
         //
+        //  For some reason Windows doesn't add the prefix to this string,
+        //  which is really broken - a volume name of "C:" is not a volume
+        //  name, it's a reference to a current directory.
+        //
+
+        if (!YoriLibIsPathPrefixed(VolumeName)) {
+            YORI_STRING EscapedVolumeName;
+            YoriLibInitEmptyString(&EscapedVolumeName);
+            if (!YoriLibGetFullPathNameReturnAllocation(VolumeName, TRUE, &EscapedVolumeName, NULL)) {
+                if (FreeOnFailure) {
+                    YoriLibFreeStringContents(VolumeName);
+                }
+                return FALSE;
+            }
+
+            //
+            //  If it fits in the existing allocation, use that.  This allows
+            //  the caller to supply an appropriately sized buffer and
+            //  expect the result in that buffer.
+            //
+
+            if (EscapedVolumeName.LengthInChars < VolumeName->LengthAllocated) {
+                memcpy(VolumeName->StartOfString, EscapedVolumeName.StartOfString, EscapedVolumeName.LengthInChars * sizeof(TCHAR));
+                VolumeName->LengthInChars = EscapedVolumeName.LengthInChars;
+                VolumeName->StartOfString[VolumeName->LengthInChars] = '\0';
+            } else {
+                YoriLibFreeStringContents(VolumeName);
+                YoriLibCloneString(VolumeName, &EscapedVolumeName);
+                FreeOnFailure = TRUE;
+            }
+
+            YoriLibFreeStringContents(&EscapedVolumeName);
+        }
+
+        //
         //  If it ends in a backslash, truncate it
         //
 
