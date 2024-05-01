@@ -3,7 +3,7 @@
  *
  * Yori shell display volume properties
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2024 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,13 +39,17 @@ CHAR strVolHelpText[] =
         "\n"
         "Format specifiers are:\n"
         "   $clustersize$        The size of each cluster in bytes\n"
+        "   $disknumber$         The number of the disk hosting the volume\n"
+        "   $diskoffset$         The offset within the disk to the volume in bytes\n"
         "   $filerecordsize$     The size of each NTFS file record\n"
+        "   $firstclusteroffset$ The offset in bytes to the first file system cluster\n"
         "   $free$               Free space in bytes\n"
         "   $fsname$             The file system name\n"
         "   $fullserial$         The 64 bit serial number\n"
         "   $label$              The volume label\n"
         "   $maxfilename$        The longest file name component supported\n"
         "   $mftsize$            The amount of bytes consumed in the NTFS MFT\n"
+        "   $partitionsize$      The size of the partition in bytes\n"
         "   $physicalsectorsize$ The size of each physical sector in bytes\n"
         "   $reserved$           Reserved space in bytes\n"
         "   $sectorsize$         The size of each logical sector in bytes\n"
@@ -102,6 +106,8 @@ typedef struct _VOL_RESULT {
             BOOLEAN RefsData:1;
             BOOLEAN Reserved:1;
             BOOLEAN FullSerial:1;
+            BOOLEAN RetrievalPointerBase:1;
+            BOOLEAN VolumeDiskExtents:1;
         };
     } Have;
 
@@ -210,6 +216,19 @@ typedef struct _VOL_RESULT {
      */
     REFS_VOLUME_DATA_BUFFER RefsData;
 
+    /**
+     The offset from the start of the partition to the first cluster, in
+     bytes.
+     */
+    DWORDLONG RetrievalPointerBase;
+
+    /**
+     Information about the location of the partition within the disk.  Note
+     this program only supports a single extent (ie., a single partition on
+     a single disk, not a span or stripe.)
+     */
+    YORI_VOLUME_DISK_EXTENTS VolumeDiskExtents;
+
 } VOL_RESULT, *PVOL_RESULT;
 
 /**
@@ -244,10 +263,24 @@ VolExpandVariables(
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), VolContext->ClusterSize);
 
+    } else if (VolContext->Have.VolumeDiskExtents &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("disknumber")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), VolContext->VolumeDiskExtents.Extents[0].DiskNumber);
+
+    } else if (VolContext->Have.VolumeDiskExtents &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("diskoffset")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%lli"), VolContext->VolumeDiskExtents.Extents[0].StartingOffset.QuadPart);
+
     } else if (VolContext->Have.NtfsData &&
                YoriLibCompareStringWithLiteral(VariableName, _T("filerecordsize")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), VolContext->NtfsData.BytesPerFileRecordSegment);
+
+    } else if (VolContext->Have.RetrievalPointerBase &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("firstclusteroffset")) == 0) {
+        CharsNeeded = YoriLibSPrintfSize(_T("%lli"), VolContext->RetrievalPointerBase);
 
     } else if (VolContext->Have.FreeSpace &&
                YoriLibCompareStringWithLiteral(VariableName, _T("free")) == 0) {
@@ -278,6 +311,11 @@ VolExpandVariables(
                YoriLibCompareStringWithLiteral(VariableName, _T("mftsize")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%lli"), VolContext->NtfsData.MftValidDataLength);
+
+    } else if (VolContext->Have.VolumeDiskExtents &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("partitionsize")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%lli"), VolContext->VolumeDiskExtents.Extents[0].ExtentLength.QuadPart);
 
     } else if (VolContext->Have.PhysicalSectorSize &&
                YoriLibCompareStringWithLiteral(VariableName, _T("physicalsectorsize")) == 0) {
@@ -344,8 +382,14 @@ VolExpandVariables(
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("clustersize")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->ClusterSize);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("disknumber")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->VolumeDiskExtents.Extents[0].DiskNumber);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("diskoffset")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->VolumeDiskExtents.Extents[0].StartingOffset.QuadPart);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("filerecordsize")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->NtfsData.BytesPerFileRecordSegment);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("firstclusteroffset")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->RetrievalPointerBase);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("free")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->FreeSpace.QuadPart);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("fsname")) == 0) {
@@ -358,6 +402,8 @@ VolExpandVariables(
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->MaxComponentLength);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("mftsize")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->NtfsData.MftValidDataLength);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("partitionsize")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->VolumeDiskExtents.Extents[0].ExtentLength.QuadPart);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("physicalsectorsize")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->PhysicalSectorSize);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("reserved")) == 0) {
@@ -441,7 +487,7 @@ ENTRYPOINT(
                 VolHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2024"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
@@ -662,6 +708,40 @@ ENTRYPOINT(
             VolResult.Have.PhysicalSectorSize = TRUE;
         }
 
+        //
+        //  NTFS will not answer this unless the user is elevated.  exFAT,
+        //  which is what this is really for, will answer it regardless.
+        //
+
+        if (DeviceIoControl(hDir,
+                            FSCTL_GET_RETRIEVAL_POINTER_BASE,
+                            NULL,
+                            0,
+                            &VolResult.RetrievalPointerBase,
+                            sizeof(VolResult.RetrievalPointerBase),
+                            &BytesReturned,
+                            NULL)) {
+
+            if (VolResult.Have.SectorSize) {
+                VolResult.RetrievalPointerBase = VolResult.RetrievalPointerBase * VolResult.SectorSize;
+                VolResult.Have.RetrievalPointerBase = TRUE;
+            }
+        }
+
+        if (DeviceIoControl(hDir,
+                            IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+                            NULL,
+                            0,
+                            &VolResult.VolumeDiskExtents,
+                            sizeof(VolResult.VolumeDiskExtents),
+                            &BytesReturned,
+                            NULL)) {
+
+            if (VolResult.VolumeDiskExtents.NumberOfDiskExtents == 1) {
+                VolResult.Have.VolumeDiskExtents = TRUE;
+            }
+        }
+
         CloseHandle(hDir);
     }
 
@@ -765,6 +845,28 @@ ENTRYPOINT(
             LPTSTR FormatString = 
                           _T("File record size:     $filerecordsize$\n")
                           _T("MFT size:             $mftsize$\n");
+            YoriLibConstantString(&YsFormatString, FormatString);
+            YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, VolExpandVariables, &VolResult, &DisplayString);
+            if (DisplayString.StartOfString != NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+            }
+        }
+
+        if (VolResult.Have.RetrievalPointerBase) {
+            LPTSTR FormatString = 
+                          _T("First cluster offset: $firstclusteroffset$\n");
+            YoriLibConstantString(&YsFormatString, FormatString);
+            YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, VolExpandVariables, &VolResult, &DisplayString);
+            if (DisplayString.StartOfString != NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+            }
+        }
+
+        if (VolResult.Have.VolumeDiskExtents) {
+            LPTSTR FormatString = 
+                          _T("Hosting disk number:  $disknumber$\n")
+                          _T("Disk offset:          $diskoffset$\n")
+                          _T("Partition size:       $partitionsize$\n");
             YoriLibConstantString(&YsFormatString, FormatString);
             YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, VolExpandVariables, &VolResult, &DisplayString);
             if (DisplayString.StartOfString != NULL) {

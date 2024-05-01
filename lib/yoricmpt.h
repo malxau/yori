@@ -2234,11 +2234,70 @@ typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
 #define PROCESS_MODE_BACKGROUND_BEGIN 0x00100000
 #endif
 
+/**
+ A structure describing a single extent of a partition within a disk.
+ */
+typedef struct _YORI_DISK_EXTENT {
+
+    /**
+     The disk containing this portion of the partition.
+     */
+    DWORD DiskNumber;
+
+    /**
+     The starting offset within the disk of this portion of the partition.
+     */
+    LARGE_INTEGER StartingOffset;
+
+    /**
+     The length of this portion of the partition.
+     */
+    LARGE_INTEGER ExtentLength;
+} YORI_DISK_EXTENT, *PYORI_DISK_EXTENT;
+
+/**
+ A list of extents describing a partition within one or more disks.
+ */
+typedef struct _YORI_VOLUME_DISK_EXTENTS {
+
+    /**
+     The number of extents in the below array.
+     */
+    DWORD NumberOfDiskExtents;
+
+    /**
+     An array of disk extents describing the partition.
+     */
+    YORI_DISK_EXTENT Extents[1];
+} YORI_VOLUME_DISK_EXTENTS, *PYORI_VOLUME_DISK_EXTENTS;
+
+#ifndef IOCTL_VOLUME_BASE
+/**
+ The IOCTL range for volume IOCTLs, if it's not already defined.
+ */
+#define IOCTL_VOLUME_BASE 'V'
+#endif
+
+#ifndef IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
+/**
+ The IOCTL code to query volume extents, if it's not already defined.
+ */
+#define IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS CTL_CODE(IOCTL_VOLUME_BASE, 0, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#endif
+
 #ifndef IOCTL_DISK_GET_LENGTH_INFO
 /**
  The IOCTL code to query a volume or disk length, if it's not already defined.
  */
 #define IOCTL_DISK_GET_LENGTH_INFO CTL_CODE(IOCTL_DISK_BASE, 23, METHOD_BUFFERED, FILE_READ_ACCESS)
+#endif
+
+#ifndef FSCTL_GET_RETRIEVAL_POINTER_BASE
+
+/**
+ The FSCTL code to get the retrieval pointer base, if it's not already defined.
+ */
+#define FSCTL_GET_RETRIEVAL_POINTER_BASE CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 141, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #endif
 
 #ifndef FSCTL_SET_REPARSE_POINT
