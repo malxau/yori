@@ -104,6 +104,7 @@ CHAR strHelpHelpText2[] =
         "ERR       Display the text for a Windows error code\n"
         "EXIT      Exits the shell\n"
         "EXPR      Evaluate simple arithmetic expressions\n"
+        "EXTENTS   Output file system extents behind files\n"
         "FALSE     Return false\n"
         "FINFO     Output information about file metadata\n"
         "FG        Display the output of a background job in the foreground\n"

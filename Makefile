@@ -118,6 +118,7 @@ DIRS1=crt        \
       erase      \
       err        \
       expr       \
+      extents    \
       finfo      \
       for        \
       fscmp      \

@@ -19,6 +19,7 @@
 ..\env\yenv.exe|yenv.exe
 ..\envdiff\envdiff.exe|envdiff.exe
 ..\err\yerr.exe|yerr.exe
+..\extents\yextents.exe|yextents.exe
 ..\get\yget.exe|yget.exe
 ..\finfo\finfo.exe|finfo.exe
 ..\grpcmp\grpcmp.exe|grpcmp.exe

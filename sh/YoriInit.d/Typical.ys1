@@ -14,6 +14,7 @@ builtin alias -s dos2unix=iconv -u $*$
 builtin alias -s edit=yedit $*$
 builtin alias -s env=yenv $*$
 builtin alias -s err=yerr $*$
+builtin alias -s extents=yextents $*$
 builtin alias -s hash=yhash $*$
 builtin alias -s help=yhelp $*$
 builtin alias -s hexedit=yhexedit $*$

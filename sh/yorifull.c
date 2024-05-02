@@ -204,6 +204,11 @@ YORI_CMD_BUILTIN YoriCmd_YEXPR;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YEXTENTS;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_FALSE;
 
 /**
@@ -656,6 +661,7 @@ YoriShBuiltins[] = {
                     {_T("YERASE"),    YoriCmd_YERASE},
                     {_T("YERR"),      YoriCmd_YERR},
                     {_T("YEXPR"),     YoriCmd_YEXPR},
+                    {_T("YEXTENTS"),  YoriCmd_YEXTENTS},
                     {_T("YGET"),      YoriCmd_YGET},
                     {_T("YHASH"),     YoriCmd_YHASH},
                     {_T("YHELP"),     YoriCmd_YHELP},
@@ -721,6 +727,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("erase"),    _T("yerase $*$")},
     {_T("err"),      _T("yerr $*$")},
     {_T("expr"),     _T("yexpr $*$")},
+    {_T("extents"),  _T("yextents $*$")},
     {_T("ftype"),    _T("yassoc -t $*$")},
     {_T("hash"),     _T("yhash $*$")},
     {_T("head"),     _T("ytype -h $*$")},

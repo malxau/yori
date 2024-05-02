@@ -19,6 +19,7 @@
 ..\env\yenv.pdb|yenv.pdb
 ..\envdiff\envdiff.pdb|envdiff.pdb
 ..\err\yerr.pdb|yerr.pdb
+..\extents\yextents.pdb|yextents.pdb
 ..\finfo\finfo.pdb|finfo.pdb
 ..\get\yget.pdb|yget.pdb
 ..\grpcmp\grpcmp.pdb|grpcmp.pdb

@@ -28,6 +28,7 @@
 ..\erase\builtins.lib
 ..\err\builtins.lib
 ..\expr\builtins.lib
+..\extents\builtins.lib
 ..\finfo\builtins.lib
 ..\fscmp\builtins.lib
 ..\get\builtins.lib
