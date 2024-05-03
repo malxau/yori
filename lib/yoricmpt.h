@@ -2234,6 +2234,14 @@ typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
 #define PROCESS_MODE_BACKGROUND_BEGIN 0x00100000
 #endif
 
+#ifndef INVALID_LCN
+/**
+ A value describing an invalid LCN (region not allocated) for compilation
+ environments that don't define it.
+ */
+#define INVALID_LCN ((DWORDLONG)-1)
+#endif
+
 /**
  A structure describing a single extent of a partition within a disk.
  */
