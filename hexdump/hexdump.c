@@ -196,6 +196,12 @@ typedef struct _HEXDUMP_REVERSE_CONTEXT {
     UCHAR WordsPerLine;
 
     /**
+     TRUE if all whitespace should be ignored and the input should be parsed
+     as a sequential hex stream.  FALSE for a regular format.
+     */
+    BOOLEAN NoWhitespace;
+
+    /**
      The buffer to populate with data as each line is parsed.  This may point
      to StaticOutputBuffer below, or may be a heap allocation in binary mode.
      */
@@ -226,6 +232,9 @@ typedef struct _HEXDUMP_REVERSE_CONTEXT {
 
  @param Line Pointer to a line of hex encoded text to test.
 
+ @param SupportBinary If TRUE, succeed for a series of hex digits with no
+        whitespace.
+
  @param ReverseContext Pointer to the reverse hex dump context.  On output
         it is populated with the format of the data.
 
@@ -235,12 +244,19 @@ typedef struct _HEXDUMP_REVERSE_CONTEXT {
 BOOL
 HexDumpDetectReverseFormatFromLine(
     __in PYORI_STRING Line,
+    __in BOOLEAN SupportBinary,
     __out PHEXDUMP_REVERSE_CONTEXT ReverseContext
     )
 {
     YORI_STRING Substring;
 
+    ReverseContext->NoWhitespace = FALSE;
     ReverseContext->CharsInInputLineToIgnore = 0;
+
+    //
+    //  Look if the line starts with an offset.  If so, we need to ignore it
+    //  when converting back to binary.
+    //
 
     if (HexDumpDoesStringStartWithHexDigits(Line, 8)) {
 
@@ -282,23 +298,36 @@ HexDumpDetectReverseFormatFromLine(
     Substring.LengthInChars = Line->LengthInChars - ReverseContext->CharsInInputLineToIgnore;
 
 
+    //
+    //  8 hex digits with a space == DWORDs
+    //
+
     if (Substring.LengthInChars >= 2 * 4 &&
         HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 4) &&
         (Substring.LengthInChars == 2 * 4 || Substring.StartOfString[2 * 4] == ' ')) {
 
         ReverseContext->BytesPerWord = 4;
 
+    //
+    //  4 hex digits with a space == WORDs
+    //
     } else if (Substring.LengthInChars >= 2 * 2 &&
                HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 2) &&
                (Substring.LengthInChars == 2 * 2 || Substring.StartOfString[2 * 2] == ' ')) {
 
         ReverseContext->BytesPerWord = 2;
 
+    //
+    //  2 hex digits with a space == BYTEs
+    //
     } else if (Substring.LengthInChars >= 2 * 1 &&
                HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 1) &&
                (Substring.LengthInChars == 2 * 1 || Substring.StartOfString[2 * 1] == ' ')) {
 
         ReverseContext->BytesPerWord = 1;
+    //
+    //  8 hex digits, backquote, 8 hex digits == QWORDs
+    //
     } else if (Substring.LengthInChars >= 2 * 4 + 1 + 2 * 4 &&
         HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 4) &&
         Substring.StartOfString[2 * 4] == '`') {
@@ -311,7 +340,19 @@ HexDumpDetectReverseFormatFromLine(
 
             ReverseContext->BytesPerWord = 8;
         }
+    //
+    //  2 hex digits, no space and binary support...just assume bytes
+    //
+    } else if (SupportBinary &&
+               Substring.LengthInChars >= 2 * 1 &&
+               HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 1)) {
+        ReverseContext->BytesPerWord = 1;
+        ReverseContext->NoWhitespace = TRUE;
     }
+
+    //
+    //  If we don't know how to parse it, fail
+    //
 
     if (ReverseContext->BytesPerWord == 0) {
         return FALSE;
@@ -646,7 +687,8 @@ HexDumpReverseProcessStream(
         return TRUE;
     }
 
-    if (!HexDumpDetectReverseFormatFromLine(&LineString, &ReverseContext)) {
+    if (!HexDumpDetectReverseFormatFromLine(&LineString, FALSE, &ReverseContext)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a stream of hex digits\n"));
         YoriLibLineReadCloseOrCache(LineContext);
         YoriLibFreeStringContents(&LineString);
         return FALSE;
@@ -717,7 +759,11 @@ HexDumpBinaryParseLine(
 
     while(TRUE) {
 
-        StartChar = Index * (ReverseContext->BytesPerWord * 2 + 1);
+        if (ReverseContext->NoWhitespace) {
+            StartChar = Index * (ReverseContext->BytesPerWord * 2);
+        } else {
+            StartChar = Index * (ReverseContext->BytesPerWord * 2 + 1);
+        }
 
         //
         //  8 byte words have a seperator, so they consist of 17 raw chars
@@ -866,7 +912,8 @@ HexDumpBinaryProcessStream(
 
     LineNumber++;
 
-    if (!HexDumpDetectReverseFormatFromLine(&LineString, &ReverseContext)) {
+    if (!HexDumpDetectReverseFormatFromLine(&LineString, TRUE, &ReverseContext)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a stream of hex digits, line %lli\n"), LineNumber);
         YoriLibLineReadCloseOrCache(LineContext);
         YoriLibFreeStringContents(&LineString);
         return FALSE;
