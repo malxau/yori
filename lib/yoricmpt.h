@@ -7926,7 +7926,7 @@ typedef GET_PRODUCT_INFO *PGET_PRODUCT_INFO;
  A prototype for the GetSystemPowerStatus function.
  */
 typedef
-DWORDLONG WINAPI
+BOOL WINAPI
 GET_SYSTEM_POWER_STATUS(PYORI_SYSTEM_POWER_STATUS);
 
 /**
