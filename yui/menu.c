@@ -2685,6 +2685,28 @@ YuiMenuExecuteById(
     return TRUE;
 }
 
+/**
+ Return the flags to use when calling TrackPopupMenu.  Some flags were added
+ in later versions of Windows that are important, but cause earlier versions
+ to fail completely.
+
+ @return The flags to pass to TrackPopupMenu.
+ */
+DWORD
+YuiMenuGetPopupMenuFlags(VOID)
+{
+    DWORD OsMajor;
+    DWORD OsMinor;
+    DWORD BuildNumber;
+    DWORD Flags;
+
+    YoriLibGetOsVersion(&OsMajor, &OsMinor, &BuildNumber);
+    Flags = TPM_RETURNCMD | TPM_BOTTOMALIGN;
+    if (OsMajor >= 5) {
+        Flags = Flags | TPM_NOANIMATION | TPM_RECURSE;
+    }
+    return Flags;
+}
 
 /**
  Display the start menu and execute any item selected.
@@ -2722,7 +2744,7 @@ YuiMenuDisplayAndExecute(
     DllUser32.pSetForegroundWindow(hWnd);
 
     MenuId = TrackPopupMenu(YuiContext->StartMenu,
-                            TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_NOANIMATION | TPM_RECURSE,
+                            YuiMenuGetPopupMenuFlags(),
                             WindowRect.left,
                             WindowRect.top,
                             0,
@@ -2794,7 +2816,7 @@ YuiMenuDisplayContext(
     DllUser32.pSetForegroundWindow(hWnd);
 
     MenuId = TrackPopupMenu(Menu,
-                            TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_NOANIMATION | TPM_RECURSE,
+                            YuiMenuGetPopupMenuFlags(),
                             CursorX,
                             CursorY,
                             0,
@@ -2914,7 +2936,7 @@ YuiMenuDisplayWindowContext(
     DllUser32.pSetForegroundWindow(hWnd);
 
     MenuId = TrackPopupMenu(Menu,
-                            TPM_RETURNCMD | TPM_BOTTOMALIGN | TPM_NOANIMATION | TPM_RECURSE,
+                            YuiMenuGetPopupMenuFlags(),
                             CursorX,
                             CursorY,
                             0,
