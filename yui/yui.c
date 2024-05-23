@@ -560,7 +560,17 @@ YuiNotifyResolutionChange(
     YuiMonitor->StartRightOffset = (WORD)(YuiMonitor->StartLeftOffset + YuiMonitor->StartButtonWidth);
 
     YuiMonitor->LeftmostTaskbarOffset = (WORD)(YuiMonitor->TaskbarPaddingHorizontal + YuiMonitor->StartButtonWidth + YuiMonitor->ControlBorderWidth * 2);
-    YuiMonitor->RightmostTaskbarOffset = (WORD)(YuiMonitor->ControlBorderWidth + YuiMonitor->ClockWidth + YuiMonitor->TaskbarPaddingHorizontal);
+    if (YuiContext.DisplayBattery) {
+        YuiMonitor->RightmostTaskbarOffset = (WORD)(YuiMonitor->ControlBorderWidth +
+                                                    YuiMonitor->BatteryWidth +
+                                                    3 +
+                                                    YuiMonitor->ClockWidth +
+                                                    YuiMonitor->TaskbarPaddingHorizontal);
+    } else {
+        YuiMonitor->RightmostTaskbarOffset = (WORD)(YuiMonitor->ControlBorderWidth +
+                                                    YuiMonitor->ClockWidth +
+                                                    YuiMonitor->TaskbarPaddingHorizontal);
+    }
 
     YuiTaskbarNotifyResolutionChange(YuiMonitor);
 
@@ -1342,7 +1352,11 @@ YuiInitializeMonitor(
                     WM_SETFONT,
                     (WPARAM)YuiMonitor->hFont,
                     MAKELPARAM(TRUE, 0));
-        YuiMonitor->RightmostTaskbarOffset = (WORD)(1 + YuiMonitor->ClockWidth + 3 + YuiMonitor->BatteryWidth + 1);
+        YuiMonitor->RightmostTaskbarOffset = (WORD)(YuiMonitor->ControlBorderWidth +
+                                                    YuiMonitor->BatteryWidth +
+                                                    3 +
+                                                    YuiMonitor->ClockWidth +
+                                                    YuiMonitor->TaskbarPaddingHorizontal);
     }
 
     return TRUE;
