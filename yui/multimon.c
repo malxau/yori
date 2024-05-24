@@ -485,7 +485,7 @@ YuiResetWorkArea(
     NewWorkArea.right = OldWorkArea->right;
     NewWorkArea.top = OldWorkArea->top;
     NewWorkArea.bottom = YuiMonitor->ScreenTop + 
-                         YuiMonitor->ScreenHeight - YuiMonitor->TaskbarHeight - 1;
+                         YuiMonitor->ScreenHeight - YuiMonitor->TaskbarHeight;
 
     if (NewWorkArea.left != OldWorkArea->left ||
         NewWorkArea.right != OldWorkArea->right ||
