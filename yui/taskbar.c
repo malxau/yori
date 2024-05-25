@@ -857,6 +857,91 @@ YuiTaskbarFindButtonFromHwndToActivate(
 }
 
 /**
+ Attempt to launch a new instance of a running program.  This is invoked if
+ the user shift-clicks a taskbar button.
+
+ @param YuiMonitor Pointer to the monitor context.
+
+ @param ThisButton The identifier of the button that was pressed indicating a
+        desire to relaunch the associated window.
+ */
+VOID
+YuiTaskbarLaunchNewTaskFromButton(
+    __in PYUI_MONITOR YuiMonitor,
+    __in PYUI_TASKBAR_BUTTON ThisButton
+    )
+{
+    YORI_STRING ModuleName;
+    HANDLE ProcessHandle;
+    HINSTANCE hInst;
+    BOOLEAN Elevated;
+    LPTSTR Verb;
+
+    //
+    //  Simple case: this window was found to be associated with a process
+    //  launched by this program.  In that case, we know which shortcut
+    //  was used to launch it, and can accurately launch a new instance
+    //  from the same shortcut.
+    //
+
+    Elevated = FALSE;
+    if (ThisButton->ChildProcess != NULL) {
+        Elevated = ThisButton->ChildProcess->Elevated;
+    }
+    if (ThisButton->ShortcutPath.LengthInChars > 0) {
+#if DBG
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Launching shortcut associated with button %y\n"), &ThisButton->ShortcutPath);
+#endif
+        YuiExecuteShortcut(YuiMonitor, &ThisButton->ShortcutPath, Elevated);
+        return;
+    }
+
+    //
+    //  If that didn't happen, look up the process name associated with
+    //  the window and launch it.  We don't know anything about startup
+    //  parameters to use.
+    //
+
+    YoriLibLoadPsapiFunctions();
+    if (DllPsapi.pGetModuleFileNameExW == NULL ||
+        DllShell32.pShellExecuteW == NULL) {
+        return;
+    }
+
+    //
+    //  Attempt to find the process executable.  If we don't have access,
+    //  there's not much we can do.
+    //
+
+    ProcessHandle = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, ThisButton->ProcessId);
+    if (ProcessHandle == NULL) {
+        return;
+    }
+
+    if (!YoriLibAllocateString(&ModuleName, 32 * 1024)) {
+        CloseHandle(ProcessHandle);
+        return;
+    }
+
+    ModuleName.LengthInChars = (YORI_ALLOC_SIZE_T)DllPsapi.pGetModuleFileNameExW(ProcessHandle, NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
+
+    Verb = NULL;
+    if (Elevated) {
+        Verb = _T("runas");
+    }
+
+    //
+    //  Launch what we've got, no arguments, working directory, or other
+    //  state.
+    //
+
+    hInst = DllShell32.pShellExecuteW(NULL, Verb, ModuleName.StartOfString, NULL, NULL, SW_SHOWNORMAL);
+
+    YoriLibFreeStringContents(&ModuleName);
+    CloseHandle(ProcessHandle);
+}
+
+/**
  Processes a notification that the resolution of the screen has changed,
  which implies the taskbar is not the same size as previously and buttons may
  need to be moved around.
@@ -1424,71 +1509,32 @@ YuiTaskbarLaunchNewTask(
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
-    YORI_STRING ModuleName;
-    HANDLE ProcessHandle;
-    HINSTANCE hInst;
-    BOOLEAN Elevated;
 
     ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiMonitor, CtrlId);
     if (ThisButton != NULL) {
+        YuiTaskbarLaunchNewTaskFromButton(YuiMonitor, ThisButton);
+    }
+}
 
-        //
-        //  Simple case: this window was found to be associated with a process
-        //  launched by this program.  In that case, we know which shortcut
-        //  was used to launch it, and can accurately launch a new instance
-        //  from the same shortcut.
-        //
+/**
+ Attempt to launch a new instance of a running program.  This is invoked if
+ the user shift-clicks a taskbar button.
 
-        Elevated = FALSE;
-        if (ThisButton->ChildProcess != NULL) {
-            Elevated = ThisButton->ChildProcess->Elevated;
-        }
-        if (ThisButton->ShortcutPath.LengthInChars > 0) {
-#if DBG
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Launching shortcut associated with button %y\n"), &ThisButton->ShortcutPath);
-#endif
-            YuiExecuteShortcut(YuiMonitor, &ThisButton->ShortcutPath, Elevated);
-            return;
-        }
+ @param YuiMonitor Pointer to the monitor context.
 
-        //
-        //  If that didn't happen, look up the process name associated with
-        //  the window and launch it.  We don't know anything about startup
-        //  parameters to use.
-        //
+ @param hWnd The identifier of the application window.
+ */
+VOID
+YuiTaskbarLaunchNewTaskFromhWnd(
+    __in PYUI_MONITOR YuiMonitor,
+    __in HWND hWnd
+    )
+{
+    PYUI_TASKBAR_BUTTON ThisButton;
 
-        YoriLibLoadPsapiFunctions();
-        if (DllPsapi.pGetModuleFileNameExW == NULL ||
-            DllShell32.pShellExecuteW == NULL) {
-            return;
-        }
-
-        //
-        //  Attempt to find the process executable.  If we don't have access,
-        //  there's not much we can do.
-        //
-
-        ProcessHandle = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, ThisButton->ProcessId);
-        if (ProcessHandle == NULL) {
-            return;
-        }
-
-        if (!YoriLibAllocateString(&ModuleName, 32 * 1024)) {
-            CloseHandle(ProcessHandle);
-            return;
-        }
-
-        ModuleName.LengthInChars = (YORI_ALLOC_SIZE_T)DllPsapi.pGetModuleFileNameExW(ProcessHandle, NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
-
-        //
-        //  Launch what we've got, no arguments, working directory, or other
-        //  state.
-        //
-
-        hInst = DllShell32.pShellExecuteW(NULL, NULL, ModuleName.StartOfString, NULL, NULL, SW_SHOWNORMAL);
-
-        YoriLibFreeStringContents(&ModuleName);
-        CloseHandle(ProcessHandle);
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiMonitor, hWnd);
+    if (ThisButton != NULL) {
+        YuiTaskbarLaunchNewTaskFromButton(YuiMonitor, ThisButton);
     }
 }
 

@@ -303,6 +303,11 @@ typedef struct _YUI_MENU_CONTEXT {
      */
     YUI_MENU_OWNERDRAW_ITEM WinContextTerminateProcess;
 
+    /**
+     Owner draw state for the launch new menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM WinContextLaunchNew;
+
 } YUI_MENU_CONTEXT, *PYUI_MENU_CONTEXT;
 
 /**
@@ -390,6 +395,7 @@ YuiMenuCleanupContext(VOID)
     YuiMenuCleanupItem(&YuiMenuContext.WinContextHide);
     YuiMenuCleanupItem(&YuiMenuContext.WinContextClose);
     YuiMenuCleanupItem(&YuiMenuContext.WinContextTerminateProcess);
+    YuiMenuCleanupItem(&YuiMenuContext.WinContextLaunchNew);
 }
 
 /**
@@ -522,6 +528,9 @@ YuiMenuInitializeContext(
 
     YuiMenuInitializeItem(&YuiMenuContext.WinContextTerminateProcess);
     YoriLibConstantString(&YuiMenuContext.WinContextTerminateProcess.Text, _T("Terminate process"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.WinContextLaunchNew);
+    YoriLibConstantString(&YuiMenuContext.WinContextLaunchNew.Text, _T("Launch new"));
 
     return TRUE;
 }
@@ -2859,6 +2868,9 @@ YuiMenuExecuteWindowContextById(
     UNREFERENCED_PARAMETER(YuiMonitor);
 
     switch(MenuId) {
+        case YUI_MENU_LAUNCHNEW:
+            YuiTaskbarLaunchNewTaskFromhWnd(YuiMonitor, hWnd);
+            break;
         case YUI_MENU_MINIMIZEWINDOW:
             CloseWindow(hWnd);
             break;
@@ -2923,8 +2935,11 @@ YuiMenuDisplayWindowContext(
 
     Menu = CreatePopupMenu();
 
+    AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_LAUNCHNEW, (LPCWSTR)&YuiMenuContext.WinContextLaunchNew);
+    AppendMenu(Menu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.Seperator);
     AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_MINIMIZEWINDOW, (LPCWSTR)&YuiMenuContext.WinContextMinimize);
     AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_HIDEWINDOW, (LPCWSTR)&YuiMenuContext.WinContextHide);
+    AppendMenu(Menu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.Seperator);
     AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_CLOSEWINDOW, (LPCWSTR)&YuiMenuContext.WinContextClose);
     AppendMenu(Menu, MF_OWNERDRAW, YUI_MENU_TERMINATEPROCESS, (LPCWSTR)&YuiMenuContext.WinContextTerminateProcess);
 

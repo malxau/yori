@@ -964,24 +964,29 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
 #define YUI_MENU_SHOW_DESKTOP          (43)
 
 /**
+ An identifier for the menu item to launch a new instance.
+ */
+#define YUI_MENU_LAUNCHNEW             (50)
+
+/**
  An identifier for the menu item to minimize an open window.
  */
-#define YUI_MENU_MINIMIZEWINDOW        (50)
+#define YUI_MENU_MINIMIZEWINDOW        (51)
 
 /**
  An identifier for the menu item to hide an open window.
  */
-#define YUI_MENU_HIDEWINDOW            (51)
+#define YUI_MENU_HIDEWINDOW            (52)
 
 /**
  An identifier for the menu item to close an open window.
  */
-#define YUI_MENU_CLOSEWINDOW           (52)
+#define YUI_MENU_CLOSEWINDOW           (53)
 
 /**
  An identifier for the menu item to terminate a process.
  */
-#define YUI_MENU_TERMINATEPROCESS      (53)
+#define YUI_MENU_TERMINATEPROCESS      (54)
 
 /**
  An identifier for the menu item to launch wifi settings.
@@ -1227,6 +1232,12 @@ VOID
 YuiTaskbarLaunchNewTask(
     __in PYUI_MONITOR YuiMonitor,
     __in DWORD CtrlId
+    );
+
+VOID
+YuiTaskbarLaunchNewTaskFromhWnd(
+    __in PYUI_MONITOR YuiMonitor,
+    __in HWND hWnd
     );
 
 BOOL
