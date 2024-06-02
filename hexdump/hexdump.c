@@ -135,6 +135,28 @@ typedef struct _HEXDUMP_CONTEXT {
 } HEXDUMP_CONTEXT, *PHEXDUMP_CONTEXT;
 
 /**
+ Check if a character is a valid hex digit.
+
+ @param Char Character to check.
+
+ @return TRUE if the character is hex, FALSE if not.
+ */
+BOOLEAN
+HexDumpIsHexDigit(
+    __in TCHAR Char
+    )
+{
+    if ((Char < '0' || Char > '9') &&
+        (Char < 'a' || Char > 'f') &&
+        (Char < 'A' || Char > 'F')) {
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
  Check if the string starts with a consecutive section of hex characters.
 
  @param String Pointer to the string to check.
@@ -158,10 +180,7 @@ HexDumpDoesStringStartWithHexDigits(
 
     for (Index = 0; Index < DigitsToCheck; Index++) {
         Char = String->StartOfString[Index];
-        if ((Char < '0' || Char > '9') &&
-            (Char < 'a' || Char > 'f') &&
-            (Char < 'A' || Char > 'F')) {
-
+        if (!HexDumpIsHexDigit(Char)) {
             return FALSE;
         }
     }
@@ -723,6 +742,9 @@ HexDumpReverseProcessStream(
 
  @param Line Pointer to a line of hex encoded text.
 
+ @param ErrorChar On failure, updated to indicate the location of the parse
+        error.
+
  @param ReverseContext Pointer to the reverse hex dump context.  On input
         indicates the format and it is populated with the binary form on
         output.
@@ -732,6 +754,7 @@ HexDumpReverseProcessStream(
 BOOL
 HexDumpBinaryParseLine(
     __in PYORI_STRING Line,
+    __out_opt PYORI_ALLOC_SIZE_T ErrorChar,
     __inout PHEXDUMP_REVERSE_CONTEXT ReverseContext
     )
 {
@@ -739,6 +762,10 @@ HexDumpBinaryParseLine(
     YORI_ALLOC_SIZE_T StartChar;
     YORI_ALLOC_SIZE_T Index;
     BOOL Result;
+
+    if (ErrorChar != NULL) {
+        *ErrorChar = 0;
+    }
 
     YoriLibInitEmptyString(&Substring);
 
@@ -789,7 +816,8 @@ HexDumpBinaryParseLine(
         //  are for.
         //
 
-        if (StartChar + ReverseContext->BytesPerWord > Line->LengthInChars) {
+        if (StartChar + ReverseContext->BytesPerWord * 2 > Line->LengthInChars) {
+            Result = FALSE;
             break;
         }
 
@@ -873,6 +901,10 @@ HexDumpBinaryParseLine(
         Index++;
     }
 
+    if (Result == FALSE && ErrorChar != NULL) {
+        *ErrorChar = StartChar;
+    }
+
     return Result;
 }
 
@@ -899,6 +931,9 @@ HexDumpBinaryProcessStream(
     DWORD BytesWritten;
     DWORDLONG LineNumber;
     HEXDUMP_REVERSE_CONTEXT ReverseContext;
+    YORI_ALLOC_SIZE_T ErrorChar;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T DigitsPerWord;
 
     YoriLibInitEmptyString(&LineString);
     HexDumpContext->FilesFound++;
@@ -932,8 +967,29 @@ HexDumpBinaryProcessStream(
 
     while (TRUE) {
 
-        if (!HexDumpBinaryParseLine(&LineString, &ReverseContext)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a stream of hex digits, line %lli\n"), LineNumber);
+        if (!HexDumpBinaryParseLine(&LineString, &ErrorChar, &ReverseContext)) {
+            if (ErrorChar < LineString.LengthInChars) {
+                DigitsPerWord = 2 * ReverseContext.BytesPerWord;
+                if (ErrorChar + DigitsPerWord > LineString.LengthInChars) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: insufficient digits for a word, line %lli position %i\n"), LineNumber, ErrorChar);
+                } else {
+                    for (Index = 0; Index < DigitsPerWord; Index++) {
+                        TCHAR Char;
+                        Char = LineString.StartOfString[ErrorChar + Index];
+                        if (!HexDumpIsHexDigit(Char)) {
+                            if (YoriLibIsCharPrintable(Char)) {
+                                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a hex digit, line %lli position %i '%c'\n"), LineNumber, ErrorChar + Index, Char);
+                            } else {
+                                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a hex digit, line %lli position %i <unprintable>\n"), LineNumber, ErrorChar + Index);
+                            }
+                            break;
+                        }
+                    }
+                    if (Index == DigitsPerWord) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a stream of hex digits, line %lli position %i\n"), LineNumber, ErrorChar);
+                    }
+                }
+            }
             break;
         }
 
