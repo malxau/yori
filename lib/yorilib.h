@@ -750,6 +750,20 @@ YoriLibCopyTextRtfAndHtml(
     __in PYORI_STRING HtmlVersion
     );
 
+__success(return)
+BOOL
+YoriLibCopyBinaryData(
+    __in PUCHAR Buffer,
+    __in YORI_ALLOC_SIZE_T BufferLength
+    );
+
+__success(return)
+BOOL
+YoriLibPasteBinaryData(
+    __out PUCHAR *Buffer,
+    __out PYORI_ALLOC_SIZE_T BufferLength
+    );
+
 BOOLEAN
 YoriLibIsSystemClipboardAvailable(VOID);
 

@@ -541,6 +541,194 @@ YoriLibCopyTextRtfAndHtml(
     return TRUE;
 }
 
+/**
+ Copy binary data into the clipboard.
+
+ @param Buffer The data to populate into the clipboard.
+ 
+ @param BufferLength The length of the data to populate into the clipboard, in
+        bytes.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibCopyBinaryData(
+    __in PUCHAR Buffer,
+    __in YORI_ALLOC_SIZE_T BufferLength
+    )
+{
+    HANDLE hMem;
+    HANDLE hClip;
+    PUCHAR pMem;
+    SIZE_T ClipboardBufferLength;
+    PDWORD InternalBufferLength;
+    DWORD BinFmt;
+
+    YoriLibLoadUser32Functions();
+
+    if (DllKernel32.pGlobalLock == NULL ||
+        DllKernel32.pGlobalUnlock == NULL ||
+        DllUser32.pOpenClipboard == NULL ||
+        DllUser32.pEmptyClipboard == NULL ||
+        DllUser32.pRegisterClipboardFormatW == NULL ||
+        DllUser32.pSetClipboardData == NULL ||
+        DllUser32.pCloseClipboard == NULL) {
+        return FALSE;
+    }
+
+    ClipboardBufferLength = BufferLength;
+    ClipboardBufferLength = ClipboardBufferLength + sizeof(DWORD);
+    if (!YoriLibIsSizeAllocatable(ClipboardBufferLength)) {
+        return FALSE;
+    }
+
+    BinFmt = DllUser32.pRegisterClipboardFormatW(_T("BinaryData"));
+    if (BinFmt == 0) {
+        return FALSE;
+    }
+
+    //
+    //  Open the clipboard and empty its contents.
+    //
+
+    if (!YoriLibOpenClipboard()) {
+        return FALSE;
+    }
+
+    DllUser32.pEmptyClipboard();
+
+    hMem = GlobalAlloc(GMEM_MOVEABLE, ClipboardBufferLength);
+    if (hMem == NULL) {
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    pMem = DllKernel32.pGlobalLock(hMem);
+    if (pMem == NULL) {
+        GlobalFree(hMem);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    InternalBufferLength = (PDWORD)pMem;
+    *InternalBufferLength = BufferLength;
+
+    pMem = pMem + sizeof(DWORD);
+    memcpy(pMem, Buffer, BufferLength);
+    DllKernel32.pGlobalUnlock(hMem);
+    pMem = NULL;
+
+    hClip = DllUser32.pSetClipboardData(BinFmt, hMem);
+    if (hClip == NULL) {
+        DllUser32.pCloseClipboard();
+        GlobalFree(hMem);
+        return FALSE;
+    }
+
+    DllUser32.pCloseClipboard();
+    GlobalFree(hMem);
+    return TRUE;
+}
+
+
+/**
+ Retrieve any binary data from the clipboard.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibPasteBinaryData(
+    __out PUCHAR *Buffer,
+    __out PYORI_ALLOC_SIZE_T BufferLength
+    )
+{
+    HANDLE hMem;
+    PUCHAR pMem;
+    SIZE_T ClipboardBufferLength;
+    YORI_ALLOC_SIZE_T LocalBufferLength;
+    PUCHAR LocalBuffer;
+    PDWORD InternalBufferLength;
+    DWORD BinFmt;
+
+    YoriLibLoadUser32Functions();
+
+    if (DllKernel32.pGlobalLock == NULL ||
+        DllKernel32.pGlobalUnlock == NULL ||
+        DllUser32.pOpenClipboard == NULL ||
+        DllUser32.pRegisterClipboardFormatW == NULL ||
+        DllUser32.pGetClipboardData == NULL ||
+        DllUser32.pCloseClipboard == NULL) {
+
+        return FALSE;
+    }
+
+    BinFmt = DllUser32.pRegisterClipboardFormatW(_T("BinaryData"));
+    if (BinFmt == 0) {
+        return FALSE;
+    }
+
+    //
+    //  Open the clipboard and fetch its contents.
+    //
+
+    if (!YoriLibOpenClipboard()) {
+        return FALSE;
+    }
+
+    hMem = DllUser32.pGetClipboardData(BinFmt);
+    if (hMem == NULL) {
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    ClipboardBufferLength = DllKernel32.pGlobalSize(hMem);
+    if (ClipboardBufferLength < sizeof(DWORD)) {
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    pMem = DllKernel32.pGlobalLock(hMem);
+    if (pMem == NULL) {
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    InternalBufferLength = (PDWORD)pMem;
+    if (*InternalBufferLength > ClipboardBufferLength - sizeof(DWORD)) {
+        DllKernel32.pGlobalUnlock(hMem);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    ClipboardBufferLength = *InternalBufferLength;
+    if (!YoriLibIsSizeAllocatable(ClipboardBufferLength)) {
+        DllKernel32.pGlobalUnlock(hMem);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+
+    LocalBufferLength = (YORI_ALLOC_SIZE_T)ClipboardBufferLength;
+    LocalBuffer = YoriLibReferencedMalloc(LocalBufferLength);
+    if (LocalBuffer == NULL) {
+        DllKernel32.pGlobalUnlock(hMem);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    pMem = pMem + sizeof(DWORD);
+    memcpy(LocalBuffer, pMem, LocalBufferLength);
+    DllKernel32.pGlobalUnlock(hMem);
+    DllUser32.pCloseClipboard();
+
+    *Buffer = LocalBuffer;
+    *BufferLength = LocalBufferLength;
+
+    return TRUE;
+}
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
 #pragma warning(pop)
 #endif
