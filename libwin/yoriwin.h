@@ -475,6 +475,21 @@ YoriWinHexEditReplaceData(
     __in YORI_ALLOC_SIZE_T Length
     );
 
+BOOLEAN
+YoriWinHexEditCutSelectedData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
+YoriWinHexEditCopySelectedData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
+YoriWinHexEditPasteData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
 PYORI_WIN_CTRL_HANDLE
 YoriWinHexEditCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
