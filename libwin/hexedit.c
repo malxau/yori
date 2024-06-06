@@ -2704,6 +2704,11 @@ YoriWinHexEditSetSelectionByte(
 
  @param HexEdit Pointer to the hex edit control that describes the current
         selection and cursor location.
+
+ @param MoveDown TRUE if the selection is being extended downwards, FALSE if
+        it is being extended upwards.  This is ... best effort.  It allows a
+        new word to be selected when the cursor extends into the high nibble
+        when moving down, and the low nibble when moving up.
  */
 VOID
 YoriWinHexEditExtendSelectionToCursor(
@@ -2762,7 +2767,7 @@ YoriWinHexEditExtendSelectionToCursor(
 
     YoriWinHexEditGetCursorLocation(&HexEdit->Ctrl, &AsChar, &EffectiveCursorOffset, &BitShift);
 
-    BitsPerWord = HexEdit->BytesPerWord * 8;
+    BitsPerWord = (UCHAR)(HexEdit->BytesPerWord * 8);
 
     //
     //  If this is a keyboard selection, and the selection is extending
@@ -2983,7 +2988,10 @@ YoriWinHexEditScrollForMouseSelect(
          CellType == YoriWinHexEditCellTypeCharValue)) {
 
         if (CellType == YoriWinHexEditCellTypeHexDigitPadding) {
-            YoriWinHexEditSetCursorToBufferLocation(HexEdit, YoriWinHexEditCellTypeHexDigit, BufferOffset, HexEdit->BytesPerWord * 8 - 4);
+            YoriWinHexEditSetCursorToBufferLocation(HexEdit,
+                                                    YoriWinHexEditCellTypeHexDigit,
+                                                    BufferOffset,
+                                                    (UCHAR)(HexEdit->BytesPerWord * 8 - 4));
         } else {
             YoriWinHexEditSetCursorLocationInternal(HexEdit, NewCursorOffset, NewCursorLine);
         }
@@ -3586,6 +3594,7 @@ YoriWinHexEditGetCursorLocation(
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &LocalBitShift, &BeyondBufferEnd);
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
     if (CellType == YoriWinHexEditCellTypeHexDigit ||
+        CellType == YoriWinHexEditCellTypeHexDigitPadding ||
         CellType == YoriWinHexEditCellTypeCharValue) {
 
         LocalBufferOffset = HexEdit->CursorLine;
@@ -3808,13 +3817,13 @@ YoriWinHexEditSelectionActive(
 /**
  Delete the range of the buffer containing the selection.
 
- @param HexEdit Pointer to the hex edit control.
+ @param CtrlHandle Pointer to the hex edit control.
 
  @return TRUE if data is deleted, FALSE if it is not.
  */
 BOOLEAN
 YoriWinHexEditDeleteSelection(
-    __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
     )
 {
     YORI_ALLOC_SIZE_T CursorOffset;
@@ -3823,6 +3832,11 @@ YoriWinHexEditDeleteSelection(
     YORI_ALLOC_SIZE_T BufferOffset;
     YORI_ALLOC_SIZE_T Length;
     YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
 
     if (!YoriWinHexEditSelectionActive(&HexEdit->Ctrl) ||
         HexEdit->Selection.BeyondLastByteOffset <= HexEdit->Selection.FirstByteOffset) {
@@ -3838,27 +3852,22 @@ YoriWinHexEditDeleteSelection(
     }
 
     YoriWinHexEditGetCursorLocation(&HexEdit->Ctrl, &AsChar, &CursorOffset, &BitShift);
+    CursorOffset = (YORI_ALLOC_SIZE_T)BufferOffset;
+    if (AsChar) {
+        CellType = YoriWinHexEditCellTypeCharValue;
+    } else {
+        CellType = YoriWinHexEditCellTypeHexDigit;
+    }
     if (!YoriWinHexEditDeleteData(&HexEdit->Ctrl, BufferOffset, Length)) {
         return FALSE;
     }
 
-    if (CursorOffset > HexEdit->BufferValid) {
-        if (AsChar) {
-            CellType = YoriWinHexEditCellTypeCharValue;
-        } else {
-            CellType = YoriWinHexEditCellTypeHexDigit;
-        }
-        CursorOffset = HexEdit->BufferValid;
-        if (CellType == YoriWinHexEditCellTypeHexDigit) {
-            CursorOffset = (HexEdit->BufferValid / HexEdit->BytesPerWord) * HexEdit->BytesPerWord;
-        }
-        BitShift = 0;
+    BitShift = 0;
 
-        YoriWinHexEditSetCursorToBufferLocation(HexEdit,
-                                                CellType,
-                                                CursorOffset,
-                                                BitShift);
-    }
+    YoriWinHexEditSetCursorToBufferLocation(HexEdit,
+                                            CellType,
+                                            CursorOffset,
+                                            BitShift);
     YoriWinHexEditClearSelectionInternal(HexEdit);
     return TRUE;
 }
@@ -3898,7 +3907,8 @@ YoriWinHexEditCutSelectedData(
         return FALSE;
     }
 
-    if (YoriWinHexEditDeleteSelection(HexEdit)) {
+    if (YoriWinHexEditDeleteSelection(&HexEdit->Ctrl)) {
+        HexEdit->UserModified = TRUE;
         YoriWinHexEditEnsureCursorVisible(HexEdit);
         YoriWinHexEditPaint(HexEdit);
     }
@@ -3966,6 +3976,7 @@ YoriWinHexEditPasteData(
 
     if (YoriWinHexEditSelectionActive(CtrlHandle)) {
         YoriWinHexEditDeleteSelection(CtrlHandle);
+        HexEdit->UserModified = TRUE;
     }
 
     if (!YoriLibPasteBinaryData(&Buffer, &BufferLength)) {
@@ -4027,7 +4038,9 @@ YoriWinHexEditDelete(
 {
 
     if (YoriWinHexEditSelectionActive(&HexEdit->Ctrl)) {
-        return YoriWinHexEditDeleteSelection(HexEdit);
+        if (YoriWinHexEditDeleteSelection(&HexEdit->Ctrl)) {
+            HexEdit->UserModified = TRUE;
+        }
     } else {
         YORI_ALLOC_SIZE_T FirstLine;
         YORI_ALLOC_SIZE_T FirstCharOffset;
@@ -4041,6 +4054,7 @@ YoriWinHexEditDelete(
             return FALSE;
         }
 
+        HexEdit->UserModified = TRUE;
         YoriWinHexEditSetCursorLocationInternal(HexEdit, LastCharOffset, LastLine);
     }
 
@@ -4724,11 +4738,18 @@ YoriWinHexEditMouseDown(
 
     if (BufferOffset <= HexEdit->BufferValid &&
         (CellType == YoriWinHexEditCellTypeHexDigit ||
+         CellType == YoriWinHexEditCellTypeHexDigitPadding ||
          CellType == YoriWinHexEditCellTypeCharValue)) {
 
         YoriWinHexEditClearSelection(HexEdit);
-        YoriWinHexEditSetCursorLocationInternal(HexEdit, NewCursorChar, NewCursorLine);
-        YoriWinHexEditClearSelection(HexEdit);
+        if (CellType == YoriWinHexEditCellTypeHexDigitPadding) {
+            YoriWinHexEditSetCursorToBufferLocation(HexEdit,
+                                                    YoriWinHexEditCellTypeHexDigit,
+                                                    BufferOffset,
+                                                    (UCHAR)(HexEdit->BytesPerWord * 8 - 4));
+        } else {
+            YoriWinHexEditSetCursorLocationInternal(HexEdit, NewCursorChar, NewCursorLine);
+        }
         YoriWinHexEditStartSelectionAtCursor(HexEdit, TRUE);
         HexEdit->MouseButtonDown = TRUE;
 

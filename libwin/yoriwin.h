@@ -330,6 +330,11 @@ YoriWinHexEditGetSelectedData(
     );
 
 BOOLEAN
+YoriWinHexEditDeleteSelection(
+    __in PYORI_WIN_CTRL_HANDLE HexEdit
+    );
+
+BOOLEAN
 YoriWinHexEditGetModifyState(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
     );

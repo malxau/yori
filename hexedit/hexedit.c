@@ -142,6 +142,11 @@ typedef struct _HEXEDIT_CONTEXT {
     DWORD EditPasteMenuIndex;
 
     /**
+     The index of the edit clear menu item.
+     */
+    DWORD EditClearMenuIndex;
+
+    /**
      The index of the view menu.  This is used to check and uncheck menu
      items based on the state of the control.
      */
@@ -1009,6 +1014,7 @@ HexEditEditButtonClicked(
     PYORI_WIN_CTRL_HANDLE CutItem;
     PYORI_WIN_CTRL_HANDLE CopyItem;
     PYORI_WIN_CTRL_HANDLE PasteItem;
+    PYORI_WIN_CTRL_HANDLE ClearItem;
     BOOLEAN DataSelected;
     PUCHAR ClipboardBuffer;
     YORI_ALLOC_SIZE_T ClipboardBufferLength;
@@ -1027,13 +1033,16 @@ HexEditEditButtonClicked(
     CutItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, HexEditContext->EditCutMenuIndex);
     CopyItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, HexEditContext->EditCopyMenuIndex);
     PasteItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, HexEditContext->EditPasteMenuIndex);
+    ClearItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, HexEditContext->EditClearMenuIndex);
 
     if (DataSelected) {
         YoriWinMenuBarEnableMenuItem(CutItem);
         YoriWinMenuBarEnableMenuItem(CopyItem);
+        YoriWinMenuBarEnableMenuItem(ClearItem);
     } else {
         YoriWinMenuBarDisableMenuItem(CutItem);
         YoriWinMenuBarDisableMenuItem(CopyItem);
+        YoriWinMenuBarDisableMenuItem(ClearItem);
     }
 
     if (ClipboardBuffer != NULL) {
@@ -1103,6 +1112,26 @@ HexEditPasteButtonClicked(
 
     YoriWinHexEditPasteData(HexEditContext->HexEdit);
 }
+
+/**
+ A callback invoked when the clear button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HexEditClearButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+    YoriWinHexEditDeleteSelection(HexEditContext->HexEdit);
+    YoriWinHexEditSetModifyState(HexEditContext->HexEdit, TRUE);
+}
+
 
 /**
  Search forward through a memory buffer looking for a matching sub-buffer.
@@ -2262,7 +2291,7 @@ HexEditPopulateMenuBar(
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[7];
-    YORI_WIN_MENU_ENTRY EditMenuEntries[3];
+    YORI_WIN_MENU_ENTRY EditMenuEntries[4];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[8];
     YORI_WIN_MENU_ENTRY ToolsMenuEntries[1];
@@ -2324,6 +2353,12 @@ HexEditPopulateMenuBar(
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Paste"));
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+V"));
     EditMenuEntries[MenuIndex].NotifyCallback = HexEditPasteButtonClicked;
+    MenuIndex++;
+
+    HexEditContext->EditClearMenuIndex = MenuIndex;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("Cl&ear"));
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Del"));
+    EditMenuEntries[MenuIndex].NotifyCallback = HexEditClearButtonClicked;
     MenuIndex++;
 
     ZeroMemory(&SearchMenuEntries, sizeof(SearchMenuEntries));

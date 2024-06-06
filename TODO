@@ -34,8 +34,6 @@ fun to write.
  - Ymake execute preprocessor CreateProcess calls in parallel somehow
  - Ymake dependency aware install, so $(BINDIR) is updated if the link changes
 
- - Clipboard in hexedit
-
  - Regedit "rename" values
  - Regedit "rename" keys
  - Regedit search
