@@ -372,8 +372,13 @@ ENTRYPOINT(
     }
 
     if (DisplayGraph) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Percent remaining: %i%%\n"), BatteryContext.PowerStatus.BatteryLifePercent);
-        YoriLibDisplayBarGraph(GetStdHandle(STD_OUTPUT_HANDLE), BatteryContext.PowerStatus.BatteryLifePercent * 10, 400, 200);
+        UCHAR BatteryLifePercent;
+        BatteryLifePercent = BatteryContext.PowerStatus.BatteryLifePercent;
+        if (BatteryLifePercent > 100) {
+            BatteryLifePercent = 100;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Percent remaining: %i%%\n"), BatteryLifePercent);
+        YoriLibDisplayBarGraph(GetStdHandle(STD_OUTPUT_HANDLE), BatteryLifePercent * 10, 400, 200);
     }
 
     if (AllocatedFormatString.LengthInChars > 0) {
