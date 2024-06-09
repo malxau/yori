@@ -1051,5 +1051,70 @@ YuiRefreshMonitors(
     return TRUE;
 }
 
+/**
+ Create a window on the taskbar for the battery.  This can be added after the
+ taskbar is created if a battery starts reporting itself as existing.
+
+ @param YuiMonitor Pointer to the monitor.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YuiInitializeBatteryWindow(
+    __in PYUI_MONITOR YuiMonitor
+    )
+{
+    RECT ClientRect;
+    PYUI_CONTEXT YuiContext;
+
+    YuiContext = YuiMonitor->YuiContext;
+
+    ASSERT(YuiMonitor->hWndBattery == NULL);
+    ASSERT(YuiMonitor->BatteryWidth != 0);
+
+    //
+    //  Create the battery window
+    //
+
+    DllUser32.pGetClientRect(YuiMonitor->hWndTaskbar, &ClientRect);
+    YuiMonitor->hWndBattery = CreateWindowEx(0,
+                                             _T("STATIC"),
+                                             _T(""),
+                                             SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
+                                             ClientRect.right - YuiMonitor->ClockWidth - 3 - YuiMonitor->BatteryWidth - YuiMonitor->TaskbarPaddingHorizontal,
+                                             YuiMonitor->TaskbarPaddingVertical,
+                                             YuiMonitor->BatteryWidth,
+                                             ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
+                                             YuiMonitor->hWndTaskbar,
+                                             (HMENU)(DWORD_PTR)YUI_BATTERY_DISPLAY,
+                                             NULL,
+                                             NULL);
+
+    if (YuiMonitor->hWndBattery == NULL) {
+        return FALSE;
+    }
+
+    SendMessage(YuiMonitor->hWndBattery,
+                WM_SETFONT,
+                (WPARAM)YuiMonitor->hFont,
+                MAKELPARAM(TRUE, 0));
+
+    //
+    //  Shrink the space for taskbar buttons and notify the taskbar to
+    //  recalculate
+    //
+
+    YuiMonitor->RightmostTaskbarOffset = (WORD)(YuiMonitor->ControlBorderWidth +
+                                                YuiMonitor->BatteryWidth +
+                                                3 +
+                                                YuiMonitor->ClockWidth +
+                                                YuiMonitor->TaskbarPaddingHorizontal);
+    if (!YuiContext->DisplayResolutionChangeInProgress) {
+        YuiTaskbarNotifyResolutionChange(YuiMonitor);
+        YuiContext->DisplayResolutionChangeInProgress = FALSE;
+    }
+    return TRUE;
+}
+
 
 // vim:sw=4:ts=4:et:

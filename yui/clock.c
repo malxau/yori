@@ -145,6 +145,30 @@ YuiClockUpdate(
     }
     YoriLibFreeStringContents(&DisplayTime);
 
+    //
+    //  If this program doesn't think a battery exists, query it and see if
+    //  it starts to exist.  This happens because early after boot the
+    //  battery system is not initialized yet, but we want the login shell
+    //  to display it once initialization is done.
+    //
+
+    if (!YuiContext->DisplayBattery &&
+        DllKernel32.pGetSystemPowerStatus != NULL) {
+
+        if (DllKernel32.pGetSystemPowerStatus(&PowerStatus) &&
+            (PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) == 0) {
+
+            YuiMonitor = NULL;
+            YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+            while (YuiMonitor != NULL) {
+                YuiInitializeBatteryWindow(YuiMonitor);
+                YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
+            }
+
+            YuiContext->DisplayBattery = TRUE;
+        }
+    }
+
     if (YuiContext->DisplayBattery) {
         DllKernel32.pGetSystemPowerStatus(&PowerStatus);
 

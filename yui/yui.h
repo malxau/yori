@@ -1050,6 +1050,11 @@ YuiResetWorkArea(
     __in BOOLEAN Notify
     );
 
+BOOL
+YuiInitializeBatteryWindow(
+    __in PYUI_MONITOR YuiMonitor
+    );
+
 BOOLEAN
 YuiIconCacheInitializeContext(
     __in PYUI_CONTEXT YuiContext

@@ -1329,36 +1329,6 @@ YuiInitializeMonitor(
 
     SendMessage(YuiMonitor->hWndClock, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
-    if (Context->DisplayBattery) {
-        YuiMonitor->hWndBattery = CreateWindowEx(0,
-                                                 _T("STATIC"),
-                                                 _T(""),
-                                                 SS_OWNERDRAW | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
-                                                 ClientRect.right - YuiMonitor->ClockWidth - 3 - YuiMonitor->BatteryWidth - YuiMonitor->TaskbarPaddingHorizontal,
-                                                 YuiMonitor->TaskbarPaddingVertical,
-                                                 YuiMonitor->BatteryWidth,
-                                                 ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
-                                                 YuiMonitor->hWndTaskbar,
-                                                 (HMENU)(DWORD_PTR)YUI_BATTERY_DISPLAY,
-                                                 NULL,
-                                                 NULL);
-
-        if (YuiMonitor->hWndBattery == NULL) {
-            YuiCleanupGlobalState();
-            return FALSE;
-        }
-
-        SendMessage(YuiMonitor->hWndBattery,
-                    WM_SETFONT,
-                    (WPARAM)YuiMonitor->hFont,
-                    MAKELPARAM(TRUE, 0));
-        YuiMonitor->RightmostTaskbarOffset = (WORD)(YuiMonitor->ControlBorderWidth +
-                                                    YuiMonitor->BatteryWidth +
-                                                    3 +
-                                                    YuiMonitor->ClockWidth +
-                                                    YuiMonitor->TaskbarPaddingHorizontal);
-    }
-
     return TRUE;
 }
 
@@ -1561,16 +1531,6 @@ YuiInitializeApplication(
     YoriLibInitEmptyString(&Context->BatteryDisplayedValue);
     Context->BatteryDisplayedValue.StartOfString = Context->BatteryDisplayedValueBuffer;
     Context->BatteryDisplayedValue.LengthAllocated = sizeof(Context->BatteryDisplayedValueBuffer)/sizeof(Context->BatteryDisplayedValueBuffer[0]);
-
-    if (DllKernel32.pGetSystemPowerStatus != NULL) {
-        YORI_SYSTEM_POWER_STATUS PowerStatus;
-
-        if (DllKernel32.pGetSystemPowerStatus(&PowerStatus) &&
-            (PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) == 0) {
-
-            Context->DisplayBattery = TRUE;
-        }
-    }
 
     YuiInitializeMonitors(Context);
     NoActivate = WS_EX_NOACTIVATE;
