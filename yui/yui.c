@@ -1329,6 +1329,10 @@ YuiInitializeMonitor(
 
     SendMessage(YuiMonitor->hWndClock, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
+    if (YuiContext.DisplayBattery) {
+        YuiInitializeBatteryWindow(YuiMonitor);
+    }
+
     return TRUE;
 }
 
