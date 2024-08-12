@@ -427,7 +427,7 @@ HexEditSaveFile(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING FileName,
     __in DWORDLONG DataOffset,
-    __in YORI_ALLOC_SIZE_T DataLength
+    __in DWORDLONG DataLength
     )
 {
     YORI_ALLOC_SIZE_T Index;
@@ -441,6 +441,7 @@ HexEditSaveFile(
     BOOLEAN ReplaceSucceeded;
     PUCHAR Buffer;
     YORI_ALLOC_SIZE_T BufferLength;
+    YORI_ALLOC_SIZE_T EffectiveDataLength;
     DWORD BufferWritten;
     YORI_STRING Text;
     YORI_STRING Title;
@@ -455,6 +456,13 @@ HexEditSaveFile(
         YoriLibConstantString(&Text, _T("Cannot save: file name not specified"));
         goto DisplayErrorAndFail;
     }
+
+    if (!YoriLibIsSizeAllocatable(DataLength)) {
+        YoriLibConstantString(&Text, _T("Cannot save: device size too large"));
+        goto DisplayErrorAndFail;
+    }
+
+    EffectiveDataLength = (YORI_ALLOC_SIZE_T)DataLength;
 
     ASSERT(YoriLibIsStringNullTerminated(FileName));
 
@@ -509,10 +517,10 @@ HexEditSaveFile(
 
     YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
 
-    if (DataLength != 0 &&
-        DataLength != BufferLength) {
+    if (EffectiveDataLength != 0 &&
+        EffectiveDataLength != BufferLength) {
 
-        YoriLibYPrintf(&Text, _T("Device length %i bytes does not match buffer length %i bytes"), DataLength, BufferLength);
+        YoriLibYPrintf(&Text, _T("Device length %i bytes does not match buffer length %i bytes"), EffectiveDataLength, BufferLength);
         goto DisplayErrorAndFail;
     }
 
@@ -605,6 +613,9 @@ HexEditSaveFile(
     } else {
         CloseHandle(WriteHandle);
     }
+
+    HexEditContext->DataOffset = DataOffset;
+    HexEditContext->DataLength = EffectiveDataLength;
 
     YoriLibFreeStringContents(&TempFileName);
     return TRUE;
@@ -850,6 +861,79 @@ HexEditOpenDialog(
 }
 
 /**
+ Display a save as dialog.  The save may be for files or devices.
+
+ @param Parent Handle to the main window.
+
+ @param HexEditContext Pointer to the hexedit context.
+
+ @param SaveDevice If TRUE, the save device dialog should be displayed.
+        If FALSE, the save file dialog should be displayed.
+ */
+VOID
+HexEditSaveAsDialog(
+    __in PYORI_WIN_CTRL_HANDLE Parent,
+    __in PHEXEDIT_CONTEXT HexEditContext,
+    __in BOOLEAN SaveDevice
+    )
+{
+    YORI_STRING Title;
+    YORI_STRING Text;
+    YORI_STRING FullName;
+    DWORDLONG DeviceOffset;
+    DWORDLONG DeviceLength;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
+    WinMgrHandle = YoriWinGetWindowManagerHandle(Parent);
+
+    YoriLibConstantString(&Title, _T("Save As"));
+    YoriLibInitEmptyString(&Text);
+
+    DeviceOffset = 0;
+    DeviceLength = 0;
+
+    if (SaveDevice) {
+        YoriDlgDevice(WinMgrHandle,
+                      &Title,
+                      0,
+                      NULL,
+                      &Text,
+                      &DeviceOffset,
+                      &DeviceLength);
+
+    } else {
+        YoriDlgFile(WinMgrHandle,
+                    &Title,
+                    0,
+                    NULL,
+                    &Text);
+    }
+
+    if (Text.LengthInChars == 0) {
+        YoriLibFreeStringContents(&Text);
+        return;
+    }
+    YoriLibInitEmptyString(&FullName);
+
+    if (!YoriLibUserStringToSingleFilePath(&Text, TRUE, &FullName)) {
+        YoriLibFreeStringContents(&Text);
+        return;
+    }
+
+    YoriLibFreeStringContents(&Text);
+
+    if (!HexEditSaveFile(HexEditContext, WinMgrHandle, &FullName, DeviceOffset, DeviceLength)) {
+        YoriLibFreeStringContents(&FullName);
+        return;
+    }
+
+    YoriLibFreeStringContents(&HexEditContext->OpenFileName);
+    memcpy(&HexEditContext->OpenFileName, &FullName, sizeof(YORI_STRING));
+    HexEditUpdateOpenedFileCaption(HexEditContext);
+    YoriWinHexEditSetModifyState(HexEditContext->HexEdit, FALSE);
+}
+
+/**
  A callback invoked when the open menu item is invoked.
 
  @param Ctrl Pointer to the menu bar control.
@@ -932,49 +1016,32 @@ HexEditSaveAsButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    YORI_STRING Title;
-    YORI_STRING Text;
-    YORI_STRING FullName;
     PHEXEDIT_CONTEXT HexEditContext;
-
     PYORI_WIN_CTRL_HANDLE Parent;
-    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
-    WinMgrHandle = YoriWinGetWindowManagerHandle(Parent);
 
-    YoriLibConstantString(&Title, _T("Save As"));
-    YoriLibInitEmptyString(&Text);
+    HexEditSaveAsDialog(Parent, HexEditContext, FALSE);
+}
 
-    YoriDlgFile(WinMgrHandle,
-                &Title,
-                0,
-                NULL,
-                &Text);
+/**
+ A callback invoked when the save as device menu item is invoked.
 
-    if (Text.LengthInChars == 0) {
-        YoriLibFreeStringContents(&Text);
-        return;
-    }
-    YoriLibInitEmptyString(&FullName);
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditSaveAsDeviceButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PHEXEDIT_CONTEXT HexEditContext;
+    PYORI_WIN_CTRL_HANDLE Parent;
 
-    if (!YoriLibUserStringToSingleFilePath(&Text, TRUE, &FullName)) {
-        YoriLibFreeStringContents(&Text);
-        return;
-    }
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
 
-    YoriLibFreeStringContents(&Text);
-    if (!HexEditSaveFile(HexEditContext, WinMgrHandle, &FullName, 0, 0)) {
-        return;
-    }
-
-    YoriLibFreeStringContents(&HexEditContext->OpenFileName);
-    memcpy(&HexEditContext->OpenFileName, &FullName, sizeof(YORI_STRING));
-    HexEditUpdateOpenedFileCaption(HexEditContext);
-    YoriWinHexEditSetModifyState(HexEditContext->HexEdit, FALSE);
-    HexEditContext->DataOffset = 0;
-    HexEditContext->DataLength = 0;
+    HexEditSaveAsDialog(Parent, HexEditContext, TRUE);
 }
 
 /**
@@ -2290,7 +2357,7 @@ HexEditPopulateMenuBar(
     __in PYORI_WIN_WINDOW_HANDLE Parent
     )
 {
-    YORI_WIN_MENU_ENTRY FileMenuEntries[7];
+    YORI_WIN_MENU_ENTRY FileMenuEntries[8];
     YORI_WIN_MENU_ENTRY EditMenuEntries[4];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[8];
@@ -2326,6 +2393,11 @@ HexEditPopulateMenuBar(
     YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("Save &As..."));
     FileMenuEntries[MenuIndex].NotifyCallback = HexEditSaveAsButtonClicked;
     MenuIndex++;
+
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("Save As Dev&ice..."));
+    FileMenuEntries[MenuIndex].NotifyCallback = HexEditSaveAsDeviceButtonClicked;
+    MenuIndex++;
+
     FileMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
     MenuIndex++;
 
