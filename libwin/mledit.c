@@ -4267,6 +4267,9 @@ YoriWinMultilineEditPasteText(
         return FALSE;
     }
 
+    YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+    YoriWinMultilineEditPaint(MultilineEdit);
+
     YoriLibFreeStringContents(&Text);
     return TRUE;
 }

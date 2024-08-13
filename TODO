@@ -23,7 +23,6 @@ fun to write.
  - Minimize in libwin, implying defining an icon form of a window
  - TreeView
  - Multi-column list
- - Edit reposition viewport after paste
  - Edit horizontal scroll bar
  - Edit parse vim tags
 
