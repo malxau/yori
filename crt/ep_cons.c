@@ -258,6 +258,8 @@ VOID __cdecl CONSOLE_CRT_ENTRYPOINT(void)
     int argc;
     int ret;
 
+    argc = 0;
+
     argv = mini_tcmdlinetoargs(GetCommandLine(), &argc);
     if (argv == NULL) {
         ret = EXIT_FAILURE;

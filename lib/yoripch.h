@@ -120,6 +120,15 @@
                                // annoying.
 #endif
 
+#if defined(_MSC_VER) && defined(_M_PPC)
+#pragma warning(disable: 4701) // Using uninitialized variable.  The PowerPC
+                               // compiler considers a pointer to a variable
+                               // to be "using" it, but that's how to
+                               // populate output parameters from functions,
+                               // so the warning here is quite overactive.
+#pragma warning(disable: 4310) // Cast truncates constant value
+#endif
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
 #pragma warning(disable: 26451) // Arithmetic overflow
 #if (_MSC_VER >= 1939)
