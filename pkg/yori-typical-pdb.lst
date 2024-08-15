@@ -26,7 +26,7 @@
 ..\hash\yhash.pdb|yhash.pdb
 ..\help\yhelp.pdb|yhelp.pdb
 ..\hexdump\hexdump.pdb|hexdump.pdb
-..\hexedit\yhexedit.pdb|hexedit.pdb
+..\hexedit\yhexedit.pdb|yhexedit.pdb
 ..\hilite\hilite.pdb|hilite.pdb
 ..\iconv\iconv.pdb|iconv.pdb
 ..\initool\initool.pdb|initool.pdb
