@@ -2104,143 +2104,6 @@ YoriWinMultilineEditRedo(
 //
 
 /**
- Merge two lines into one.  This occurs when the user deletes a line break.
-
- @param MultilineEdit Pointer to the multiline edit control.
-
- @param FirstLineIndex Specifies the first of two lines to merge.  The line
-        immediately following this line is the other line to merge.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinMultilineEditMergeLines(
-    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
-    __in YORI_ALLOC_SIZE_T FirstLineIndex
-    )
-{
-    PYORI_STRING Line[2];
-    YORI_ALLOC_SIZE_T LinesToCopy;
-
-    if (FirstLineIndex + 1 > MultilineEdit->LinesPopulated) {
-        return FALSE;
-    }
-
-    Line[0] = &MultilineEdit->LineArray[FirstLineIndex];
-    Line[1] = &MultilineEdit->LineArray[FirstLineIndex + 1];
-
-    if (Line[0]->LengthInChars + Line[1]->LengthInChars > Line[0]->LengthAllocated) {
-        YORI_STRING TargetLine;
-
-        if (!YoriLibAllocateString(&TargetLine, Line[0]->LengthInChars + Line[1]->LengthInChars + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
-            return FALSE;
-        }
-
-        memcpy(TargetLine.StartOfString, Line[0]->StartOfString, Line[0]->LengthInChars * sizeof(TCHAR));
-        TargetLine.LengthInChars = Line[0]->LengthInChars;
-        YoriLibFreeStringContents(Line[0]);
-        memcpy(Line[0], &TargetLine, sizeof(YORI_STRING));
-    }
-
-    memcpy(&Line[0]->StartOfString[Line[0]->LengthInChars], Line[1]->StartOfString, Line[1]->LengthInChars * sizeof(TCHAR));
-    Line[0]->LengthInChars = Line[0]->LengthInChars + Line[1]->LengthInChars;
-
-    YoriLibFreeStringContents(Line[1]);
-
-    LinesToCopy = MultilineEdit->LinesPopulated - FirstLineIndex - 2;
-    if (LinesToCopy > 0) {
-        memmove(&MultilineEdit->LineArray[FirstLineIndex + 1],
-                &MultilineEdit->LineArray[FirstLineIndex + 2],
-                LinesToCopy * sizeof(YORI_STRING));
-    }
-    MultilineEdit->LinesPopulated--;
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLineIndex, MultilineEdit->LinesPopulated);
-
-    return TRUE;
-}
-
-/**
- Split one line into two.  This occurs when the user presses enter.
-
- @param MultilineEdit Pointer to the multiline edit control.
-
- @param LineIndex Specifies the line to split.
-
- @param CharOffset Specifies the number of characters to include in the first
-        line.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinMultilineEditSplitLines(
-    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
-    __in YORI_ALLOC_SIZE_T LineIndex,
-    __in YORI_ALLOC_SIZE_T CharOffset
-    )
-{
-    PYORI_STRING Line[2];
-    YORI_STRING TargetLine;
-    YORI_ALLOC_SIZE_T LinesToCopy;
-    YORI_ALLOC_SIZE_T CharsNeededOnNewLine;
-
-    if (LineIndex >= MultilineEdit->LinesPopulated) {
-        return FALSE;
-    }
-
-    //
-    //  The caller should have reallocated the line array as needed before
-    //  calling this function.
-    //
-
-    ASSERT(LineIndex + 1 < MultilineEdit->LinesAllocated);
-    if (LineIndex + 1 >= MultilineEdit->LinesAllocated) {
-        return FALSE;
-    }
-
-    Line[0] = &MultilineEdit->LineArray[LineIndex];
-    Line[1] = &MultilineEdit->LineArray[LineIndex + 1];
-
-    //
-    //  If there is text to preserve from the end of the first line, allocate
-    //  a new line and copy the text into it.
-    //
-
-    if (CharOffset < Line[0]->LengthInChars) {
-        CharsNeededOnNewLine = Line[0]->LengthInChars - CharOffset;
-        if (!YoriLibAllocateString(&TargetLine, CharsNeededOnNewLine + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
-            return FALSE;
-        }
-
-        memcpy(TargetLine.StartOfString, &Line[0]->StartOfString[CharOffset], CharsNeededOnNewLine * sizeof(TCHAR));
-        TargetLine.LengthInChars = CharsNeededOnNewLine;
-        Line[0]->LengthInChars = CharOffset;
-    } else {
-        YoriLibInitEmptyString(&TargetLine);
-    }
-
-    //
-    //  If there are lines following this point, move them down.
-    //
-
-    LinesToCopy = MultilineEdit->LinesPopulated - LineIndex - 1;
-    if (LinesToCopy > 0) {
-        memmove(&MultilineEdit->LineArray[LineIndex + 2],
-                &MultilineEdit->LineArray[LineIndex + 1],
-                LinesToCopy * sizeof(YORI_STRING));
-    }
-
-    //
-    //  Copy the new line into position.
-    //
-
-    memcpy(Line[1], &TargetLine, sizeof(YORI_STRING));
-    MultilineEdit->LinesPopulated++;
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, LineIndex, MultilineEdit->LinesPopulated);
-
-    return TRUE;
-}
-
-/**
  Find the length in characters needed to store a single continuous string
  covering the specified range in a multiline edit control.
 
@@ -2619,6 +2482,19 @@ YoriWinMultilineEditDeleteTextRange(
     if (!ProcessingBackspace) {
         MultilineEdit->AutoIndentApplied = FALSE;
     }
+
+    //
+    //  In the majority of cases, selection ought to be cleared due to the
+    //  input that triggered the operation.  It's cleared here
+    //  unconditionally though because maintaining the same text range as
+    //  selected implies manipulating the selection range to reflect
+    //  changes earlier in the buffer (eg. if lines 3-5 are selected and
+    //  line 2 is deleted, selection logically moves up.)  Sometimes all
+    //  text selected is being deleted, and the selection would need to
+    //  be cleared anyway.
+    //
+
+    YoriWinMultilineEditClearSelection(MultilineEdit);
 
     if (!ProcessingUndo) {
         BOOLEAN RangeBeforeExistingRange;
