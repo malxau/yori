@@ -1171,7 +1171,7 @@ CoCreateSynchronousMenu(VOID)
     DWORD_PTR Result;
     YORI_STRING SortStrings[CoSortBeyondMaximum];
 
-    if (!YoriWinOpenWindowManager(FALSE, &WinMgr)) {
+    if (!YoriWinOpenWindowManager(FALSE, YoriWinColorTableDefault, &WinMgr)) {
         return FALSE;
     }
 

@@ -52,6 +52,16 @@ typedef VOID YORI_WIN_NOTIFY(PYORI_WIN_CTRL_HANDLE);
  */
 typedef YORI_WIN_NOTIFY *PYORI_WIN_NOTIFY;
 
+/**
+ A list of possible color tables to use.
+ */
+typedef enum _YORI_WIN_COLOR_TABLE_ID {
+    YoriWinColorTableDefault = 0,
+    YoriWinColorTableVga = 1,
+    YoriWinColorTableNano = 2,
+    YoriWinColorTableMono = 3
+} YORI_WIN_COLOR_TABLE_ID;
+
 // BUTTON.C
 
 BOOLEAN
@@ -1208,6 +1218,7 @@ __success(return)
 BOOLEAN
 YoriWinOpenWindowManager(
     __in BOOLEAN UseAlternateBuffer,
+    __in YORI_WIN_COLOR_TABLE_ID ColorTableId,
     __out PYORI_WIN_WINDOW_MANAGER_HANDLE *WinMgrHandle
     );
 

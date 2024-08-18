@@ -565,7 +565,9 @@ typedef enum _YORI_WIN_COLOR_ID {
 } YORI_WIN_COLOR_ID;
 
 YORI_WIN_COLOR_TABLE_HANDLE
-YoriWinGetDefaultColorTable(VOID);
+YoriWinGetColorTable(
+    __in YORI_WIN_COLOR_TABLE_ID ColorTableId
+    );
 
 UCHAR
 YoriWinDefaultColorLookup(

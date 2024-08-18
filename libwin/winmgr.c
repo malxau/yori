@@ -517,6 +517,9 @@ YoriWinCloseWindowManager(
         buffer.  This is useful for full screen applications.  If FALSE, the
         existing buffer is used.
 
+ @param ColorTableId Specifies the color scheme to use.  Should generally be
+        YoriWinColorTableDefault, but can be overridden if needed.
+
  @param WinMgrHandle On successful completion, populated with a pointer to the
         window manager.
 
@@ -526,6 +529,7 @@ __success(return)
 BOOLEAN
 YoriWinOpenWindowManager(
     __in BOOLEAN UseAlternateBuffer,
+    __in YORI_WIN_COLOR_TABLE_ID ColorTableId,
     __out PYORI_WIN_WINDOW_MANAGER_HANDLE *WinMgrHandle
     )
 {
@@ -539,6 +543,7 @@ YoriWinOpenWindowManager(
         return FALSE;
     }
 
+    WinMgr->hConOut = NULL;
     WinMgr->hConOriginal = NULL;
     WinMgr->SavedContents = NULL;
     WinMgr->Contents = NULL;
@@ -561,7 +566,11 @@ YoriWinOpenWindowManager(
     WinMgr->MinimumSize.X = 60;
     WinMgr->MinimumSize.Y = 20;
 
-    WinMgr->ColorTable = YoriWinGetDefaultColorTable();
+    WinMgr->ColorTable = YoriWinGetColorTable(ColorTableId);
+    if (WinMgr->ColorTable == NULL) {
+        YoriWinCloseWindowManager(WinMgr);
+        return FALSE;
+    }
     WinMgr->hConOut = CreateFile(_T("CONOUT$"), GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
     if (WinMgr->hConOut == INVALID_HANDLE_VALUE) {
         WinMgr->hConOut = NULL;

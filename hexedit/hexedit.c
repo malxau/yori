@@ -2675,7 +2675,7 @@ HexEditCreateMainWindow(
     YORI_STRING Caption;
     DWORD Style;
 
-    if (!YoriWinOpenWindowManager(TRUE, &WinMgr)) {
+    if (!YoriWinOpenWindowManager(TRUE, YoriWinColorTableDefault, &WinMgr)) {
         return FALSE;
     }
 

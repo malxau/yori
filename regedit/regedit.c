@@ -1984,7 +1984,7 @@ RegeditCreateMainWindow(
     DWORD_PTR Result;
     COORD WinMgrSize;
 
-    if (!YoriWinOpenWindowManager(TRUE, &WinMgr)) {
+    if (!YoriWinOpenWindowManager(TRUE, YoriWinColorTableDefault, &WinMgr)) {
         return FALSE;
     }
 

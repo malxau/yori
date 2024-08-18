@@ -109,7 +109,7 @@ WinTest(VOID)
     DWORD_PTR Result;
     YORI_STRING Title;
 
-    if (!YoriWinOpenWindowManager(FALSE, &WinMgr)) {
+    if (!YoriWinOpenWindowManager(FALSE, YoriWinColorTableDefault, &WinMgr)) {
         return FALSE;
     }
 

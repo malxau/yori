@@ -285,7 +285,7 @@ HistoryCreateSynchronousMenu(
         return FALSE;
     }
 
-    if (!YoriWinOpenWindowManager(FALSE, &WinMgr)) {
+    if (!YoriWinOpenWindowManager(FALSE, YoriWinColorTableDefault, &WinMgr)) {
         return FALSE;
     }
 

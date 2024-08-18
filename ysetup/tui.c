@@ -342,7 +342,7 @@ SetupTuiDisplayUi(VOID)
     DWORD ElementCount;
     DWORD_PTR Result;
 
-    if (!YoriWinOpenWindowManager(FALSE, &WinMgr)) {
+    if (!YoriWinOpenWindowManager(FALSE, YoriWinColorTableDefault, &WinMgr)) {
         return FALSE;
     }
 

@@ -226,7 +226,7 @@ SlmenuCreateSinglelineMenu(
         return FALSE;
     }
 
-    if (!YoriWinOpenWindowManager(FALSE, &WinMgr)) {
+    if (!YoriWinOpenWindowManager(FALSE, YoriWinColorTableDefault, &WinMgr)) {
         return FALSE;
     }
 
@@ -397,7 +397,7 @@ SlmenuCreateMultilineMenu(
         return FALSE;
     }
 
-    if (!YoriWinOpenWindowManager(FALSE, &WinMgr)) {
+    if (!YoriWinOpenWindowManager(FALSE, YoriWinColorTableDefault, &WinMgr)) {
         return FALSE;
     }
 

@@ -3,7 +3,7 @@
  *
  * Yori shell text editor
  *
- * Copyright (c) 2020-2023 Malcolm J. Smith
+ * Copyright (c) 2020-2024 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,9 +38,10 @@ CHAR strEditHelpText[] =
         "\n"
         "Displays editor.\n"
         "\n"
-        "EDIT [-license] [-a] [-e encoding] [-r] [filename]\n"
+        "EDIT [-license] [-a] [-b] [-e encoding] [-r] [filename]\n"
         "\n"
         "   -a             Use ASCII characters for drawing\n"
+        "   -b             Use black and white display\n"
         "   -e <encoding>  Specifies the character encoding to use\n"
         "   -r             Open file as read only\n";
 
@@ -48,7 +49,7 @@ CHAR strEditHelpText[] =
  The copyright year string to display with license text.
  */
 const
-TCHAR strEditCopyrightYear[] = _T("2020-2023");
+TCHAR strEditCopyrightYear[] = _T("2020-2024");
 
 /**
  Display usage text to the user.
@@ -215,6 +216,12 @@ typedef struct _EDIT_CONTEXT {
      the previous line, or right at the end of a line moves to the next line.
      */
     BOOLEAN TraditionalNavigation;
+
+    /**
+     If TRUE, the display should be black and white with no color.  FALSE
+     is default, using a blue background.
+     */
+    BOOLEAN UseMonoDisplay;
 
     /**
      TRUE to use only 7 bit ASCII characters for visual display.
@@ -3092,8 +3099,14 @@ EditCreateMainWindow(
     PYORI_WIN_CTRL_HANDLE StatusBar;
     DWORD_PTR Result;
     YORI_STRING Caption;
+    YORI_WIN_COLOR_TABLE_ID ColorTableId;
 
-    if (!YoriWinOpenWindowManager(TRUE, &WinMgr)) {
+    ColorTableId = YoriWinColorTableDefault;
+    if (EditContext->UseMonoDisplay) {
+        ColorTableId = YoriWinColorTableMono;
+    }
+
+    if (!YoriWinOpenWindowManager(TRUE, ColorTableId, &WinMgr)) {
         return FALSE;
     }
 
@@ -3170,9 +3183,15 @@ EditCreateMainWindow(
     EditContext->StatusBar = StatusBar;
 
     if (YoriLibDoesSystemSupportBackgroundColors()) {
-        YoriWinMultilineEditSetColor(MultilineEdit,
-                                     BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
-                                     BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
+        if (EditContext->UseMonoDisplay) {
+            YoriWinMultilineEditSetColor(MultilineEdit,
+                                         FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+                                         BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
+        } else {
+            YoriWinMultilineEditSetColor(MultilineEdit,
+                                         BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+                                         BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
+        }
     }
     YoriWinMultilineEditSetCursorMoveNotifyCallback(MultilineEdit, EditNotifyCursorMove);
 
@@ -3286,6 +3305,9 @@ ENTRYPOINT(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 GlobalEditContext.UseAsciiDrawing = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+                GlobalEditContext.UseMonoDisplay = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 if (ArgC > i + 1) {
