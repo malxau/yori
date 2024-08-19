@@ -1936,6 +1936,82 @@ YoriShSelectToBufferOffset(
 }
 
 /**
+ Scroll the viewport for a page up operation.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShProcessPageUp(
+    __inout PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    HANDLE ConsoleHandle;
+    SHORT LinesToScroll;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    ConsoleHandle = Buffer->ConsoleOutputHandle;
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    LinesToScroll = (SHORT)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top);
+    if (ScreenInfo.srWindow.Top > 0) {
+        if (ScreenInfo.srWindow.Top > LinesToScroll) {
+            ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top - LinesToScroll);
+            ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - LinesToScroll);
+        } else {
+            ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top);
+            ScreenInfo.srWindow.Top = 0;
+        }
+    }
+
+    SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
+
+    return FALSE;
+}
+
+/**
+ Scroll the viewport for a page down operation.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShProcessPageDown(
+    __inout PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    HANDLE ConsoleHandle;
+    SHORT LinesToScroll;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    ConsoleHandle = Buffer->ConsoleOutputHandle;
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    LinesToScroll = (SHORT)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top);
+    if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - 1) {
+        if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - LinesToScroll - 1) {
+            ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + LinesToScroll);
+            ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom + LinesToScroll);
+        } else {
+            ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + (ScreenInfo.dwSize.Y - ScreenInfo.srWindow.Bottom - 1));
+            ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.dwSize.Y - 1);
+        }
+    }
+
+    SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
+
+    return FALSE;
+}
+
+/**
  Process a key that is typically an enhanced key, including arrows, insert,
  delete, home, end, etc.  The "normal" placement of these keys is as enhanced,
  but the original XT keys are the ones on the number pad when num lock is off,
@@ -2021,6 +2097,12 @@ YoriShProcessEnhancedKeyDown(
             YoriShClearInputSelections(Buffer);
             return TRUE;
         }
+    } else if (KeyCode == VK_PRIOR) {
+        YoriShProcessPageUp(Buffer);
+        return TRUE;
+    } else if (KeyCode == VK_NEXT) {
+        YoriShProcessPageDown(Buffer);
+        return TRUE;
     } else if (KeyCode == VK_DIVIDE) {
         YORI_STRING KeyString;
         YoriLibConstantString(&KeyString, _T("/"));
@@ -2931,7 +3013,6 @@ YoriShProcessMouseScroll(
     SHORT LinesToScroll;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
 
-    UNREFERENCED_PARAMETER(Buffer);
     UNREFERENCED_PARAMETER(ButtonsPressed);
     UNREFERENCED_PARAMETER(TerminateInput);
 
