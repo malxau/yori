@@ -536,6 +536,7 @@ YuiNotifyResolutionChange(
                               YuiMonitor->BatteryWidth,
                               ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
                               TRUE);
+        RedrawWindow(YuiMonitor->hWndBattery, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);
     }
 
     if (YuiMonitor->hWndClock != NULL) {
@@ -545,6 +546,7 @@ YuiNotifyResolutionChange(
                               YuiMonitor->ClockWidth,
                               ClientRect.bottom - 2 * YuiMonitor->TaskbarPaddingVertical,
                               TRUE);
+        RedrawWindow(YuiMonitor->hWndClock, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);
     }
 
     if (YuiMonitor->hWndStart != NULL) {
@@ -826,7 +828,7 @@ YuiTaskbarWindowProc(
                     YuiTaskbarSyncWithCurrent(&YuiContext);
                     break;
                 case YUI_CLOCK_TIMER:
-                    YuiClockUpdate(&YuiContext);
+                    YuiClockUpdate(&YuiContext, FALSE);
                     break;
             }
             return 0;
@@ -1329,9 +1331,22 @@ YuiInitializeMonitor(
 
     SendMessage(YuiMonitor->hWndClock, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
+    //
+    //  If the application already knows about a battery, initialize it on
+    //  this taskbar.  This is used when a new taskbar is created in a
+    //  monitor reconfiguration.
+    //
+
     if (YuiContext.DisplayBattery) {
         YuiInitializeBatteryWindow(YuiMonitor);
     }
+
+    //
+    //  Redraw the clock text, even if the clock text hasn't changed, because
+    //  this clock may not have received it yet.
+    //
+
+    YuiClockUpdate(&YuiContext, TRUE);
 
     return TRUE;
 }
@@ -1659,7 +1674,7 @@ YuiInitializeApplication(
         }
     }
 
-    YuiClockUpdate(Context);
+    YuiClockUpdate(Context, TRUE);
 
     YuiAdjustAllWorkAreasAndHideExplorer(Context);
 

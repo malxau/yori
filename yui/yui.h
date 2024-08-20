@@ -1340,7 +1340,8 @@ YuiClockDisplayBatteryInfo(
 
 VOID
 YuiClockUpdate(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext,
+    __in BOOLEAN ForceUpdate
     );
 
 LRESULT CALLBACK

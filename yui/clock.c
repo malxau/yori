@@ -87,10 +87,14 @@ YuiClockDisplayBatteryInfo(
  taskbar.
 
  @param YuiContext Pointer to the application context.
+
+ @param ForceUpdate If TRUE, text is redrawn even if it hasn't changed.  If
+        FALSE, text is only drawn when it changes.
  */
 VOID
 YuiClockUpdate(
-    __in PYUI_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext,
+    __in BOOLEAN ForceUpdate
     )
 {
     YORI_STRING DisplayTime;
@@ -119,7 +123,9 @@ YuiClockUpdate(
 
     YoriLibYPrintf(&DisplayTime, _T("%i:%02i %s"), DisplayHour, CurrentLocalTime.wMinute, (CurrentLocalTime.wHour >= 12)?_T("PM"):_T("AM"));
 
-    if (YoriLibCompareString(&DisplayTime, &YuiContext->ClockDisplayedValue) != 0) {
+    if (ForceUpdate ||
+        YoriLibCompareString(&DisplayTime, &YuiContext->ClockDisplayedValue) != 0) {
+
         if (DisplayTime.LengthInChars < YuiContext->ClockDisplayedValue.LengthAllocated) {
             memcpy(YuiContext->ClockDisplayedValue.StartOfString,
                    DisplayTime.StartOfString,
