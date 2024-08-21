@@ -44,6 +44,11 @@ DWORD CachedMinorOsVersion;
 DWORD CachedBuildNumber;
 
 /**
+ Previously returned system page size.
+ */
+DWORD CachedPageSize;
+
+/**
  Background support has been determined.
  */
 BOOLEAN YoriLibBackgroundColorSupportDetermined;
@@ -637,11 +642,41 @@ YoriLibIsRunningUnderSsh(VOID)
 YORI_ALLOC_SIZE_T
 YoriLibGetPageSize(VOID)
 {
-#if defined(_M_ALPHA)
-    return 0x2000;
-#else
-    return 0x1000;
-#endif
+    YORI_SYSTEM_INFO SysInfo;
+    DWORD ValidPageSize;
+
+    //
+    //  If the page size is known, return it.
+    //
+    if (CachedPageSize != 0) {
+        return CachedPageSize;
+    }
+
+
+    //
+    //  Ask the system for the page size.
+    //
+    SysInfo.dwPageSize = 0;
+    GetSystemInfo((LPSYSTEM_INFO)&SysInfo);
+
+    //
+    //  Check if the page size is a power of 2, 4Kb or greater, and 1Mb or
+    //  smaller.  If these criteria aren't met, assume this value is bogus.
+    //
+
+    for (ValidPageSize = 0x1000; ValidPageSize <= 0x100000; ValidPageSize = (ValidPageSize<<1)) {
+        if (ValidPageSize == SysInfo.dwPageSize) {
+            CachedPageSize = SysInfo.dwPageSize;
+            return CachedPageSize;
+        }
+    }
+
+    //
+    //  Default to 4Kb, which is highly likely to be correct.
+    //
+
+    CachedPageSize = 0x1000;
+    return CachedPageSize;
 }
 
 /**
