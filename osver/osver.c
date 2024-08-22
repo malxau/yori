@@ -153,7 +153,8 @@ OSVER_BUILD_DESCRIPTION OsVerBuildDescriptions[] = {
     {20348, "Windows Server 2022"},
     {22000, "Windows 11"},
     {22621, "Windows 11 22H2"},
-    {22631, "Windows 11 23H2"}
+    {22631, "Windows 11 23H2"},
+    {26100, "Windows 11 24H2"}
 };
 
 /**
