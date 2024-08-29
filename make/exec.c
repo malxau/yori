@@ -1158,13 +1158,20 @@ Drain:
             ProcessHandleArray[Index] = ChildRecipeArray[Index].ProcessHandle;
         }
 
+        //
+        //  If all have active processes, wait for one to complete, then clean
+        //  up the one that did.  If Index != NumberActiveProcesses, it means
+        //  no handle was found above, so there's nothing to wait for, and
+        //  the entry needs to be cleaned up.
+        //
+
         if (Index == NumberActiveProcesses) {
             Index = WaitForMultipleObjectsEx(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE, FALSE);
             Index = Index - WAIT_OBJECT_0;
-
-            MakeProcessCompletion(MakeContext, &ChildRecipeArray[Index]);
-            MakeRecipeCompletion(MakeContext, &ChildRecipeArray[Index]);
         }
+
+        MakeProcessCompletion(MakeContext, &ChildRecipeArray[Index]);
+        MakeRecipeCompletion(MakeContext, &ChildRecipeArray[Index]);
 
         if (NumberActiveProcesses > Index + 1) {
             memmove(&ChildRecipeArray[Index],
