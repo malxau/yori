@@ -2635,7 +2635,12 @@ YoriWinEditEventHandler(
             } else if (Event->KeyDown.CtrlMask == LEFT_CTRL_PRESSED ||
                        Event->KeyDown.CtrlMask == RIGHT_CTRL_PRESSED) {
 
-                if (Event->KeyDown.VirtualKeyCode == 'C') {
+                if (Event->KeyDown.VirtualKeyCode == 'A') {
+                    if (Edit->Text.LengthInChars > 0) {
+                        YoriWinEditSetSelectionRange(Ctrl, 0, Edit->Text.LengthInChars);
+                    }
+                    return TRUE;
+                } else if (Event->KeyDown.VirtualKeyCode == 'C') {
                     if (YoriWinEditCopySelectedText(Ctrl)) {
                         Edit->Selection.Active = YoriWinEditSelectNotActive;
                         YoriWinEditEnsureCursorVisible(Edit);
