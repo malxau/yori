@@ -1202,6 +1202,16 @@ YoriLibRtfConvertToRtfFromVt(
     __in_opt PDWORD ColorTable
     );
 
+// *** DBLCLK.C ***
+
+BOOL
+YoriLibGetSelectionDoubleClickBreakChars(
+    __out PYORI_STRING BreakChars
+    );
+
+BOOL
+YoriLibIsYoriQuickEditEnabled(VOID);
+
 // *** DEBUG.C ***
 
 
@@ -3654,11 +3664,6 @@ YoriLibCopySelectionIfPresent(
     __in PYORILIB_SELECTION Selection
     );
 
-BOOL
-YoriLibGetSelectionDoubleClickBreakChars(
-    __out PYORI_STRING BreakChars
-    );
-
 WORD
 YoriLibGetSelectionColor(
     __in HANDLE ConsoleHandle
@@ -3669,9 +3674,6 @@ YoriLibSetSelectionColor(
     __in PYORILIB_SELECTION Selection,
     __in WORD SelectionColor
     );
-
-BOOL
-YoriLibIsYoriQuickEditEnabled(VOID);
 
 // *** STRARRAY.C ***
 

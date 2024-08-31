@@ -21,6 +21,7 @@ OBJS=\
 	 cvtcons.obj  \
 	 cvthtml.obj  \
 	 cvtrtf.obj   \
+	 dblclk.obj   \
 	 debug.obj    \
 	 dyld.obj     \
 	 dyld_adv.obj \
