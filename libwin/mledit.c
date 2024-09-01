@@ -4598,6 +4598,82 @@ YoriWinMultilineEditClear(
 }
 
 /**
+ Indicate if auto indent is enabled, if an auto indent line is currently
+ active, which line it is, and the extent of the indent.
+
+ @param CtrlHandle Pointer to a multiline edit control.
+
+ @param AutoIndentEnabled Optionally points to a boolean that will be written
+        within this function to indicate whether auto indent can be applied or
+        not.
+
+ @param AutoIndentActive Optionally points to a boolean that will be written
+        within this function to indicate whether auto indent is currently
+        active on any line.
+
+ @param AutoIndentActiveLine Optionally points to an integer that will be
+        written within this function to indicate the line index that has
+        auto indent applied.  This is only meaningful if AutoIndentActive is
+        TRUE.
+
+ @param AutoIndentActiveLength Optionally points to an integer that will be
+        written within this function to indicate the length of the auto
+        indent.  This is only meaningful if AutoIndentActive is TRUE.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditGetAutoIndent(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out_opt PBOOLEAN AutoIndentEnabled,
+    __out_opt PBOOLEAN AutoIndentActive,
+    __out_opt PYORI_ALLOC_SIZE_T AutoIndentActiveLine,
+    __out_opt PYORI_ALLOC_SIZE_T AutoIndentActiveLength
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (AutoIndentEnabled != NULL) {
+        if (MultilineEdit->AutoIndent) {
+            *AutoIndentEnabled = TRUE;
+        } else {
+            *AutoIndentEnabled = FALSE;
+        }
+    }
+
+    if (AutoIndentActive != NULL) {
+        if (MultilineEdit->AutoIndentApplied) {
+            *AutoIndentActive = TRUE;
+        } else {
+            *AutoIndentActive = FALSE;
+        }
+    }
+
+    if (AutoIndentActiveLine != NULL) {
+        if (MultilineEdit->AutoIndentApplied) {
+            *AutoIndentActiveLine = MultilineEdit->AutoIndentAppliedLine;
+        } else {
+            *AutoIndentActiveLine = 0;
+        }
+    }
+
+    if (AutoIndentActiveLength != NULL) {
+        if (MultilineEdit->AutoIndentApplied) {
+            *AutoIndentActiveLength = MultilineEdit->AutoIndentSourceLength;
+        } else {
+            *AutoIndentActiveLength = 0;
+        }
+    }
+
+    return TRUE;
+}
+
+
+/**
  Return the number of lines with data in a multiline edit control.
 
  @param CtrlHandle Pointer to the multiline edit control.
@@ -4832,9 +4908,20 @@ YoriWinMultilineEditSetAutoIndent(
 {
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    YORI_ALLOC_SIZE_T LineIndex;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (!AutoIndentEnabled && MultilineEdit->AutoIndentApplied) {
+        LineIndex = MultilineEdit->AutoIndentAppliedLine;
+        if (YoriWinMultilineEditTrimAutoIndent(MultilineEdit, LineIndex, 0)) {
+            YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, 0, LineIndex);
+            YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+            YoriWinMultilineEditPaint(MultilineEdit);
+        }
+    }
+
     MultilineEdit->AutoIndent = AutoIndentEnabled;
 }
 

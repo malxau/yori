@@ -905,6 +905,15 @@ YoriWinMultilineEditSetColor(
     __in WORD SelectedAttributes
     );
 
+BOOLEAN
+YoriWinMultilineEditGetAutoIndent(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out_opt PBOOLEAN AutoIndentEnabled,
+    __out_opt PBOOLEAN AutoIndentActive,
+    __out_opt PYORI_ALLOC_SIZE_T AutoIndentActiveLine,
+    __out_opt PYORI_ALLOC_SIZE_T AutoIndentActiveLength
+    );
+
 YORI_ALLOC_SIZE_T
 YoriWinMultilineEditGetLineCount(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle

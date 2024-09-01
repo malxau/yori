@@ -727,6 +727,8 @@ EditSaveFile(
     __in PYORI_STRING FileName
     )
 {
+    BOOLEAN AutoIndentActive;
+    YORI_ALLOC_SIZE_T AutoIndentLine;
     YORI_ALLOC_SIZE_T LineIndex;
     YORI_ALLOC_SIZE_T LineCount;
     DWORD SavedEncoding;
@@ -776,6 +778,8 @@ EditSaveFile(
         return FALSE;
     }
 
+    YoriWinMultilineEditGetAutoIndent(EditContext->MultilineEdit, NULL, &AutoIndentActive, &AutoIndentLine, NULL);
+
     //
     //  Write all of the lines to the temporary file and abort on failure.
     //
@@ -818,7 +822,13 @@ EditSaveFile(
     YoriLibSetMultibyteOutputEncoding(EditContext->Encoding);
     for (LineIndex = 0; LineIndex < LineCount; LineIndex++) {
         Line = YoriWinMultilineEditGetLineByIndex(EditContext->MultilineEdit, LineIndex);
-        if (Line->LengthInChars > 0) {
+        //
+        //  We only need to write lines with contents.  If the line is only
+        //  auto indent, then pretend it's empty since the user hasn't
+        //  written anything there.
+        //
+
+        if (Line->LengthInChars > 0 && (!AutoIndentActive || LineIndex != AutoIndentLine)) {
             if (!YoriLibOutputTextToMultibyteDevice(TempHandle, Line)) {
                 CloseHandle(TempHandle);
                 DeleteFile(TempFileName.StartOfString);
