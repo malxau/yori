@@ -992,12 +992,6 @@ YoriWinMultilineEditSetExpandTab(
     );
 
 VOID
-YoriWinMultilineEditSetTrimTrailingWhitespace(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in BOOLEAN TrimTrailingWhitespaceEnabled
-    );
-
-VOID
 YoriWinMultilineEditSetTraditionalNavigation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in BOOLEAN TraditionalNavigationEnabled

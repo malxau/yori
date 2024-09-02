@@ -168,11 +168,6 @@ typedef struct _EDIT_CONTEXT {
     DWORD OptionsExpandTabMenuIndex;
 
     /**
-     The index of the trim trailing whitespace item in the options menu.
-     */
-    DWORD OptionsTrimTrailingWhitespaceMenuIndex;
-
-    /**
      The number of space characters to display for each tab character.  This
      is temporarily initialized to -1 to indicate the edit control should
      use a default value.
@@ -202,12 +197,6 @@ typedef struct _EDIT_CONTEXT {
      space characters.  FALSE if a tab key press should be a tab character.
      */
     BOOLEAN ExpandTab;
-
-    /**
-     TRUE to remove trailing whitespace at the end of a line on navigation.
-     FALSE to retain trailing whitespace.
-     */
-    BOOLEAN TrimTrailingWhitespace;
 
     /**
      TRUE to enable traditional MS-DOS edit navigation, where the cursor can
@@ -326,16 +315,6 @@ EditLoadDefaults(
             EditContext->TraditionalNavigation = TRUE;
         } else {
             EditContext->TraditionalNavigation = FALSE;
-        }
-    }
-
-    ValueSize = sizeof(Value);
-    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("TrimTrailingWhitespace"), NULL, &Type, (LPBYTE)&Value, &ValueSize);
-    if (Err == ERROR_SUCCESS && Type == REG_DWORD && ValueSize == sizeof(DWORD)) {
-        if (Value != 0) {
-            EditContext->TrimTrailingWhitespace = TRUE;
-        } else {
-            EditContext->TrimTrailingWhitespace = FALSE;
         }
     }
 
@@ -2457,41 +2436,6 @@ EditExpandTabOptionsButtonClicked(
 }
 
 /**
- A callback invoked when the trim trailing whitespace options menu item is
- invoked.
-
- @param Ctrl Pointer to the menu bar control.
- */
-VOID
-EditTrimTrailingWhitespaceOptionsButtonClicked(
-    __in PYORI_WIN_CTRL_HANDLE Ctrl
-    )
-{
-    PYORI_WIN_CTRL_HANDLE Parent;
-    PYORI_WIN_CTRL_HANDLE OptionsMenu;
-    PYORI_WIN_CTRL_HANDLE TrimTrailingWhitespaceMenuItem;
-
-    PEDIT_CONTEXT EditContext;
-    Parent = YoriWinGetControlParent(Ctrl);
-    EditContext = YoriWinGetControlContext(Parent);
-
-    OptionsMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, EditContext->OptionsMenuIndex);
-    TrimTrailingWhitespaceMenuItem = YoriWinMenuBarGetSubmenuHandle(Ctrl,
-                                                                    OptionsMenu,
-                                                                    EditContext->OptionsTrimTrailingWhitespaceMenuIndex);
-
-
-    if (EditContext->TrimTrailingWhitespace) {
-        EditContext->TrimTrailingWhitespace = FALSE;
-        YoriWinMenuBarUncheckMenuItem(TrimTrailingWhitespaceMenuItem);
-    } else {
-        EditContext->TrimTrailingWhitespace = TRUE;
-        YoriWinMenuBarCheckMenuItem(TrimTrailingWhitespaceMenuItem);
-    }
-    YoriWinMultilineEditSetTrimTrailingWhitespace(EditContext->MultilineEdit, EditContext->TrimTrailingWhitespace);
-}
-
-/**
  A callback invoked when the save default settings options menu item is
  invoked.
 
@@ -2591,16 +2535,6 @@ EditSaveDefaultSettingsOptionsButtonClicked(
     }
 
     Err = DllAdvApi32.pRegSetValueExW(hKey, _T("TraditionalNavigation"), 0, REG_DWORD, (LPBYTE)&Value, sizeof(Value));
-    if (Err != ERROR_SUCCESS) {
-        goto Exit;
-    }
-
-    Value = 0;
-    if (EditContext->TrimTrailingWhitespace) {
-        Value = 1;
-    }
-
-    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("TrimTrailingWhitespace"), 0, REG_DWORD, (LPBYTE)&Value, sizeof(Value));
     if (Err != ERROR_SUCCESS) {
         goto Exit;
     }
@@ -2805,7 +2739,7 @@ EditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
     YORI_WIN_MENU_ENTRY EditMenuEntries[7];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
-    YORI_WIN_MENU_ENTRY OptionsMenuEntries[7];
+    YORI_WIN_MENU_ENTRY OptionsMenuEntries[6];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
@@ -2937,14 +2871,6 @@ EditPopulateMenuBar(
     YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Expand tab"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditExpandTabOptionsButtonClicked;
     EditContext->OptionsExpandTabMenuIndex = MenuIndex;
-
-    MenuIndex++;
-    if (EditContext->TrimTrailingWhitespace) {
-        OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
-    }
-    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("Remove trailing &whitespace"));
-    OptionsMenuEntries[MenuIndex].NotifyCallback = EditTrimTrailingWhitespaceOptionsButtonClicked;
-    EditContext->OptionsTrimTrailingWhitespaceMenuIndex = MenuIndex;
 
     MenuIndex++;
     OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
@@ -3169,7 +3095,6 @@ EditCreateMainWindow(
     YoriWinMultilineEditSetAutoIndent(MultilineEdit, EditContext->AutoIndent);
     YoriWinMultilineEditSetTraditionalNavigation(MultilineEdit, EditContext->TraditionalNavigation);
     YoriWinMultilineEditSetExpandTab(MultilineEdit, EditContext->ExpandTab);
-    YoriWinMultilineEditSetTrimTrailingWhitespace(MultilineEdit, EditContext->TrimTrailingWhitespace);
 
     Rect.Top = (SHORT)(Rect.Bottom + 1);
     Rect.Bottom = Rect.Top;
@@ -3296,7 +3221,6 @@ ENTRYPOINT(
     GlobalEditContext.TraditionalNavigation = TRUE;
     GlobalEditContext.AutoIndent = TRUE;
     GlobalEditContext.ExpandTab = FALSE;
-    GlobalEditContext.TrimTrailingWhitespace = FALSE;
 
     EditLoadDefaults(&GlobalEditContext);
 
