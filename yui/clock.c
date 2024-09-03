@@ -155,7 +155,10 @@ YuiClockUpdate(
     //  If this program doesn't think a battery exists, query it and see if
     //  it starts to exist.  This happens because early after boot the
     //  battery system is not initialized yet, but we want the login shell
-    //  to display it once initialization is done.
+    //  to display it once initialization is done.  It's possible that we'll
+    //  find a battery while constructing initial taskbars though, so
+    //  it's not valid to initialize a battery if the taskbar doesn't exist
+    //  on a monitor yet; those will get created along with the taskbar.
     //
 
     if (!YuiContext->DisplayBattery &&
@@ -167,7 +170,9 @@ YuiClockUpdate(
             YuiMonitor = NULL;
             YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
             while (YuiMonitor != NULL) {
-                YuiInitializeBatteryWindow(YuiMonitor);
+                if (YuiMonitor->hWndTaskbar != NULL) {
+                    YuiInitializeBatteryWindow(YuiMonitor);
+                }
                 YuiMonitor = YuiGetNextMonitor(YuiContext, YuiMonitor);
             }
 
