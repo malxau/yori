@@ -952,6 +952,11 @@ YoriWinIsConhostv2(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle
     );
 
+BOOLEAN
+YoriWinIsDoubleWideCharSupported(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle
+    );
+
 VOID
 YoriWinMgrRegenerateRegion(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,

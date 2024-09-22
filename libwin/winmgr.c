@@ -248,6 +248,13 @@ typedef struct _YORI_WIN_WINDOW_MANAGER {
     BOOLEAN IsConhostv2;
 
     /**
+     Set to TRUE if the console supports drawing double wide chars as double
+     wide (consuming two cells.)  FALSE if these will be rendered as one
+     cell.
+     */
+    BOOLEAN IsDoubleWideSupported;
+
+    /**
      Set to TRUE to indicate SavedConsoleInputMode contains a value that
      should be restored when the window manager exits.
      */
@@ -666,6 +673,12 @@ YoriWinOpenWindowManager(
         WinMgr->IsConhostv2 = TRUE;
     }
 
+    //
+    //  MSFIX This should check the font
+    //
+
+    WinMgr->IsDoubleWideSupported = TRUE;
+
     SetConsoleMode(WinMgr->hConOut, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
 
     //
@@ -957,6 +970,24 @@ YoriWinIsConhostv2(
 {
     PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
     return WinMgr->IsConhostv2;
+}
+
+/**
+ Return TRUE if the window manager supports double-wide characters.  If FALSE,
+ all characters are rendered as narrow.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @return TRUE to indicate double wide characters are supported, FALSE if they
+         are not.
+ */
+BOOLEAN
+YoriWinIsDoubleWideCharSupported(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+    return WinMgr->IsDoubleWideSupported;
 }
 
 /**

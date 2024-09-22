@@ -46,6 +46,37 @@ YoriLibIsEscapeChar(
 }
 
 /**
+ Returns TRUE if the character should be displayed in two console cells,
+ FALSE if it is a conventional, narrow character.
+
+ @param Char The character whose width should be determined.
+
+ @return TRUE if the character should be double-wide, FALSE if it should
+         be narrow.
+ */
+BOOLEAN
+YoriLibIsDoubleWideChar(
+    __in TCHAR Char
+    )
+{
+    if (Char < 0x1100) {
+        return FALSE;
+    }
+
+    if (Char < 0x115F ||
+        (Char >= 0x2e80 && Char < 0xA4CF) ||
+        (Char >= 0xAC00 && Char <= 0xD7A3) ||
+        (Char >= 0xF900 && Char <= 0xFAFF) ||
+        (Char >= 0xFE10 && Char <= 0xFE19) ||
+        (Char >= 0xFE30 && Char <= 0xFE6F)) {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Set an unsigned value into a large integer.  This is an abstraction to allow
  the large integer to be larger than the compiler's native type.
 

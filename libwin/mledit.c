@@ -495,78 +495,26 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
 //
 
 /**
- Calculate the line of text to display.  This is typically the exact same
- string as the line from the file's contents, but can diverge due to
- display requirements such as tab expansion.
+ Return TRUE if the multiline edit control supports double-wide characters.
+ If FALSE, all characters are rendered as narrow.
 
  @param MultilineEdit Pointer to the multiline edit control.
 
- @param LineIndex Specifies the line number to obtain a display line for.
-
- @param DisplayLine On successful completion, populated with a string to
-        display.  This may point back into the same data as the original
-        line, or may be a fresh allocation.  The caller should free it with
-        @ref YoriLibFreeStringContents .  If the result points back to the
-        original string, the MemoryToFree member will be NULL to indicate
-        that the caller has nothing to deallocate.
-
- @return TRUE to indicate success, FALSE to indicate failure.
+ @return TRUE to indicate double wide characters are supported, FALSE if they
+         are not.
  */
 BOOLEAN
-YoriWinMultilineEditGenerateDisplayLine(
-    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
-    __in YORI_ALLOC_SIZE_T LineIndex,
-    __out PYORI_STRING DisplayLine
+YoriWinMultilineEditIsDoubleWideCharSupported(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
     )
 {
-    YORI_ALLOC_SIZE_T CharIndex;
-    YORI_ALLOC_SIZE_T DestIndex;
-    PYORI_STRING SourceLine;
-    YORI_ALLOC_SIZE_T TabCount;
-    BOOLEAN NeedDoubleBuffer;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
 
-    ASSERT(LineIndex < MultilineEdit->LinesPopulated);
+    TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
+    WinMgr = YoriWinGetWindowManagerHandle(TopLevelWindow);
 
-    SourceLine = &MultilineEdit->LineArray[LineIndex];
-
-    NeedDoubleBuffer = FALSE;
-    TabCount = 0;
-    for (CharIndex = 0; CharIndex < SourceLine->LengthInChars; CharIndex++) {
-        if (SourceLine->StartOfString[CharIndex] == '\t') {
-            NeedDoubleBuffer = TRUE;
-            TabCount++;
-        }
-    }
-
-    if (!NeedDoubleBuffer) {
-        YoriLibInitEmptyString(DisplayLine);
-        DisplayLine->StartOfString = SourceLine->StartOfString;
-        DisplayLine->LengthInChars = SourceLine->LengthInChars;
-        return TRUE;
-    }
-
-    if (!YoriLibAllocateString(DisplayLine, SourceLine->LengthInChars + TabCount * MultilineEdit->TabWidth)) {
-        return FALSE;
-    }
-
-    DestIndex = 0;
-    for (CharIndex = 0; CharIndex < SourceLine->LengthInChars; CharIndex++) {
-        if (SourceLine->StartOfString[CharIndex] == '\t') {
-            YORI_ALLOC_SIZE_T TabIndex;
-
-            for (TabIndex = 0; TabIndex < MultilineEdit->TabWidth; TabIndex++) {
-                DisplayLine->StartOfString[DestIndex + TabIndex] = ' ';
-            }
-            DestIndex = DestIndex + MultilineEdit->TabWidth;
-
-        } else {
-            DisplayLine->StartOfString[DestIndex] = SourceLine->StartOfString[CharIndex];
-            DestIndex++;
-        }
-    }
-
-    DisplayLine->LengthInChars = DestIndex;
-    return TRUE;
+    return YoriWinIsDoubleWideCharSupported(WinMgr);
 }
 
 /**
@@ -583,36 +531,54 @@ YoriWinMultilineEditGenerateDisplayLine(
 
  @param CursorChar On completion, populated with the offset in the line buffer
         corresponding to the display offset.
+
+ @param Remainder If specified, on completion, updated with the number of
+        empty display cells before the data at CursorChar is displayed.
+        This can be caused by a tab or wide char that encompasses the
+        DisplayChar cell along with other cells, where no single character
+        starts at the requested DisplayChar.
  */
 VOID
 YoriWinMultilineEditFindCursorCharFromDisplayChar(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
     __in YORI_ALLOC_SIZE_T LineIndex,
     __in YORI_ALLOC_SIZE_T DisplayChar,
-    __out PYORI_ALLOC_SIZE_T CursorChar
+    __out PYORI_ALLOC_SIZE_T CursorChar,
+    __out_opt PYORI_ALLOC_SIZE_T Remainder
     )
 {
     YORI_ALLOC_SIZE_T CharIndex;
     YORI_ALLOC_SIZE_T CurrentDisplayIndex;
     YORI_ALLOC_SIZE_T DesiredCursorChar;
     PYORI_STRING Line;
+    TCHAR Char;
+    BOOLEAN DoubleWideCharSupported;
 
     if (LineIndex >= MultilineEdit->LinesPopulated) {
         *CursorChar = DisplayChar;
         return;
     }
 
+    DoubleWideCharSupported = YoriWinMultilineEditIsDoubleWideCharSupported(MultilineEdit);
+
     Line = &MultilineEdit->LineArray[LineIndex];
 
     CurrentDisplayIndex = 0;
     for (CharIndex = 0; CharIndex < Line->LengthInChars; CharIndex++) {
         if (CurrentDisplayIndex >= DisplayChar) {
+            if (Remainder != NULL) {
+                *Remainder = (CurrentDisplayIndex - DisplayChar);
+            }
             *CursorChar = CharIndex;
             return;
         }
 
-        if (Line->StartOfString[CharIndex] == '\t') {
+        Char = Line->StartOfString[CharIndex];
+
+        if (Char == '\t') {
             CurrentDisplayIndex = CurrentDisplayIndex + MultilineEdit->TabWidth;
+        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
+            CurrentDisplayIndex = CurrentDisplayIndex + 2;
         } else {
             CurrentDisplayIndex++;
         }
@@ -630,6 +596,9 @@ YoriWinMultilineEditFindCursorCharFromDisplayChar(
         }
     }
 
+    if (Remainder != NULL) {
+        *Remainder = 0;
+    }
     *CursorChar = DesiredCursorChar;
 }
 
@@ -658,11 +627,15 @@ YoriWinMultilineEditFindDisplayCharFromCursorChar(
     YORI_ALLOC_SIZE_T CharIndex;
     YORI_ALLOC_SIZE_T CurrentDisplayIndex;
     PYORI_STRING Line;
+    TCHAR Char;
+    BOOLEAN DoubleWideCharSupported;
 
     if (LineIndex >= MultilineEdit->LinesPopulated) {
         *DisplayChar = CursorChar;
         return;
     }
+
+    DoubleWideCharSupported = YoriWinMultilineEditIsDoubleWideCharSupported(MultilineEdit);
 
     Line = &MultilineEdit->LineArray[LineIndex];
 
@@ -673,8 +646,12 @@ YoriWinMultilineEditFindDisplayCharFromCursorChar(
             return;
         }
 
-        if (Line->StartOfString[CharIndex] == '\t') {
+        Char = Line->StartOfString[CharIndex];
+
+        if (Char == '\t') {
             CurrentDisplayIndex = CurrentDisplayIndex + MultilineEdit->TabWidth;
+        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
+            CurrentDisplayIndex = CurrentDisplayIndex + 2;
         } else {
             CurrentDisplayIndex++;
         }
@@ -726,7 +703,12 @@ YoriWinMultilineEditTranslateViewportCoordinatesToCursorCoordinates(
 
     DisplayOffset = ViewportLeftOffset + MultilineEdit->ViewportLeft;
 
-    YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, LineOffset, DisplayOffset, CursorChar);
+    //
+    //  MSFIX Review callers to this function and see what they need for
+    //  Remainder
+    //
+
+    YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, LineOffset, DisplayOffset, CursorChar, NULL);
     *LineIndex = LineOffset;
     return Result;
 }
@@ -878,6 +860,162 @@ YoriWinMultilineEditPaintNonClient(
 }
 
 /**
+ Calculate the line of text to display.  This is typically the exact same
+ string as the line from the file's contents, but can diverge due to
+ display requirements such as tab expansion or wide characters.  The
+ generated line contains the text visible within the viewport (ie., is
+ truncated according to the current state of ViewportLeft.)
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param LineIndex Specifies the line number to obtain a display line for.
+
+ @param ClientWidth Specifies the number of cells that will be displayed
+        within the control.  There is no need to populate more data than
+        this.
+
+ @param DisplayLine On successful completion, populated with a string to
+        display.  This may point back into the same data as the original
+        line, or may be a fresh allocation.  The caller should free it with
+        @ref YoriLibFreeStringContents .  If the result points back to the
+        original string, the MemoryToFree member will be NULL to indicate
+        that the caller has nothing to deallocate.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditGenerateDisplayLine(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in YORI_ALLOC_SIZE_T LineIndex,
+    __in YORI_ALLOC_SIZE_T ClientWidth,
+    __out PYORI_STRING DisplayLine
+    )
+{
+    YORI_ALLOC_SIZE_T BufferChar;
+    YORI_ALLOC_SIZE_T CharIndex;
+    PYORI_STRING SourceLine;
+    YORI_ALLOC_SIZE_T Remainder;
+    YORI_ALLOC_SIZE_T CellsDisplayed;
+    TCHAR Char;
+    BOOLEAN NeedDoubleBuffer;
+    BOOLEAN DoubleWideCharSupported;
+    BOOLEAN IsNanoServer;
+
+    DoubleWideCharSupported = YoriWinMultilineEditIsDoubleWideCharSupported(MultilineEdit);
+    IsNanoServer = YoriLibIsNanoServer();
+
+    ASSERT(LineIndex < MultilineEdit->LinesPopulated);
+
+    SourceLine = &MultilineEdit->LineArray[LineIndex];
+
+    //
+    //  MSFIX This needs to return a "remainder" to say the number of
+    //  display cells not describable before this buffer char.  If
+    //  this is nonzero, NeedDoubleBuffer = TRUE
+    //
+
+    YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit,
+                                                      LineIndex,
+                                                      MultilineEdit->ViewportLeft,
+                                                      &BufferChar,
+                                                      &Remainder);
+
+    //
+    //  If none of the source line is visible, return nothing.
+    //
+
+    if (BufferChar >= SourceLine->LengthInChars) {
+        YoriLibInitEmptyString(DisplayLine);
+        return TRUE;
+    }
+
+    CellsDisplayed = 0;
+    NeedDoubleBuffer = FALSE;
+
+    //
+    //  Count how many chars are required to fill the viewport.  If the
+    //  chars are all single width and not tab, the line buffer can be
+    //  used directly.  Otherwise, count the size of the buffer needed.
+    //  Note this sizing can be pessimistic (assume wide chars fit, tabs
+    //  are fully expanded.)
+    //
+
+    if (Remainder > 0) {
+        NeedDoubleBuffer = TRUE;
+        CellsDisplayed = Remainder;
+    }
+
+    for (CharIndex = BufferChar;
+         CharIndex < SourceLine->LengthInChars && CellsDisplayed < ClientWidth;
+         CharIndex++) {
+
+        Char = SourceLine->StartOfString[CharIndex];
+
+        if (Char == '\t') {
+            NeedDoubleBuffer = TRUE;
+            CellsDisplayed = CellsDisplayed + MultilineEdit->TabWidth;
+        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
+            NeedDoubleBuffer = TRUE;
+            CellsDisplayed = CellsDisplayed + 2;
+        } else if (IsNanoServer && Char == '\0') {
+            NeedDoubleBuffer = TRUE;
+            CellsDisplayed++;
+        } else {
+            CellsDisplayed++;
+        }
+    }
+
+    if (!NeedDoubleBuffer) {
+        YoriLibInitEmptyString(DisplayLine);
+        DisplayLine->StartOfString = &SourceLine->StartOfString[BufferChar];
+        DisplayLine->LengthInChars = SourceLine->LengthInChars - BufferChar;
+        return TRUE;
+    }
+
+    if (!YoriLibAllocateString(DisplayLine, CellsDisplayed)) {
+        return FALSE;
+    }
+
+    for (CellsDisplayed = 0; CellsDisplayed < Remainder; CellsDisplayed++) {
+        DisplayLine->StartOfString[CellsDisplayed] = ' ';
+    }
+
+    for (CharIndex = BufferChar;
+         CharIndex < SourceLine->LengthInChars && CellsDisplayed < ClientWidth;
+         CharIndex++) {
+
+        Char = SourceLine->StartOfString[CharIndex];
+
+        if (Char == '\t') {
+            YORI_ALLOC_SIZE_T TabIndex;
+            for (TabIndex = 0; TabIndex < MultilineEdit->TabWidth && CellsDisplayed < ClientWidth; TabIndex++) {
+                DisplayLine->StartOfString[CellsDisplayed] = ' ';
+                CellsDisplayed++;
+            }
+        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
+            if (CellsDisplayed + 1 < ClientWidth) {
+                DisplayLine->StartOfString[CellsDisplayed] = Char;
+                CellsDisplayed++;
+                DisplayLine->StartOfString[CellsDisplayed] = ' ';
+                CellsDisplayed++;
+            } else {
+                DisplayLine->StartOfString[CellsDisplayed] = ' ';
+                CellsDisplayed++;
+            }
+        } else if (IsNanoServer && Char == '\0') {
+            DisplayLine->StartOfString[CellsDisplayed] = ' ';
+            CellsDisplayed++;
+        } else {
+            DisplayLine->StartOfString[CellsDisplayed] = Char;
+            CellsDisplayed++;
+        }
+    }
+
+    DisplayLine->LengthInChars = CellsDisplayed;
+    return TRUE;
+}
+
+/**
  Draw a single line of text within the client area of a multiline edit
  control.
 
@@ -903,11 +1041,13 @@ YoriWinMultilineEditPaintSingleLine(
     BOOLEAN SelectionActive;
     YORI_STRING Line;
     TCHAR Char;
+    YORI_ALLOC_SIZE_T ClientWidth;
 
     ColumnIndex = 0;
     RowIndex = (WORD)(LineIndex - MultilineEdit->ViewportTop);
     WindowAttributes = MultilineEdit->TextAttributes;
     SelectionActive = YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl);
+    ClientWidth = (YORI_ALLOC_SIZE_T)ClientSize->X;
 
     if (LineIndex < MultilineEdit->LinesPopulated) {
         TextAttributes = WindowAttributes;
@@ -922,13 +1062,27 @@ YoriWinMultilineEditPaintSingleLine(
             TextAttributes = MultilineEdit->SelectedAttributes;
         }
 
-        if (!YoriWinMultilineEditGenerateDisplayLine(MultilineEdit, LineIndex, &Line)) {
+        //
+        //  Capture a display string.  This contains one char per cell,
+        //  substituting spaces for tabs, and applying any NULLs needed
+        //  for wide char display.
+        //
+
+        if (!YoriWinMultilineEditGenerateDisplayLine(MultilineEdit, LineIndex, ClientWidth, &Line)) {
             YoriLibInitEmptyString(&Line);
         }
-        for (; ColumnIndex < ClientSize->X && ColumnIndex + MultilineEdit->ViewportLeft < Line.LengthInChars; ColumnIndex++) {
+
+        for (; ColumnIndex < ClientSize->X && ColumnIndex < Line.LengthInChars; ColumnIndex++) {
+
+            //
+            //  If a selection is active, calculate which display cells
+            //  should be selected.
+            //
+
             if (SelectionActive) {
                 YORI_ALLOC_SIZE_T DisplayFirstCharOffset;
                 YORI_ALLOC_SIZE_T DisplayLastCharOffset;
+                YORI_ALLOC_SIZE_T DisplayCurrentOffset;
                 YoriWinMultilineEditFindDisplayCharFromCursorChar(MultilineEdit,
                                                                   MultilineEdit->Selection.FirstLine,
                                                                   MultilineEdit->Selection.FirstCharOffset,
@@ -939,42 +1093,35 @@ YoriWinMultilineEditPaintSingleLine(
                                                                   &DisplayLastCharOffset);
 
 
+                DisplayCurrentOffset = MultilineEdit->ViewportLeft + ColumnIndex;
                 if (LineIndex == MultilineEdit->Selection.FirstLine &&
                     LineIndex == MultilineEdit->Selection.LastLine) {
                     TextAttributes = WindowAttributes;
-                    if (ColumnIndex + MultilineEdit->ViewportLeft >= DisplayFirstCharOffset &&
-                        ColumnIndex + MultilineEdit->ViewportLeft < DisplayLastCharOffset) {
+                    if (DisplayCurrentOffset >= DisplayFirstCharOffset &&
+                        DisplayCurrentOffset < DisplayLastCharOffset) {
                         TextAttributes = MultilineEdit->SelectedAttributes;
                     }
                 } else if (LineIndex == MultilineEdit->Selection.FirstLine) {
                     TextAttributes = WindowAttributes;
-                    if (ColumnIndex + MultilineEdit->ViewportLeft >= DisplayFirstCharOffset) {
+                    if (DisplayCurrentOffset >= DisplayFirstCharOffset) {
                         TextAttributes = MultilineEdit->SelectedAttributes;
                     }
                 } else if (LineIndex == MultilineEdit->Selection.LastLine) {
                     TextAttributes = WindowAttributes;
-                    if (ColumnIndex + MultilineEdit->ViewportLeft < DisplayLastCharOffset) {
+                    if (DisplayCurrentOffset < DisplayLastCharOffset) {
                         TextAttributes = MultilineEdit->SelectedAttributes;
                     }
                 }
             }
 
-            Char = Line.StartOfString[ColumnIndex + MultilineEdit->ViewportLeft];
 
-            //
-            //  Nano server interprets NULL as "leave previous contents alone"
-            //  which is hazardous for an editor.
-            //
-
-            if (Char == 0 && YoriLibIsNanoServer()) {
-                Char = ' ';
-            }
+            Char = Line.StartOfString[ColumnIndex];
 
             YoriWinSetControlClientCell(&MultilineEdit->Ctrl, ColumnIndex, RowIndex, Char, TextAttributes);
         }
 
         //
-        //  Unless a tab is present, this is a no-op
+        //  Unless a tab or wide char is present, this is a no-op
         //
 
         YoriLibFreeStringContents(&Line);
@@ -5150,7 +5297,8 @@ YoriWinMultilineEditPageUp(
         YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit,
                                                           NewCursorLine,
                                                           MultilineEdit->DesiredDisplayCursorOffset,
-                                                          &NewCursorOffset);
+                                                          &NewCursorOffset,
+                                                          NULL);
         YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
         YoriWinMultilineEditRepaintScrollBar(MultilineEdit);
         return TRUE;
@@ -5201,7 +5349,8 @@ YoriWinMultilineEditPageDown(
         YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit,
                                                           NewCursorLine,
                                                           MultilineEdit->DesiredDisplayCursorOffset,
-                                                          &NewCursorOffset);
+                                                          &NewCursorOffset,
+                                                          NULL);
         YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
         YoriWinMultilineEditRepaintScrollBar(MultilineEdit);
         return TRUE;
@@ -5469,7 +5618,8 @@ YoriWinMultilineEditScrollForMouseSelect(
     YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit,
                                                       NewCursorLine,
                                                       DisplayOffset,
-                                                      &NewCursorOffset);
+                                                      &NewCursorOffset,
+                                                      NULL);
 
     //
     //  When using modern navigation, the cursor can't move to the right of
@@ -5720,7 +5870,8 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
             YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit,
                                                               NewCursorLine,
                                                               MultilineEdit->DesiredDisplayCursorOffset,
-                                                              &NewCursorOffset);
+                                                              &NewCursorOffset,
+                                                              NULL);
             YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
                 YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
@@ -5742,7 +5893,8 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
             YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit,
                                                               NewCursorLine,
                                                               MultilineEdit->DesiredDisplayCursorOffset,
-                                                              &NewCursorOffset);
+                                                              &NewCursorOffset,
+                                                              NULL);
             YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
                 YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);

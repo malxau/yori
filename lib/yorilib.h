@@ -4102,6 +4102,11 @@ YoriLibLiAssignUnsigned(
     __in YORI_MAX_UNSIGNED_T Value
     );
 
+BOOLEAN
+YoriLibIsDoubleWideChar(
+    __in TCHAR Char
+    );
+
 __success(return)
 BOOL
 YoriLibMakeInheritableHandle(
