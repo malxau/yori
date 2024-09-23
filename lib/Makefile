@@ -56,6 +56,7 @@ OBJS=\
 	 process.obj  \
 	 progman.obj  \
 	 recycle.obj  \
+	 rsrc.obj     \
 	 scut.obj     \
 	 scheme.obj   \
 	 select.obj   \

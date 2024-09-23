@@ -3387,6 +3387,16 @@ YoriLibRecycleBinFile(
     __in PYORI_STRING FilePath
     );
 
+// *** RSRC.C ***
+
+
+BOOLEAN
+YoriLibLoadAndVerifyStringResourceArray(
+    __in YORI_ALLOC_SIZE_T InitialElement,
+    __in YORI_ALLOC_SIZE_T NumberElements,
+    __out PYORI_STRING * StringArray
+    );
+
 // *** SCHEME.C ***
 
 __success(return)
