@@ -131,6 +131,15 @@ mini_memmove(void * dest, const void * src, unsigned int len)
     return dest;
 }
 
+//
+//  Sigh, turn off optimizations now the optimizer is too aggressive to
+//  be helpful, and MSVC doesn't have finer grained tools
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1940) && defined(_M_IX86)
+#pragma optimize("", off)
+#endif
+
 /**
  Set a block of memory to a specific byte value.
 
@@ -173,6 +182,10 @@ __attribute__((no_builtin("memset")))
 
     return dest;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1940) && defined(_M_IX86)
+#pragma optimize("", on)
+#endif
 
 /**
  Compare two blocks of memory and indicate if the first is less than the
