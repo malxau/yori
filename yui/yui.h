@@ -1158,6 +1158,12 @@ YuiGetMenuSelectedBackgroundColor(VOID);
 COLORREF
 YuiGetMenuSelectedTextColor(VOID);
 
+BOOLEAN
+YuiDrawDesktopBackground(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    );
+
 VOID
 YuiDrawWindowBackground(
     __in HDC hDC,

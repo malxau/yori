@@ -714,6 +714,13 @@ YuiDesktopWindowProc(
     __in LPARAM lParam
     )
 {
+    switch(uMsg) {
+        case WM_PAINT:
+            if (YuiDrawDesktopBackground(&YuiContext, hwnd)) {
+                return 0;
+            }
+            break;
+    }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 

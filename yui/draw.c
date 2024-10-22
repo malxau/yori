@@ -929,4 +929,48 @@ YuiDrawMenuItem(
     return TRUE;
 }
 
+/**
+ Draw the desktop.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hWnd The window to draw the desktop within.
+
+ @return TRUE if painting occurred, FALSE if it did not.
+ */
+BOOLEAN
+YuiDrawDesktopBackground(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    )
+{
+    RECT ClientRect;
+    HDC hDC;
+    PAINTSTRUCT paintStruct;
+
+    UNREFERENCED_PARAMETER(YuiContext);
+
+    //
+    //  If the window has no repainting to do, stop.
+    //
+
+    if (!GetUpdateRect(hWnd, &ClientRect, FALSE)) {
+        return FALSE;
+    }
+
+    //
+    //  If it does, redraw.  BeginPaint is supposed to redraw the background
+    //  with the class brush implicitly, meaning there's no manual drawing
+    //  here.
+    //
+
+    hDC = BeginPaint(hWnd, &paintStruct);
+    if (hDC == NULL) {
+        return FALSE;
+    }
+
+    EndPaint(hWnd, &paintStruct);
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:
