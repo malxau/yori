@@ -220,7 +220,7 @@ SlmenuCreateSinglelineMenu(
     WORD ButtonWidth;
     PYORI_WIN_CTRL_HANDLE Ctrl;
     DWORD_PTR Result;
-    SMALL_RECT WinMgrPos;
+    COORD WinMgrSize;
 
     if (NumberOptions == 0) {
         return FALSE;
@@ -230,32 +230,44 @@ SlmenuCreateSinglelineMenu(
         return FALSE;
     }
 
-    if (!YoriWinGetWinMgrLocation(WinMgr, &WinMgrPos)) {
+    if (!YoriWinGetWinMgrDimensions(WinMgr, &WinMgrSize)) {
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
 
-    CtrlRect.Left = WinMgrPos.Left;
-    CtrlRect.Right = WinMgrPos.Right;
-    CtrlRect.Top = WinMgrPos.Top;
-    CtrlRect.Bottom = WinMgrPos.Top;
+    CtrlRect.Top = 0;
+    CtrlRect.Bottom = 0;
+    CtrlRect.Left = 0;
+    CtrlRect.Right = WinMgrSize.X - 1;
 
     if (Location == SlmenuBottomLine) {
-        CtrlRect.Top = WinMgrPos.Bottom;
-        CtrlRect.Bottom = WinMgrPos.Bottom;
+        CtrlRect.Top = WinMgrSize.Y - 1;
+        CtrlRect.Bottom = WinMgrSize.Y - 1;
     } else if (Location == SlmenuCurrentLine ||
                Location == SlmenuCurrentLineRemainder) {
         COORD CursorLocation;
+        SMALL_RECT WinMgrPos;
+
+        if (!YoriWinGetWinMgrLocation(WinMgr, &WinMgrPos)) {
+            YoriWinCloseWindowManager(WinMgr);
+            return FALSE;
+        }
+
         if (!YoriWinGetWinMgrInitialCursorLocation(WinMgr, &CursorLocation)) {
             YoriWinCloseWindowManager(WinMgr);
             return FALSE;
         }
 
-        CtrlRect.Top = CursorLocation.Y;
-        CtrlRect.Bottom = CursorLocation.Y;
+        if (CursorLocation.Y < WinMgrPos.Top || CursorLocation.Y > WinMgrPos.Bottom) {
+            YoriWinCloseWindowManager(WinMgr);
+            return FALSE;
+        }
+
+        CtrlRect.Top = CursorLocation.Y - WinMgrPos.Top;
+        CtrlRect.Bottom = CursorLocation.Y - WinMgrPos.Top;
 
         if (Location == SlmenuCurrentLineRemainder) {
-            CtrlRect.Left = CursorLocation.X;
+            CtrlRect.Left = CursorLocation.X - WinMgrPos.Left;
         }
     }
 
