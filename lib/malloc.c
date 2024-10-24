@@ -497,6 +497,52 @@ YoriLibDereference(
     }
 }
 
+/*
+The optimizer does a good job at condensing the function below, but
+unfortunately early optimizers get it wrong.
+
+Visual C++ 2.0:
+00000000: 83 7C 24 08 00     cmp         dword ptr [esp+08],00
+00000005: 75 07              jne         0000000E
+00000007: F6 44 24 04 00     test        byte ptr [esp+04],00
+0000000C: 75 04              jne         00000012
+0000000E: 32 C0              xor         al,al
+00000010: EB 02              jmp         00000014
+00000012: B0 01              mov         al,01
+00000014: C2 08 00           ret         0008
+
+Visual C++ 4.1/4.2:
+00000000: 83 7C 24 08 00     cmp         dword ptr [esp+8],0
+00000005: 75 07              jne         0000000E
+00000007: F6 44 24 04 00     test        byte ptr [esp+4],0
+0000000C: 74 04              je          00000012
+0000000E: 32 C0              xor         al,al
+00000010: EB 02              jmp         00000014
+00000012: B0 01              mov         al,1
+00000014: C2 08 00           ret         8
+
+Visual C++ 5.0:
+00000000: 8B 4C 24 08        mov         ecx,dword ptr [esp+8]
+00000004: 33 C0              xor         eax,eax
+00000006: 0B C1              or          eax,ecx
+00000008: 74 04              je          0000000E
+0000000A: 32 C0              xor         al,al
+0000000C: EB 02              jmp         00000010
+0000000E: B0 01              mov         al,1
+00000010: C2 08 00           ret         8
+
+
+This function is trying to say "if the upper bits are nonzero, this is not a
+valid allocation."  Visual C++ 2.x and 4.x both attempt to interpret the low
+8 bits, although note the tests are inverted, which causes them to fail
+differently.
+
+Visual C++ 5.0 gets it "right" by not looking at the low 32 bits at all.
+*/
+#if defined(_MSC_VER) && _MSC_VER < 1100
+#pragma optimize("", off)
+#endif
+
 /**
  Determine if the specified size is allocatable.  If the specified size
  exceeds an implementation or specified limit, the size cannot be allowed.
@@ -527,6 +573,10 @@ YoriLibIsSizeAllocatable(
 
     return TRUE;
 }
+
+#if defined(_MSC_VER) && _MSC_VER < 1100
+#pragma optimize("", on)
+#endif
 
 /**
  Determine if any value within the specified range is a valid allocation, and
