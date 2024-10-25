@@ -29,7 +29,6 @@
 #include <yoriwin.h>
 #include <yoridlg.h>
 #include "edit.h"
-#include "resource.h"
 
 /**
  Help text to display to the user.
@@ -71,11 +70,6 @@ EditHelp(VOID)
  window.
  */
 typedef struct _EDIT_CONTEXT {
-
-    /**
-     Pointer to an array of localized strings.
-     */
-    PYORI_STRING ResourceStrings;
 
     /**
      Pointer to the multiline edit control.
@@ -246,9 +240,6 @@ EditFreeEditContext(
     __in PEDIT_CONTEXT EditContext
     )
 {
-    if (EditContext->ResourceStrings != NULL) {
-        YoriLibDereference(EditContext->ResourceStrings);
-    }
     YoriLibFreeStringContents(&EditContext->OpenFileName);
     YoriLibFreeStringContents(&EditContext->SearchString);
 }
@@ -557,8 +548,6 @@ EditPopulateFromStream(
  overwrite it.  Prompt the user to remove the read only bit, and if it can
  be removed successfully, allow the save to continue.
 
- @param EditContext Pointer to the edit context specifying localized strings.
-
  @param Parent Pointer to the control describing the main window.
 
  @param FileName The file that may be overwritten.
@@ -569,7 +558,6 @@ EditPopulateFromStream(
  */
 BOOLEAN
 EditIsFileWriteProtected(
-    __in PEDIT_CONTEXT EditContext,
     __in PYORI_WIN_CTRL_HANDLE Parent,
     __in PYORI_STRING FileName
     )
@@ -581,7 +569,6 @@ EditIsFileWriteProtected(
     YORI_STRING Title;
     YORI_STRING ButtonText[2];
     BOOLEAN WriteProtected;
-    LPTSTR TemplateText;
 
     WriteProtected = FALSE;
     ASSERT(YoriLibIsStringNullTerminated(FileName));
@@ -590,28 +577,22 @@ EditIsFileWriteProtected(
         (Attributes & FILE_ATTRIBUTE_READONLY) != 0) {
 
         WriteProtected = TRUE;
-        YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_OVERWRITEREADONLY]);
+        YoriLibConstantString(&Title, _T("Overwrite read only file"));
 
         YoriLibInitEmptyString(&UnescapedPath);
         if (!YoriLibUnescapePath(FileName, &UnescapedPath)) {
             UnescapedPath.StartOfString = FileName->StartOfString;
             UnescapedPath.LengthInChars = FileName->LengthInChars;
         }
-        TemplateText = YoriLibCStringFromYoriString(&EditContext->ResourceStrings[IDS_YEDIT_MSG_FILEREADONLY]);
 
         YoriLibInitEmptyString(&Text);
-
-        if (TemplateText != NULL) {
-            YoriLibYPrintf(&Text,
-                           TemplateText,
-                           &UnescapedPath);
-
-            YoriLibDereference(TemplateText);
-        }
+        YoriLibYPrintf(&Text,
+                       _T("%y is read only.  Overwrite?"),
+                       &UnescapedPath);
 
         YoriLibFreeStringContents(&UnescapedPath);
-        YoriLibCloneString(&ButtonText[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OVERWRITE]);
-        YoriLibCloneString(&ButtonText[1], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_DONTSAVE]);
+        YoriLibConstantString(&ButtonText[0], _T("&Overwrite"));
+        YoriLibConstantString(&ButtonText[1], _T("Do&n't save"));
         ButtonPressed = YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                                           &Title,
                                           &Text,
@@ -626,8 +607,8 @@ EditIsFileWriteProtected(
             if (SetFileAttributes(FileName->StartOfString, Attributes)) {
                 WriteProtected = FALSE;
             } else {
-                YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_FAIL_CLEARREADONLY]);
-                YoriLibCloneString(&ButtonText[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
+                YoriLibConstantString(&Text, _T("Could not remove read only attribute."));
+                YoriLibConstantString(&ButtonText[0], _T("&Ok"));
                 YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                                   &Title,
                                   &Text,
@@ -931,11 +912,11 @@ EditPromptForSaveIfModified(
 
         Parent = YoriWinGetControlParent(EditContext->MultilineEdit);
 
-        YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_SAVECHANGES]);
-        YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_MSG_FILEMODIFIED]);
-        YoriLibCloneString(&ButtonText[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_YES]);
-        YoriLibCloneString(&ButtonText[1], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_NO]);
-        YoriLibCloneString(&ButtonText[2], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_CANCEL]);
+        YoriLibConstantString(&Title, _T("Save changes"));
+        YoriLibConstantString(&Text, _T("The file has been modified.  Save changes?"));
+        YoriLibConstantString(&ButtonText[0], _T("&Yes"));
+        YoriLibConstantString(&ButtonText[1], _T("&No"));
+        YoriLibConstantString(&ButtonText[2], _T("&Cancel"));
 
         ButtonId = YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                                      &Title,
@@ -1012,8 +993,6 @@ EditNewButtonClicked(
  dialogs.  UTF-8 is the default wherever possible but is not available
  on NT 3.x.
 
- @param EditContext Pointer to the edit context specifying localized strings.
-
  @param EncodingValues Pointer to an array of values to populate.  The array
         must have space for at least four elements.
 
@@ -1025,7 +1004,6 @@ EditNewButtonClicked(
  */
 WORD
 EditPopulateEncodingArray(
-    __in PEDIT_CONTEXT EditContext,
     __out_ecount(6) PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues,
     __in BOOLEAN EncodingsForOpen
     )
@@ -1035,21 +1013,21 @@ EditPopulateEncodingArray(
     EncodingIndex = 0;
     if (EncodingsForOpen) {
         if (YoriLibIsUtf8Supported()) {
-            YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_UTF_DETECT]);
-            YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_UTF8]);
+            YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8/16 based on BOM"));
+            YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8"));
         }
-        YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_ANSI]);
-        YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_ASCII]);
-        YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_UTF16]);
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ANSI"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ASCII"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-16"));
     } else {
         if (YoriLibIsUtf8Supported()) {
-            YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_UTF8]);
-            YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_UTF8_BOM]);
+            YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8"));
+            YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8 with BOM"));
         }
-        YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_ANSI]);
-        YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_ASCII]);
-        YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_UTF16]);
-        YoriLibCloneString(&EncodingValues[EncodingIndex++].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_ENC_UTF16_BOM]);
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ANSI"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ASCII"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-16"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-16 with BOM"));
     }
 
     return EncodingIndex;
@@ -1229,12 +1207,12 @@ EditOpenButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    EncodingCount = EditPopulateEncodingArray(EditContext, EncodingValues, TRUE);
+    EncodingCount = EditPopulateEncodingArray(EncodingValues, TRUE);
 
-    YoriLibCloneString(&ReadOnlyValues[0].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_OPEN_EDITING]);
-    YoriLibCloneString(&ReadOnlyValues[1].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_OPEN_READONLY]);
+    YoriLibConstantString(&ReadOnlyValues[0].ValueText, _T("Open for editing"));
+    YoriLibConstantString(&ReadOnlyValues[1].ValueText, _T("Open read only"));
 
-    YoriLibCloneString(&CustomOptionArray[0].Description, &EditContext->ResourceStrings[IDS_YEDIT_DLG_READONLY]);
+    YoriLibConstantString(&CustomOptionArray[0].Description, _T("&Read Only:"));
     CustomOptionArray[0].ValueCount = 2;
     CustomOptionArray[0].Values = ReadOnlyValues;
     if (EditContext->ReadOnly) {
@@ -1243,12 +1221,12 @@ EditOpenButtonClicked(
         CustomOptionArray[0].SelectedValue = 0;
     }
 
-    YoriLibCloneString(&CustomOptionArray[1].Description, &EditContext->ResourceStrings[IDS_YEDIT_DLG_ENCODING]);
+    YoriLibConstantString(&CustomOptionArray[1].Description, _T("&Encoding:"));
     CustomOptionArray[1].ValueCount = EncodingCount;
     CustomOptionArray[1].Values = EncodingValues;
     CustomOptionArray[1].SelectedValue = 0;
 
-    YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_OPEN]);
+    YoriLibConstantString(&Title, _T("Open"));
     YoriLibInitEmptyString(&Text);
 
     YoriDlgFile(YoriWinGetWindowManagerHandle(Parent),
@@ -1284,8 +1262,8 @@ EditOpenButtonClicked(
         YORI_STRING DialogText;
         YORI_STRING ButtonText;
 
-        YoriLibCloneString(&DialogText, &EditContext->ResourceStrings[IDS_YEDIT_FAIL_OPENFILE]);
-        YoriLibCloneString(&ButtonText, &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
+        YoriLibConstantString(&DialogText, _T("Could not open file"));
+        YoriLibConstantString(&ButtonText, _T("Ok"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                           &Title,
@@ -1342,15 +1320,15 @@ EditSaveButtonClicked(
         return;
     }
 
-    if (EditIsFileWriteProtected(EditContext, Parent, &EditContext->OpenFileName)) {
+    if (EditIsFileWriteProtected(Parent, &EditContext->OpenFileName)) {
         return;
     }
 
-    YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_SAVE]);
-    YoriLibCloneString(&ButtonText, &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
+    YoriLibConstantString(&Title, _T("Save"));
+    YoriLibConstantString(&ButtonText, _T("Ok"));
 
     if (!EditSaveFile(EditContext, &EditContext->OpenFileName)) {
-        YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_FAIL_OPENFILEWRITE]);
+        YoriLibConstantString(&Text, _T("Could not open file for writing"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                           &Title,
@@ -1390,18 +1368,18 @@ EditSaveAsButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    EncodingCount = EditPopulateEncodingArray(EditContext, EncodingValues, FALSE);
+    EncodingCount = EditPopulateEncodingArray(EncodingValues, FALSE);
 
-    YoriLibCloneString(&LineEndingValues[0].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_LINE_CRLF]);
-    YoriLibCloneString(&LineEndingValues[1].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_LINE_LF]);
-    YoriLibCloneString(&LineEndingValues[2].ValueText, &EditContext->ResourceStrings[IDS_YEDIT_LINE_CR]);
+    YoriLibConstantString(&LineEndingValues[0].ValueText, _T("Windows (CRLF)"));
+    YoriLibConstantString(&LineEndingValues[1].ValueText, _T("UNIX (LF)"));
+    YoriLibConstantString(&LineEndingValues[2].ValueText, _T("Classic Mac (CR)"));
 
-    YoriLibCloneString(&CustomOptionArray[0].Description, &EditContext->ResourceStrings[IDS_YEDIT_DLG_ENCODING]);
+    YoriLibConstantString(&CustomOptionArray[0].Description, _T("&Encoding:"));
     CustomOptionArray[0].ValueCount = EncodingCount;
     CustomOptionArray[0].Values = EncodingValues;
     CustomOptionArray[0].SelectedValue = EditArrayIndexFromEncoding(EditContext->Encoding, EditContext->WriteBom);
 
-    YoriLibCloneString(&CustomOptionArray[1].Description, &EditContext->ResourceStrings[IDS_YEDIT_DLG_LINEENDING]);
+    YoriLibConstantString(&CustomOptionArray[1].Description, _T("&Line ending:"));
     CustomOptionArray[1].ValueCount = sizeof(LineEndingValues)/sizeof(LineEndingValues[1]);
     CustomOptionArray[1].Values = LineEndingValues;
     CustomOptionArray[1].SelectedValue = 0;
@@ -1413,7 +1391,7 @@ EditSaveAsButtonClicked(
     }
 
 
-    YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_SAVEAS]);
+    YoriLibConstantString(&Title, _T("Save As"));
     YoriLibInitEmptyString(&Text);
 
     YoriDlgFile(YoriWinGetWindowManagerHandle(Parent),
@@ -1457,7 +1435,7 @@ EditSaveAsButtonClicked(
             break;
     }
 
-    if (EditIsFileWriteProtected(EditContext, Parent, &FullName)) {
+    if (EditIsFileWriteProtected(Parent, &FullName)) {
         return;
     }
 
@@ -1466,8 +1444,8 @@ EditSaveAsButtonClicked(
         YORI_STRING ButtonText;
 
         YoriLibFreeStringContents(&FullName);
-        YoriLibCloneString(&ButtonText, &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
-        YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_FAIL_OPENFILEWRITE]);
+        YoriLibConstantString(&ButtonText, _T("Ok"));
+        YoriLibConstantString(&Text, _T("Could not open file for writing"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                           &Title,
@@ -1943,7 +1921,7 @@ EditFindButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_FIND]);
+    YoriLibConstantString(&Title, _T("Find"));
     YoriLibInitEmptyString(&Text);
 
     //
@@ -1983,9 +1961,9 @@ EditFindButtonClicked(
     if (!EditFindNextFromCurrentPosition(EditContext)) {
         YORI_STRING ButtonText[1];
 
-        YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_FIND]);
-        YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_FIND_NOTFOUND]);
-        YoriLibCloneString(&ButtonText[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("Text not found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                           &Title,
@@ -2022,9 +2000,9 @@ EditFindNextButtonClicked(
         YORI_STRING Text;
         YORI_STRING ButtonText[1];
 
-        YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_FIND]);
-        YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_FIND_NOMOREFOUND]);
-        YoriLibCloneString(&ButtonText[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("No more matches found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                           &Title,
@@ -2092,9 +2070,9 @@ EditFindPreviousButtonClicked(
         YORI_STRING Text;
         YORI_STRING ButtonText[1];
 
-        YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_FIND]);
-        YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_FIND_NOMOREFOUND]);
-        YoriLibCloneString(&ButtonText[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("No more matches found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                           &Title,
@@ -2147,7 +2125,7 @@ EditChangeButtonClicked(
 
         if (!ReplaceAll) {
 
-            YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_FIND]);
+            YoriLibConstantString(&Title, _T("Find"));
 
             //
             //  Populate the dialog with whatever is selected now, if anything
@@ -2307,7 +2285,7 @@ EditGoToLineButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_GOTO]);
+    YoriLibConstantString(&Title, _T("Go to line"));
     YoriLibInitEmptyString(&Text);
 
     YoriDlgInput(YoriWinGetWindowManagerHandle(Parent),
@@ -2487,9 +2465,9 @@ EditSaveDefaultSettingsOptionsButtonClicked(
         DllAdvApi32.pRegCreateKeyExW == NULL ||
         DllAdvApi32.pRegSetValueExW == NULL) {
 
-        YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_ERROR]);
-        YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_FAIL_REGISTRYSUPPORT]);
-        YoriLibCloneString(&ButtonText[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
+        YoriLibConstantString(&Title, _T("Error"));
+        YoriLibConstantString(&Text, _T("The operating system does not support registry updates."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                           &Title,
@@ -2511,9 +2489,9 @@ EditSaveDefaultSettingsOptionsButtonClicked(
                                        &hKey,
                                        &Disposition);
     if (Err != ERROR_SUCCESS) {
-        YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_ERROR]);
-        YoriLibCloneString(&Text, &EditContext->ResourceStrings[IDS_YEDIT_FAIL_OPENREGISTRY]);
-        YoriLibCloneString(&ButtonText[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
+        YoriLibConstantString(&Title, _T("Error"));
+        YoriLibConstantString(&Text, _T("Could not open registry key."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
                           &Title,
@@ -2599,14 +2577,12 @@ EditAboutButtonClicked(
     YORI_STRING CenteredText;
     YORI_STRING ButtonTexts[2];
     YORI_ALLOC_SIZE_T Index;
-    PEDIT_CONTEXT EditContext;
     DWORD ButtonClicked;
 
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
-    EditContext = YoriWinGetControlContext(Parent);
 
-    YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_ABOUT]);
+    YoriLibConstantString(&Title, _T("About"));
     YoriLibInitEmptyString(&Text);
     YoriLibYPrintf(&Text,
                    _T("Edit %i.%02i\n")
@@ -2655,8 +2631,8 @@ EditAboutButtonClicked(
         }
     }
 
-    YoriLibCloneString(&ButtonTexts[0], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_OK]);
-    YoriLibCloneString(&ButtonTexts[1], &EditContext->ResourceStrings[IDS_YEDIT_BUTTON_LICENSE]);
+    YoriLibConstantString(&ButtonTexts[0], _T("&Ok"));
+    YoriLibConstantString(&ButtonTexts[1], _T("&View License..."));
 
     ButtonClicked = YoriDlgAbout(YoriWinGetWindowManagerHandle(Parent),
                                  &Title,
@@ -2673,7 +2649,7 @@ EditAboutButtonClicked(
         if (YoriLibMitLicenseText(strEditCopyrightYear, &Text)) {
 
             YoriLibInitEmptyString(&CenteredText);
-            YoriLibCloneString(&Title, &EditContext->ResourceStrings[IDS_YEDIT_TITLE_LICENSE]);
+            YoriLibConstantString(&Title, _T("License"));
 
             //
             //  Replace all single line breaks with spaces but leave one line
@@ -2772,29 +2748,29 @@ EditPopulateMenuBar(
 
     ZeroMemory(&FileMenuEntries, sizeof(FileMenuEntries));
     MenuIndex = 0;
-    YoriLibCloneString(&FileMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_FILE_NEW]);
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("&New"));
     YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+N"));
     FileMenuEntries[MenuIndex].NotifyCallback = EditNewButtonClicked;
 
     MenuIndex++;
-    YoriLibCloneString(&FileMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_FILE_OPEN]);
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("&Open..."));
     YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+O"));
     FileMenuEntries[MenuIndex].NotifyCallback = EditOpenButtonClicked;
 
     MenuIndex++;
-    YoriLibCloneString(&FileMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_FILE_SAVE]);
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("&Save"));
     FileMenuEntries[MenuIndex].NotifyCallback = EditSaveButtonClicked;
     YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+S"));
 
     MenuIndex++;
-    YoriLibCloneString(&FileMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_FILE_SAVEAS]);
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("Save &As..."));
     FileMenuEntries[MenuIndex].NotifyCallback = EditSaveAsButtonClicked;
 
     MenuIndex++;
     FileMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
 
     MenuIndex++;
-    YoriLibCloneString(&FileMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_FILE_EXIT]);
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("E&xit"));
     YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+Q"));
     FileMenuEntries[MenuIndex].NotifyCallback = EditExitButtonClicked;
 
@@ -2802,13 +2778,13 @@ EditPopulateMenuBar(
     ZeroMemory(&EditMenuEntries, sizeof(EditMenuEntries));
 
     EditContext->EditUndoMenuIndex = MenuIndex;
-    YoriLibCloneString(&EditMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_EDIT_UNDO]);
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Undo"));
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+Z"));
     EditMenuEntries[MenuIndex].NotifyCallback = EditUndoButtonClicked;
 
     MenuIndex++;
     EditContext->EditRedoMenuIndex = MenuIndex;
-    YoriLibCloneString(&EditMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_EDIT_REDO]);
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Redo"));
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+R"));
     EditMenuEntries[MenuIndex].NotifyCallback = EditRedoButtonClicked;
 
@@ -2817,66 +2793,66 @@ EditPopulateMenuBar(
 
     MenuIndex++;
     EditContext->EditCutMenuIndex = MenuIndex;
-    YoriLibCloneString(&EditMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_EDIT_CUT]);
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("Cu&t"));
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+X"));
     EditMenuEntries[MenuIndex].NotifyCallback = EditCutButtonClicked;
 
     MenuIndex++;
     EditContext->EditCopyMenuIndex = MenuIndex;
-    YoriLibCloneString(&EditMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_EDIT_COPY]);
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Copy"));
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+C"));
     EditMenuEntries[MenuIndex].NotifyCallback = EditCopyButtonClicked;
 
     MenuIndex++;
     EditContext->EditPasteMenuIndex = MenuIndex;
-    YoriLibCloneString(&EditMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_EDIT_PASTE]);
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Paste"));
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+V"));
     EditMenuEntries[MenuIndex].NotifyCallback = EditPasteButtonClicked;
 
     MenuIndex++;
     EditContext->EditClearMenuIndex = MenuIndex;
-    YoriLibCloneString(&EditMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_EDIT_CLEAR]);
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("Cl&ear"));
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Del"));
     EditMenuEntries[MenuIndex].NotifyCallback = EditClearButtonClicked;
 
     ZeroMemory(&SearchMenuEntries, sizeof(SearchMenuEntries));
     MenuIndex = 0;
-    YoriLibCloneString(&SearchMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_SEARCH_FIND]);
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Find..."));
     YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+F"));
     SearchMenuEntries[MenuIndex].NotifyCallback = EditFindButtonClicked;
 
     MenuIndex++;
-    YoriLibCloneString(&SearchMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_SEARCH_REPEAT]);
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Repeat Last Find"));
     YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("F3"));
     SearchMenuEntries[MenuIndex].NotifyCallback = EditFindNextButtonClicked;
 
     MenuIndex++;
-    YoriLibCloneString(&SearchMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_SEARCH_PREVIOUS]);
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("Find &Previous"));
     YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Shift+F3"));
     SearchMenuEntries[MenuIndex].NotifyCallback = EditFindPreviousButtonClicked;
 
     MenuIndex++;
-    YoriLibCloneString(&SearchMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_SEARCH_CHANGE]);
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Change..."));
     SearchMenuEntries[MenuIndex].NotifyCallback = EditChangeButtonClicked;
 
     MenuIndex++;
     SearchMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
 
     MenuIndex++;
-    YoriLibCloneString(&SearchMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_SEARCH_GOTO]);
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Go to line..."));
     YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+G"));
     SearchMenuEntries[MenuIndex].NotifyCallback = EditGoToLineButtonClicked;
 
     ZeroMemory(&OptionsMenuEntries, sizeof(OptionsMenuEntries));
     MenuIndex = 0;
-    YoriLibCloneString(&OptionsMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_OPTIONS_DISPLAY]);
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Display..."));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditDisplayOptionsButtonClicked;
 
     MenuIndex++;
     if (EditContext->TraditionalNavigation) {
         OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
     }
-    YoriLibCloneString(&OptionsMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_OPTIONS_TRADITIONAL]);
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Traditional navigation"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditTraditionalNavigationOptionsButtonClicked;
     EditContext->OptionsTraditionalMenuIndex = MenuIndex;
 
@@ -2884,7 +2860,7 @@ EditPopulateMenuBar(
     if (EditContext->AutoIndent) {
         OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
     }
-    YoriLibCloneString(&OptionsMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_OPTIONS_AUTOINDENT]);
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Auto indent"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditAutoIndentOptionsButtonClicked;
     EditContext->OptionsAutoIndentMenuIndex = MenuIndex;
 
@@ -2892,7 +2868,7 @@ EditPopulateMenuBar(
     if (EditContext->ExpandTab) {
         OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
     }
-    YoriLibCloneString(&OptionsMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_OPTIONS_EXPANDTAB]);
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Expand tab"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditExpandTabOptionsButtonClicked;
     EditContext->OptionsExpandTabMenuIndex = MenuIndex;
 
@@ -2900,12 +2876,12 @@ EditPopulateMenuBar(
     OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
 
     MenuIndex++;
-    YoriLibCloneString(&OptionsMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_OPTIONS_SAVEDEFAULTS]);
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Save default settings"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditSaveDefaultSettingsOptionsButtonClicked;
 
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
     MenuIndex = 0;
-    YoriLibCloneString(&HelpMenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_HELP_ABOUT]);
+    YoriLibConstantString(&HelpMenuEntries[MenuIndex].Caption, _T("&About..."));
     HelpMenuEntries[MenuIndex].NotifyCallback = EditAboutButtonClicked;
 
     MenuBarItems.ItemCount = 5;
@@ -2913,30 +2889,30 @@ EditPopulateMenuBar(
 
     MenuIndex = 0;
     ZeroMemory(MenuEntries, sizeof(MenuEntries));
-    YoriLibCloneString(&MenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_FILE]);
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&File"));
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(FileMenuEntries)/sizeof(FileMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = FileMenuEntries;
 
     MenuIndex++;
     EditContext->EditMenuIndex = MenuIndex;
-    YoriLibCloneString(&MenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_EDIT]);
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Edit"));
     MenuEntries[MenuIndex].NotifyCallback = EditEditButtonClicked;
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(EditMenuEntries)/sizeof(EditMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = EditMenuEntries;
 
     MenuIndex++;
-    YoriLibCloneString(&MenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_SEARCH]);
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Search"));
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(SearchMenuEntries)/sizeof(SearchMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = SearchMenuEntries;
 
     MenuIndex++;
     EditContext->OptionsMenuIndex = MenuIndex;
-    YoriLibCloneString(&MenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_OPTIONS]);
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Options"));
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(OptionsMenuEntries)/sizeof(OptionsMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = OptionsMenuEntries;
 
     MenuIndex++;
-    YoriLibCloneString(&MenuEntries[MenuIndex].Caption, &EditContext->ResourceStrings[IDS_YEDIT_MNU_HELP]);
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Help"));
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(HelpMenuEntries)/sizeof(HelpMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = HelpMenuEntries;
 
@@ -3080,7 +3056,7 @@ EditCreateMainWindow(
     }
 
     if (WindowSize.X < 60 || WindowSize.Y < 20) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &EditContext->ResourceStrings[IDS_YEDIT_MSG_WINDOWTOOSMALL]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("edit: window size too small\n"));
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
@@ -3235,10 +3211,6 @@ ENTRYPOINT(
     YORI_STRING Arg;
 
     ZeroMemory(&GlobalEditContext, sizeof(GlobalEditContext));
-    if (!YoriLibLoadAndVerifyStringResourceArray(IDS_YEDIT_BASE, IDS_YEDIT_MAX, &GlobalEditContext.ResourceStrings)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YEdit: Could not load localized resources\n"));
-        return EXIT_FAILURE;
-    }
     if (YoriLibIsUtf8Supported()) {
         GlobalEditContext.Encoding = CP_UTF8_OR_16;
     } else {
@@ -3261,11 +3233,9 @@ ENTRYPOINT(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 EditHelp();
-                EditFreeEditContext(&GlobalEditContext);
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(strEditCopyrightYear);
-                EditFreeEditContext(&GlobalEditContext);
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 GlobalEditContext.UseAsciiDrawing = TRUE;
@@ -3300,7 +3270,6 @@ ENTRYPOINT(
 
     if (StartArg > 0 && StartArg < ArgC) {
         if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &GlobalEditContext.OpenFileName)) {
-            EditFreeEditContext(&GlobalEditContext);
             return EXIT_FAILURE;
         }
     }

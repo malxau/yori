@@ -559,13 +559,9 @@ YoriLibIsSizeAllocatable(
     YORI_MAX_UNSIGNED_T AllocMask;
     YORI_ALLOC_SIZE_T MaxAlloc;
 
-    AllocMask = 0;
-
     MaxAlloc = (YORI_ALLOC_SIZE_T)-1;
-    AllocMask = (YORI_MAX_UNSIGNED_T)MaxAlloc;
+    AllocMask = MaxAlloc;
     AllocMask = ~AllocMask;
-
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("MaxAlloc %08x AllocMask %016llx Size %016llx\n"), MaxAlloc, AllocMask, Size);
 
     if (Size & AllocMask) {
         return FALSE;
