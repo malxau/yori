@@ -35,10 +35,12 @@ CHAR strShutdownHelpText[] =
         "\n"
         "Shutdown the system.\n"
         "\n"
-        "SHUTDN [-license] [-f] [-d|-k|-l|-r|-s [-p]]\n"
+        "SHUTDN [-license] [-f] [-d|-e|-h|-k|-l|-r|-s [-p]]\n"
         "\n"
         "   -d             Disconnect the current session\n"
+        "   -e             Sleep the system\n"
         "   -f             Force the action without waiting for programs to close cleanly\n"
+        "   -h             Hibernates the system\n"
         "   -k             Lock the current session\n"
         "   -l             Log off the current user\n"
         "   -p             Turn off power after shutdown, if supported\n"
@@ -68,7 +70,9 @@ typedef enum _SHUTDN_OP {
     ShutdownOpShutdown = 2,
     ShutdownOpReboot = 3,
     ShutdownOpLock = 4,
-    ShutdownOpDisconnect = 5
+    ShutdownOpDisconnect = 5,
+    ShutdownOpSleep = 6,
+    ShutdownOpHibernate = 7,
 } SHUTDN_OP;
 
 #ifdef YORI_BUILTIN
@@ -131,8 +135,14 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 Op = ShutdownOpDisconnect;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+                Op = ShutdownOpSleep;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 Force = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+                Op = ShutdownOpHibernate;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
                 Op = ShutdownOpLock;
@@ -163,6 +173,7 @@ ENTRYPOINT(
     }
 
     YoriLibLoadAdvApi32Functions();
+    YoriLibLoadPowrprofFunctions();
     YoriLibLoadUser32Functions();
 
     YoriLibEnableShutdownPrivilege();
@@ -277,7 +288,47 @@ ENTRYPOINT(
                 YoriLibFreeWinErrorText(ErrText);
                 return EXIT_FAILURE;
             }
-            
+            break;
+        case ShutdownOpSleep:
+            if (DllKernel32.pSetSystemPowerState == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: OS support not present\n"));
+                return EXIT_FAILURE;
+            }
+            if (DllPowrprof.pIsPwrSuspendAllowed != NULL &&
+                !DllPowrprof.pIsPwrSuspendAllowed()) {
+
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: system does not support sleep\n"));
+                return EXIT_FAILURE;
+            }
+            Result = DllKernel32.pSetSystemPowerState(TRUE, Force);
+            if (!Result) {
+                Err = GetLastError();
+                ErrText = YoriLibGetWinErrorText(Err);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Sleep failed: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                return EXIT_FAILURE;
+            }
+            break;
+        case ShutdownOpHibernate:
+            if (DllKernel32.pSetSystemPowerState == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: OS support not present\n"));
+                return EXIT_FAILURE;
+            }
+            if (DllPowrprof.pIsPwrHibernateAllowed != NULL &&
+                !DllPowrprof.pIsPwrHibernateAllowed()) {
+
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: system does not support hibernate\n"));
+                return EXIT_FAILURE;
+            }
+            Result = DllKernel32.pSetSystemPowerState(FALSE, Force);
+            if (!Result) {
+                Err = GetLastError();
+                ErrText = YoriLibGetWinErrorText(Err);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Hibernate failed: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                return EXIT_FAILURE;
+            }
+            break;
     }
 
     return EXIT_SUCCESS;

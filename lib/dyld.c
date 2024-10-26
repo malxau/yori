@@ -224,6 +224,7 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
     {(FARPROC *)&DllKernel32.pSetCurrentConsoleFontEx, "SetCurrentConsoleFontEx"},
     {(FARPROC *)&DllKernel32.pSetFileInformationByHandle, "SetFileInformationByHandle"},
     {(FARPROC *)&DllKernel32.pSetInformationJobObject, "SetInformationJobObject"},
+    {(FARPROC *)&DllKernel32.pSetSystemPowerState, "SetSystemPowerState"},
     {(FARPROC *)&DllKernel32.pWritePrivateProfileStringW, "WritePrivateProfileStringW"},
     {(FARPROC *)&DllKernel32.pWow64DisableWow64FsRedirection, "Wow64DisableWow64FsRedirection"},
     {(FARPROC *)&DllKernel32.pWow64GetThreadContext, "Wow64GetThreadContext"},
@@ -449,6 +450,37 @@ YoriLibLoadOle32Functions(VOID)
     DllOle32.pOleUninitialize = (POLE_UNINITIALIZE)GetProcAddress(DllOle32.hDll, "OleUninitialize");
     DllOle32.pRegisterDragDrop = (PREGISTER_DRAG_DROP)GetProcAddress(DllOle32.hDll, "RegisterDragDrop");
     DllOle32.pRevokeDragDrop = (PREVOKE_DRAG_DROP)GetProcAddress(DllOle32.hDll, "RevokeDragDrop");
+
+    return TRUE;
+}
+
+/**
+ A structure containing pointers to powrprof.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_POWRPROF_FUNCTIONS DllPowrprof;
+
+/**
+ Load pointers to all optional powrprof.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadPowrprofFunctions(VOID)
+{
+
+    if (DllPowrprof.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllPowrprof.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("POWRPROF.DLL"));
+    if (DllPowrprof.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllPowrprof.pIsPwrHibernateAllowed = (PIS_PWR_SUSPEND_ALLOWED)GetProcAddress(DllPowrprof.hDll, "IsPwrHibernateAllowed");
+    DllPowrprof.pIsPwrSuspendAllowed = (PIS_PWR_SUSPEND_ALLOWED)GetProcAddress(DllPowrprof.hDll, "IsPwrSuspendAllowed");
+    DllPowrprof.pSetSuspendState = (PSET_SUSPEND_STATE)GetProcAddress(DllPowrprof.hDll, "SetSuspendState");
 
     return TRUE;
 }

@@ -902,19 +902,29 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
 #define YUI_MENU_LOGOFF                (12)
 
 /**
+ An identifier for the menu item to sleep the system.
+ */
+#define YUI_MENU_SLEEP                 (13)
+
+/**
+ An identifier for the menu item to hibernate the system.
+ */
+#define YUI_MENU_HIBERNATE             (14)
+
+/**
  An identifier for the menu item to reboot the system.
  */
-#define YUI_MENU_REBOOT                (13)
+#define YUI_MENU_REBOOT                (15)
 
 /**
  An identifier for the menu item to shut down the system.
  */
-#define YUI_MENU_SHUTDOWN              (14)
+#define YUI_MENU_SHUTDOWN              (16)
 
 /**
  An identifier for the menu item to exit the program.
  */
-#define YUI_MENU_EXIT                  (15)
+#define YUI_MENU_EXIT                  (17)
 
 /**
  An identifier for the menu item to run a program.

@@ -8247,6 +8247,18 @@ SET_INFORMATION_JOB_OBJECT(HANDLE, DWORD, PVOID, DWORD);
 typedef SET_INFORMATION_JOB_OBJECT *PSET_INFORMATION_JOB_OBJECT;
 
 /**
+ A prototype for the SetSystemPowerState function.
+ */
+typedef
+BOOL WINAPI
+SET_SYSTEM_POWER_STATE(BOOL, BOOL);
+
+/**
+ A prototype for a pointer to the SetSystemPowerState function.
+ */
+typedef SET_SYSTEM_POWER_STATE *PSET_SYSTEM_POWER_STATE;
+
+/**
  A prototype for the WritePrivateProfileStringW function.
  */
 typedef
@@ -8629,6 +8641,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to SetInformationJobObject.
      */
     PSET_INFORMATION_JOB_OBJECT pSetInformationJobObject;
+
+    /**
+     If it's available on the current system, a pointer to GetSystemPowerState.
+     */
+    PSET_SYSTEM_POWER_STATE pSetSystemPowerState;
 
     /**
      If it's available on the current system, a pointer to WritePrivateProfileStringW.
@@ -9872,6 +9889,74 @@ typedef struct _YORI_OLE32_FUNCTIONS {
 } YORI_OLE32_FUNCTIONS, *PYORI_OLE32_FUNCTIONS;
 
 extern YORI_OLE32_FUNCTIONS DllOle32;
+
+/**
+ A prototype for the IsPwrHibernateAllowed function.
+ */
+typedef
+BOOLEAN WINAPI
+IS_PWR_HIBERNATE_ALLOWED(VOID);
+
+/**
+ A prototype for a pointer to the IsPwrHibernateAllowed function.
+ */
+typedef IS_PWR_HIBERNATE_ALLOWED *PIS_PWR_HIBERNATE_ALLOWED;
+
+/**
+ A prototype for the IsPwrSuspendAllowed function.
+ */
+typedef
+BOOLEAN WINAPI
+IS_PWR_SUSPEND_ALLOWED(VOID);
+
+/**
+ A prototype for a pointer to the IsPwrSuspendAllowed function.
+ */
+typedef IS_PWR_SUSPEND_ALLOWED *PIS_PWR_SUSPEND_ALLOWED;
+
+/**
+ A prototype for the SetSuspendState function.
+ */
+typedef
+BOOLEAN WINAPI
+SET_SUSPEND_STATE(BOOL, BOOL, BOOL);
+
+/**
+ A prototype for a pointer to the SetSuspendState function.
+ */
+typedef SET_SUSPEND_STATE *PSET_SUSPEND_STATE;
+
+/**
+ A structure containing optional function pointers to powepsapi.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_POWRPROF_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to
+     IsPwrHibernateAllowed.
+     */
+    PIS_PWR_HIBERNATE_ALLOWED pIsPwrHibernateAllowed;
+
+    /**
+     If it's available on the current system, a pointer to
+     IsPwrSuspendAllowed.
+     */
+    PIS_PWR_SUSPEND_ALLOWED pIsPwrSuspendAllowed;
+
+    /**
+     If it's available on the current system, a pointer to
+     SetSuspendState.
+     */
+    PSET_SUSPEND_STATE pSetSuspendState;
+
+} YORI_POWRPROF_FUNCTIONS, *PYORI_POWRPROF_FUNCTIONS;
+
+extern YORI_POWRPROF_FUNCTIONS DllPowrprof;
 
 /**
  A prototype for the GetModuleFileNameExW function.

@@ -249,6 +249,16 @@ typedef struct _YUI_MENU_CONTEXT {
     YUI_MENU_OWNERDRAW_ITEM ShutdownLogoff;
 
     /**
+     Owner draw state for the Shutdown Sleep menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ShutdownSleep;
+
+    /**
+     Owner draw state for the Shutdown Hibernate menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ShutdownHibernate;
+
+    /**
      Owner draw state for the Shutdown Reboot menu item.
      */
     YUI_MENU_OWNERDRAW_ITEM ShutdownReboot;
@@ -379,6 +389,8 @@ YuiMenuCleanupContext(VOID)
     YuiMenuCleanupItem(&YuiMenuContext.ShutdownLock);
     YuiMenuCleanupItem(&YuiMenuContext.ShutdownExit);
     YuiMenuCleanupItem(&YuiMenuContext.ShutdownLogoff);
+    YuiMenuCleanupItem(&YuiMenuContext.ShutdownSleep);
+    YuiMenuCleanupItem(&YuiMenuContext.ShutdownHibernate);
     YuiMenuCleanupItem(&YuiMenuContext.ShutdownReboot);
     YuiMenuCleanupItem(&YuiMenuContext.ShutdownShutdown);
 
@@ -495,6 +507,12 @@ YuiMenuInitializeContext(
 
     YuiMenuInitializeItem(&YuiMenuContext.ShutdownLogoff);
     YoriLibConstantString(&YuiMenuContext.ShutdownLogoff.Text, _T("Log off"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.ShutdownSleep);
+    YoriLibConstantString(&YuiMenuContext.ShutdownSleep.Text, _T("Sleep"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.ShutdownHibernate);
+    YoriLibConstantString(&YuiMenuContext.ShutdownHibernate.Text, _T("Hibernate"));
 
     YuiMenuInitializeItem(&YuiMenuContext.ShutdownReboot);
     YoriLibConstantString(&YuiMenuContext.ShutdownReboot.Text, _T("Reboot"));
@@ -1768,6 +1786,8 @@ YuiMenuPopulate(
 {
     YORI_STRING EnumDir;
     WORD MatchFlags;
+    BOOLEAN SleepSupported;
+    BOOLEAN HibernateSupported;
 
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
     MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
@@ -1912,6 +1932,17 @@ YuiMenuPopulate(
         AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW, YUI_MENU_EXIT, (LPCWSTR)&YuiMenuContext.Exit);
     }
 
+    SleepSupported = FALSE;
+    HibernateSupported = FALSE;
+
+    if (DllPowrprof.pIsPwrSuspendAllowed != NULL && DllPowrprof.pIsPwrSuspendAllowed()) {
+        SleepSupported = TRUE;
+    }
+
+    if (DllPowrprof.pIsPwrHibernateAllowed != NULL && DllPowrprof.pIsPwrHibernateAllowed()) {
+        HibernateSupported = TRUE;
+    }
+
     YuiContext->ShutdownMenu = CreatePopupMenu();
     if (YuiContext->ShutdownMenu == NULL) {
         return FALSE;
@@ -1922,6 +1953,15 @@ YuiMenuPopulate(
         AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_EXIT, (LPCWSTR)&YuiMenuContext.ShutdownExit);
     } else {
         AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_LOGOFF, (LPCWSTR)&YuiMenuContext.ShutdownLogoff);
+    }
+    if (SleepSupported || HibernateSupported) {
+        AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.Seperator);
+    }
+    if (SleepSupported) {
+        AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_SLEEP, (LPCWSTR)&YuiMenuContext.ShutdownSleep);
+    }
+    if (HibernateSupported) {
+        AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_HIBERNATE, (LPCWSTR)&YuiMenuContext.ShutdownHibernate);
     }
     AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW | MF_SEPARATOR, 0, (LPCWSTR)&YuiMenuContext.Seperator);
     AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_REBOOT, (LPCWSTR)&YuiMenuContext.ShutdownReboot);
@@ -2574,6 +2614,18 @@ YuiMenuExecuteById(
         case YUI_MENU_LOGOFF:
             if (DllUser32.pExitWindowsEx != NULL) {
                 DllUser32.pExitWindowsEx(EWX_LOGOFF, 0);
+            }
+            break;
+        case YUI_MENU_SLEEP:
+            if (DllKernel32.pSetSystemPowerState != NULL) {
+                YoriLibEnableShutdownPrivilege();
+                DllKernel32.pSetSystemPowerState(TRUE, FALSE);
+            }
+            break;
+        case YUI_MENU_HIBERNATE:
+            if (DllKernel32.pSetSystemPowerState != NULL) {
+                YoriLibEnableShutdownPrivilege();
+                DllKernel32.pSetSystemPowerState(FALSE, FALSE);
             }
             break;
         case YUI_MENU_REBOOT:

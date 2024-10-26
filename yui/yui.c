@@ -1795,6 +1795,7 @@ ymain(
     YoriLibLoadUser32Functions();
     YoriLibLoadShell32Functions();
     YoriLibLoadWtsApi32Functions();
+    YoriLibLoadPowrprofFunctions();
 
     for (i = 1; i < ArgC; i++) {
 

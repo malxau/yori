@@ -1288,6 +1288,9 @@ BOOL
 YoriLibLoadOle32Functions(VOID);
 
 BOOL
+YoriLibLoadPowrprofFunctions(VOID);
+
+BOOL
 YoriLibLoadPsapiFunctions(VOID);
 
 BOOL
