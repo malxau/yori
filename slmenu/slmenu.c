@@ -238,11 +238,11 @@ SlmenuCreateSinglelineMenu(
     CtrlRect.Top = 0;
     CtrlRect.Bottom = 0;
     CtrlRect.Left = 0;
-    CtrlRect.Right = WinMgrSize.X - 1;
+    CtrlRect.Right = (SHORT)(WinMgrSize.X - 1);
 
     if (Location == SlmenuBottomLine) {
-        CtrlRect.Top = WinMgrSize.Y - 1;
-        CtrlRect.Bottom = WinMgrSize.Y - 1;
+        CtrlRect.Top = (SHORT)(WinMgrSize.Y - 1);
+        CtrlRect.Bottom = (SHORT)(WinMgrSize.Y - 1);
     } else if (Location == SlmenuCurrentLine ||
                Location == SlmenuCurrentLineRemainder) {
         COORD CursorLocation;
@@ -263,11 +263,11 @@ SlmenuCreateSinglelineMenu(
             return FALSE;
         }
 
-        CtrlRect.Top = CursorLocation.Y - WinMgrPos.Top;
-        CtrlRect.Bottom = CursorLocation.Y - WinMgrPos.Top;
+        CtrlRect.Top = (SHORT)(CursorLocation.Y - WinMgrPos.Top);
+        CtrlRect.Bottom = (SHORT)(CursorLocation.Y - WinMgrPos.Top);
 
         if (Location == SlmenuCurrentLineRemainder) {
-            CtrlRect.Left = CursorLocation.X - WinMgrPos.Left;
+            CtrlRect.Left = (SHORT)(CursorLocation.X - WinMgrPos.Left);
         }
     }
 
