@@ -3392,7 +3392,7 @@ YoriLibRecycleBinFile(
 
 // *** RSRC.C ***
 
-
+__success(return)
 BOOLEAN
 YoriLibLoadAndVerifyStringResourceArray(
     __in YORI_ALLOC_SIZE_T InitialElement,

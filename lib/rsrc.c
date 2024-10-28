@@ -46,6 +46,7 @@
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriLibLoadStringResourceArray(
     __in YORI_ALLOC_SIZE_T InitialElement,
@@ -129,6 +130,7 @@ YoriLibLoadStringResourceArray(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriLibLoadAndVerifyStringResourceArray(
     __in YORI_ALLOC_SIZE_T InitialElement,

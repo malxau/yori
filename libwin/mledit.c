@@ -556,6 +556,9 @@ YoriWinMultilineEditFindCursorCharFromDisplayChar(
 
     if (LineIndex >= MultilineEdit->LinesPopulated) {
         *CursorChar = DisplayChar;
+        if (Remainder != NULL) {
+            *Remainder = 0;
+        }
         return;
     }
 
