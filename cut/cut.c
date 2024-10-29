@@ -3,7 +3,7 @@
  *
  * Yori shell filter within a line of output
  *
- * Copyright (c) 2017-2022 Malcolm J. Smith
+ * Copyright (c) 2017-2024 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,14 +35,17 @@ CHAR strCutHelpText[] =
         "\n"
         "Outputs a portion of an input buffer of text.\n"
         "\n"
-        "CUT [-license] [-b] [-s] [-f n] [-d <delimiter chars>] [-o n] [-l n] [file]\n"
+        "CUT [-license] [-b] [-s] [-f n] [-d <delimiter chars>] [-o n] [-l n]\n"
+        "    [[-i] -t <text>] [file]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -d             The set of characters which delimit fields, default comma\n"
         "   -f n           The field number to cut\n"
+        "   -i             Match text case insensitively\n"
         "   -l             The length in bytes to cut from the line or field\n"
         "   -o             The offset in bytes to cut from the line or field\n"
         "   -r             Operate on raw file offsets, not lines\n"
+        "   -t text        Start matching offsets from the portion of line matching text\n"
         "   -s             Match files from all subdirectories\n"
         ;
 
@@ -82,6 +85,18 @@ typedef struct _CUT_CONTEXT {
      offsets refer to a range within each line.
      */
     BOOLEAN RawFile;
+
+    /**
+     TRUE if any text matching should be case insensitive.  If FALSE, text
+     matching is case sensitive."
+     */
+    BOOLEAN CaseInsensitive;
+
+    /**
+     Start processing the line from any matching text.  If empty, the entire
+     line is used.
+     */
+    YORI_STRING MatchText;
 
     /**
      For a field delimited stream, contains the NULL terminated string
@@ -168,6 +183,28 @@ CutProcessHandleLines(
 
         MatchingSubset.StartOfString = LineString.StartOfString;
         MatchingSubset.LengthInChars = LineString.LengthInChars;
+
+        if (CutContext->MatchText.LengthInChars > 0) {
+            YORI_ALLOC_SIZE_T OffsetOfMatch;
+            BOOLEAN MatchFound;
+            MatchFound = FALSE;
+            if (CutContext->CaseInsensitive) {
+                if (YoriLibFindFirstMatchingSubstringInsensitive(&MatchingSubset, 1, &CutContext->MatchText, &OffsetOfMatch)) {
+                    MatchFound = TRUE;
+                }
+            } else {
+                if (YoriLibFindFirstMatchingSubstring(&MatchingSubset, 1, &CutContext->MatchText, &OffsetOfMatch)) {
+                    MatchFound = TRUE;
+                }
+            }
+
+            if (MatchFound) {
+                MatchingSubset.StartOfString = &MatchingSubset.StartOfString[OffsetOfMatch];
+                MatchingSubset.LengthInChars = (YORI_ALLOC_SIZE_T)(MatchingSubset.LengthInChars - OffsetOfMatch);
+            } else {
+                MatchingSubset.LengthInChars = 0;
+            }
+        }
 
         if (CutContext->FieldDelimited) {
             YORI_ALLOC_SIZE_T CurrentField = 0;
@@ -538,7 +575,7 @@ ENTRYPOINT(
                 CutHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2022"));
+                YoriLibDisplayMitLicense(_T("2017-2024"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -593,6 +630,19 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 CutContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+                CutContext.CaseInsensitive = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+                if (ArgC > i + 1) {
+                    if (CutContext.RawFile) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Matching text incompatible with raw file\n"));
+                    } else {
+                        YoriLibCloneString(&CutContext.MatchText, &ArgV[i + 1]);
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
@@ -628,6 +678,7 @@ ENTRYPOINT(
     if (StartArg == 0 || StartArg == ArgC) {
         if (YoriLibIsStdInConsole()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: No file or pipe for input\n"));
+            YoriLibFreeStringContents(&CutContext.MatchText);
             return EXIT_FAILURE;
         }
         hSource = GetStdHandle(STD_INPUT_HANDLE);
@@ -675,6 +726,7 @@ ENTRYPOINT(
 #if !YORI_BUILTIN
     YoriLibLineReadCleanupCache();
 #endif
+    YoriLibFreeStringContents(&CutContext.MatchText);
 
     return Result;
 }
