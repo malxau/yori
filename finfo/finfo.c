@@ -919,7 +919,7 @@ FInfoOutputShortName(
 {
     YORI_ALLOC_SIZE_T NameLength = (YORI_ALLOC_SIZE_T)_tcslen(Context->Entry.ShortFileName);
     if (OutputString->LengthAllocated >= NameLength) {
-        memcpy(OutputString->StartOfString, Context->Entry.FileName, NameLength * sizeof(TCHAR));
+        memcpy(OutputString->StartOfString, Context->Entry.ShortFileName, NameLength * sizeof(TCHAR));
         OutputString->LengthInChars = NameLength;
     }
     return NameLength;
@@ -1402,6 +1402,7 @@ FInfoExpandVariables(
         if (YoriLibCompareStringWithLiteral(VariableName, FInfoKnownVariables[Index].VariableName) == 0) {
             FInfoKnownVariables[Index].CollectFn(&FInfoContext->Entry, FInfoContext->FileInfo, FInfoContext->FilePath);
             CharsNeeded = FInfoKnownVariables[Index].OutputFn(FInfoContext, OutputString);
+            break;
         }
     }
 
