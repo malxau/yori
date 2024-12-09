@@ -3,7 +3,7 @@
  *
  * Yori shell start process via shell tool
  *
- * Copyright (c) 2017-2021 Malcolm J. Smith
+ * Copyright (c) 2017-2024 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,8 +35,9 @@ CHAR strStartHelpText[] =
         "\n"
         "Ask the shell to open a file.\n"
         "\n"
-        "START [-license] [-e] [-s:b|-s:h|-s:m] <file>\n"
+        "START [-license] [-c] [-e] [-s:b|-s:h|-s:m] <file>\n"
         "\n"
+        "   -c             Start with a clean environment\n"
         "   -e             Start elevated\n"
         "   -s:b           Start in the background\n"
         "   -s:h           Start hidden\n"
@@ -66,19 +67,25 @@ StartHelp(VOID)
 
  @param ShowState The state of the window for the new program.
 
+ @param CleanEnvironment TRUE to indicate a fresh environment block should
+        be allocated.  FALSE to inherit the environment from the current
+        process.
+
  @return TRUE to indicate success, FALSE on failure.
  */
 BOOLEAN
 StartCreateProcess(
     __in YORI_ALLOC_SIZE_T ArgC,
     __in YORI_STRING ArgV[],
-    __in INT ShowState
+    __in INT ShowState,
+    __in BOOLEAN CleanEnvironment
     )
 {
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
     YORI_STRING CmdLine;
     DWORD CreationFlags;
+    PVOID EnvironmentBlock;
 
     YoriLibInitEmptyString(&CmdLine);
     if (!YoriLibBuildCmdlineFromArgcArgv(ArgC, ArgV, TRUE, TRUE, &CmdLine)) {
@@ -88,6 +95,7 @@ StartCreateProcess(
 
     ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
     ZeroMemory(&StartupInfo, sizeof(StartupInfo));
+    EnvironmentBlock = NULL;
 
     StartupInfo.cb = sizeof(StartupInfo);
     StartupInfo.dwFlags = STARTF_USESHOWWINDOW;
@@ -95,7 +103,29 @@ StartCreateProcess(
 
     CreationFlags = CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP | CREATE_DEFAULT_ERROR_MODE;
 
-    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, CreationFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+    //
+    //  If the user requested a clean environment and the OS can provide one,
+    //  attempt to construct it.
+    //
+
+    if (CleanEnvironment &&
+        DllAdvApi32.pOpenProcessToken != NULL &&
+        DllUserEnv.pCreateEnvironmentBlock != NULL &&
+        DllUserEnv.pDestroyEnvironmentBlock != NULL) {
+
+        HANDLE ProcessHandle;
+
+        if (DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_EXECUTE | TOKEN_QUERY | TOKEN_READ, &ProcessHandle)) {
+            if (DllUserEnv.pCreateEnvironmentBlock(&EnvironmentBlock, ProcessHandle, FALSE)) {
+                CreationFlags = CreationFlags | CREATE_UNICODE_ENVIRONMENT;
+            } else {
+                EnvironmentBlock = NULL;
+            }
+            CloseHandle(ProcessHandle);
+        }
+    }
+
+    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, CreationFlags, EnvironmentBlock, NULL, &StartupInfo, &ProcessInfo)) {
         DWORD Err = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(Err);
         if (ErrText != NULL) {
@@ -103,8 +133,15 @@ StartCreateProcess(
             YoriLibFreeWinErrorText(ErrText);
 
         }
+        if (EnvironmentBlock != NULL) {
+            DllUserEnv.pDestroyEnvironmentBlock(EnvironmentBlock);
+        }
         YoriLibFreeStringContents(&CmdLine);
         return FALSE;
+    }
+
+    if (EnvironmentBlock != NULL) {
+        DllUserEnv.pDestroyEnvironmentBlock(EnvironmentBlock);
     }
 
     YoriLibFreeStringContents(&CmdLine);
@@ -275,6 +312,10 @@ StartShellExecute(
         suppressed; FALSE to let the system determine whether to display
         a prompt.
 
+ @param CleanEnvironment TRUE to indicate a fresh environment block should
+        be allocated.  FALSE to inherit the environment from the current
+        process.
+
  @return TRUE to indicate success, FALSE on failure.
  */
 BOOLEAN
@@ -283,20 +324,25 @@ StartExecute(
     __in YORI_STRING ArgV[],
     __in INT ShowState,
     __in BOOLEAN Elevate,
-    __in BOOLEAN NoElevate
+    __in BOOLEAN NoElevate,
+    __in BOOLEAN CleanEnvironment
     )
 {
     YoriLibLoadShell32Functions();
+    YoriLibLoadUserEnvFunctions();
+    YoriLibLoadAdvApi32Functions();
 
-    if (Elevate && DllShell32.pShellExecuteExW == NULL) {
-        return FALSE;
+    if (!CleanEnvironment) {
+        if (Elevate && DllShell32.pShellExecuteExW == NULL) {
+            return FALSE;
+        }
+
+        if (DllShell32.pShellExecuteW != NULL) {
+            return StartShellExecute(ArgC, ArgV, ShowState, Elevate, NoElevate);
+        }
     }
 
-    if (DllShell32.pShellExecuteW != NULL) {
-        return StartShellExecute(ArgC, ArgV, ShowState, Elevate, NoElevate);
-    }
-
-    return StartCreateProcess(ArgC, ArgV, ShowState);
+    return StartCreateProcess(ArgC, ArgV, ShowState, CleanEnvironment);
 }
 
 #ifdef YORI_BUILTIN
@@ -337,6 +383,7 @@ ENTRYPOINT(
     BOOLEAN Elevate = FALSE;
     BOOLEAN Result;
     BOOLEAN NoElevate = FALSE;
+    BOOLEAN CleanEnvironment = FALSE;
 
     ShowState = SW_SHOWNORMAL;
 
@@ -351,8 +398,11 @@ ENTRYPOINT(
                 StartHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2021"));
+                YoriLibDisplayMitLicense(_T("2017-2024"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                CleanEnvironment = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 Elevate = TRUE;
                 NoElevate = FALSE;
@@ -388,6 +438,16 @@ ENTRYPOINT(
 
     if (StartArg == 0 || StartArg == ArgC) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("start: missing argument\n"));
+        return EXIT_FAILURE;
+    }
+
+    if (CleanEnvironment && (Elevate || NoElevate)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("start: clean environment incompatible with elevation\n"));
+        return EXIT_FAILURE;
+    }
+
+    if (Elevate && NoElevate) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("start: elevate incompatible with no elevate\n"));
         return EXIT_FAILURE;
     }
 
@@ -452,11 +512,11 @@ ENTRYPOINT(
             ArgArray[Index + 2].MemoryToFree = NULL;
         }
 
-        Result = StartExecute(ArgCount + 2, ArgArray, ShowState, Elevate, NoElevate);
+        Result = StartExecute(ArgCount + 2, ArgArray, ShowState, Elevate, NoElevate, CleanEnvironment);
         YoriLibFreeStringContents(&ArgArray[0]);
         YoriLibFree(ArgArray);
     } else {
-        Result = StartExecute(ArgC - StartArg, &ArgV[StartArg], ShowState, Elevate, NoElevate);
+        Result = StartExecute(ArgC - StartArg, &ArgV[StartArg], ShowState, Elevate, NoElevate, CleanEnvironment);
     }
 
     if (Result) {

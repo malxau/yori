@@ -1303,6 +1303,9 @@ BOOL
 YoriLibLoadUser32Functions(VOID);
 
 BOOL
+YoriLibLoadUserEnvFunctions(VOID);
+
+BOOL
 YoriLibLoadVersionFunctions(VOID);
 
 BOOL

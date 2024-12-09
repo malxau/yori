@@ -4,7 +4,7 @@
  * Yori shell header file to define OS things that the compilation environment
  * doesn't support.
  *
- * Copyright (c) 2017-2021 Malcolm J. Smith
+ * Copyright (c) 2017-2024 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -10896,6 +10896,56 @@ typedef struct _YORI_USER32_FUNCTIONS {
 } YORI_USER32_FUNCTIONS, *PYORI_USER32_FUNCTIONS;
 
 extern YORI_USER32_FUNCTIONS DllUser32;
+
+/**
+ A prototype for the CreateEnvironmentBlock function.
+ */
+typedef
+BOOL WINAPI
+CREATE_ENVIRONMENT_BLOCK(LPVOID *, HANDLE, BOOL);
+
+/**
+ A prototype for a pointer to the CreateEnvironmentBlock function.
+ */
+typedef CREATE_ENVIRONMENT_BLOCK *PCREATE_ENVIRONMENT_BLOCK;
+
+/**
+ A prototype for the DestroyEnvironmentBlock function.
+ */
+typedef
+BOOL WINAPI
+DESTROY_ENVIRONMENT_BLOCK(LPVOID);
+
+/**
+ A prototype for a pointer to the DestroyEnvironmentBlock function.
+ */
+typedef DESTROY_ENVIRONMENT_BLOCK *PDESTROY_ENVIRONMENT_BLOCK;
+
+/**
+ A structure containing optional function pointers to userenv.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_USERENV_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to
+     CreateEnvironmentBlock.
+     */
+    PCREATE_ENVIRONMENT_BLOCK pCreateEnvironmentBlock;
+
+    /**
+     If it's available on the current system, a pointer to
+     DestroyEnvironmentBlock.
+     */
+    PDESTROY_ENVIRONMENT_BLOCK pDestroyEnvironmentBlock;
+
+} YORI_USERENV_FUNCTIONS, *PYORI_USERENV_FUNCTIONS;
+
+extern YORI_USERENV_FUNCTIONS DllUserEnv;
 
 /**
  A prototype for the GetFileVersionInfoSizeW function.

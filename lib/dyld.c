@@ -582,6 +582,35 @@ YoriLibLoadShfolderFunctions(VOID)
 }
 
 /**
+ A structure containing pointers to userenv.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_USERENV_FUNCTIONS DllUserEnv;
+
+/**
+ Load pointers to all optional userenv.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadUserEnvFunctions(VOID)
+{
+
+    if (DllUserEnv.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllUserEnv.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("USERENV.DLL"));
+    if (DllUserEnv.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllUserEnv.pCreateEnvironmentBlock = (PCREATE_ENVIRONMENT_BLOCK)GetProcAddress(DllUserEnv.hDll, "CreateEnvironmentBlock");
+    DllUserEnv.pDestroyEnvironmentBlock = (PDESTROY_ENVIRONMENT_BLOCK)GetProcAddress(DllUserEnv.hDll, "DestroyEnvironmentBlock");
+    return TRUE;
+}
+
+/**
  A structure containing pointers to version.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
