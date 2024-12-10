@@ -708,8 +708,6 @@ YoriLibReadLineToStringEx(
                 break;
             }
 
-            ResetEvent(FileHandle);
-
             //
             //  Note that this delay is not exercised once the process
             //  starts pushing data into the pipe.  Think of this as
