@@ -2818,6 +2818,41 @@ typedef struct RETRIEVAL_POINTERS_BUFFER {
 } RETRIEVAL_POINTERS_BUFFER, *PRETRIEVAL_POINTERS_BUFFER;
 #endif
 
+#ifndef FSCTL_MOVE_FILE
+/**
+ Specifies the FSCTL_MOVE_FILE numerical representation if the compilation
+ environment doesn't provide it.
+ */
+#define FSCTL_MOVE_FILE    CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 29,  METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/**
+ Specifies information required to move a file to a different cluster.
+ */
+typedef struct _MOVE_FILE_DATA {
+
+    /**
+     A handle to the file.  This FSCTL is sent to the volume.
+     */
+    HANDLE FileHandle;
+
+    /**
+     The file offset to move.
+     */
+    LARGE_INTEGER StartingVcn;
+
+    /**
+     The target cluster on the volume to move to.
+     */
+    LARGE_INTEGER StartingLcn;
+
+    /**
+     The number of clusters to move.
+     */
+    DWORD ClusterCount;
+
+} MOVE_FILE_DATA, *PMOVE_FILE_DATA;
+#endif
+
 #ifndef FSCTL_QUERY_ALLOCATED_RANGES
 /**
  Specifies the FSCTL_QUERY_ALLOCATED_RANGES numerical representation if the

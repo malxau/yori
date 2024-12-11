@@ -1,7 +1,7 @@
 /**
  * @file extents/extents.c
  *
- * Yori shell display file extents
+ * Yori shell display and manipulate file extents
  *
  * Copyright (c) 2018-2024 Malcolm J. Smith
  *
@@ -33,13 +33,14 @@
 const
 CHAR strExtentsHelpText[] =
         "\n"
-        "Output location of files within a volume or disk.\n"
+        "Output location of files within a volume or disk and relocate files.\n"
         "\n"
-        "EXTENTS [-license] <file>...\n"
+        "EXTENTS [-license] [-b] [-d] [-h] [-m vcn lcn cnt] [-s] <file>...\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -d             Return directories rather than directory contents\n"
         "   -h             Display output in hexadecimal\n"
+        "   -m vcn lcn cnt Move a range of a file to a new position\n"
         "   -s             Process files from all subdirectories\n";
 
 /**
@@ -51,6 +52,24 @@ typedef struct _EXTENTS_CONTEXT {
      Pointer to the full file path for a matching file.
      */
     PYORI_STRING FilePath;
+
+    /**
+     When moving a file (ClusterCount != 0), specifies the offset of the file
+     to move.
+     */
+    LONGLONG StartingVcn;
+
+    /**
+     When moving a file (ClusterCount != 0), specifies the target cluster on
+     the volume to move to.
+     */
+    LONGLONG StartingLcn;
+
+    /**
+     Specifies the number of clusters to move.  If zero, the program is
+     outputting the locations of files.
+     */
+    DWORD ClusterCount;
 
     /**
      Records the total number of files processed.
@@ -84,6 +103,241 @@ ExtentsHelp(VOID)
 }
 
 /**
+ Display the extents used by a single file.
+
+ @param ExtentsContext Pointer to the application context.
+
+ @param FilePath Specifies the full path to the file.
+
+ @param FileHandle Specifies the handle to the file whose extents should
+        be displayed.
+
+ @param BytesPerCluster Specifies the bytes per cluster to use in display
+        calculations.
+
+ @param RetrievalPointerBase Specifies the base offset of the volume to use
+        in display calculations.
+
+ @param VolumeDiskExtents Specifies the location of the volume within the
+        disk to use in display calculations.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+ExtentsDisplayExtents(
+    __in PEXTENTS_CONTEXT ExtentsContext,
+    __in PYORI_STRING FilePath,
+    __in HANDLE FileHandle,
+    __in DWORD BytesPerCluster,
+    __in DWORDLONG RetrievalPointerBase,
+    __in PYORI_VOLUME_DISK_EXTENTS VolumeDiskExtents
+    )
+{
+    STARTING_VCN_INPUT_BUFFER StartingVcn;
+    PRETRIEVAL_POINTERS_BUFFER RetrievalPointers;
+    YORI_ALLOC_SIZE_T RetrievalPointerSize;
+    BOOLEAN MoreToGo;
+    DWORD Index;
+    DWORD BytesReturned;
+    DWORD Error;
+    LPTSTR ErrText;
+
+    RetrievalPointerSize = 4096;
+    RetrievalPointers = YoriLibMalloc(RetrievalPointerSize);
+    if (RetrievalPointers == NULL) {
+        return FALSE;
+    }
+
+    YoriLibLiAssignUnsigned(&StartingVcn.StartingVcn, 0);
+
+    MoreToGo = TRUE;
+    while (MoreToGo) {
+        MoreToGo = FALSE;
+        Error = ERROR_SUCCESS;
+        if (!DeviceIoControl(FileHandle,
+                             FSCTL_GET_RETRIEVAL_POINTERS,
+                             &StartingVcn,
+                             sizeof(StartingVcn),
+                             RetrievalPointers,
+                             RetrievalPointerSize,
+                             &BytesReturned,
+                             NULL)) {
+
+            Error = GetLastError();
+            if (Error == ERROR_MORE_DATA) {
+                MoreToGo = TRUE;
+                Error = ERROR_SUCCESS;
+            }
+        }
+
+        if (Error == ERROR_SUCCESS) {
+            YORI_MAX_UNSIGNED_T FileOffset;
+            YORI_MAX_UNSIGNED_T Lcn;
+            YORI_MAX_SIGNED_T CurrentVcn;
+            YORI_MAX_UNSIGNED_T PartitionOffset;
+            YORI_MAX_UNSIGNED_T DiskOffset;
+
+            //
+            //  For the first range, output headers.  This is deferred until
+            //  here so we don't output headers followed by an error.
+            //
+
+            if (StartingVcn.StartingVcn.QuadPart == 0) {
+                if (ExtentsContext->FilesFound > 0) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+                }
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y:\n"), FilePath);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  File Offset    |    Cluster    |   Partition Offset"));
+            
+                if (VolumeDiskExtents->NumberOfDiskExtents == 1) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("   |  Disk Offset\n"));
+                } else {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+                }
+            }
+
+            //
+            //  Loop over all extents returned from this call.  Note this is
+            //  not necessarily all extents for the file.
+            //
+
+            CurrentVcn = RetrievalPointers->StartingVcn.QuadPart;
+            for (Index = 0; Index < RetrievalPointers->ExtentCount; Index++) {
+
+                FileOffset = CurrentVcn * BytesPerCluster;
+                Lcn = RetrievalPointers->Extents[Index].Lcn.QuadPart;
+                PartitionOffset = Lcn * BytesPerCluster + RetrievalPointerBase;
+
+                //
+                //  Display file offset
+                //
+    
+                if (ExtentsContext->DisplayHex) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("0x%-14llx | "), FileOffset);
+                } else {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-16lli | "), FileOffset);
+                }
+
+                //
+                //  Display cluster and partition offset
+                //
+
+                if (Lcn == INVALID_LCN) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("*** NOT ALLOCATED ***\n"));
+
+                } else {
+                    if (ExtentsContext->DisplayHex) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("0x%-11llx | 0x%-18llx"), Lcn, PartitionOffset);
+                    } else {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-13lli | %-20lli"), Lcn, PartitionOffset);
+                    }
+
+                    //
+                    //  On a simple disk, display disk offset
+                    //
+
+                    if (VolumeDiskExtents->NumberOfDiskExtents == 1) {
+                        DiskOffset = PartitionOffset + VolumeDiskExtents->Extents[0].StartingOffset.QuadPart;
+                        if (ExtentsContext->DisplayHex) {
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" | 0x%-18llx\n"), DiskOffset);
+                        } else {
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" | %-20lli\n"), DiskOffset);
+                        }
+                    } else {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+                    }
+                }
+
+                CurrentVcn = RetrievalPointers->Extents[Index].NextVcn.QuadPart;
+            }
+
+            //
+            //  Find the start point for the next call, or indicate that
+            //  the end of file has been reached.
+            //
+
+            if (!MoreToGo) {
+                FileOffset = CurrentVcn * BytesPerCluster;
+                if (ExtentsContext->DisplayHex) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("0x%-14llx | *** END ***\n"), FileOffset);
+                } else {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-16lli | *** END ***\n"), FileOffset);
+                }
+            } else if (CurrentVcn > StartingVcn.StartingVcn.QuadPart) {
+                StartingVcn.StartingVcn.QuadPart = CurrentVcn;
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: get retrieval pointers did not advance, previous start vcn %lli, new start vcn %lli\n"), StartingVcn.StartingVcn.QuadPart, CurrentVcn);
+                MoreToGo = FALSE;
+            }
+        } else if (Error == ERROR_HANDLE_EOF) {
+            if (ExtentsContext->FilesFound > 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: %y has no extents\n"), FilePath);
+            MoreToGo = FALSE;
+        } else {
+            ErrText = YoriLibGetWinErrorText(Error);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: get retrieval pointers of %y failed: %s"), FilePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            MoreToGo = FALSE;
+        }
+    }
+
+    YoriLibFree(RetrievalPointers);
+    return TRUE;
+}
+
+/**
+ Move a range of a file to the specified target extents.
+
+ @param ExtentsContext Pointer to the application context.
+
+ @param FilePath Specifies the full path of the file to move.
+
+ @param VolumeHandle Specifies a handle to the volume that hosts the file.
+
+ @param FileHandle Specifies a handle to the file to move.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+ExtentsMoveFile(
+    __in PEXTENTS_CONTEXT ExtentsContext,
+    __in PYORI_STRING FilePath,
+    __in HANDLE VolumeHandle,
+    __in HANDLE FileHandle
+    )
+{
+    MOVE_FILE_DATA MoveData;
+    DWORD BytesReturned;
+    DWORD Error;
+    LPTSTR ErrText;
+
+    MoveData.FileHandle = FileHandle;
+    MoveData.StartingVcn.QuadPart = ExtentsContext->StartingVcn;
+    MoveData.StartingLcn.QuadPart = ExtentsContext->StartingLcn;
+    MoveData.ClusterCount = ExtentsContext->ClusterCount;
+
+    Error = ERROR_SUCCESS;
+    if (!DeviceIoControl(VolumeHandle,
+                         FSCTL_MOVE_FILE,
+                         &MoveData,
+                         sizeof(MoveData),
+                         NULL,
+                         0,
+                         &BytesReturned,
+                         NULL)) {
+
+        Error = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Error);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: move extent 0x%llx of %y to 0x%llx failed: %s"), ExtentsContext->StartingVcn, FilePath, ExtentsContext->StartingLcn, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+    }
+
+    return TRUE;
+}
+
+/**
  A callback that is invoked when a file is found that matches a search criteria
  specified in the set of strings to enumerate.
 
@@ -110,19 +364,15 @@ ExtentsFileFoundCallback(
     PEXTENTS_CONTEXT ExtentsContext;
     HANDLE VolumeHandle;
     HANDLE FileHandle;
-    STARTING_VCN_INPUT_BUFFER StartingVcn;
-    PRETRIEVAL_POINTERS_BUFFER RetrievalPointers;
-    YORI_ALLOC_SIZE_T RetrievalPointerSize;
     DWORD BytesReturned;
     DWORD Error;
     LPTSTR ErrText;
-    BOOLEAN MoreToGo;
-    DWORD Index;
     DWORD SectorsPerCluster;
     DWORD SectorSize;
     DWORD FreeClusters;
     DWORD TotalClusters;
     DWORD BytesPerCluster;
+    DWORD DesiredAccess;
     DWORDLONG RetrievalPointerBase;
     YORI_VOLUME_DISK_EXTENTS VolumeDiskExtents;
 
@@ -139,7 +389,7 @@ ExtentsFileFoundCallback(
     YoriLibInitEmptyString(&VolRootName);
     if (!YoriLibGetVolumePathName(FilePath, &VolRootName)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: failed to find volume for file %y\n"), FilePath);
-        return TRUE;
+        goto End;
     }
 
     //
@@ -170,7 +420,7 @@ ExtentsFileFoundCallback(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: GetDiskFreeSpace of %y failed: %s\n"), &VolRootName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriLibFreeStringContents(&VolRootName);
-        return TRUE;
+        goto End;
     }
 
     BytesPerCluster = SectorsPerCluster * SectorSize;
@@ -192,9 +442,13 @@ ExtentsFileFoundCallback(
     //  handle, but not require any form of write access or read data access,
     //  or else it needs an administrative caller.
     //
+    DesiredAccess = FILE_READ_ATTRIBUTES | FILE_TRAVERSE;
+    if (ExtentsContext->ClusterCount != 0) {
+        DesiredAccess = FILE_READ_ATTRIBUTES | FILE_READ_DATA | FILE_WRITE_DATA;
+    }
 
     VolumeHandle = CreateFile(VolRootName.StartOfString,
-                              FILE_READ_ATTRIBUTES | FILE_TRAVERSE,
+                              DesiredAccess,
                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                               NULL,
                               OPEN_EXISTING,
@@ -206,7 +460,7 @@ ExtentsFileFoundCallback(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: open of %y failed: %s\n"), &VolRootName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriLibFreeStringContents(&VolRootName);
-        return TRUE;
+        goto End;
     }
 
     //
@@ -256,14 +510,6 @@ ExtentsFileFoundCallback(
         VolumeDiskExtents.NumberOfDiskExtents = 0;
     }
 
-    CloseHandle(VolumeHandle);
-
-    RetrievalPointerSize = 4096;
-    RetrievalPointers = YoriLibMalloc(RetrievalPointerSize);
-    if (RetrievalPointers == NULL) {
-        YoriLibFreeStringContents(&VolRootName);
-        return TRUE;
-    }
 
     //
     //  Open the file and start querying its extents.
@@ -283,149 +529,29 @@ ExtentsFileFoundCallback(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: open of %y failed: %s"), FilePath, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriLibFreeStringContents(&VolRootName);
-        YoriLibFree(RetrievalPointers);
+        CloseHandle(VolumeHandle);
         return TRUE;
     }
 
-    YoriLibLiAssignUnsigned(&StartingVcn.StartingVcn, 0);
-
-    MoreToGo = TRUE;
-    while (MoreToGo) {
-        MoreToGo = FALSE;
-        Error = ERROR_SUCCESS;
-        if (!DeviceIoControl(FileHandle,
-                             FSCTL_GET_RETRIEVAL_POINTERS,
-                             &StartingVcn,
-                             sizeof(StartingVcn),
-                             RetrievalPointers,
-                             RetrievalPointerSize,
-                             &BytesReturned,
-                             NULL)) {
-
-            Error = GetLastError();
-            if (Error == ERROR_MORE_DATA) {
-                MoreToGo = TRUE;
-                Error = ERROR_SUCCESS;
-            }
-        }
-
-        if (Error == ERROR_SUCCESS) {
-            YORI_MAX_UNSIGNED_T FileOffset;
-            YORI_MAX_UNSIGNED_T Lcn;
-            YORI_MAX_SIGNED_T CurrentVcn;
-            YORI_MAX_UNSIGNED_T PartitionOffset;
-            YORI_MAX_UNSIGNED_T DiskOffset;
-
-            //
-            //  For the first range, output headers.  This is deferred until
-            //  here so we don't output headers followed by an error.
-            //
-
-            if (StartingVcn.StartingVcn.QuadPart == 0) {
-                if (ExtentsContext->FilesFound > 0) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-                }
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y:\n"), FilePath);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  File Offset    |    Cluster    |   Partition Offset"));
-            
-                if (VolumeDiskExtents.NumberOfDiskExtents == 1) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("   |  Disk Offset\n"));
-                } else {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-                }
-            }
-
-            //
-            //  Loop over all extents returned from this call.  Note this is
-            //  not necessarily all extents for the file.
-            //
-
-            CurrentVcn = RetrievalPointers->StartingVcn.QuadPart;
-            for (Index = 0; Index < RetrievalPointers->ExtentCount; Index++) {
-
-                FileOffset = CurrentVcn * BytesPerCluster;
-                Lcn = RetrievalPointers->Extents[Index].Lcn.QuadPart;
-                PartitionOffset = Lcn * BytesPerCluster + RetrievalPointerBase;
-
-                //
-                //  Display file offset
-                //
-    
-                if (ExtentsContext->DisplayHex) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("0x%-14llx | "), FileOffset);
-                } else {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-16lli | "), FileOffset);
-                }
-
-                //
-                //  Display cluster and partition offset
-                //
-
-                if (Lcn == INVALID_LCN) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("*** NOT ALLOCATED ***\n"));
-
-                } else {
-                    if (ExtentsContext->DisplayHex) {
-                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("0x%-11llx | 0x%-18llx"), Lcn, PartitionOffset);
-                    } else {
-                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-13lli | %-20lli"), Lcn, PartitionOffset);
-                    }
-
-                    //
-                    //  On a simple disk, display disk offset
-                    //
-
-                    if (VolumeDiskExtents.NumberOfDiskExtents == 1) {
-                        DiskOffset = PartitionOffset + VolumeDiskExtents.Extents[0].StartingOffset.QuadPart;
-                        if (ExtentsContext->DisplayHex) {
-                            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" | 0x%-18llx\n"), DiskOffset);
-                        } else {
-                            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" | %-20lli\n"), DiskOffset);
-                        }
-                    } else {
-                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-                    }
-                }
-
-                CurrentVcn = RetrievalPointers->Extents[Index].NextVcn.QuadPart;
-            }
-
-            //
-            //  Find the start point for the next call, or indicate that
-            //  the end of file has been reached.
-            //
-
-            if (!MoreToGo) {
-                FileOffset = CurrentVcn * BytesPerCluster;
-                if (ExtentsContext->DisplayHex) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("0x%-14llx | *** END ***\n"), FileOffset);
-                } else {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-16lli | *** END ***\n"), FileOffset);
-                }
-            } else if (CurrentVcn > StartingVcn.StartingVcn.QuadPart) {
-                StartingVcn.StartingVcn.QuadPart = CurrentVcn;
-            } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: get retrieval pointers did not advance, previous start vcn %lli, new start vcn %lli\n"), StartingVcn.StartingVcn.QuadPart, CurrentVcn);
-                MoreToGo = FALSE;
-            }
-        } else if (Error == ERROR_HANDLE_EOF) {
-            if (ExtentsContext->FilesFound > 0) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-            }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: %y has no extents\n"), FilePath);
-            MoreToGo = FALSE;
-        } else {
-            ErrText = YoriLibGetWinErrorText(Error);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: get retrieval pointers of %y failed: %s"), FilePath, ErrText);
-            YoriLibFreeWinErrorText(ErrText);
-            MoreToGo = FALSE;
-        }
+    if (ExtentsContext->ClusterCount == 0) {
+        ExtentsDisplayExtents(ExtentsContext,
+                              FilePath,
+                              FileHandle,
+                              BytesPerCluster,
+                              RetrievalPointerBase,
+                              &VolumeDiskExtents);
+    } else if (ExtentsContext->FilesFound == 0) {
+        ExtentsMoveFile(ExtentsContext, FilePath, VolumeHandle, FileHandle);
+    } else {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: cannot move multiple files to the same LCN"));
     }
 
 
     CloseHandle(FileHandle);
+    CloseHandle(VolumeHandle);
     YoriLibFreeStringContents(&VolRootName);
-    YoriLibFree(RetrievalPointers);
+
+End:
 
     ExtentsContext->FilesFound++;
     ExtentsContext->FilesFoundThisArg++;
@@ -493,6 +619,40 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
                 ExtentsContext.DisplayHex = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+                if (ArgC > i + 3) {
+                    YORI_ALLOC_SIZE_T CharsConsumed;
+                    YORI_MAX_SIGNED_T llTemp = 0;
+                    if (!YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) ||
+                        CharsConsumed == 0 ||
+                        llTemp < 0) {
+
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: invalid VCN\n"));
+                        return EXIT_FAILURE;
+                    }
+                    ExtentsContext.StartingVcn = llTemp;
+
+                    if (!YoriLibStringToNumber(&ArgV[i + 2], TRUE, &llTemp, &CharsConsumed) ||
+                        CharsConsumed == 0 ||
+                        llTemp < 0) {
+
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: invalid LCN\n"));
+                        return EXIT_FAILURE;
+                    }
+                    ExtentsContext.StartingLcn = llTemp;
+
+                    if (!YoriLibStringToNumber(&ArgV[i + 3], TRUE, &llTemp, &CharsConsumed) ||
+                        CharsConsumed == 0 ||
+                        llTemp <= 0) {
+
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: invalid cluster count\n"));
+                        return EXIT_FAILURE;
+                    }
+                    ExtentsContext.ClusterCount = (DWORD)llTemp;
+                    ArgumentUnderstood = TRUE;
+                    i = i + 3;
+                }
+
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
