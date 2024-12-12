@@ -137,54 +137,54 @@ ymain(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 SetupHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("complete")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("complete")) == 0) {
                 InstallType = InstallTypeComplete;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("core")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("core")) == 0) {
                 InstallType = InstallTypeCore;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desktop")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("desktop")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_DESKTOP_SHORTCUT;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("gui")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("gui")) == 0) {
                 UiToUse = UiGui;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("source")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("source")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_SOURCE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("start")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("start")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_START_SHORTCUT;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("symbols")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("symbols")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_SYMBOLS;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("systempath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("systempath")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_SYSTEM_PATH;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("terminal")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("terminal")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_TERMINAL_PROFILE;
                 ArgumentUnderstood = TRUE;
 #if YSETUP_TUI
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("text")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("text")) == 0) {
                 UiToUse = UiTui;
                 ArgumentUnderstood = TRUE;
 #endif
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("typical")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("typical")) == 0) {
                 InstallType = InstallTypeTypical;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("uninstall")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("uninstall")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_UNINSTALL;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("userpath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("userpath")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_USER_PATH;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;

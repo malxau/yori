@@ -379,30 +379,30 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 MountHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 if (ArgC > i + 1) {
                     FileName = &ArgV[i + 1];
                     Op = MountOpMountIso;
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 ReadOnly = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("u")) == 0) {
                 if (ArgC > i + 1) {
                     FileName = &ArgV[i + 1];
                     Op = MountOpUnmount;
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("v")) == 0) {
                 if (ArgC > i + 1) {
                     FileName = &ArgV[i + 1];
                     Op = MountOpMountVhd;
@@ -419,12 +419,12 @@ ENTRYPOINT(
                     YoriLibInitEmptyString(&Ext);
                     Ext.StartOfString = Period + 1;
                     Ext.LengthInChars = ArgV[i].LengthInChars - (YORI_ALLOC_SIZE_T)(Period - ArgV[i].StartOfString) - 1;
-                    if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("iso")) == 0) {
+                    if (YoriLibCompareStringLitIns(&Ext, _T("iso")) == 0) {
                         FileName = &ArgV[i];
                         Op = MountOpMountIso;
                         ArgumentUnderstood = TRUE;
-                    } else if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("vhd")) == 0 ||
-                               YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("vhdx")) == 0) {
+                    } else if (YoriLibCompareStringLitIns(&Ext, _T("vhd")) == 0 ||
+                               YoriLibCompareStringLitIns(&Ext, _T("vhdx")) == 0) {
                         FileName = &ArgV[i];
                         Op = MountOpMountVhd;
                         ArgumentUnderstood = TRUE;
@@ -451,7 +451,7 @@ ENTRYPOINT(
     if (FileName != NULL &&
         YoriLibIsCommandLineOption(FileName, &Arg)) {
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+        if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
             MountHelp();
             return EXIT_SUCCESS;
         }

@@ -61,12 +61,24 @@ OBJS=\
 	 scheme.obj   \
 	 select.obj   \
 	 strarray.obj \
-	 string.obj   \
 	 strmenum.obj \
 	 temp.obj     \
 	 update.obj   \
 	 util.obj     \
 	 vt.obj       \
+	 ylhomedr.obj \
+	 ylstralc.obj \
+	 ylstrcat.obj \
+	 ylstrcmp.obj \
+	 ylstrcnt.obj \
+	 ylstrcnv.obj \
+	 ylstrfnd.obj \
+	 ylstrhex.obj \
+	 ylstrnum.obj \
+	 ylstrsrt.obj \
+	 ylstrtrm.obj \
+	 ylvolpth.obj \
+	 ylvtdbg.obj  \
 
 all: yorilib.lib yoriver.obj
 

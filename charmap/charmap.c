@@ -202,11 +202,11 @@ CharMapEncodingFromString(
     __in PYORI_STRING String
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ascii")) == 0) {
+    if (YoriLibCompareStringLitIns(String, _T("ascii")) == 0) {
         return CP_OEMCP;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ansi")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("ansi")) == 0) {
         return CP_ACP;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("utf16")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("utf16")) == 0) {
         return CP_UTF16;
     }
     return (DWORD)-1;
@@ -259,14 +259,14 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 CharMapHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
 
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     YORI_MAX_SIGNED_T llTemp;
@@ -276,7 +276,7 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 if (ArgC > i + 1) {
                     DWORD NewEncoding;
                     NewEncoding = CharMapEncodingFromString(&ArgV[i + 1]);
@@ -286,7 +286,7 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 if (ArgC > i + 1) {
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     YORI_MAX_SIGNED_T llTemp;

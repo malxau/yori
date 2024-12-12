@@ -302,34 +302,34 @@ ENTRYPOINT(
 
             ArgParsed = FALSE;
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ArgParsed = TRUE;
                 DisplayUsage = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2015-2018"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("exec")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("exec")) == 0) {
                 ArgParsed = TRUE;
                 ExecMode = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("html4")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("html4")) == 0) {
                 ArgParsed = TRUE;
                 StripEscapes = FALSE;
                 CvtvtHtml4SetFunctions(&Callbacks);
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("html5")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("html5")) == 0) {
                 ArgParsed = TRUE;
                 StripEscapes = FALSE;
                 CvtvtHtml5SetFunctions(&Callbacks);
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rtf")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("rtf")) == 0) {
                 ArgParsed = TRUE;
                 StripEscapes = FALSE;
                 CvtvtRtfSetFunctions(&Callbacks);
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("text")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("text")) == 0) {
                 ArgParsed = TRUE;
                 StripEscapes = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("win32")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("win32")) == 0) {
                 ArgParsed = TRUE;
                 StripEscapes = FALSE;
-                YoriLibConsoleSetFunctions(&Callbacks);
+                YoriLibConsoleSetFn(&Callbacks);
             }
 
             if (!ArgParsed) {
@@ -421,9 +421,9 @@ ENTRYPOINT(
     if (StripEscapes) {
         DWORD CurrentMode;
         if (GetConsoleMode(hOutput, &CurrentMode)) {
-            YoriLibConsoleNoEscapeSetFunctions(&Callbacks);
+            YoriLibConsoleNoEscSetFn(&Callbacks);
         } else {
-            YoriLibUtf8TextNoEscapesSetFunctions(&Callbacks);
+            YoriLibUtf8TextNoEscSetFn(&Callbacks);
         }
     }
 
@@ -444,7 +444,7 @@ ENTRYPOINT(
 
         if (LineString.LengthInChars > 0) {
 
-            if (!YoriLibProcessVtEscapesOnOpenStream(LineString.StartOfString,
+            if (!YoriLibProcVtEscOnOpenStream(LineString.StartOfString,
                                                      LineString.LengthInChars,
                                                      hOutput,
                                                      &Callbacks)) {
@@ -456,7 +456,7 @@ ENTRYPOINT(
         }
 
         if (LineEnding != YoriLibLineEndingNone) {
-            if (!YoriLibProcessVtEscapesOnOpenStream(_T("\n"),
+            if (!YoriLibProcVtEscOnOpenStream(_T("\n"),
                                                      1,
                                                      hOutput,
                                                      &Callbacks)) {

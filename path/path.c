@@ -143,23 +143,23 @@ PathExpandVariables(
     YORI_ALLOC_SIZE_T CharsNeeded = 0;
     PYORI_PATH_COMPONENTS PathComponents = (PYORI_PATH_COMPONENTS)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("PATH")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("PATH")) == 0) {
         CharsNeeded = PathComponents->EntireNaturalPath.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PATHNOSLASH")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("PATHNOSLASH")) == 0) {
         CharsNeeded = PathComponents->EntirePathWithoutTrailingSlash.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("EXT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("EXT")) == 0) {
         CharsNeeded = PathComponents->Extension.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FILE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("FILE")) == 0) {
         CharsNeeded = PathComponents->FullFileName.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("BASE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("BASE")) == 0) {
         CharsNeeded = PathComponents->BaseName.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DRIVE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("DRIVE")) == 0) {
         CharsNeeded = PathComponents->DriveLetter.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DIR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("DIR")) == 0) {
         CharsNeeded = PathComponents->PathFromRoot.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHARE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("SHARE")) == 0) {
         CharsNeeded = PathComponents->ShareName.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PARENT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("PARENT")) == 0) {
         CharsNeeded = PathComponents->ParentName.LengthInChars;
     } else {
         return 0;
@@ -169,23 +169,23 @@ PathExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("PATH")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("PATH")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->EntireNaturalPath.StartOfString, CharsNeeded * sizeof(TCHAR));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PATHNOSLASH")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("PATHNOSLASH")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->EntirePathWithoutTrailingSlash.StartOfString, CharsNeeded * sizeof(TCHAR));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("EXT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("EXT")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->Extension.StartOfString, CharsNeeded * sizeof(TCHAR));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FILE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("FILE")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->FullFileName.StartOfString, CharsNeeded * sizeof(TCHAR));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("BASE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("BASE")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->BaseName.StartOfString, CharsNeeded * sizeof(TCHAR));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DRIVE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("DRIVE")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->DriveLetter.StartOfString, CharsNeeded * sizeof(TCHAR));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DIR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("DIR")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->PathFromRoot.StartOfString, CharsNeeded * sizeof(TCHAR));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHARE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("SHARE")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->ShareName.StartOfString, CharsNeeded * sizeof(TCHAR));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PARENT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("PARENT")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->ParentName.StartOfString, CharsNeeded * sizeof(TCHAR));
     }
 
@@ -240,16 +240,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 PathHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 UseLongPath = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
                     YsFormatString.StartOfString = ArgV[i + 1].StartOfString;
                     YsFormatString.LengthInChars = ArgV[i + 1].LengthInChars;
@@ -257,7 +257,7 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;

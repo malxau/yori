@@ -189,11 +189,11 @@ CutProcessHandleLines(
             BOOLEAN MatchFound;
             MatchFound = FALSE;
             if (CutContext->CaseInsensitive) {
-                if (YoriLibFindFirstMatchingSubstringInsensitive(&MatchingSubset, 1, &CutContext->MatchText, &OffsetOfMatch)) {
+                if (YoriLibFindFirstMatchSubstrIns(&MatchingSubset, 1, &CutContext->MatchText, &OffsetOfMatch)) {
                     MatchFound = TRUE;
                 }
             } else {
-                if (YoriLibFindFirstMatchingSubstring(&MatchingSubset, 1, &CutContext->MatchText, &OffsetOfMatch)) {
+                if (YoriLibFindFirstMatchSubstr(&MatchingSubset, 1, &CutContext->MatchText, &OffsetOfMatch)) {
                     MatchFound = TRUE;
                 }
             }
@@ -212,7 +212,7 @@ CutProcessHandleLines(
             for (CurrentField = 0; CurrentField <= CutContext->FieldOfInterest; CurrentField++) {
                 YORI_ALLOC_SIZE_T CharsBeforeSeperator;
 
-                CharsBeforeSeperator = YoriLibCountStringNotContainingChars(&MatchingSubset, CutContext->FieldSeperator);
+                CharsBeforeSeperator = YoriLibCntStringNotWithChars(&MatchingSubset, CutContext->FieldSeperator);
                 if (CurrentField == CutContext->FieldOfInterest) {
                     MatchingSubset.LengthInChars = CharsBeforeSeperator;
                 } else {
@@ -571,16 +571,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 CutHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2024"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("o")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("o")) == 0) {
                 if (ArgC > i + 1) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
                         CutContext.DesiredOffset = Temp;
@@ -588,7 +588,7 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
                 if (ArgC > i + 1) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
                         CutContext.DesiredLength = Temp;
@@ -596,7 +596,7 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
                         if (CutContext.RawFile) {
@@ -609,7 +609,7 @@ ENTRYPOINT(
                         }
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("d")) == 0) {
                 if (ArgC > i + 1) {
                     if (CutContext.RawFile) {
                         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Field delimiting incompatible with raw file\n"));
@@ -620,20 +620,20 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 if (CutContext.FieldDelimited) {
                     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Field delimiting incompatible with raw file\n"));
                 } else {
                     CutContext.RawFile = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 CutContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 CutContext.CaseInsensitive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("t")) == 0) {
                 if (ArgC > i + 1) {
                     if (CutContext.RawFile) {
                         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Matching text incompatible with raw file\n"));
@@ -643,7 +643,7 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;

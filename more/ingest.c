@@ -163,7 +163,7 @@ MoreAddPhysicalLineToBuffer(
             YoriLibInitEmptyString(&EscapeSubset);
             EscapeSubset.StartOfString = &LineString->StartOfString[CharIndex + 2];
             EscapeSubset.LengthInChars = LineString->LengthInChars - CharIndex - 2;
-            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
 
             //
             //  Look for color changes so any later line can be marked as
@@ -173,7 +173,7 @@ MoreAddPhysicalLineToBuffer(
             if (LineString->LengthInChars > CharIndex + 2 + EndOfEscape) {
                 EscapeSubset.StartOfString -= 2;
                 EscapeSubset.LengthInChars = EndOfEscape + 3;
-                YoriLibVtFinalColorFromSequence(AllocContext->PreviousColor, &EscapeSubset, &AllocContext->PreviousColor);
+                YoriLibVtFinalColorFromEsc(AllocContext->PreviousColor, &EscapeSubset, &AllocContext->PreviousColor);
             }
         }
         if (LineString->StartOfString[CharIndex] == '\t') {

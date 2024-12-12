@@ -88,7 +88,7 @@ IfFindOffsetOfNextComponent(
             YoriLibInitEmptyString(&EscapeSubset);
             EscapeSubset.StartOfString = &String->StartOfString[CharIndex + 2];
             EscapeSubset.LengthInChars = String->LengthInChars - CharIndex - 2;
-            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
             CharIndex += 2 + EndOfEscape;
         } else if (String->StartOfString[CharIndex] == ';') {
             String->StartOfString[CharIndex] = '\0';
@@ -152,10 +152,10 @@ YoriCmd_IF(
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 IfHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
             }

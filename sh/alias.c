@@ -680,7 +680,7 @@ YoriShFindAliasWithinStrings(
             CharsConsumed += FoundAliasValue.LengthInChars + 1;
         }
 
-        if (YoriLibCompareStringInsensitive(AliasName, &FoundAliasName) == 0) {
+        if (YoriLibCompareStringIns(AliasName, &FoundAliasName) == 0) {
             memcpy(AliasValue, &FoundAliasValue, sizeof(YORI_STRING));
             return TRUE;
         }

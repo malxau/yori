@@ -284,13 +284,13 @@ IconvEncodingFromString(
     __in PYORI_STRING String
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("utf8")) == 0) {
+    if (YoriLibCompareStringLitIns(String, _T("utf8")) == 0) {
         return CP_UTF8;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ascii")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("ascii")) == 0) {
         return CP_OEMCP;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ansi")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("ansi")) == 0) {
         return CP_ACP;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("utf16")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("utf16")) == 0) {
         return CP_UTF16;
     }
     return (DWORD)-1;
@@ -344,16 +344,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 IconvHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 if (ArgC > i + 1) {
                     DWORD NewEncoding;
                     NewEncoding = IconvEncodingFromString(&ArgV[i + 1]);
@@ -363,7 +363,7 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 if (ArgC > i + 1) {
                     DWORD NewEncoding;
                     NewEncoding = IconvEncodingFromString(&ArgV[i + 1]);
@@ -373,19 +373,19 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("m")) == 0) {
                 IconvContext.LineEnding = _T("\r");
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("u")) == 0) {
                 IconvContext.LineEnding = _T("\n");
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 IconvContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("w")) == 0) {
                 IconvContext.LineEnding = _T("\r\n");
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;

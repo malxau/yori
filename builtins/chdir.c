@@ -93,15 +93,15 @@ YoriCmd_CHDIR(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ChdirHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("d")) == 0) {
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 SetToLongPath = TRUE;
                 ArgumentUnderstood = TRUE;
             }
@@ -201,7 +201,7 @@ YoriCmd_CHDIR(
         //
 
         YoriLibInitEmptyString(&CdPath);
-        if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORICDPATH"), &CdPath)) {
+        if (!YoriLibAllocateAndGetEnvVar(_T("YORICDPATH"), &CdPath)) {
             LastError = GetLastError();
             ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not query environment: %s"), ErrText);
@@ -234,7 +234,7 @@ YoriCmd_CHDIR(
             //  directory on another drive.
             //
 
-            if (YoriLibCompareStringWithLiteral(&Component, _T(".")) == 0) {
+            if (YoriLibCompareStringLit(&Component, _T(".")) == 0) {
 
                 if (!YoriLibUserStringToSingleFilePath(NewDir, SetToLongPath, &NewCurrentDirectory)) {
                     LastError = GetLastError();

@@ -199,7 +199,7 @@ typedef struct _DU_CONTEXT {
     /**
      The buffer for the above string.
      */
-    TCHAR FileSizeColorStringBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    TCHAR FileSizeColorStringBuffer[YORI_MAX_VT_ESCAPE_CHARS];
 
     /**
      Color information to display against matching files.
@@ -279,7 +279,7 @@ DuReportAndCloseStack(
     TCHAR FileSizeStringBuffer[8];
     LARGE_INTEGER SizeToDisplay;
     YORI_STRING VtAttribute;
-    TCHAR VtAttributeBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    TCHAR VtAttributeBuffer[YORI_MAX_VT_ESCAPE_CHARS];
     YORILIB_COLOR_ATTRIBUTES Attribute;
 
     PDU_DIRECTORY_STACK DirStack;
@@ -705,7 +705,7 @@ DuFileFoundCallback(
             YORI_ALLOC_SIZE_T StackDirLength;
             StackDirLength = DuContext->DirStack[Index].DirectoryName.LengthInChars;
             if (Depth >= Index &&
-                YoriLibCompareStringCount(FilePath, &DuContext->DirStack[Index].DirectoryName, StackDirLength) == 0 &&
+                YoriLibCompareStringCnt(FilePath, &DuContext->DirStack[Index].DirectoryName, StackDirLength) == 0 &&
                 (FilePath->LengthInChars == StackDirLength ||
                  YoriLibIsSep(FilePath->StartOfString[StackDirLength]) ||
                  YoriLibIsSep(DuContext->DirStack[Index].DirectoryName.StartOfString[StackDirLength - 1]))) {
@@ -859,32 +859,32 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 DuHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("a")) == 0) {
                 DuContext.CompressedFileSize = TRUE;
                 DuContext.IncludeNamedStreams = TRUE;
                 DuContext.AverageHardLinkSize = TRUE;
                 DuContext.AllocationSize = TRUE;
                 DuContext.WimBackedFilesAsZero = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 DuContext.CompressedFileSize = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("d")) == 0) {
                 DuContext.IncludeNamedStreams = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("h")) == 0) {
                 DuContext.AverageHardLinkSize = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 if (i + 1 < ArgC) {
                     YORI_MAX_SIGNED_T Depth;
                     YORI_ALLOC_SIZE_T CharsConsumed;
@@ -895,19 +895,19 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 if (i + 1 < ArgC) {
                     DuContext.MinimumDirectorySizeToDisplay = YoriLibStringToFileSize(&ArgV[i + 1]);
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("u")) == 0) {
                 DuContext.AllocationSize = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("w")) == 0) {
                 DuContext.WimBackedFilesAsZero = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;
@@ -938,7 +938,7 @@ ENTRYPOINT(
     }
 
     DuContext.FileSizeColorString.StartOfString = DuContext.FileSizeColorStringBuffer;
-    DuContext.FileSizeColorString.LengthAllocated = YORI_MAX_INTERNAL_VT_ESCAPE_CHARS;
+    DuContext.FileSizeColorString.LengthAllocated = YORI_MAX_VT_ESCAPE_CHARS;
 
     YoriLibVtStringForTextAttribute(&DuContext.FileSizeColorString, DuContext.FileSizeColor.Ctrl, DuContext.FileSizeColor.Win32Attr);
 

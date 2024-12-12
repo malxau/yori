@@ -2391,7 +2391,7 @@ YoriWinMultilineEditFindPreviousIndentLine(
 
     for (ProbeLine = MultilineEdit->AutoIndentSourceLine; ProbeLine > 0; ProbeLine--) {
         YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, ProbeLine - 1, &ProbeIndent);
-        MatchingLength = YoriLibCountStringMatchingChars(&CurrentIndent, &ProbeIndent);
+        MatchingLength = YoriLibCntStringMatchChars(&CurrentIndent, &ProbeIndent);
         if (MatchingLength < CurrentIndent.LengthInChars) {
             *NewLine = ProbeLine - 1;
             ProbeIndent.LengthInChars = MatchingLength;
@@ -3372,7 +3372,7 @@ YoriWinMultilineEditInsertTextRange(
 
     Line = &MultilineEdit->LineArray[FirstLine];
     if (FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars > Line->LengthAllocated) {
-        if (!YoriLibReallocateString(Line, FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
+        if (!YoriLibReallocString(Line, FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
             YoriLibFreeStringContents(&TrailingPortionOfFirstLine);
             return FALSE;
         }

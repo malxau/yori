@@ -222,7 +222,7 @@ MakeJoinLines(
             NewLength = AllocationNeeded;
         }
 
-        if (!YoriLibReallocateString(CombinedLine, NewLength)) {
+        if (!YoriLibReallocString(CombinedLine, NewLength)) {
             return FALSE;
         }
     }
@@ -317,7 +317,7 @@ MakeDetermineLineType(
         return MakeLineTypeEmpty;
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitive(Line, _T("DebugBreak")) == 0) {
+    if (YoriLibCompareStringLitIns(Line, _T("DebugBreak")) == 0) {
         return MakeLineTypeDebugBreak;
     }
 
@@ -437,7 +437,7 @@ MakeDeterminePreprocessorLineType(
 
     FoundType = MakePreprocessorLineTypeUnknown;
     for (Index = 0; Index < sizeof(MakePreprocessorLineTypeMap)/sizeof(MakePreprocessorLineTypeMap[0]); Index++) {
-        if (YoriLibCompareStringWithLiteralInsensitiveCount(&Substring, MakePreprocessorLineTypeMap[Index].String, (YORI_ALLOC_SIZE_T)_tcslen(MakePreprocessorLineTypeMap[Index].String)) == 0) {
+        if (YoriLibCompareStringLitInsCnt(&Substring, MakePreprocessorLineTypeMap[Index].String, (YORI_ALLOC_SIZE_T)_tcslen(MakePreprocessorLineTypeMap[Index].String)) == 0) {
             FoundType = MakePreprocessorLineTypeMap[Index].Type;
             if (ArgumentOffset != NULL) {
                 *ArgumentOffset = SubstringOffset + (YORI_ALLOC_SIZE_T)_tcslen(MakePreprocessorLineTypeMap[Index].String);
@@ -470,13 +470,13 @@ MakeDeterminePreprocessorLineType(
     Substring.StartOfString = &Line->StartOfString[SubstringOffset];
     Substring.LengthInChars = Line->LengthInChars - SubstringOffset;
 
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(&Substring, _T("IFNDEF"), sizeof("IFNDEF") - 1) == 0) {
+    if (YoriLibCompareStringLitInsCnt(&Substring, _T("IFNDEF"), sizeof("IFNDEF") - 1) == 0) {
         FoundType = MakePreprocessorLineTypeElseIfNDef;
         SubstringOffset = SubstringOffset + sizeof("IFNDEF") - 1;
-    } else if (YoriLibCompareStringWithLiteralInsensitiveCount(&Substring, _T("IFDEF"), sizeof("IFDEF") - 1) == 0) {
+    } else if (YoriLibCompareStringLitInsCnt(&Substring, _T("IFDEF"), sizeof("IFDEF") - 1) == 0) {
         FoundType = MakePreprocessorLineTypeElseIfDef;
         SubstringOffset = SubstringOffset + sizeof("IFDEF") - 1;
-    } else if (YoriLibCompareStringWithLiteralInsensitiveCount(&Substring, _T("IF"), sizeof("IF") - 1) == 0) {
+    } else if (YoriLibCompareStringLitInsCnt(&Substring, _T("IF"), sizeof("IF") - 1) == 0) {
         FoundType = MakePreprocessorLineTypeElseIf;
         SubstringOffset = SubstringOffset + sizeof("IF") - 1;
     }
@@ -1165,7 +1165,7 @@ MakeFindFirstMatchingSubstringSkipQuotes(
         }
 
         for (CheckCount = 0; CheckCount < NumberMatches; CheckCount++) {
-            if (YoriLibCompareStringCount(&RemainingString, &MatchArray[CheckCount], MatchArray[CheckCount].LengthInChars) == 0) {
+            if (YoriLibCompareStringCnt(&RemainingString, &MatchArray[CheckCount], MatchArray[CheckCount].LengthInChars) == 0) {
                 if (StringOffsetOfMatch != NULL) {
                     *StringOffsetOfMatch = String->LengthInChars - RemainingString.LengthInChars;
                 }
@@ -1984,7 +1984,7 @@ MakeDetermineTargetOptions(
             Component.LengthInChars = OptionString.LengthInChars;
         }
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&Component, _T("dirs")) == 0) {
+        if (YoriLibCompareStringLitIns(&Component, _T("dirs")) == 0) {
             *DependenciesAreDirectories = TRUE;
         } else {
             Equals = YoriLibFindLeftMostCharacter(&Component, '=');
@@ -1994,7 +1994,7 @@ MakeDetermineTargetOptions(
                 ValueString.LengthInChars = Component.LengthInChars - (YORI_ALLOC_SIZE_T)(Equals - Component.StartOfString) - 1;
                 Component.LengthInChars = (YORI_ALLOC_SIZE_T)(Equals - Component.StartOfString);
 
-                if (YoriLibCompareStringWithLiteralInsensitive(&Component, _T("target")) == 0) {
+                if (YoriLibCompareStringLitIns(&Component, _T("target")) == 0) {
                     ChildTargetName->StartOfString = ValueString.StartOfString;
                     ChildTargetName->LengthInChars = ValueString.LengthInChars;
                 }
@@ -2008,7 +2008,7 @@ MakeDetermineTargetOptions(
         Space = YoriLibFindLeftMostCharacter(&OptionString, ' ');
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&OptionString, _T("dirs")) == 0) {
+    if (YoriLibCompareStringLitIns(&OptionString, _T("dirs")) == 0) {
         *DependenciesAreDirectories = TRUE;
     }
 
@@ -2275,7 +2275,7 @@ MakeAddRule(
     //  order is.
     //
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&Substring, _T(".SUFFIXES")) == 0) {
+    if (YoriLibCompareStringLitIns(&Substring, _T(".SUFFIXES")) == 0) {
         ScopeContext->ParserState = MakeParserDefault;
         return NULL;
     }
@@ -2571,9 +2571,9 @@ MakeAddInlineFileLine(
         return TRUE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(InlineFile->FileHandle, Line);
+    YoriLibOutputTextToMbyteDev(InlineFile->FileHandle, Line);
     YoriLibConstantString(&Newline, _T("\r\n"));
-    YoriLibOutputTextToMultibyteDevice(InlineFile->FileHandle, &Newline);
+    YoriLibOutputTextToMbyteDev(InlineFile->FileHandle, &Newline);
     return TRUE;
 }
 
@@ -2649,7 +2649,7 @@ MakeAddRecipeCommand(
     }
 
     if (CharsNeeded > Target->Recipe.LengthAllocated) {
-        if (!YoriLibReallocateString(&Target->Recipe, CharsNeeded * 2)) {
+        if (!YoriLibReallocString(&Target->Recipe, CharsNeeded * 2)) {
             return FALSE;
         }
     }

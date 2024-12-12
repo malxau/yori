@@ -609,7 +609,7 @@ YoriLibCabShouldIncludeFile(
 
     if (IncludeFile) {
         for (Count = 0; Count < ExpandContext->NumberFilesToExclude; Count++) {
-            if (YoriLibCompareStringInsensitive(FileName, &ExpandContext->FilesToExclude[Count]) == 0) {
+            if (YoriLibCompareStringIns(FileName, &ExpandContext->FilesToExclude[Count]) == 0) {
                 IncludeFile = FALSE;
                 break;
             }
@@ -618,7 +618,7 @@ YoriLibCabShouldIncludeFile(
 
     if (!IncludeFile) {
         for (Count = 0; Count < ExpandContext->NumberFilesToInclude; Count++) {
-            if (YoriLibCompareStringInsensitive(FileName, &ExpandContext->FilesToInclude[Count]) == 0) {
+            if (YoriLibCompareStringIns(FileName, &ExpandContext->FilesToInclude[Count]) == 0) {
                 IncludeFile = TRUE;
                 break;
             }

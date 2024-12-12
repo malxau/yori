@@ -426,7 +426,7 @@ YoriShBuiltIn (
         PYORI_STRING NewString;
         YORI_ALLOC_SIZE_T LenBeforeSep;
 
-        LenBeforeSep = YoriLibCountStringNotContainingChars(CmdString, _T("./\\"));
+        LenBeforeSep = YoriLibCntStringNotWithChars(CmdString, _T("./\\"));
         if (LenBeforeSep < CmdString->LengthInChars) {
 
             if (!YoriLibShExpandCmdContext(&ExecContext->CmdToExec, 1, 1)) {

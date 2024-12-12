@@ -427,13 +427,13 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 SplitHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 if (ArgC > i + 1) {
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     ArgumentUnderstood = TRUE;
@@ -441,10 +441,10 @@ ENTRYPOINT(
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &SplitContext.BytesPerPart, &CharsConsumed);
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("j")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("j")) == 0) {
                 JoinMode = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
                 if (ArgC > i + 1) {
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     ArgumentUnderstood = TRUE;
@@ -452,7 +452,7 @@ ENTRYPOINT(
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &SplitContext.LinesPerPart, &CharsConsumed);
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("p")) == 0) {
                 if (ArgC > i + 1) {
                     ArgumentUnderstood = TRUE;
                     YoriLibFreeStringContents(&SplitContext.Prefix);
@@ -461,7 +461,7 @@ ENTRYPOINT(
                     }
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;

@@ -174,12 +174,12 @@ MakeIsVariableTargetSpecific(
     __in PCYORI_STRING VariableName
     )
 {
-    if (YoriLibCompareStringWithLiteralCount(VariableName, _T("@"), 1) == 0 ||
-        YoriLibCompareStringWithLiteralCount(VariableName, _T("$@"), 2) == 0 ||
-        YoriLibCompareStringWithLiteralCount(VariableName, _T("*"), 1) == 0 ||
-        YoriLibCompareStringWithLiteralCount(VariableName, _T("**"), 2) == 0 ||
-        YoriLibCompareStringWithLiteralCount(VariableName, _T("?"), 1) == 0 ||
-        YoriLibCompareStringWithLiteralCount(VariableName, _T("<"), 1) == 0) {
+    if (YoriLibCompareStringLitCnt(VariableName, _T("@"), 1) == 0 ||
+        YoriLibCompareStringLitCnt(VariableName, _T("$@"), 2) == 0 ||
+        YoriLibCompareStringLitCnt(VariableName, _T("*"), 1) == 0 ||
+        YoriLibCompareStringLitCnt(VariableName, _T("**"), 2) == 0 ||
+        YoriLibCompareStringLitCnt(VariableName, _T("?"), 1) == 0 ||
+        YoriLibCompareStringLitCnt(VariableName, _T("<"), 1) == 0) {
 
         return TRUE;
     }
@@ -227,7 +227,7 @@ MakeSubstituteNamedVariable(
     YORI_ALLOC_SIZE_T LengthNeeded;
     LPTSTR Ptr;
 
-    if (YoriLibCompareStringWithLiteralCount(VariableName, _T("$"), 1) == 0) {
+    if (YoriLibCompareStringLitCnt(VariableName, _T("$"), 1) == 0) {
         YoriLibYPrintf(VariableData, _T("$"));
         return TRUE;
     } else if (MakeIsVariableTargetSpecific(VariableName)) {
@@ -293,12 +293,12 @@ MakeSubstituteNamedVariable(
     RemainingText.StartOfString = FoundVariable->Value.StartOfString;
     RemainingText.LengthInChars = FoundVariable->Value.LengthInChars;
 
-    FoundMatch = YoriLibFindFirstMatchingSubstring(&RemainingText, 1, &SearchText, &FoundAt);
+    FoundMatch = YoriLibFindFirstMatchSubstr(&RemainingText, 1, &SearchText, &FoundAt);
     while (FoundMatch) {
         LengthNeeded = LengthNeeded + FoundAt + ReplaceText.LengthInChars;
         RemainingText.StartOfString += FoundAt + SearchText.LengthInChars;
         RemainingText.LengthInChars -= FoundAt + SearchText.LengthInChars;
-        FoundMatch = YoriLibFindFirstMatchingSubstring(&RemainingText, 1, &SearchText, &FoundAt);
+        FoundMatch = YoriLibFindFirstMatchSubstr(&RemainingText, 1, &SearchText, &FoundAt);
     }
 
     LengthNeeded = LengthNeeded + RemainingText.LengthInChars + 1;
@@ -320,7 +320,7 @@ MakeSubstituteNamedVariable(
     RemainingText.StartOfString = FoundVariable->Value.StartOfString;
     RemainingText.LengthInChars = FoundVariable->Value.LengthInChars;
 
-    FoundMatch = YoriLibFindFirstMatchingSubstring(&RemainingText, 1, &SearchText, &FoundAt);
+    FoundMatch = YoriLibFindFirstMatchSubstr(&RemainingText, 1, &SearchText, &FoundAt);
     while (FoundMatch) {
         if (FoundAt > 0) {
             memcpy(&VariableData->StartOfString[LengthNeeded], RemainingText.StartOfString, FoundAt * sizeof(TCHAR));
@@ -331,7 +331,7 @@ MakeSubstituteNamedVariable(
         LengthNeeded = LengthNeeded + ReplaceText.LengthInChars;
         RemainingText.StartOfString += FoundAt + SearchText.LengthInChars;
         RemainingText.LengthInChars = RemainingText.LengthInChars - (FoundAt + SearchText.LengthInChars);
-        FoundMatch = YoriLibFindFirstMatchingSubstring(&RemainingText, 1, &SearchText, &FoundAt);
+        FoundMatch = YoriLibFindFirstMatchSubstr(&RemainingText, 1, &SearchText, &FoundAt);
     }
 
     if (RemainingText.LengthInChars > 0) {

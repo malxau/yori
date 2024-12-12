@@ -269,7 +269,7 @@ YoriDlgDirOkButtonClicked(
     //
 
     if (PathComponent.StartOfString == NULL &&
-        YoriLibCompareStringWithLiteral(&FileComponent, _T(".")) == 0) {
+        YoriLibCompareStringLit(&FileComponent, _T(".")) == 0) {
 
         ASSERT(!WildFound);
         YoriLibCloneString(&FullFilePath, &State->CurrentDirectory);

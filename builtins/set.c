@@ -137,28 +137,28 @@ YoriCmd_SET(
 
         if (YoriLibIsCommandLineOption(&EscapedArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 SetHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 if (!RemoveComponent && !IncludeComponent) {
                     AppendComponent = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 if (!RemoveComponent && !AppendComponent) {
                     IncludeComponent = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 if (!IncludeComponent && !AppendComponent) {
                     RemoveComponent = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i;
                 ArgumentUnderstood = TRUE;
                 break;
@@ -217,17 +217,17 @@ YoriCmd_SET(
                 Value.StartOfString[Value.LengthInChars] = '\0';
                 SetRemoveEscapes(&Value);
                 if (IncludeComponent) {
-                    if (YoriLibAddEnvironmentComponentReturnString(&Variable, &Value, TRUE, &CombinedValue)) {
+                    if (YoriLibAddEnvCompReturnString(&Variable, &Value, TRUE, &CombinedValue)) {
                         YoriCallSetEnvironmentVariable(&Variable, &CombinedValue);
                         YoriLibFreeStringContents(&CombinedValue);
                     }
                 } else if (AppendComponent) {
-                    if (YoriLibAddEnvironmentComponentReturnString(&Variable, &Value, FALSE, &CombinedValue)) {
+                    if (YoriLibAddEnvCompReturnString(&Variable, &Value, FALSE, &CombinedValue)) {
                         YoriCallSetEnvironmentVariable(&Variable, &CombinedValue);
                         YoriLibFreeStringContents(&CombinedValue);
                     }
                 } else if (RemoveComponent) {
-                    if (YoriLibRemoveEnvironmentComponentReturnString(&Variable, &Value, &CombinedValue)) {
+                    if (YoriLibRmEnvCompReturnString(&Variable, &Value, &CombinedValue)) {
                         if (CombinedValue.LengthAllocated > 0) {
                             YoriCallSetEnvironmentVariable(&Variable, &CombinedValue);
                         } else {
@@ -250,7 +250,7 @@ YoriCmd_SET(
             }
             ThisVar = EnvironmentStrings.StartOfString;
             while (*ThisVar != '\0') {
-                if (YoriLibCompareStringWithLiteralInsensitiveCount(&Variable, ThisVar, Variable.LengthInChars) == 0) {
+                if (YoriLibCompareStringLitInsCnt(&Variable, ThisVar, Variable.LengthInChars) == 0) {
                     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
                 }
                 ThisVar += _tcslen(ThisVar);

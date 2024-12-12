@@ -220,37 +220,37 @@ TimeThisExpandVariables(
     LARGE_INTEGER CpuTime;
     PTIMETHIS_CONTEXT TimeThisContext = (PTIMETHIS_CONTEXT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("CHILDCPU")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("CHILDCPU")) == 0) {
         CpuTime.QuadPart = TimeThisContext->KernelTimeInMs.QuadPart + TimeThisContext->UserTimeInMs.QuadPart;
         return TimeThisOutputTimestamp(CpuTime, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CHILDCPUMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CHILDCPUMS")) == 0) {
         CpuTime.QuadPart = TimeThisContext->KernelTimeInMs.QuadPart + TimeThisContext->UserTimeInMs.QuadPart;
         return TimeThisOutputLargeInteger(CpuTime, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CHILDKERNEL")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CHILDKERNEL")) == 0) {
         return TimeThisOutputTimestamp(TimeThisContext->KernelTimeInMs, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CHILDKERNELMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CHILDKERNELMS")) == 0) {
         return TimeThisOutputLargeInteger(TimeThisContext->KernelTimeInMs, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CHILDUSER")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CHILDUSER")) == 0) {
         return TimeThisOutputTimestamp(TimeThisContext->UserTimeInMs, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CHILDUSERMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CHILDUSERMS")) == 0) {
         return TimeThisOutputLargeInteger(TimeThisContext->UserTimeInMs, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ELAPSEDTIME")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("ELAPSEDTIME")) == 0) {
         return TimeThisOutputTimestamp(TimeThisContext->WallTimeInMs, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ELAPSEDTIMEMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("ELAPSEDTIMEMS")) == 0) {
         return TimeThisOutputLargeInteger(TimeThisContext->WallTimeInMs, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TREECPU")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TREECPU")) == 0) {
         CpuTime.QuadPart = TimeThisContext->KernelTimeTreeInMs.QuadPart + TimeThisContext->UserTimeTreeInMs.QuadPart;
         return TimeThisOutputTimestamp(CpuTime, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TREECPUMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TREECPUMS")) == 0) {
         CpuTime.QuadPart = TimeThisContext->KernelTimeTreeInMs.QuadPart + TimeThisContext->UserTimeTreeInMs.QuadPart;
         return TimeThisOutputLargeInteger(CpuTime, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TREEKERNEL")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TREEKERNEL")) == 0) {
         return TimeThisOutputTimestamp(TimeThisContext->KernelTimeTreeInMs, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TREEKERNELMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TREEKERNELMS")) == 0) {
         return TimeThisOutputLargeInteger(TimeThisContext->KernelTimeTreeInMs, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TREEUSER")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TREEUSER")) == 0) {
         return TimeThisOutputTimestamp(TimeThisContext->UserTimeTreeInMs, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TREEUSERMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TREEUSERMS")) == 0) {
         return TimeThisOutputLargeInteger(TimeThisContext->UserTimeTreeInMs, 10, OutputBuffer);
     }
     return 0;
@@ -323,13 +323,13 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 TimeThisHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
                     YoriLibFreeStringContents(&AllocatedFormatString);
                     YoriLibCloneString(&AllocatedFormatString, &ArgV[i + 1]);

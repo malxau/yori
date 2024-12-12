@@ -333,7 +333,7 @@ YoriLibHttpFindResponseHeader(
     ListEntry = YoriLibGetNextListEntry(&UrlRequest->u.Url.HttpResponseHeaders, ListEntry);
     while (ListEntry != NULL) {
         ResponseLine = CONTAINING_RECORD(ListEntry, YORI_LIB_HTTP_HEADER_LINE, ListEntry);
-        if (YoriLibCompareStringWithLiteralInsensitive(&ResponseLine->Variable, Header) == 0) {
+        if (YoriLibCompareStringLitIns(&ResponseLine->Variable, Header) == 0) {
             return ResponseLine;
         }
         ListEntry = YoriLibGetNextListEntry(&UrlRequest->u.Url.HttpResponseHeaders, ListEntry);
@@ -482,7 +482,7 @@ YoriLibHttpProcessResponseHeaders(
     //
 
     ResponseLine = CONTAINING_RECORD(ListEntry, YORI_LIB_HTTP_HEADER_LINE, ListEntry);
-    if (YoriLibCompareStringWithLiteralCount(&ResponseLine->EntireLine, _T("HTTP/"), sizeof("HTTP/") - 1) != 0) {
+    if (YoriLibCompareStringLitCnt(&ResponseLine->EntireLine, _T("HTTP/"), sizeof("HTTP/") - 1) != 0) {
         return FALSE;
     }
 
@@ -490,7 +490,7 @@ YoriLibHttpProcessResponseHeaders(
     Str.StartOfString = &ResponseLine->EntireLine.StartOfString[sizeof("HTTP/") - 1];
     Str.LengthInChars = ResponseLine->EntireLine.LengthInChars - sizeof("HTTP/") + 1;
 
-    if (!YoriLibStringToNumberSpecifyBase(&Str, 10, FALSE, &llTemp, &CharsConsumed)) {
+    if (!YoriLibStringToNumberBase(&Str, 10, FALSE, &llTemp, &CharsConsumed)) {
         return FALSE;
     }
 
@@ -510,7 +510,7 @@ YoriLibHttpProcessResponseHeaders(
     Str.StartOfString = Str.StartOfString + 1;
     Str.LengthInChars = Str.LengthInChars - 1;
 
-    if (!YoriLibStringToNumberSpecifyBase(&Str, 10, FALSE, &llTemp, &CharsConsumed)) {
+    if (!YoriLibStringToNumberBase(&Str, 10, FALSE, &llTemp, &CharsConsumed)) {
         return FALSE;
     }
 
@@ -529,7 +529,7 @@ YoriLibHttpProcessResponseHeaders(
         return FALSE;
     }
 
-    if (!YoriLibStringToNumberSpecifyBase(&Str, 10, FALSE, &llTemp, &CharsConsumed)) {
+    if (!YoriLibStringToNumberBase(&Str, 10, FALSE, &llTemp, &CharsConsumed)) {
         return FALSE;
     }
 
@@ -587,7 +587,7 @@ YoriLibHttpProcessUrlRequest(
     //  here.
     //
 
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(&UrlRequest->u.Url.Url, _T("http://"), sizeof("http://") - 1) != 0) {
+    if (YoriLibCompareStringLitInsCnt(&UrlRequest->u.Url.Url, _T("http://"), sizeof("http://") - 1) != 0) {
         return FALSE;
     }
 
@@ -723,7 +723,7 @@ YoriLibHttpMergeRedirectUrl(
     //  - URL purely relative to the original URL
     //
 
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(LocationHeader, _T("http://"), sizeof("http://") - 1) == 0) {
+    if (YoriLibCompareStringLitInsCnt(LocationHeader, _T("http://"), sizeof("http://") - 1) == 0) {
         YoriLibCloneString(RedirectUrl, LocationHeader);
         return TRUE;
     }
@@ -756,7 +756,7 @@ YoriLibHttpMergeRedirectUrl(
     //  know what to do next.
     //
 
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(&CombinedString, _T("http://"), sizeof("http://") - 1) != 0) {
+    if (YoriLibCompareStringLitInsCnt(&CombinedString, _T("http://"), sizeof("http://") - 1) != 0) {
         YoriLibFreeStringContents(&CombinedString);
         return FALSE;
     }

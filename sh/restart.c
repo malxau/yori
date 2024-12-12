@@ -159,7 +159,7 @@ YoriShCleanupStaleRestartStates(VOID)
         ProcessId = 0;
         ProcessIsRunning = TRUE;
         if (FileTimeExpired &&
-            YoriLibCompareStringWithLiteralInsensitiveCount(&FileName, _T("yori-restart-"), sizeof("yori-restart-") - 1) == 0) {
+            YoriLibCompareStringLitInsCnt(&FileName, _T("yori-restart-"), sizeof("yori-restart-") - 1) == 0) {
 
             //
             //  Find the process ID in the file name.
@@ -175,7 +175,7 @@ YoriShCleanupStaleRestartStates(VOID)
                 }
             }
 
-            if (YoriLibStringToNumberSpecifyBase(&PidString, 16, FALSE, &LongProcessId, &CharsConsumed) &&
+            if (YoriLibStringToNumberBase(&PidString, 16, FALSE, &LongProcessId, &CharsConsumed) &&
                 CharsConsumed > 0) {
 
                 ProcessId = (DWORD)LongProcessId;
@@ -304,7 +304,7 @@ YoriShSaveRestartStateWorker(
         Comma[0] = '\0';
     }
 
-    if (YoriLibCompareStringWithLiteral(&RestartFileName, _T("1")) != 0) {
+    if (YoriLibCompareStringLit(&RestartFileName, _T("1")) != 0) {
         YoriLibFreeStringContents(&RestartFileName);
         return 0;
     }

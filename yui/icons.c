@@ -130,7 +130,7 @@ YuiIconCacheLookupAndReference(
     while (ListEntry != NULL) {
         Icon = CONTAINING_RECORD(ListEntry, YUI_MENU_SHARED_ICON, ListEntry);
         if (((FileName == NULL && Icon->FileName.StartOfString == NULL) ||
-             (FileName != NULL && YoriLibCompareStringInsensitive(FileName, &Icon->FileName) == 0)) &&
+             (FileName != NULL && YoriLibCompareStringIns(FileName, &Icon->FileName) == 0)) &&
             Icon->IconIndex == IconIndex &&
             Icon->LargeIcon == LargeIcon) {
 
@@ -290,7 +290,7 @@ YuiExtractIcon(
         YoriLibInitEmptyString(&Substr);
         Substr.StartOfString = Extension + 1;
         Substr.LengthInChars = FileName->LengthInChars - (YORI_ALLOC_SIZE_T)(Extension - FileName->StartOfString) - 1;
-        if (YoriLibCompareStringWithLiteralInsensitive(&Substr, _T("ico")) == 0) {
+        if (YoriLibCompareStringLitIns(&Substr, _T("ico")) == 0) {
             Icon = DllUser32.pLoadImageW(NULL, FileName->StartOfString, IMAGE_ICON, Width, Height, LR_LOADFROMFILE);
             return Icon;
         }

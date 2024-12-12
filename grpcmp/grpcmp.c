@@ -98,16 +98,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 GrpcmpHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2020"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BuiltinMode = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;
@@ -146,7 +146,7 @@ ENTRYPOINT(
 
         WellKnownId = 0;
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[StartArg], _T("Administrators")) == 0) {
+        if (YoriLibCompareStringLitIns(&ArgV[StartArg], _T("Administrators")) == 0) {
             WellKnownId = DOMAIN_ALIAS_RID_ADMINS;
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("grpcmp: group name is not well known\n"));

@@ -517,13 +517,13 @@ SdirParseArgs (
 
             OptParsed = SdirParseOpt(Arg.StartOfString);
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("help")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("help")) == 0) {
                 DisplayUsage = TRUE;
                 OptParsed = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 DisplayUsage = TRUE;
                 OptParsed = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("v")) == 0) {
                 DisplayUsage = TRUE;
                 OptParsed = TRUE;
             }

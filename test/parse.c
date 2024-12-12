@@ -63,7 +63,7 @@ TestParseTwoArgCmd(VOID)
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[0], _T("foo")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\n"),
                       __FILE__,
@@ -74,7 +74,7 @@ TestParseTwoArgCmd(VOID)
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[1], _T("bar")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[1], _T("bar")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected bar\n"),
                       __FILE__,
@@ -170,7 +170,7 @@ TestParseOneArgContainingQuotesCmd(VOID)
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo\" \"bar")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[0], _T("foo\" \"bar")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\" \"bar\n"),
                       __FILE__,
@@ -249,7 +249,7 @@ TestParseOneArgEnclosedInQuotesCmd(VOID)
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[0], _T("foo")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\n"),
                       __FILE__,
@@ -335,7 +335,7 @@ TestParseOneArgWithStartingQuotesCmd(VOID)
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("Program Files\\foo")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[0], _T("Program Files\\foo")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\\foo\n"),
                       __FILE__,
@@ -427,7 +427,7 @@ TestParseOneArgWithStartingQuotesEndingSlashCmd(VOID)
     //  escape the quote.)
     //
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("Program Files\\\\")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[0], _T("Program Files\\\\")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\\\\\n"),
                       __FILE__,
@@ -518,7 +518,7 @@ TestParseOneArgWithStartingQuotesEndingCaretCmd(VOID)
     //  it also needs to remove the caret (which would escape the quote.)
     //
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("Program Files")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[0], _T("Program Files")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\n"),
                       __FILE__,
@@ -600,7 +600,7 @@ TestParseOneArgContainingAndEnclosedInQuotesCmd(VOID)
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo\"==\"foo")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[0], _T("foo\"==\"foo")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\"==\"foo\n"),
                       __FILE__,
@@ -682,7 +682,7 @@ TestParseRedirectWithEndingQuoteCmd(VOID)
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T(">\"file name\"")) != 0) {
+    if (YoriLibCompareStringLit(&CmdContext.ArgV[0], _T(">\"file name\"")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                       _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected >\"file name\"\n"),
                       __FILE__,

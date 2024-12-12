@@ -651,16 +651,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 SlmenuHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 Location = SlmenuBottomLine;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
 
                 if (i + 1 < ArgC) {
                     YORI_MAX_SIGNED_T llTemp;
@@ -674,7 +674,7 @@ ENTRYPOINT(
                         ArgumentUnderstood = TRUE;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("p")) == 0) {
                 if (i + 1 < ArgC) {
                     Prompt.StartOfString = ArgV[i + 1].StartOfString;
                     Prompt.LengthInChars = ArgV[i + 1].LengthInChars;
@@ -682,7 +682,7 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     DisplayPrompt = &Prompt;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("t")) == 0) {
                 Location = SlmenuTopLine;
                 ArgumentUnderstood = TRUE;
             }

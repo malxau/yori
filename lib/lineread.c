@@ -117,7 +117,7 @@ YoriLibCopyLineToUserBufferW(
 
     if (CharsNeeded > UserString->LengthAllocated) {
         UserString->LengthInChars = 0;
-        if (!YoriLibReallocateString(UserString, CharsNeeded + 64)) {
+        if (!YoriLibReallocString(UserString, CharsNeeded + 64)) {
             return FALSE;
         }
     }

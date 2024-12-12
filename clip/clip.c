@@ -629,7 +629,7 @@ ClipFindFormatByName(
         FoundFormatName[sizeof(FoundFormatName)/sizeof(FoundFormatName[0]) - 1] = '\0';
 
         if (FoundFormatName[0] != '\0' &&
-            YoriLibCompareStringWithLiteralInsensitive(SearchFormatName, FoundFormatName) == 0) {
+            YoriLibCompareStringLitIns(SearchFormatName, FoundFormatName) == 0) {
 
             return Format;
         }
@@ -794,7 +794,7 @@ ClipPasteSpecifiedFormat(
         return FALSE;
     }
     if (FormatString != NULL &&
-        YoriLibCompareStringWithLiteralInsensitive(FormatString, _T("HTML Format")) == 0) {
+        YoriLibCompareStringLitIns(FormatString, _T("HTML Format")) == 0) {
         pMem = ClipExtractHtmlRange(pMem, BufferSize);
         if (pMem != NULL) {
             YoriLibOutputToDevice(hFile, 0, _T("%hs"), pMem);
@@ -1062,48 +1062,48 @@ ENTRYPOINT(
         if (YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
             BOOL ArgParsed = FALSE;
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ClipHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2015-2020"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 if (Op == ClipOperationUnknown) {
                     ArgParsed = TRUE;
                     Op = ClipOperationEmpty;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("h")) == 0) {
                 if (Op == ClipOperationUnknown) {
                     ArgParsed = TRUE;
                     Op = ClipOperationCopyHtml;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
                 if (Op == ClipOperationUnknown) {
                     ArgParsed = TRUE;
                     Op = ClipOperationListFormats;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("p")) == 0) {
                 if (Op == ClipOperationUnknown) {
                     ArgParsed = TRUE;
                     Op = ClipOperationPasteText;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ph")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("ph")) == 0) {
                 if (Op == ClipOperationUnknown) {
                     ArgParsed = TRUE;
                     Op = ClipOperationPasteHTML;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("pr")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("pr")) == 0) {
                 if (Op == ClipOperationUnknown) {
                     ArgParsed = TRUE;
                     Op = ClipOperationPasteRichText;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 if (Op == ClipOperationUnknown) {
                     ArgParsed = TRUE;
                     Op = ClipOperationCopyRtf;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("t")) == 0) {
                 if (Op == ClipOperationUnknown) {
                     ArgParsed = TRUE;
                     Op = ClipOperationPreserveText;

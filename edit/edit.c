@@ -808,7 +808,7 @@ EditSaveFile(
         //
 
         if (Line->LengthInChars > 0 && (!AutoIndentActive || LineIndex != AutoIndentLine)) {
-            if (!YoriLibOutputTextToMultibyteDevice(TempHandle, Line)) {
+            if (!YoriLibOutputTextToMbyteDev(TempHandle, Line)) {
                 CloseHandle(TempHandle);
                 DeleteFile(TempFileName.StartOfString);
                 YoriLibFreeStringContents(&TempFileName);
@@ -816,7 +816,7 @@ EditSaveFile(
                 return FALSE;
             }
         }
-        if (!YoriLibOutputTextToMultibyteDevice(TempHandle, &EditContext->Newline)) {
+        if (!YoriLibOutputTextToMbyteDev(TempHandle, &EditContext->Newline)) {
             CloseHandle(TempHandle);
             DeleteFile(TempFileName.StartOfString);
             YoriLibFreeStringContents(&TempFileName);
@@ -1384,9 +1384,9 @@ EditSaveAsButtonClicked(
     CustomOptionArray[1].Values = LineEndingValues;
     CustomOptionArray[1].SelectedValue = 0;
 
-    if (YoriLibCompareStringWithLiteral(&EditContext->Newline, _T("\n")) == 0) {
+    if (YoriLibCompareStringLit(&EditContext->Newline, _T("\n")) == 0) {
         CustomOptionArray[1].SelectedValue = 1;
-    } else if (YoriLibCompareStringWithLiteral(&EditContext->Newline, _T("\r")) == 0) {
+    } else if (YoriLibCompareStringLit(&EditContext->Newline, _T("\r")) == 0) {
         CustomOptionArray[1].SelectedValue = 2;
     }
 
@@ -1727,9 +1727,9 @@ EditFindNextMatchingString(
         Substring.StartOfString = Line->StartOfString + StartOffset;
         Substring.LengthInChars = Line->LengthInChars - StartOffset;
         if (EditContext->SearchMatchCase) {
-            Match = YoriLibFindFirstMatchingSubstring(&Substring, 1, &EditContext->SearchString, &Offset);
+            Match = YoriLibFindFirstMatchSubstr(&Substring, 1, &EditContext->SearchString, &Offset);
         } else {
-            Match = YoriLibFindFirstMatchingSubstringInsensitive(&Substring, 1, &EditContext->SearchString, &Offset);
+            Match = YoriLibFindFirstMatchSubstrIns(&Substring, 1, &EditContext->SearchString, &Offset);
         }
 
         if (Match != NULL) {
@@ -1746,9 +1746,9 @@ EditFindNextMatchingString(
     for (LineIndex = StartLine + 1; LineIndex < LineCount; LineIndex++) {
         Line = YoriWinMultilineEditGetLineByIndex(EditContext->MultilineEdit, LineIndex);
         if (EditContext->SearchMatchCase) {
-            Match = YoriLibFindFirstMatchingSubstring(Line, 1, &EditContext->SearchString, &Offset);
+            Match = YoriLibFindFirstMatchSubstr(Line, 1, &EditContext->SearchString, &Offset);
         } else {
-            Match = YoriLibFindFirstMatchingSubstringInsensitive(Line, 1, &EditContext->SearchString, &Offset);
+            Match = YoriLibFindFirstMatchSubstrIns(Line, 1, &EditContext->SearchString, &Offset);
         }
         if (Match != NULL) {
             *NextMatchLine = LineIndex;
@@ -1823,9 +1823,9 @@ EditFindPreviousMatchingString(
         }
     }
     if (EditContext->SearchMatchCase) {
-        Match = YoriLibFindLastMatchingSubstring(&Substring, 1, &EditContext->SearchString, &Offset);
+        Match = YoriLibFindLastMatchSubstr(&Substring, 1, &EditContext->SearchString, &Offset);
     } else {
-        Match = YoriLibFindLastMatchingSubstringInsensitive(&Substring, 1, &EditContext->SearchString, &Offset);
+        Match = YoriLibFindLastMatchSubstrIns(&Substring, 1, &EditContext->SearchString, &Offset);
     }
 
     if (Match != NULL) {
@@ -1841,9 +1841,9 @@ EditFindPreviousMatchingString(
     for (LineIndex = StartLine; LineIndex > 0; LineIndex--) {
         Line = YoriWinMultilineEditGetLineByIndex(EditContext->MultilineEdit, LineIndex - 1);
         if (EditContext->SearchMatchCase) {
-            Match = YoriLibFindLastMatchingSubstring(Line, 1, &EditContext->SearchString, &Offset);
+            Match = YoriLibFindLastMatchSubstr(Line, 1, &EditContext->SearchString, &Offset);
         } else {
-            Match = YoriLibFindLastMatchingSubstringInsensitive(Line, 1, &EditContext->SearchString, &Offset);
+            Match = YoriLibFindLastMatchSubstrIns(Line, 1, &EditContext->SearchString, &Offset);
         }
         if (Match != NULL) {
             *NextMatchLine = LineIndex - 1;
@@ -3163,14 +3163,14 @@ EditEncodingFromString(
     __in PYORI_STRING String
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("utf8")) == 0 &&
+    if (YoriLibCompareStringLitIns(String, _T("utf8")) == 0 &&
         YoriLibIsUtf8Supported()) {
         return CP_UTF8;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ascii")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("ascii")) == 0) {
         return CP_OEMCP;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ansi")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("ansi")) == 0) {
         return CP_ACP;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("utf16")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("utf16")) == 0) {
         return CP_UTF16;
     }
     return (DWORD)-1;
@@ -3231,19 +3231,19 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 EditHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(strEditCopyrightYear);
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("a")) == 0) {
                 GlobalEditContext.UseAsciiDrawing = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 GlobalEditContext.UseMonoDisplay = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 if (ArgC > i + 1) {
                     DWORD NewEncoding;
                     NewEncoding = EditEncodingFromString(&ArgV[i + 1]);
@@ -3253,7 +3253,7 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 GlobalEditContext.ReadOnly = TRUE;
                 ArgumentUnderstood = TRUE;
             }

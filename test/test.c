@@ -149,26 +149,26 @@ ymain(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 TestHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2022"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("v")) == 0) {
                 if (ArgC > i + 1) {
                     for (Var = 0; Var < sizeof(TestVariations)/sizeof(TestVariations[0]); Var++) {
-                        if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], TestVariations[Var].Name) == 0) {
+                        if (YoriLibCompareStringLitIns(&ArgV[i + 1], TestVariations[Var].Name) == 0) {
                             TestVariations[Var].ExplicitlySpecified = TRUE;
                             TestVariations[Var].Execute = TRUE;
                             RunAll = FALSE;
                         }
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("x")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("x")) == 0) {
                 if (ArgC > i + 1) {
                     for (Var = 0; Var < sizeof(TestVariations)/sizeof(TestVariations[0]); Var++) {
-                        if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], TestVariations[Var].Name) == 0) {
+                        if (YoriLibCompareStringLitIns(&ArgV[i + 1], TestVariations[Var].Name) == 0) {
                             TestVariations[Var].ExplicitlySpecified = TRUE;
                             TestVariations[Var].Execute = FALSE;
                         }

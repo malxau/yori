@@ -207,10 +207,10 @@ YoriLibLoadColorFromSchemeString(
     Color = 0;
     YoriLibConstantString(&Dark, YoriLibSchemeColorPrefixes[0]);
     YoriLibConstantString(&Bright, YoriLibSchemeColorPrefixes[1]);
-    if (YoriLibCompareStringInsensitiveCount(&StringValue, &Dark, Dark.LengthInChars) == 0) {
+    if (YoriLibCompareStringInsCnt(&StringValue, &Dark, Dark.LengthInChars) == 0) {
         StringValue.StartOfString = StringValue.StartOfString + Dark.LengthInChars;
         StringValue.LengthInChars = StringValue.LengthInChars - Dark.LengthInChars;
-    } else if (YoriLibCompareStringInsensitiveCount(&StringValue, &Bright, Bright.LengthInChars) == 0) {
+    } else if (YoriLibCompareStringInsCnt(&StringValue, &Bright, Bright.LengthInChars) == 0) {
         Color = (UCHAR)(Color | FOREGROUND_INTENSITY);
         StringValue.StartOfString = StringValue.StartOfString + Bright.LengthInChars;
         StringValue.LengthInChars = StringValue.LengthInChars - Bright.LengthInChars;
@@ -226,7 +226,7 @@ YoriLibLoadColorFromSchemeString(
     StringValue.LengthInChars = StringValue.LengthInChars - 1;
 
     for (Index = 0; Index < sizeof(YoriLibSchemeColorNames)/sizeof(YoriLibSchemeColorNames[0]); Index++) {
-        if (YoriLibCompareStringWithLiteralInsensitive(&StringValue, YoriLibSchemeColorNames[Index]) == 0) {
+        if (YoriLibCompareStringLitIns(&StringValue, YoriLibSchemeColorNames[Index]) == 0) {
             Color = (UCHAR)(Color + Index);
             break;
         }

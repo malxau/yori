@@ -100,8 +100,8 @@ YoriShExecuteYoriInit(
         YoriLibInitEmptyString(&YsExt);
         YsExt.StartOfString = szExt;
         YsExt.LengthInChars = Filename->LengthInChars - (YORI_ALLOC_SIZE_T)(szExt - Filename->StartOfString);
-        if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
-            YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
+        if (YoriLibCompareStringLitIns(&YsExt, _T(".cmd")) == 0 ||
+            YoriLibCompareStringLitIns(&YsExt, _T(".bat")) == 0) {
 
             if (YoriLibUnescapePath(Filename, &UnescapedPath)) {
                 NameToUse = &UnescapedPath;
@@ -230,7 +230,7 @@ YoriShInit(VOID)
                 ModuleName.LengthInChars--;
                 if (YoriLibIsSep(ModuleName.StartOfString[ModuleName.LengthInChars])) {
 
-                    YoriLibAddEnvironmentComponent(_T("PATH"), &ModuleName, TRUE);
+                    YoriLibAddEnvComponent(_T("PATH"), &ModuleName, TRUE);
                     break;
                 }
             }
@@ -241,7 +241,7 @@ YoriShInit(VOID)
 
             if (YoriLibAllocateString(&CompletePath, ModuleName.LengthInChars + sizeof("\\completion"))) {
                 CompletePath.LengthInChars = YoriLibSPrintf(CompletePath.StartOfString, _T("%y\\completion"), &ModuleName);
-                YoriLibAddEnvironmentComponent(_T("YORICOMPLETEPATH"), &CompletePath, FALSE);
+                YoriLibAddEnvComponent(_T("YORICOMPLETEPATH"), &CompletePath, FALSE);
 
                 //
                 //  Convert "completion" into "complete" so there's an 8.3
@@ -251,7 +251,7 @@ YoriShInit(VOID)
                 CompletePath.LengthInChars = (YORI_ALLOC_SIZE_T)(CompletePath.LengthInChars - 2);
                 CompletePath.StartOfString[CompletePath.LengthInChars - 1] = 'e';
                 CompletePath.StartOfString[CompletePath.LengthInChars] = '\0';
-                YoriLibAddEnvironmentComponent(_T("YORICOMPLETEPATH"), &CompletePath, FALSE);
+                YoriLibAddEnvComponent(_T("YORICOMPLETEPATH"), &CompletePath, FALSE);
                 YoriLibFreeStringContents(&CompletePath);
             }
         }
@@ -268,7 +268,7 @@ YoriShInit(VOID)
     } else {
         YORI_STRING NewExt;
         YoriLibConstantString(&NewExt, _T(".YS1"));
-        YoriLibAddEnvironmentComponent(_T("PATHEXT"), &NewExt, TRUE);
+        YoriLibAddEnvComponent(_T("PATHEXT"), &NewExt, TRUE);
     }
 
     YoriLibCancelEnable(TRUE);
@@ -387,15 +387,15 @@ YoriShParseArgs(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 YoriShHelp();
                 *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2021"));
                 *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
                     Interactive = FALSE;
                     *TerminateApp = TRUE;
@@ -403,17 +403,17 @@ YoriShParseArgs(
                     ArgumentUnderstood = TRUE;
                     break;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("k")) == 0) {
                 if (ArgC > i + 1) {
                     *TerminateApp = FALSE;
                     StartArgToExec = i + 1;
                     ArgumentUnderstood = TRUE;
                     break;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nouser")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("nouser")) == 0) {
                 IgnoreUserScripts = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("restart")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("restart")) == 0) {
                 if (ArgC > i + 1) {
                     YoriShLoadSavedRestartState(&ArgV[i + 1]);
                     YoriShDiscardSavedRestartState(&ArgV[i + 1]);
@@ -422,7 +422,7 @@ YoriShParseArgs(
                     ArgumentUnderstood = TRUE;
                     break;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ss")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("ss")) == 0) {
                 if (ArgC > i + 1) {
                     Interactive = FALSE;
                     IgnoreInteractive = TRUE;
@@ -506,7 +506,7 @@ YoriShDisplayWarnings(VOID)
 
         NoWarningsVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NoWarningsVar.StartOfString, NoWarningsVar.LengthAllocated, NULL);
         if (EnvVarLength < NoWarningsVar.LengthAllocated &&
-            YoriLibCompareStringWithLiteral(&NoWarningsVar, _T("1")) == 0) {
+            YoriLibCompareStringLit(&NoWarningsVar, _T("1")) == 0) {
 
             YoriLibFreeStringContents(&NoWarningsVar);
             return TRUE;
@@ -677,7 +677,7 @@ YoriShCaptureCurrentDirectoryAndInformTerminal(VOID)
 
     CurrentDirectoryLength = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(0, NULL);
     if (CurrentDirectoryLength > NextCurrentDirectory->LengthAllocated) {
-        if (!YoriLibReallocateStringWithoutPreservingContents(NextCurrentDirectory, CurrentDirectoryLength + 0x40)) {
+        if (!YoriLibReallocStringNoContents(NextCurrentDirectory, CurrentDirectoryLength + 0x40)) {
             return;
         }
     }

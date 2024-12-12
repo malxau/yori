@@ -363,7 +363,7 @@ YoriLibExpandCommandVariables(
                     break;
                 } else {
                     ExpandedString->LengthInChars = DestIndex;
-                    if (!YoriLibReallocateString(ExpandedString, ExpandedString->LengthAllocated * 4)) {
+                    if (!YoriLibReallocString(ExpandedString, ExpandedString->LengthAllocated * 4)) {
                         YoriLibFreeStringContents(ExpandedString);
                         return FALSE;
                     }
@@ -378,7 +378,7 @@ YoriLibExpandCommandVariables(
 
         if (DestIndex + 1 >= ExpandedString->LengthAllocated) {
             ExpandedString->LengthInChars = DestIndex;
-            if (!YoriLibReallocateString(ExpandedString, ExpandedString->LengthAllocated * 4)) {
+            if (!YoriLibReallocString(ExpandedString, ExpandedString->LengthAllocated * 4)) {
                 YoriLibFreeStringContents(ExpandedString);
                 return FALSE;
             }

@@ -144,44 +144,44 @@ YpmCreateBinaryPackage(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 YpmCreateBinaryHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("a")) == 0) {
                 if (i + 1 < ArgC) {
                     NewArch = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filelist")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("filelist")) == 0) {
                 if (i + 1 < ArgC) {
                     FileList = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filepath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("filepath")) == 0) {
                 if (i + 1 < ArgC) {
                     FilePath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("minimumosbuild")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("minimumosbuild")) == 0) {
                 if (i + 1 < ArgC) {
                     MinimumOSBuild = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
 
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("packagepathforolderbuilds")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("packagepathforolderbuilds")) == 0) {
                 if (i + 1 < ArgC) {
                     PackagePathForOlderBuilds = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("replaces")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("replaces")) == 0) {
                 if (i + 1 < ArgC) {
                     ArgumentUnderstood = TRUE;
                     Replaces = &ArgV[i + 1];
@@ -193,43 +193,43 @@ YpmCreateBinaryPackage(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("sourcepath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("sourcepath")) == 0) {
                 if (i + 1 < ArgC) {
                     SourcePath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("symbolpath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("symbolpath")) == 0) {
                 if (i + 1 < ArgC) {
                     SymbolPath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradedaily")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("upgradedaily")) == 0) {
                 if (i + 1 < ArgC) {
                     UpgradeToDailyPath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradepath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("upgradepath")) == 0) {
                 if (i + 1 < ArgC) {
                     UpgradePath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradestable")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("upgradestable")) == 0) {
                 if (i + 1 < ArgC) {
                     UpgradeToStablePath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("v")) == 0) {
                 if (i + 1 < ArgC) {
                     NewVersion = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;
@@ -322,19 +322,19 @@ YpmCreateSourcePackage(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 YpmCreateSourceHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filepath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("filepath")) == 0) {
                 if (i + 1 < ArgC) {
                     FilePath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;

@@ -99,7 +99,7 @@ YoriPkgAppendPath(
 
         ExistingValue.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthRequired / sizeof(TCHAR) - 1);
 
-        if (!YoriLibAddEnvironmentComponentToString(&ExistingValue, PathToAdd, TRUE)) {
+        if (!YoriLibAddEnvCompToString(&ExistingValue, PathToAdd, TRUE)) {
             YoriLibFreeStringContents(&ExistingValue);
             DllAdvApi32.pRegCloseKey(hKey);
             return FALSE;
@@ -189,7 +189,7 @@ YoriPkgRemoveInstalledPath(
 
         ExistingValue.LengthInChars = (YORI_ALLOC_SIZE_T)(LengthRequired / sizeof(TCHAR) - 1);
 
-        if (!YoriLibRemoveEnvironmentComponentFromString(&ExistingValue, PathToRemove, &NewValue)) {
+        if (!YoriLibRmEnvCompFromString(&ExistingValue, PathToRemove, &NewValue)) {
 
             YoriLibFreeStringContents(&ExistingValue);
             DllAdvApi32.pRegCloseKey(hKey);
@@ -310,14 +310,14 @@ YoriPkgIsFileToBeDeletedOnReboot(
                 if (FoundFileEntry.StartOfString == NULL) {
                     FoundFileEntry.StartOfString = &ExistingValue.StartOfString[Index + 1];
                 } else {
-                    if (YoriLibCompareStringWithLiteralCount(&FoundFileEntry, _T("\\??\\"), sizeof("\\??\\") - 1) == 0) {
+                    if (YoriLibCompareStringLitCnt(&FoundFileEntry, _T("\\??\\"), sizeof("\\??\\") - 1) == 0) {
                         FoundFileEntry.StartOfString += sizeof("\\??\\") - 1;
                         FoundFileEntry.LengthInChars -= sizeof("\\??\\") - 1;
-                    } else if (YoriLibCompareStringWithLiteralCount(&FoundFileEntry, _T("\\\\?\\"), sizeof("\\\\?\\") - 1) == 0) {
+                    } else if (YoriLibCompareStringLitCnt(&FoundFileEntry, _T("\\\\?\\"), sizeof("\\\\?\\") - 1) == 0) {
                         FoundFileEntry.StartOfString += sizeof("\\\\?\\") - 1;
                         FoundFileEntry.LengthInChars -= sizeof("\\\\?\\") - 1;
                     }
-                    if (YoriLibCompareStringInsensitive(&FoundFileEntry, FilePath) == 0) {
+                    if (YoriLibCompareStringIns(&FoundFileEntry, FilePath) == 0) {
                         YoriLibFreeStringContents(&ExistingValue);
                         return TRUE;
                     }

@@ -126,20 +126,20 @@ YpmConfig(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 YpmConfigHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2021-2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("consoledefaultscheme")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("consoledefaultscheme")) == 0) {
                 if (i + 1 < ArgC && !ConsoleScheme && !ConsoleDefaultScheme) {
                     ConsoleDefaultScheme = TRUE;
                     i++;
                     FileName = &ArgV[i];
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("consolescheme")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("consolescheme")) == 0) {
                 if (i + 2 < ArgC && !ConsoleScheme && !ConsoleDefaultScheme) {
                     ConsoleScheme = TRUE;
                     i++;
@@ -148,34 +148,34 @@ YpmConfig(
                     FileName = &ArgV[i];
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desktop")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("desktop")) == 0) {
                 CreateDesktopShortcut = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("loginshell")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("loginshell")) == 0) {
                 LoginShell = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("restoreshell")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("restoreshell")) == 0) {
                 RestoreShell = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ssh")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("ssh")) == 0) {
                 SshShell = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("start")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("start")) == 0) {
                 CreateStartMenuShortcut = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("systempath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("systempath")) == 0) {
                 AppendToSystemPath = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("terminal")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("terminal")) == 0) {
                 CreateTerminalProfile = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("userpath")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("userpath")) == 0) {
                 AppendToUserPath = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("yui")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("yui")) == 0) {
                 YuiShell = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;

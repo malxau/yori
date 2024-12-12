@@ -226,46 +226,46 @@ ProcInfoExpandVariables(
     LARGE_INTEGER IoCount;
     PPROCINFO_CONTEXT ProcInfoContext = (PPROCINFO_CONTEXT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("COMMIT")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("COMMIT")) == 0) {
         MemInKb.QuadPart = ProcInfoContext->VmInfo.CommitUsage / 1024;
         return ProcInfoOutputLargeInteger(MemInKb, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CPU")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CPU")) == 0) {
         CpuTime.QuadPart = ProcInfoContext->KernelTimeInMs.QuadPart + ProcInfoContext->UserTimeInMs.QuadPart;
         return ProcInfoOutputTimestamp(CpuTime, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CPUMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CPUMS")) == 0) {
         CpuTime.QuadPart = ProcInfoContext->KernelTimeInMs.QuadPart + ProcInfoContext->UserTimeInMs.QuadPart;
         return ProcInfoOutputLargeInteger(CpuTime, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CPUKERNEL")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CPUKERNEL")) == 0) {
         return ProcInfoOutputTimestamp(ProcInfoContext->KernelTimeInMs, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CPUKERNELMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CPUKERNELMS")) == 0) {
         return ProcInfoOutputLargeInteger(ProcInfoContext->KernelTimeInMs, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CPUUSER")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CPUUSER")) == 0) {
         return ProcInfoOutputTimestamp(ProcInfoContext->UserTimeInMs, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CPUUSERMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("CPUUSERMS")) == 0) {
         return ProcInfoOutputLargeInteger(ProcInfoContext->UserTimeInMs, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ELAPSED")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("ELAPSED")) == 0) {
         return ProcInfoOutputTimestamp(ProcInfoContext->ElapsedTimeInMs, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ELAPSEDMS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("ELAPSEDMS")) == 0) {
         return ProcInfoOutputLargeInteger(ProcInfoContext->ElapsedTimeInMs, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("OTHERIOBYTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("OTHERIOBYTES")) == 0) {
         IoCount.QuadPart = ProcInfoContext->IoCounters.OtherBytes;
         return ProcInfoOutputLargeInteger(IoCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("OTHERIOCOUNT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("OTHERIOCOUNT")) == 0) {
         IoCount.QuadPart = ProcInfoContext->IoCounters.OtherOperations;
         return ProcInfoOutputLargeInteger(IoCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("READBYTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("READBYTES")) == 0) {
         IoCount.QuadPart = ProcInfoContext->IoCounters.ReadBytes;
         return ProcInfoOutputLargeInteger(IoCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("READCOUNT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("READCOUNT")) == 0) {
         IoCount.QuadPart = ProcInfoContext->IoCounters.ReadOperations;
         return ProcInfoOutputLargeInteger(IoCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WORKINGSET")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("WORKINGSET")) == 0) {
         MemInKb.QuadPart = ProcInfoContext->VmInfo.WorkingSetSize / 1024;
         return ProcInfoOutputLargeInteger(MemInKb, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WRITEBYTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("WRITEBYTES")) == 0) {
         IoCount.QuadPart = ProcInfoContext->IoCounters.WriteBytes;
         return ProcInfoOutputLargeInteger(IoCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WRITECOUNT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("WRITECOUNT")) == 0) {
         IoCount.QuadPart = ProcInfoContext->IoCounters.WriteOperations;
         return ProcInfoOutputLargeInteger(IoCount, 10, OutputBuffer);
     }
@@ -436,20 +436,20 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ProcInfoHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019-2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
                     YoriLibFreeStringContents(&AllocatedFormatString);
                     YoriLibCloneString(&AllocatedFormatString, &ArgV[i + 1]);
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("h")) == 0) {
                 DumpHandles = TRUE;
                 ArgumentUnderstood = TRUE;
             }

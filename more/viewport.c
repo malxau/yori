@@ -135,7 +135,7 @@ MoreDrawStatusLine(
         return;
     }
 
-    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+    YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
     //
     //  Capture statistics
@@ -205,7 +205,7 @@ MoreDrawStatusLine(
 
     if (MoreContext->SearchUiActive) {
         YORI_STRING SearchColorString;
-        TCHAR SearchColorBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+        TCHAR SearchColorBuffer[YORI_MAX_VT_ESCAPE_CHARS];
 
         SearchIndex = MoreSearchIndexForColorIndex(MoreContext, MoreContext->SearchColorIndex);
         SearchString = &MoreContext->SearchStrings[SearchIndex];
@@ -246,7 +246,7 @@ MoreDrawStatusLine(
         //  contain even the fixed portion and it will be reallocated anyway.
         //
 
-        CharsNeeded = MoreContext->ViewportWidth + SearchCount * (YORI_MAX_INTERNAL_VT_ESCAPE_CHARS + 4);
+        CharsNeeded = MoreContext->ViewportWidth + SearchCount * (YORI_MAX_VT_ESCAPE_CHARS + 4);
 
         if (YoriLibAllocateString(&LineToDisplay, CharsNeeded)) {
             YoriLibYPrintf(&LineToDisplay,
@@ -355,7 +355,7 @@ MoreDrawStatusLine(
     YoriLibFreeStringContents(&LineToDisplay);
     MoreContext->SearchDirty = FALSE;
 
-    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, YoriLibVtGetDefaultColor());
+    YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, YoriLibVtGetDefaultColor());
 }
 
 /**
@@ -402,12 +402,12 @@ MoreDegenerateDisplay(
 
         if (MoreContext->DisplayViewportLines[Index].InitialDisplayColor == 7) {
             if (Index % 2 != 0) {
-                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x17);
+                YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, 0x17);
             } else {
-                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x7);
+                YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, 0x7);
             }
         } else {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialDisplayColor);
+            YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialDisplayColor);
         }
 
         if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
@@ -490,7 +490,7 @@ MoreOutputSeriesOfLines(
         YoriLibFreeStringContents(&CombinedBuffer);
     } else {
         for (Index = 0; Index < LineCount; Index++) {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FirstLine[Index].InitialDisplayColor);
+            YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, FirstLine[Index].InitialDisplayColor);
 
             //
             //  When scrolling to a new line, the console can initialize the
@@ -1553,7 +1553,7 @@ MoreCopySelectionIfPresent(
             //  because the other is the NULL char from sizeof.
             //
 
-            VtTextBufferSize += LogicalLineLength + 1 + YORI_MAX_INTERNAL_VT_ESCAPE_CHARS;
+            VtTextBufferSize += LogicalLineLength + 1 + YORI_MAX_VT_ESCAPE_CHARS;
         }
     }
 
@@ -1780,7 +1780,7 @@ MoreAppendToSearchString(
         if (NewAllocSize == 0) {
             return FALSE;
         }
-        if (!YoriLibReallocateString(SearchString, NewAllocSize)) {
+        if (!YoriLibReallocString(SearchString, NewAllocSize)) {
             return FALSE;
         }
     }

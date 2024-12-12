@@ -102,16 +102,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 SleepHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 CountdownMode = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i;
                 ArgumentUnderstood = TRUE;
                 break;
@@ -141,13 +141,13 @@ ENTRYPOINT(
         YoriLibInitEmptyString(&Suffix);
         Suffix.StartOfString = &ArgV[StartArg].StartOfString[CharsConsumed];
         Suffix.LengthInChars = ArgV[StartArg].LengthInChars - CharsConsumed;
-        if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("ms")) == 0) {
+        if (YoriLibCompareStringLitIns(&Suffix, _T("ms")) == 0) {
             TimeToSleep = (DWORD)llTemp;
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("s")) == 0) {
+        } else if (YoriLibCompareStringLitIns(&Suffix, _T("s")) == 0) {
             TimeToSleep = (DWORD)llTemp * 1000;
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("m")) == 0) {
+        } else if (YoriLibCompareStringLitIns(&Suffix, _T("m")) == 0) {
             TimeToSleep = (DWORD)llTemp * 1000 * 60;
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("h")) == 0) {
+        } else if (YoriLibCompareStringLitIns(&Suffix, _T("h")) == 0) {
             TimeToSleep = (DWORD)llTemp * 1000 * 60 * 60;
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sleep: unknown suffix\n"));

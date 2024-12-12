@@ -81,37 +81,37 @@ YoriShExpandPrompt(
 
     UNREFERENCED_PARAMETER(Context);
 
-    if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("A")) == 0) {
+    if (YoriLibCompareStringLitIns(VariableName, _T("A")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '&';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("B")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("B")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '|';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("C")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("C")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '(';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("E")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("E")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = 27;
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("F")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("F")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = ')';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("G")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("G")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '>';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("G_OR_ADMIN_G")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("G_OR_ADMIN_G")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             if (YoriShPromptIsAdmin()) {
@@ -120,12 +120,12 @@ YoriShExpandPrompt(
                 OutputString->StartOfString[0] = '>';
             }
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("L")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("L")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '<';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("P")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("P")) == 0) {
         YORI_STRING CurrentDirectory;
         YoriLibGetCurrentDirectoryForDisplay(&CurrentDirectory);
         CharsNeeded = CurrentDirectory.LengthInChars;
@@ -133,32 +133,32 @@ YoriShExpandPrompt(
             memcpy(OutputString->StartOfString, CurrentDirectory.StartOfString, CharsNeeded * sizeof(TCHAR));
         }
         YoriLibFreeStringContents(&CurrentDirectory);
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("PID")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("PID")) == 0) {
         CharsNeeded = 10;
         if (OutputString->LengthAllocated > CharsNeeded) {
             CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%x"), GetCurrentProcessId());
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("Q")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("Q")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '=';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("S")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("S")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = ' ';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("_")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("_")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '\n';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("$")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("$")) == 0) {
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '$';
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("+")) == 0) {
+    } else if (YoriLibCompareStringLitIns(VariableName, _T("+")) == 0) {
         CharsNeeded = YoriShGlobal.PromptRecursionDepth;
         if (OutputString->LengthAllocated > YoriShGlobal.PromptRecursionDepth) {
             YORI_ALLOC_SIZE_T Index;

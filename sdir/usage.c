@@ -745,27 +745,27 @@ SdirUsage(
 
         if (YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("opts")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("opts")) == 0) {
                 DisplayOptionsHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("display")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("display")) == 0) {
                 DisplayDisplayHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("sort")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("sort")) == 0) {
                 DisplaySortHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filecolor")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("filecolor")) == 0) {
                 DisplayFileColorHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("metacolor")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("metacolor")) == 0) {
                 DisplayMetaColorHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 DisplayLicenseHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("v")) == 0) {
                 DisplaySomething = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("all")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("all")) == 0) {
                 DisplayOptionsHelp = TRUE;
                 DisplayLicenseHelp = TRUE;
                 DisplayDisplayHelp = TRUE;

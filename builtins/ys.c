@@ -372,7 +372,7 @@ YsGotoLabel(
                 LabelString.LengthInChars--;
             }
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&LabelString, Label) == 0) {
+            if (YoriLibCompareStringLitIns(&LabelString, Label) == 0) {
                 YsActiveScript->ActiveLine = Line;
                 return TRUE;
             }
@@ -491,10 +491,10 @@ YoriCmd_RETURN(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ReturnHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
             }
@@ -586,7 +586,7 @@ YoriCmd_RETURN(
                 VariableName.LengthInChars = (YORI_ALLOC_SIZE_T)(ThisValue - ThisVar);
                 VariableName.LengthAllocated = VariableName.LengthInChars + 1;
                 for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
-                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
+                    if (YoriLibCompareStringLitIns(&ArgV[i], ThisVar) == 0) {
                         PreserveVariable = TRUE;
                     }
                 }
@@ -624,7 +624,7 @@ YoriCmd_RETURN(
                 ValueName.LengthInChars = VarLen - VariableName.LengthInChars - 1;
                 ValueName.LengthAllocated = ValueName.LengthInChars + 1;
                 for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
-                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
+                    if (YoriLibCompareStringLitIns(&ArgV[i], ThisVar) == 0) {
                         PreserveVariable = TRUE;
                     }
                 }
@@ -689,10 +689,10 @@ YoriCmd_CALL(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 CallHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
@@ -789,10 +789,10 @@ YoriCmd_GOTO(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 GotoHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
@@ -854,10 +854,10 @@ YoriCmd_INCLUDE(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 IncludeHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
@@ -944,10 +944,10 @@ YoriCmd_SHIFT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ShiftHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
@@ -997,14 +997,14 @@ YsExpandArgumentVariables(
     YORI_ALLOC_SIZE_T StringLength;
     PYS_ARGUMENT_CONTEXT ArgContext = (PYS_ARGUMENT_CONTEXT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("~SCRIPTNAME")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("~SCRIPTNAME")) == 0) {
         if (OutputString->LengthAllocated >= YsActiveScript->FileName.LengthInChars) {
             memcpy(OutputString->StartOfString, YsActiveScript->FileName.StartOfString, YsActiveScript->FileName.LengthInChars * sizeof(TCHAR));
         }
         return YsActiveScript->FileName.LengthInChars;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("*")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("*")) == 0) {
         YORI_STRING EntireLine;
 
         if (ArgContext->ArgC < ArgContext->ShiftCount + 1) {
@@ -1270,10 +1270,10 @@ YoriCmd_YS(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 YsHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }

@@ -572,35 +572,35 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 HashHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019-2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("a")) == 0) {
                 if (i + 1 < ArgC) {
-                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("MD4")) == 0) {
+                    if (YoriLibCompareStringLitIns(&ArgV[i + 1], _T("MD4")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
                         Algorithm = CALG_MD4;
-                    } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("MD5")) == 0) {
+                    } else if (YoriLibCompareStringLitIns(&ArgV[i + 1], _T("MD5")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
                         Algorithm = CALG_MD5;
-                    } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("SHA1")) == 0) {
+                    } else if (YoriLibCompareStringLitIns(&ArgV[i + 1], _T("SHA1")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
                         Algorithm = CALG_SHA1;
-                    } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("SHA256")) == 0) {
+                    } else if (YoriLibCompareStringLitIns(&ArgV[i + 1], _T("SHA256")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
                         Algorithm = CALG_SHA_256;
-                    } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("SHA384")) == 0) {
+                    } else if (YoriLibCompareStringLitIns(&ArgV[i + 1], _T("SHA384")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
                         Algorithm = CALG_SHA_384;
-                    } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("SHA512")) == 0) {
+                    } else if (YoriLibCompareStringLitIns(&ArgV[i + 1], _T("SHA512")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
                         Algorithm = CALG_SHA_512;
@@ -609,13 +609,13 @@ ENTRYPOINT(
                         return EXIT_FAILURE;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 HashContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;

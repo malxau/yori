@@ -352,16 +352,16 @@ MakeProcessIf(
     Insensitive = FALSE;
 
     for (Index = 1; Index < ArgC; Index++) {
-        if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[Index], _T("NOT")) == 0) {
+        if (YoriLibCompareStringLitIns(&ArgV[Index], _T("NOT")) == 0) {
             if (Not) {
                 Not = FALSE;
             } else {
                 Not = TRUE;
             }
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[Index], _T("EXIST")) == 0 &&
+        } else if (YoriLibCompareStringLitIns(&ArgV[Index], _T("EXIST")) == 0 &&
                    Index + 1 < ArgC) {
             break;
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[Index], _T("/I")) == 0) {
+        } else if (YoriLibCompareStringLitIns(&ArgV[Index], _T("/I")) == 0) {
             Insensitive = TRUE;
         } else {
             YORI_STRING EqualsOperator;
@@ -377,7 +377,7 @@ MakeProcessIf(
             //
 
             YoriLibConstantString(&EqualsOperator, _T("=="));
-            MatchingOperator = YoriLibFindFirstMatchingSubstring(&ArgV[Index], 1, &EqualsOperator, &OperatorIndex);
+            MatchingOperator = YoriLibFindFirstMatchSubstr(&ArgV[Index], 1, &EqualsOperator, &OperatorIndex);
 
             ConditionTrue = FALSE;
 
@@ -391,7 +391,7 @@ MakeProcessIf(
                 SecondPart.LengthInChars = ArgV[Index].LengthInChars - OperatorIndex - MatchingOperator->LengthInChars;
 
                 if (Insensitive) {
-                    if (YoriLibCompareStringInsensitive(&FirstPart, &SecondPart) == 0) {
+                    if (YoriLibCompareStringIns(&FirstPart, &SecondPart) == 0) {
                         ConditionTrue = TRUE;
                     }
                 } else {
@@ -572,11 +572,11 @@ MakeLaunchNextCmd(
         } else {
 
             DWORD Result = EXIT_SUCCESS;
-            if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], _T("IF")) == 0) {
+            if (YoriLibCompareStringLitIns(&ExecContext->CmdToExec.ArgV[0], _T("IF")) == 0) {
                 if (MakeProcessIf(ChildRecipe, ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV, &CmdToParse)) {
                     Reparse = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], _T("CD")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&ExecContext->CmdToExec.ArgV[0], _T("CD")) == 0) {
                 Result = MakeProcessCd(ChildRecipe, ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV);
                 ExecutedBuiltin = TRUE;
                 ChildRecipe->ProcessHandle = NULL;
@@ -597,7 +597,7 @@ MakeLaunchNextCmd(
 
             if (!ExecutedBuiltin && !Reparse) {
                 for (Index = 0; Index < sizeof(MakePuntToCmd)/sizeof(MakePuntToCmd[0]); Index++) {
-                    if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], MakePuntToCmd[Index]) == 0) {
+                    if (YoriLibCompareStringLitIns(&ExecContext->CmdToExec.ArgV[0], MakePuntToCmd[Index]) == 0) {
                         PuntToCmd = TRUE;
                         break;
                     }
@@ -899,11 +899,11 @@ MakeProcessCompletion(
         if (ExitCode != 0) {
 
             if (!ChildRecipe->Cmd->IgnoreErrors) {
-                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, (WORD)((DefaultColor & 0xF0) | FOREGROUND_RED | FOREGROUND_INTENSITY));
+                YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, (WORD)((DefaultColor & 0xF0) | FOREGROUND_RED | FOREGROUND_INTENSITY));
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error in target: %y\n"), &ChildRecipe->Target->HashEntry.Key);
                 Result = FALSE;
             } else {
-                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, (WORD)((DefaultColor & 0xF0) | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
+                YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, (WORD)((DefaultColor & 0xF0) | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
             }
 
             RestoreColor = TRUE;
@@ -937,7 +937,7 @@ MakeProcessCompletion(
         }
 
         if (RestoreColor) {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, YoriLibVtGetDefaultColor());
+            YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, YoriLibVtGetDefaultColor());
         }
 
         //

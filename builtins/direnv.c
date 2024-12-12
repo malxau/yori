@@ -225,7 +225,7 @@ DirenvInstallApplyHook(VOID)
     //
 
     YoriPostcmd.LengthInChars = (YORI_ALLOC_SIZE_T)GetEnvironmentVariable(_T("YORIPOSTCMD"), YoriPostcmd.StartOfString, YoriPostcmd.LengthAllocated);
-    if (YoriLibFindFirstMatchingSubstring(&YoriPostcmd, 1, &NewPrecmdComponent, NULL) == NULL) {
+    if (YoriLibFindFirstMatchSubstr(&YoriPostcmd, 1, &NewPrecmdComponent, NULL) == NULL) {
 
         //
         //  Add " & " if the command already contains something
@@ -299,7 +299,7 @@ DirenvUninstallApplyHook(VOID)
     //  Look for direnvapply.
     //
 
-    if (YoriLibFindFirstMatchingSubstring(&YoriPostcmd, 1, &NewPrecmdComponent, &FoundOffset) != NULL) {
+    if (YoriLibFindFirstMatchSubstr(&YoriPostcmd, 1, &NewPrecmdComponent, &FoundOffset) != NULL) {
 
         //
         //  Remove any spaces or '&' from before the direnvapply that we
@@ -364,7 +364,7 @@ DirenvScriptAllowedInDirectory(
     LPTSTR NextComponent;
 
     YoriLibInitEmptyString(&Whitelist);
-    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("DIRENVDIRLIST"), &Whitelist)) {
+    if (!YoriLibAllocateAndGetEnvVar(_T("DIRENVDIRLIST"), &Whitelist)) {
         return FALSE;
     }
 
@@ -394,7 +394,7 @@ DirenvScriptAllowedInDirectory(
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Comparing %y to %y\n"), Directory, &Component);
 
-        if (YoriLibCompareStringInsensitive(Directory, &Component) == 0) {
+        if (YoriLibCompareStringIns(Directory, &Component) == 0) {
             YoriLibFreeStringContents(&Whitelist);
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Return match\n"));
             return TRUE;
@@ -454,7 +454,7 @@ DirenvApplyInternal(VOID)
     //  If it's the same as before, no work to do
     //
 
-    if (YoriLibCompareStringInsensitive(&CurrentDirectory, &DirenvPreviousCurrentDirectory) == 0) {
+    if (YoriLibCompareStringIns(&CurrentDirectory, &DirenvPreviousCurrentDirectory) == 0) {
         YoriLibFreeStringContents(&CurrentDirectory);
         return EXIT_SUCCESS;
     }
@@ -488,7 +488,7 @@ DirenvApplyInternal(VOID)
             //  nothing.
             //
 
-            if (YoriLibCompareStringInsensitive(&NewScript, &DirenvPreviousExecutedScript) == 0) {
+            if (YoriLibCompareStringIns(&NewScript, &DirenvPreviousExecutedScript) == 0) {
                 YoriLibFreeStringContents(&NewScript);
                 break;
             }
@@ -574,10 +574,10 @@ YoriCmd_DIRENVAPPLY(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 DirenvApplyHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
             }
@@ -644,19 +644,19 @@ YoriCmd_DIRENV(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 DirenvHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("a")) == 0) {
                 ArgumentUnderstood = TRUE;
                 Op = DirenvOpApply;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 ArgumentUnderstood = TRUE;
                 Op = DirenvOpInstall;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("u")) == 0) {
                 ArgumentUnderstood = TRUE;
                 Op = DirenvOpUninstall;
             }

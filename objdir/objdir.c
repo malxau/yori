@@ -250,13 +250,13 @@ ObjDirFileFoundCallback(
     IsDevice = FALSE;
     IsDriver = FALSE;
 
-    if (YoriLibCompareStringWithLiteral(ObjectType, _T("Directory")) == 0) {
+    if (YoriLibCompareStringLit(ObjectType, _T("Directory")) == 0) {
         IsDirectory = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(ObjectType, _T("SymbolicLink")) == 0) {
+    } else if (YoriLibCompareStringLit(ObjectType, _T("SymbolicLink")) == 0) {
         IsLink = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(ObjectType, _T("Device")) == 0) {
+    } else if (YoriLibCompareStringLit(ObjectType, _T("Device")) == 0) {
         IsDevice = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(ObjectType, _T("Driver")) == 0) {
+    } else if (YoriLibCompareStringLit(ObjectType, _T("Driver")) == 0) {
         IsDriver = TRUE;
     }
 
@@ -405,16 +405,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ObjDirHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("m")) == 0) {
                 ObjDirContext.MinimalDisplay = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;

@@ -210,7 +210,7 @@ YoriLibForEachFileEnum(
     //
 
     if (ForEachContext->EffectiveFileSpec.LengthInChars >= sizeof("file:///")) {
-        if (YoriLibCompareStringWithLiteralInsensitiveCount(&ForEachContext->EffectiveFileSpec, _T("file:///"), sizeof("file:///") - 1) == 0) {
+        if (YoriLibCompareStringLitInsCnt(&ForEachContext->EffectiveFileSpec, _T("file:///"), sizeof("file:///") - 1) == 0) {
             ForEachContext->EffectiveFileSpec.StartOfString = &ForEachContext->EffectiveFileSpec.StartOfString[sizeof("file:///") - 1];
             ForEachContext->EffectiveFileSpec.LengthInChars -= sizeof("file:///") - 1;
         }
@@ -698,7 +698,7 @@ YoriLibForEachFile(
     }
 
     SingleCharMode = FALSE;
-    CharsToOperator = YoriLibCountStringNotContainingChars(FileSpec, _T("{["));
+    CharsToOperator = YoriLibCntStringNotWithChars(FileSpec, _T("{["));
 
     //
     //  If there are no [ or { operators, expand any ~ operators and 
@@ -731,7 +731,7 @@ YoriLibForEachFile(
     SubstituteValues.StartOfString = &FileSpec->StartOfString[CharsToOperator + 1];
     SubstituteValues.LengthInChars = FileSpec->LengthInChars - CharsToOperator - 1;
 
-    CharsToOperator = YoriLibCountStringNotContainingChars(&SubstituteValues, SingleCharMode?_T("]"):_T("}"));
+    CharsToOperator = YoriLibCntStringNotWithChars(&SubstituteValues, SingleCharMode?_T("]"):_T("}"));
     if (CharsToOperator == SubstituteValues.LengthInChars) {
         return YoriLibForEachFileEnum(FileSpec, MatchFlags, Depth, Callback, ErrorCallback, Context);
     }
@@ -769,7 +769,7 @@ YoriLibForEachFile(
     } else {
         while(TRUE) {
             MatchValue = SubstituteValues;
-            CharsToOperator = YoriLibCountStringNotContainingChars(&SubstituteValues, _T(","));
+            CharsToOperator = YoriLibCntStringNotWithChars(&SubstituteValues, _T(","));
 
             MatchValue.LengthInChars = CharsToOperator;
 

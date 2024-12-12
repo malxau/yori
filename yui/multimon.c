@@ -803,11 +803,11 @@ YuiFindExplorerWindowFound(
 
     ClassName.LengthInChars = (YORI_ALLOC_SIZE_T)GetClassName(hWnd, ClassName.StartOfString, ClassName.LengthAllocated);
 
-    if (YoriLibCompareStringWithLiteral(&ClassName, _T("Shell_TrayWnd")) == 0) {
+    if (YoriLibCompareStringLit(&ClassName, _T("Shell_TrayWnd")) == 0) {
         YuiAddOrUpdateExplorerTaskbar(YuiContext, hWnd, TRUE);
     }
 
-    if (YoriLibCompareStringWithLiteral(&ClassName, _T("Shell_SecondaryTrayWnd")) == 0) {
+    if (YoriLibCompareStringLit(&ClassName, _T("Shell_SecondaryTrayWnd")) == 0) {
         YuiAddOrUpdateExplorerTaskbar(YuiContext, hWnd, FALSE);
     }
 

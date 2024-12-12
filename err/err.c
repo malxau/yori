@@ -159,23 +159,23 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ErrHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("n")) == 0) {
                 ErrType = ErrTypeNtstatus;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 ErrType = ErrTypeNtstatus;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("w")) == 0) {
                 ErrType = ErrTypeWindows;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("0"), 1) >= 0 &&
-                       YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("9"), 1) <= 0) {
+            } else if (YoriLibCompareStringLitInsCnt(&Arg, _T("0"), 1) >= 0 &&
+                       YoriLibCompareStringLitInsCnt(&Arg, _T("9"), 1) <= 0) {
                 StartArg = i;
                 ArgumentUnderstood = TRUE;
             }
@@ -196,7 +196,7 @@ ENTRYPOINT(
     }
 
     if (ErrIsNumberProbablyHex(&ArgV[StartArg])) {
-        if (!YoriLibStringToNumberSpecifyBase(&ArgV[StartArg], 16, TRUE, &llTemp, &CharsConsumed) || CharsConsumed == 0) {
+        if (!YoriLibStringToNumberBase(&ArgV[StartArg], 16, TRUE, &llTemp, &CharsConsumed) || CharsConsumed == 0) {
             if (!YoriLibStringToNumber(&ArgV[StartArg], TRUE, &llTemp, &CharsConsumed) || CharsConsumed == 0) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("err: Argument not understood: %y\n"), &ArgV[StartArg]);
                 return EXIT_FAILURE;

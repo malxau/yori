@@ -244,26 +244,26 @@ YoriCmd_COLOR(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ColorHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("d")) == 0) {
                 Default = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 Fullscreen = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
                 if (i + 1 < ArgC) {
                     SchemeFile = &ArgV[i + 1];
                     Op = ColorOpLoadScheme;
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 if (i + 1 < ArgC) {
                     SchemeFile = &ArgV[i + 1];
                     Op = ColorOpSaveScheme;
@@ -338,7 +338,7 @@ YoriCmd_COLOR(
         } else {
             YORILIB_COLOR_ATTRIBUTES WindowAttributes;
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[StartArg], _T("reset")) == 0) {
+            if (YoriLibCompareStringLitIns(&ArgV[StartArg], _T("reset")) == 0) {
                 Attributes.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
             } else {
                 YoriLibAttributeFromString(&ArgV[StartArg], &Attributes);
@@ -379,7 +379,7 @@ YoriCmd_COLOR(
         YoriCallSetDefaultColor(BufferInfo.wAttributes);
     }
 
-    YoriLibVtSetConsoleTextAttributeOnDevice(GetStdHandle(STD_OUTPUT_HANDLE), 0, Attributes.Ctrl, BufferInfo.wAttributes);
+    YoriLibVtSetConsoleTextAttrDev(GetStdHandle(STD_OUTPUT_HANDLE), 0, Attributes.Ctrl, BufferInfo.wAttributes);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
 
     return EXIT_SUCCESS;

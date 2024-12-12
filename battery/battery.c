@@ -126,7 +126,7 @@ BatteryExpandVariables(
     YORI_ALLOC_SIZE_T CharsNeeded;
     PBATTERY_CONTEXT BatteryContext = (PBATTERY_CONTEXT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("CHARGING")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("CHARGING")) == 0) {
         if (BatteryContext->PowerStatus.BatteryFlag == YORI_BATTERY_FLAG_UNKNOWN) {
             CharsNeeded = YoriLibSPrintfSize(_T("Unknown"));
         } else if (BatteryContext->PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_CHARGING) {
@@ -139,31 +139,31 @@ BatteryExpandVariables(
         } else {
             CharsNeeded = YoriLibSPrintfSize(_T("Draining"));
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PERCENTREMAINING")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("PERCENTREMAINING")) == 0) {
         if (BatteryContext->PowerStatus.BatteryLifePercent >= 100) {
             CharsNeeded = 3;
         } else {
             CharsNeeded = 2;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("POWERSOURCE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("POWERSOURCE")) == 0) {
         if (BatteryContext->PowerStatus.PowerSource & YORI_POWER_SOURCE_POWERED) {
             CharsNeeded = YoriLibSPrintfSize(_T("AC"));
         } else {
             CharsNeeded = YoriLibSPrintfSize(_T("Battery"));
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("REMAINING_HOURS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("REMAINING_HOURS")) == 0) {
         if (BatteryContext->PowerStatus.BatterySecondsRemaining == (DWORD)-1) {
             CharsNeeded = YoriLibSPrintfSize(_T("Unknown"));
         } else {
             CharsNeeded = YoriLibSPrintfSize(_T("%i"), BatteryContext->RemainingHours);
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("REMAINING_MINUTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("REMAINING_MINUTES")) == 0) {
         if (BatteryContext->PowerStatus.BatterySecondsRemaining == (DWORD)-1) {
             CharsNeeded = YoriLibSPrintfSize(_T("Unknown"));
         } else {
             CharsNeeded = YoriLibSPrintfSize(_T("%i"), BatteryContext->RemainingTotalMinutes);
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("REMAINING_TIME")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("REMAINING_TIME")) == 0) {
         if (BatteryContext->PowerStatus.BatterySecondsRemaining == (DWORD)-1) {
             CharsNeeded = YoriLibSPrintfSize(_T("Unknown"));
         } else {
@@ -189,7 +189,7 @@ BatteryExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("CHARGING")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("CHARGING")) == 0) {
         if (BatteryContext->PowerStatus.BatteryFlag == YORI_BATTERY_FLAG_UNKNOWN) {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("Unknown"));
         } else if (BatteryContext->PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_CHARGING) {
@@ -202,31 +202,31 @@ BatteryExpandVariables(
         } else {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("Draining"));
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PERCENTREMAINING")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("PERCENTREMAINING")) == 0) {
         if (BatteryContext->PowerStatus.BatteryLifePercent >= 100) {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("100"));
         } else {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), BatteryContext->PowerStatus.BatteryLifePercent);
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("POWERSOURCE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("POWERSOURCE")) == 0) {
         if (BatteryContext->PowerStatus.PowerSource & YORI_POWER_SOURCE_POWERED) {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("AC"));
         } else {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("Battery"));
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("REMAINING_HOURS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("REMAINING_HOURS")) == 0) {
         if (BatteryContext->PowerStatus.BatterySecondsRemaining == (DWORD)-1) {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("Unknown"));
         } else {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), BatteryContext->RemainingHours);
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("REMAINING_MINUTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("REMAINING_MINUTES")) == 0) {
         if (BatteryContext->PowerStatus.BatterySecondsRemaining == (DWORD)-1) {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("Unknown"));
         } else {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), BatteryContext->RemainingTotalMinutes);
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("REMAINING_TIME")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("REMAINING_TIME")) == 0) {
         if (BatteryContext->PowerStatus.BatterySecondsRemaining == (DWORD)-1) {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("Unknown"));
         } else {
@@ -299,10 +299,10 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 BatteryHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019-2023"));
                 return EXIT_SUCCESS;
             }

@@ -336,26 +336,26 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 WifiHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("op=connect")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("op=connect")) == 0) {
                 if (i + 1 < ArgC) {
                     Op = WifiOpConnect;
                     ProfileName = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("op=disconnect")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("op=disconnect")) == 0) {
                 Op = WifiOpDisconnect;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("op=list")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("op=list")) == 0) {
                 Op = WifiOpListNetworks;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("op=listknown")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("op=listknown")) == 0) {
                 Op = WifiOpListKnownNetworks;
                 ArgumentUnderstood = TRUE;
             }

@@ -1527,7 +1527,7 @@ YoriWinEditInsertTextRange(
         if (LengthToAllocate == 0) {
             return 0;
         }
-        if (!YoriLibReallocateString(&Edit->Text, LengthToAllocate)) {
+        if (!YoriLibReallocString(&Edit->Text, LengthToAllocate)) {
             return FALSE;
         }
     }
@@ -1643,7 +1643,7 @@ YoriWinEditOverwriteTextRange(
         if (LengthToAllocate == 0) {
             return FALSE;
         }
-        if (!YoriLibReallocateString(&Edit->Text, LengthToAllocate)) {
+        if (!YoriLibReallocString(&Edit->Text, LengthToAllocate)) {
             return FALSE;
         }
     }

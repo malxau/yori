@@ -275,7 +275,7 @@ YoriLibPasteText(
     StringLength = (YORI_ALLOC_SIZE_T)_tcslen(pMem);
 
     if (StringLength >= Buffer->LengthAllocated) {
-        if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, (YORI_ALLOC_SIZE_T)(StringLength + 1))) {
+        if (!YoriLibReallocStringNoContents(Buffer, (YORI_ALLOC_SIZE_T)(StringLength + 1))) {
             DllKernel32.pGlobalUnlock(hMem);
             DllUser32.pCloseClipboard();
             return FALSE;
@@ -794,7 +794,7 @@ YoriLibCopyTextWithProcessFallback(
     }
 
     if (Buffer->LengthInChars > YoriLibProcessClipboard.LengthAllocated) {
-        if (!YoriLibReallocateStringWithoutPreservingContents(&YoriLibProcessClipboard, Buffer->LengthInChars)) {
+        if (!YoriLibReallocStringNoContents(&YoriLibProcessClipboard, Buffer->LengthInChars)) {
             return FALSE;
         }
     }
@@ -826,7 +826,7 @@ YoriLibPasteTextWithProcessFallback(
     }
 
     if (YoriLibProcessClipboard.LengthInChars + 1 > Buffer->LengthAllocated) {
-        if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, (YORI_ALLOC_SIZE_T)(YoriLibProcessClipboard.LengthInChars + 1))) {
+        if (!YoriLibReallocStringNoContents(Buffer, (YORI_ALLOC_SIZE_T)(YoriLibProcessClipboard.LengthInChars + 1))) {
             return FALSE;
         }
     }

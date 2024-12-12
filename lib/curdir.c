@@ -98,9 +98,9 @@ YoriLibGetOnDiskCaseForPath(
                 }
                 FindHandle = FindFirstFile(NewPath.StartOfString, &FindData);
                 if (FindHandle != INVALID_HANDLE_VALUE) {
-                    if (YoriLibCompareStringWithLiteralInsensitive(&SearchComponent, FindData.cFileName) == 0) { 
+                    if (YoriLibCompareStringLitIns(&SearchComponent, FindData.cFileName) == 0) { 
                         memcpy(SearchComponent.StartOfString, FindData.cFileName, SearchComponent.LengthInChars * sizeof(TCHAR));
-                    } else if (YoriLibCompareStringWithLiteralInsensitive(&SearchComponent, FindData.cAlternateFileName) == 0) { 
+                    } else if (YoriLibCompareStringLitIns(&SearchComponent, FindData.cAlternateFileName) == 0) { 
                         memcpy(SearchComponent.StartOfString, FindData.cAlternateFileName, SearchComponent.LengthInChars * sizeof(TCHAR));
                     }
                     FindClose(FindHandle);

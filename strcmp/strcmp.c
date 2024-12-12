@@ -129,16 +129,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 StrCmpHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 MatchInsensitive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 if (i + 1 < ArgC) {
                     ArgumentUnderstood = TRUE;
                     StartArg = i + 1;
@@ -169,7 +169,7 @@ ENTRYPOINT(
     YoriLibConstantString(&OperatorMatches[STRCMP_OPERATOR_NO_MATCH], _T("!="));
     YoriLibConstantString(&OperatorMatches[STRCMP_OPERATOR_SUBSTRING], _T("*="));
 
-    MatchingOperator = YoriLibFindFirstMatchingSubstring(&Expression, sizeof(OperatorMatches)/sizeof(OperatorMatches[0]), OperatorMatches, &OperatorIndex);
+    MatchingOperator = YoriLibFindFirstMatchSubstr(&Expression, sizeof(OperatorMatches)/sizeof(OperatorMatches[0]), OperatorMatches, &OperatorIndex);
     if (MatchingOperator == NULL) {
         YoriLibFreeStringContents(&Expression);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("strcmp: missing operator\n"));
@@ -191,7 +191,7 @@ ENTRYPOINT(
     if (MatchingOperator == &OperatorMatches[STRCMP_OPERATOR_EXACT_MATCH]) {
 
         if (MatchInsensitive) {
-            if (YoriLibCompareStringInsensitive(&FirstPart, &SecondPart) == 0) {
+            if (YoriLibCompareStringIns(&FirstPart, &SecondPart) == 0) {
                 Result = EXIT_SUCCESS;
             } else {
                 Result = EXIT_FAILURE;
@@ -207,7 +207,7 @@ ENTRYPOINT(
     } else if (MatchingOperator == &OperatorMatches[STRCMP_OPERATOR_NO_MATCH]) {
 
         if (MatchInsensitive) {
-            if (YoriLibCompareStringInsensitive(&FirstPart, &SecondPart) == 0) {
+            if (YoriLibCompareStringIns(&FirstPart, &SecondPart) == 0) {
                 Result = EXIT_FAILURE;
             } else {
                 Result = EXIT_SUCCESS;
@@ -223,14 +223,14 @@ ENTRYPOINT(
     } else if (MatchingOperator == &OperatorMatches[STRCMP_OPERATOR_SUBSTRING]) {
 
         if (MatchInsensitive) {
-            FoundMatch = YoriLibFindFirstMatchingSubstringInsensitive(&SecondPart, 1, &FirstPart, NULL);
+            FoundMatch = YoriLibFindFirstMatchSubstrIns(&SecondPart, 1, &FirstPart, NULL);
             if (FoundMatch != NULL) {
                 Result = EXIT_SUCCESS;
             } else {
                 Result = EXIT_FAILURE;
             }
         } else {
-            FoundMatch = YoriLibFindFirstMatchingSubstring(&SecondPart, 1, &FirstPart, NULL);
+            FoundMatch = YoriLibFindFirstMatchSubstr(&SecondPart, 1, &FirstPart, NULL);
             if (FoundMatch != NULL) {
                 Result = EXIT_SUCCESS;
             } else {

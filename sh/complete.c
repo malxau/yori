@@ -103,7 +103,7 @@ YoriShRemoveMatchFromTabContext(
 
 /**
  Compare two Yori strings as file names, which implies case insensitively.
- This routine is a custom version of YoriLibCompareStringInsensitive which
+ This routine is a custom version of YoriLibCompareStringIns which
  handles seperator characters specifically to ensure they are logically
  before alphanumeric characters, so a shorter path with a seperator is
  ordered before a longer path.
@@ -209,7 +209,7 @@ YoriShPerformHistoryTabCompletion(
     while (ListEntry != NULL) {
         HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
 
-        if (YoriLibCompareStringInsensitiveCount(&HistoryEntry->CmdLine, &TabContext->SearchString, CompareLength) == 0) {
+        if (YoriLibCompareStringInsCnt(&HistoryEntry->CmdLine, &TabContext->SearchString, CompareLength) == 0) {
 
             //
             //  Allocate a match entry for this file.
@@ -486,7 +486,7 @@ YoriShPerformExecutableTabCompletion(
                 AliasNameLength = (YORI_ALLOC_SIZE_T)((PUCHAR)AliasValue - (PUCHAR)ThisAlias);
             }
 
-            if (YoriLibCompareStringWithLiteralInsensitiveCount(&SearchString, ThisAlias, CompareLength) == 0) {
+            if (YoriLibCompareStringLitInsCnt(&SearchString, ThisAlias, CompareLength) == 0) {
 
                 //
                 //  Allocate a match entry for this file.
@@ -552,7 +552,7 @@ YoriShPerformExecutableTabCompletion(
 
         Callback = YoriLibShGetPreviousBuiltinCallback(NULL);
         while (Callback != NULL) {
-            if (YoriLibCompareStringInsensitiveCount(&SearchString, &Callback->BuiltinName, CompareLength) == 0) {
+            if (YoriLibCompareStringInsCnt(&SearchString, &Callback->BuiltinName, CompareLength) == 0) {
 
                 //
                 //  Allocate a match entry for this file.
@@ -725,7 +725,7 @@ YoriShPerformEnvironmentTabCompletion(
     ThisVar = EnvironmentStrings.StartOfString;
     while (*ThisVar != 0) {
 
-        if (YoriLibCompareStringWithLiteralInsensitiveCount(&EnvVarPrefix, ThisVar, EnvVarPrefix.LengthInChars) == 0) {
+        if (YoriLibCompareStringLitInsCnt(&EnvVarPrefix, ThisVar, EnvVarPrefix.LengthInChars) == 0) {
             Equals = _tcschr(ThisVar, '=');
             if (Equals != NULL) {
 
@@ -1282,7 +1282,7 @@ YoriShPerformFileTabCompletion(
 
     PrefixLen = sizeof("file:///") - 1;
 
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(&SearchString, _T("file:///"), PrefixLen) == 0) {
+    if (YoriLibCompareStringLitInsCnt(&SearchString, _T("file:///"), PrefixLen) == 0) {
         SearchString.StartOfString += PrefixLen;
         SearchString.LengthInChars = SearchString.LengthInChars - PrefixLen;
         SearchString.LengthAllocated = SearchString.LengthAllocated - PrefixLen;
@@ -1383,7 +1383,7 @@ YoriShPerformFileTabCompletion(
             YoriLibConstantString(&MatchArray[Index], YoriShTabHeuristicMismatches[Index].MatchString);
         }
 
-        FoundMatch = YoriLibFindFirstMatchingSubstring(&SearchString, MismatchCount, MatchArray, &StringOffsetOfMatch);
+        FoundMatch = YoriLibFindFirstMatchSubstr(&SearchString, MismatchCount, MatchArray, &StringOffsetOfMatch);
         if (FoundMatch != NULL) {
             YoriLibFree(MatchArray);
             YoriLibFreeStringContents(&SearchString);
@@ -1398,7 +1398,7 @@ YoriShPerformFileTabCompletion(
             YoriLibConstantString(&MatchArray[Index], YoriShTabHeuristicMatches[Index].MatchString);
         }
 
-        FoundMatch = YoriLibFindFirstMatchingSubstring(&SearchString, MatchCount, MatchArray, &StringOffsetOfMatch);
+        FoundMatch = YoriLibFindFirstMatchSubstr(&SearchString, MatchCount, MatchArray, &StringOffsetOfMatch);
         if (FoundMatch == NULL) {
             YoriLibFree(MatchArray);
             YoriLibFreeStringContents(&SearchString);
@@ -1556,9 +1556,9 @@ YoriShPerformListTabCompletion(
         //
 
         if (Insensitive) {
-            MatchResult = YoriLibCompareStringInsensitiveCount(&SearchString, &Match->Value, SearchString.LengthInChars);
+            MatchResult = YoriLibCompareStringInsCnt(&SearchString, &Match->Value, SearchString.LengthInChars);
         } else {
-            MatchResult = YoriLibCompareStringCount(&SearchString, &Match->Value, SearchString.LengthInChars);
+            MatchResult = YoriLibCompareStringCnt(&SearchString, &Match->Value, SearchString.LengthInChars);
         }
 
         //
@@ -1613,19 +1613,19 @@ YoriShResolveTabCompletionStringToAction(
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/commands")) == 0) {
+    if (YoriLibCompareStringLitIns(&CmdContext.ArgV[0], _T("/commands")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeExecutablesAndBuiltins;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/directories")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&CmdContext.ArgV[0], _T("/directories")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeDirectories;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/executables")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&CmdContext.ArgV[0], _T("/executables")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeExecutables;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/files")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&CmdContext.ArgV[0], _T("/files")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeFilesAndDirectories;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/filesonly")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&CmdContext.ArgV[0], _T("/filesonly")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeFiles;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/insensitivelist")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&CmdContext.ArgV[0], _T("/insensitivelist")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeInsensitiveList;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/sensitivelist")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&CmdContext.ArgV[0], _T("/sensitivelist")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeSensitiveList;
     } else {
         YoriLibShFreeCmdContext(&CmdContext);
@@ -1952,7 +1952,7 @@ YoriShPerformArgumentTabCompletion(
         //  escapes.
         //
 
-        TrailingSlashCount = YoriLibCountStringTrailingChars(Arg, _T("\\"));
+        TrailingSlashCount = YoriLibCntStringTrailingChars(Arg, _T("\\"));
 
         //
         //  If a terminating quote is found, the number of backslashes
@@ -2139,7 +2139,7 @@ YoriShPopulateTabCompletionMatches(
             //  escapes.
             //
 
-            TrailingSlashCount = YoriLibCountStringTrailingChars(&CurrentArgString, _T("\\"));
+            TrailingSlashCount = YoriLibCntStringTrailingChars(&CurrentArgString, _T("\\"));
             //
             //  If a terminating quote is found, the number of backslashes
             //  should be even - if it was odd, this quote would be escaped
@@ -2427,7 +2427,7 @@ YoriShCompleteGenerateNewBufferString(
                 //
 
                 if (Suffix.LengthInChars > 0) {
-                    TrailingSlashCount = YoriLibCountStringTrailingChars(&Suffix, _T("\\"));
+                    TrailingSlashCount = YoriLibCntStringTrailingChars(&Suffix, _T("\\"));
                 }
 
                 //
@@ -2466,9 +2466,9 @@ YoriShCompleteGenerateNewBufferString(
 
             Arg = &CmdContext->ArgV[CmdContext->CurrentArg];
 
-            TrailingSlashCount = YoriLibCountStringTrailingChars(Arg, _T("\\"));
+            TrailingSlashCount = YoriLibCntStringTrailingChars(Arg, _T("\\"));
             if (TrailingSlashCount > 0) {
-                if (YoriLibReallocateString(Arg, Arg->LengthInChars + TrailingSlashCount)) {
+                if (YoriLibReallocString(Arg, Arg->LengthInChars + TrailingSlashCount)) {
                     for (Index = 0; Index < TrailingSlashCount; Index++) {
                         Arg->StartOfString[Arg->LengthInChars + Index] = '\\';
                     }
@@ -2756,7 +2756,7 @@ YoriShTabCompletion(
             //  which is equal to or shorter than the matching entries.
             //
 
-            ThisMatchLength = YoriLibCountStringMatchingCharsInsensitive(&Match->Value, &ThisMatch->Value);
+            ThisMatchLength = YoriLibCntStringMatchCharsIns(&Match->Value, &ThisMatch->Value);
             if (MatchCount == 0 || ThisMatchLength < ShortestMatchLength) {
                 ShortestMatchLength = ThisMatchLength;
             }
@@ -2972,13 +2972,13 @@ YoriShTrimSuggestionList(
         if (CompareString.LengthInChars <= NewString->LengthInChars) {
             TrimItem = TRUE;
         } else if (Buffer->TabContext.CaseSensitive) {
-            if (YoriLibCompareStringCount(&CompareString,
+            if (YoriLibCompareStringCnt(&CompareString,
                                           NewString,
                                           NewString->LengthInChars) != 0) {
                 TrimItem = TRUE;
             }
         } else {
-            if (YoriLibCompareStringInsensitiveCount(&CompareString,
+            if (YoriLibCompareStringInsCnt(&CompareString,
                                                      NewString,
                                                      NewString->LengthInChars) != 0) {
                 TrimItem = TRUE;
@@ -3003,13 +3003,13 @@ YoriShTrimSuggestionList(
         if (Buffer->SuggestionString.LengthInChars <= NewString->LengthInChars) {
             TrimItem = TRUE;
         } else if (Buffer->TabContext.CaseSensitive) {
-            if (YoriLibCompareStringCount(&Buffer->SuggestionString,
+            if (YoriLibCompareStringCnt(&Buffer->SuggestionString,
                                           NewString,
                                           NewString->LengthInChars) != 0) {
                 TrimItem = TRUE;
             }
         } else {
-            if (YoriLibCompareStringInsensitiveCount(&Buffer->SuggestionString,
+            if (YoriLibCompareStringInsCnt(&Buffer->SuggestionString,
                                                      NewString,
                                                      NewString->LengthInChars) != 0) {
                 TrimItem = TRUE;

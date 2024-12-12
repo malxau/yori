@@ -385,7 +385,7 @@ MakeLookupOrCreateTarget(
 
     if (ScopeContext->FirstUserTarget == NULL &&
         !TargetIsInferenceRule &&
-        YoriLibCompareStringWithLiteralInsensitive(&TargetNoQuotes, MAKE_DEFAULT_SCOPE_TARGET_NAME) != 0) {
+        YoriLibCompareStringLitIns(&TargetNoQuotes, MAKE_DEFAULT_SCOPE_TARGET_NAME) != 0) {
 
         if (!MakeCreateParentChildDependency(ScopeContext->MakeContext, Target, ScopeContext->DefaultTarget)) {
             MakeDeactivateTarget(Target);
@@ -651,7 +651,7 @@ MakeGetNextInferenceRuleTargetExtension(
 
     NextRule = MakeGetNextInferenceRule(TopScope, PreviousRule);
     while (NextRule != NULL) {
-        if (YoriLibCompareStringInsensitive(TargetExt, &NextRule->TargetExtension) == 0) {
+        if (YoriLibCompareStringIns(TargetExt, &NextRule->TargetExtension) == 0) {
             return NextRule;
         }
         NextRule = MakeGetNextInferenceRule(TopScope, NextRule);
@@ -961,7 +961,7 @@ MakeFindInferenceRuleForTarget(
 
     CharsNeeded = Target->HashEntry.Key.LengthInChars + LongestCharsNeeded + 1;
     if (CharsNeeded > FileToProbe->LengthAllocated) {
-        if (!YoriLibReallocateStringWithoutPreservingContents(FileToProbe, CharsNeeded * 2)) {
+        if (!YoriLibReallocStringNoContents(FileToProbe, CharsNeeded * 2)) {
             return FALSE;
         }
     }
@@ -1027,7 +1027,7 @@ MakeFindInferenceRuleForTarget(
 
             CharsNeeded = FileToProbe->LengthInChars + LongestCharsNeeded + 1;
             if (CharsNeeded > NestedFileToProbe->LengthAllocated) {
-                if (!YoriLibReallocateStringWithoutPreservingContents(NestedFileToProbe, CharsNeeded * 2)) {
+                if (!YoriLibReallocStringNoContents(NestedFileToProbe, CharsNeeded * 2)) {
                     return FALSE;
                 }
             }
@@ -1247,7 +1247,7 @@ MakeExpandTargetVariable(
     YORI_ALLOC_SIZE_T SymbolChars;
     BOOLEAN Result;
 
-    SymbolChars = YoriLibCountStringContainingChars(VariableName, _T("@*<?"));
+    SymbolChars = YoriLibCntStringWithChars(VariableName, _T("@*<?"));
 
     //
     //  We should only be here if the variable was target specific, which
@@ -1272,11 +1272,11 @@ MakeExpandTargetVariable(
 
     Result = FALSE;
 
-    if (YoriLibCompareStringWithLiteral(&BaseVariableName, _T("@")) == 0) {
+    if (YoriLibCompareStringLit(&BaseVariableName, _T("@")) == 0) {
         VariableData->StartOfString = Target->HashEntry.Key.StartOfString;
         VariableData->LengthInChars = Target->HashEntry.Key.LengthInChars;
         Result = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(&BaseVariableName, _T("*")) == 0) {
+    } else if (YoriLibCompareStringLit(&BaseVariableName, _T("*")) == 0) {
         VariableData->StartOfString = Target->HashEntry.Key.StartOfString;
 
         //
@@ -1300,7 +1300,7 @@ MakeExpandTargetVariable(
         }
         VariableData->LengthInChars = Index;
         Result = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(&BaseVariableName, _T("?")) == 0) {
+    } else if (YoriLibCompareStringLit(&BaseVariableName, _T("?")) == 0) {
         Index = 0;
         ListEntry = YoriLibGetNextListEntry(&Target->ParentDependents, NULL);
         while (ListEntry != NULL) {
@@ -1341,7 +1341,7 @@ MakeExpandTargetVariable(
         VariableData->StartOfString[Index] = '\0';
         VariableData->LengthInChars = Index;
         Result = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(&BaseVariableName, _T("**")) == 0) {
+    } else if (YoriLibCompareStringLit(&BaseVariableName, _T("**")) == 0) {
         Index = 0;
         ListEntry = YoriLibGetNextListEntry(&Target->ParentDependents, NULL);
         while (ListEntry != NULL) {
@@ -1375,7 +1375,7 @@ MakeExpandTargetVariable(
         VariableData->StartOfString[Index] = '\0';
         VariableData->LengthInChars = Index;
         Result = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(&BaseVariableName, _T("<")) == 0 &&
+    } else if (YoriLibCompareStringLit(&BaseVariableName, _T("<")) == 0 &&
                Target->InferenceRule != NULL) {
 
         YORI_STRING BaseName;
@@ -1444,7 +1444,7 @@ MakeExpandTargetVariable(
             VariableData->StartOfString = VariableData->StartOfString + Index;
             VariableData->LengthInChars = VariableData->LengthInChars - Index;
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("B")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&FileNamePartQualifier, _T("B")) == 0) {
         BOOLEAN FinalDotFound = FALSE;
         BOOLEAN FinalSeperatorFound = FALSE;
         YORI_ALLOC_SIZE_T FinalDotIndex = 0;
@@ -1468,7 +1468,7 @@ MakeExpandTargetVariable(
             VariableData->StartOfString = VariableData->StartOfString + Index;
         }
 
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("D")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&FileNamePartQualifier, _T("D")) == 0) {
 
         BOOLEAN FinalSeperatorFound = FALSE;
 
@@ -1483,7 +1483,7 @@ MakeExpandTargetVariable(
             VariableData->LengthInChars = Index - 1;
         }
 
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("F")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&FileNamePartQualifier, _T("F")) == 0) {
         BOOLEAN FinalSeperatorFound = FALSE;
 
         for (Index = VariableData->LengthInChars; Index > 0; Index--) {
@@ -1499,7 +1499,7 @@ MakeExpandTargetVariable(
         }
 
 
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("R")) == 0) {
+    } else if (YoriLibCompareStringLitIns(&FileNamePartQualifier, _T("R")) == 0) {
         BOOLEAN FinalDotFound = FALSE;
 
         for (Index = VariableData->LengthInChars; Index > 0; Index--) {

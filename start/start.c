@@ -394,33 +394,33 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 StartHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2024"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 CleanEnvironment = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 Elevate = TRUE;
                 NoElevate = FALSE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ne")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("ne")) == 0) {
                 NoElevate = TRUE;
                 Elevate = FALSE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s:b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s:b")) == 0) {
                 ShowState = SW_SHOWNOACTIVATE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s:h")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s:h")) == 0) {
                 ShowState = SW_HIDE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s:m")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s:m")) == 0) {
                 ShowState = SW_SHOWMINNOACTIVE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;
@@ -473,7 +473,7 @@ ENTRYPOINT(
         if (Ext != NULL) {
             YsExt.StartOfString = Ext;
             YsExt.LengthInChars = FoundExecutable.LengthInChars - (YORI_ALLOC_SIZE_T)(Ext - FoundExecutable.StartOfString);
-            if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
+            if (YoriLibCompareStringLitIns(&YsExt, _T(".ys1")) == 0) {
                 PrependYori = TRUE;
             }
         }
@@ -498,7 +498,7 @@ ENTRYPOINT(
         }
 
         YoriLibInitEmptyString(&ArgArray[0]);
-        if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORISPEC"), &ArgArray[0])) {
+        if (!YoriLibAllocateAndGetEnvVar(_T("YORISPEC"), &ArgArray[0])) {
             YoriLibConstantString(&ArgArray[0], _T("Yori"));
         }
         YoriLibConstantString(&ArgArray[1], _T("/c"));

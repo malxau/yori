@@ -91,10 +91,10 @@ WhichParseArgs(
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
             BOOLEAN Parsed = FALSE;
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2014-2018"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0 &&
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("p")) == 0 &&
                        ArgC > i + 1) {
 
                 i++;

@@ -56,7 +56,7 @@ CvtvtRtfInitializeStream(
         return FALSE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(hOutput, &OutputString);
+    YoriLibOutputTextToMbyteDev(hOutput, &OutputString);
     YoriLibFreeStringContents(&OutputString);
     return TRUE;
 }
@@ -85,7 +85,7 @@ CvtvtRtfEndStream(
         return FALSE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(hOutput, &OutputString);
+    YoriLibOutputTextToMbyteDev(hOutput, &OutputString);
     YoriLibFreeStringContents(&OutputString);
 
     return TRUE;
@@ -134,7 +134,7 @@ CvtvtRtfProcessAndOutputText(
         return FALSE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(hOutput, &TextString);
+    YoriLibOutputTextToMbyteDev(hOutput, &TextString);
 
     YoriLibFreeStringContents(&TextString);
     return TRUE;
@@ -183,7 +183,7 @@ CvtvtRtfProcessAndOutputEscape(
         return FALSE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(hOutput, &TextString);
+    YoriLibOutputTextToMbyteDev(hOutput, &TextString);
 
     YoriLibFreeStringContents(&TextString);
     return TRUE;

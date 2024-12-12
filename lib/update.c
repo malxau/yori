@@ -278,7 +278,7 @@ YoriLibUpdateBuildHttpHeaders(
     *ObjectSubset = NULL;
 
     YoriLibConstantString(&ProtocolDelimiter, _T("://"));
-    if (YoriLibFindFirstMatchingSubstring(Url, 1, &ProtocolDelimiter, &StartOfHost)) {
+    if (YoriLibFindFirstMatchSubstr(Url, 1, &ProtocolDelimiter, &StartOfHost)) {
         StartOfHost = StartOfHost + ProtocolDelimiter.LengthInChars;
         HostSubset->StartOfString = &Url->StartOfString[StartOfHost];
         HostSubset->LengthInChars = Url->LengthInChars - StartOfHost;

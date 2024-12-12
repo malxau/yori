@@ -535,10 +535,10 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 CalHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             }
@@ -555,7 +555,7 @@ ENTRYPOINT(
 
     if (StartArg != 0) {
         for (i = 0; i < sizeof(CalMonthNames)/sizeof(CalMonthNames[0]); i++) {
-            if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[StartArg], CalMonthNames[i]) == 0) {
+            if (YoriLibCompareStringLitIns(&ArgV[StartArg], CalMonthNames[i]) == 0) {
                 GetLocalTime(&CurrentSysTime);
                 CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)i, &CurrentSysTime);
                 return EXIT_SUCCESS;

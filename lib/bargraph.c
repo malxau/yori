@@ -92,7 +92,7 @@ YoriLibDisplayBarGraph(
         SupportsExtendedChars = FALSE;
     }
 
-    CharsRequired = (YORI_ALLOC_SIZE_T)(Width + YORI_MAX_INTERNAL_VT_ESCAPE_CHARS * 2);
+    CharsRequired = (YORI_ALLOC_SIZE_T)(Width + YORI_MAX_VT_ESCAPE_CHARS * 2);
     if (!YoriLibAllocateString(&Line, CharsRequired)) {
         return FALSE;
     }

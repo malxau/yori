@@ -125,7 +125,7 @@ YoriLibRewriteConsoleContents(
         }
     }
 
-    YoriLibVtSetConsoleTextAttributeOnDevice(hTarget, 0, 0, ReadBuffer[0].Attributes);
+    YoriLibVtSetConsoleTextAttrDev(hTarget, 0, 0, ReadBuffer[0].Attributes);
     LastAttribute = ReadBuffer[0].Attributes;
 
     for (ReadBufferOffset.Y = 0; ReadBufferOffset.Y < ReadBufferSize.Y; ReadBufferOffset.Y++) {
@@ -137,7 +137,7 @@ YoriLibRewriteConsoleContents(
             CellIndex = ReadBufferOffset.Y * ReadBufferSize.X + ReadBufferOffset.X;
 
             if (ReadBuffer[CellIndex].Attributes != LastAttribute) {
-                YoriLibVtSetConsoleTextAttributeOnDevice(hTarget, 0, 0, ReadBuffer[CellIndex].Attributes);
+                YoriLibVtSetConsoleTextAttrDev(hTarget, 0, 0, ReadBuffer[CellIndex].Attributes);
                 LastAttribute = ReadBuffer[CellIndex].Attributes;
             }
             YoriLibOutputToDevice(hTarget, 0, _T("%c"), ReadBuffer[CellIndex].Char.UnicodeChar);
@@ -179,7 +179,7 @@ YoriLibGenerateVtStringFromConsoleBuffers(
     SHORT LineIndex;
     SHORT CharIndex;
     WORD LastAttribute;
-    TCHAR EscapeStringBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    TCHAR EscapeStringBuffer[YORI_MAX_VT_ESCAPE_CHARS];
     YORI_STRING EscapeString;
 
     //

@@ -245,7 +245,7 @@ EnvDiffOutputDifference(
         //  if so, output the update referring to the original value.
         //
 
-        if (YoriLibFindFirstMatchingSubstring(NewValue, 1, BaseValue, &MatchOffset)) {
+        if (YoriLibFindFirstMatchSubstr(NewValue, 1, BaseValue, &MatchOffset)) {
             YORI_STRING Prefix;
             YORI_STRING Suffix;
             YoriLibInitEmptyString(&Prefix);
@@ -355,7 +355,7 @@ EnvDiffCompareEnvironments(
             //  does not by lexicographic order.
             //
 
-            Compare = YoriLibCompareStringInsensitive(&BaseKey, &NewKey);
+            Compare = YoriLibCompareStringIns(&BaseKey, &NewKey);
             if (Compare < 0) {
                 EnvDiffOutputDifference(&BaseKey, &BaseValue, NULL, OutputFormat, EnvDiffChangeRemove);
                 BaseStart = EnvDiffGetNextKeyValueOffset(BaseEnvironment, &BaseKeyValue, BaseStart);
@@ -434,7 +434,7 @@ EnvDiffLoadStreamIntoEnvironmentBlock(
                 return FALSE;
             }
 
-            if (!YoriLibReallocateString(EnvironmentBlock, (YORI_ALLOC_SIZE_T)BufferSize)) {
+            if (!YoriLibReallocString(EnvironmentBlock, (YORI_ALLOC_SIZE_T)BufferSize)) {
                 YoriLibFreeStringContents(EnvironmentBlock);
                 YoriLibFreeStringContents(&LineString);
                 YoriLibLineReadCloseOrCache(LineContext);
@@ -560,13 +560,13 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 EnvDiffHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 Reverse = TRUE;
                 ArgumentUnderstood = TRUE;
             }

@@ -88,7 +88,7 @@ typedef struct _DF_CONTEXT {
     /**
      The buffer for the above string.
      */
-    TCHAR FileSizeColorStringBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    TCHAR FileSizeColorStringBuffer[YORI_MAX_VT_ESCAPE_CHARS];
 
     /**
      Color information to display against matching directories.
@@ -125,7 +125,7 @@ DfReportSingleVolume(
     BOOL Result = FALSE;
     WIN32_FIND_DATA FindData;
     YORI_STRING VtAttribute;
-    TCHAR VtAttributeBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    TCHAR VtAttributeBuffer[YORI_MAX_VT_ESCAPE_CHARS];
 
     TCHAR MountPointName[MAX_PATH];
     LPTSTR NameToReport;
@@ -268,17 +268,17 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 DfHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("m")) == 0) {
                 DfContext.MinimalDisplay = TRUE;
                 DfContext.DisplayGraph = FALSE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i;
                 ArgumentUnderstood = TRUE;
                 break;
@@ -311,7 +311,7 @@ ENTRYPOINT(
     }
 
     DfContext.FileSizeColorString.StartOfString = DfContext.FileSizeColorStringBuffer;
-    DfContext.FileSizeColorString.LengthAllocated = YORI_MAX_INTERNAL_VT_ESCAPE_CHARS;
+    DfContext.FileSizeColorString.LengthAllocated = YORI_MAX_VT_ESCAPE_CHARS;
 
     YoriLibVtStringForTextAttribute(&DfContext.FileSizeColorString, DfContext.FileSizeColor.Ctrl, DfContext.FileSizeColor.Win32Attr);
 

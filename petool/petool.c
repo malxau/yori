@@ -619,25 +619,25 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 PeToolHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
                     FileName = &ArgV[i + 1];
                     Op = PeToolOpCalculateChecksum;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("cu")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("cu")) == 0) {
                 if (ArgC > i + 1) {
                     FileName = &ArgV[i + 1];
                     Op = PeToolOpUpdateChecksum;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("os")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("os")) == 0) {
                 if (ArgC > i + 2) {
                     FileName = &ArgV[i + 1];
                     NewSubsystemVersion = &ArgV[i + 2];

@@ -186,23 +186,23 @@ MemExpandVariables(
     YORI_ALLOC_SIZE_T CharsNeeded;
     PMEM_CONTEXT MemContext = (PMEM_CONTEXT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("TOTALMEM")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("TOTALMEM")) == 0) {
         CharsNeeded = 5;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("AVAILABLEMEM")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("AVAILABLEMEM")) == 0) {
         CharsNeeded = 5;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COMMITLIMIT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("COMMITLIMIT")) == 0) {
         CharsNeeded = 5;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("AVAILABLECOMMIT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("AVAILABLECOMMIT")) == 0) {
         CharsNeeded = 5;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TOTALMEMBYTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TOTALMEMBYTES")) == 0) {
         return MemOutputLargeInteger(MemContext->TotalPhysical, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("AVAILABLEMEMBYTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("AVAILABLEMEMBYTES")) == 0) {
         return MemOutputLargeInteger(MemContext->AvailablePhysical, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COMMITLIMITBYTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("COMMITLIMITBYTES")) == 0) {
         return MemOutputLargeInteger(MemContext->TotalCommit, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("AVAILABLECOMMITBYTES")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("AVAILABLECOMMITBYTES")) == 0) {
         return MemOutputLargeInteger(MemContext->AvailableCommit, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MEMORYLOAD")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MEMORYLOAD")) == 0) {
         return MemOutputLargeInteger(MemContext->MemoryLoad, 10, OutputBuffer);
     } else {
         return 0;
@@ -212,19 +212,19 @@ MemExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("TOTALMEM")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("TOTALMEM")) == 0) {
         if (YoriLibFileSizeToString(OutputBuffer, &MemContext->TotalPhysical)) {
             CharsNeeded = 5;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("AVAILABLEMEM")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("AVAILABLEMEM")) == 0) {
         if (YoriLibFileSizeToString(OutputBuffer, &MemContext->AvailablePhysical)) {
             CharsNeeded = 5;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COMMITLIMIT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("COMMITLIMIT")) == 0) {
         if (YoriLibFileSizeToString(OutputBuffer, &MemContext->TotalCommit)) {
             CharsNeeded = 5;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("AVAILABLECOMMIT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("AVAILABLECOMMIT")) == 0) {
         if (YoriLibFileSizeToString(OutputBuffer, &MemContext->AvailableCommit)) {
             CharsNeeded = 5;
         }
@@ -278,7 +278,7 @@ MemGroupProcessNames(
             FoundName.StartOfString = CurrentEntry->ImageName;
             FoundName.LengthInChars = CurrentEntry->ImageNameLengthInBytes / sizeof(WCHAR);
 
-            if (YoriLibCompareStringInsensitive(&PrimaryName, &FoundName) == 0) {
+            if (YoriLibCompareStringIns(&PrimaryName, &FoundName) == 0) {
                 FirstEntryWithName->WorkingSetSize += CurrentEntry->WorkingSetSize;
                 FirstEntryWithName->CommitSize += CurrentEntry->CommitSize;
                 FirstEntryWithName->ProcessId++;
@@ -539,16 +539,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 MemHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 DisplayProcesses = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("g")) == 0) {
                 GroupProcesses = TRUE;
                 ArgumentUnderstood = TRUE;
             }

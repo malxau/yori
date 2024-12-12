@@ -466,7 +466,7 @@ YoriLibRtfGenerateEscapeString(
             YoriLibInitEmptyString(&SearchString);
             SearchString.StartOfString = SrcPoint;
             SearchString.LengthInChars = RemainingLength;
-            SrcOffset = YoriLibCountStringContainingChars(&SearchString, _T("0123456789"));
+            SrcOffset = YoriLibCntStringWithChars(&SearchString, _T("0123456789"));
 
             SrcPoint += SrcOffset;
             RemainingLength = RemainingLength - SrcOffset;
@@ -577,7 +577,7 @@ YoriLibRtfCvtAppendWithReallocate(
     if (LengthNeeded > StringToAppendTo->LengthAllocated) {
         YORI_ALLOC_SIZE_T AllocSize;
         AllocSize = YoriLibMaximumAllocationInRange(LengthNeeded, LengthNeeded * 4);
-        if (!YoriLibReallocateString(StringToAppendTo, AllocSize)) {
+        if (!YoriLibReallocString(StringToAppendTo, AllocSize)) {
             return FALSE;
         }
     }
@@ -817,10 +817,10 @@ YoriLibRtfConvertToRtfFromVt(
         return FALSE;
     }
 
-    if (!YoriLibProcessVtEscapesOnOpenStream(VtText->StartOfString,
-                                             VtText->LengthInChars,
-                                             (HANDLE)&RtfContext,
-                                             &CallbackFunctions)) {
+    if (!YoriLibProcVtEscOnOpenStream(VtText->StartOfString,
+                                      VtText->LengthInChars,
+                                      (HANDLE)&RtfContext,
+                                      &CallbackFunctions)) {
 
         if (FreeColorTable) {
             YoriLibDereference(RtfContext.ColorTable);

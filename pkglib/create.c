@@ -470,8 +470,8 @@ YoriPkgCreateSourceFileFoundCallback(
     //  Skip any object starting with .git or .svn
     //
 
-    if (YoriLibCompareStringWithLiteralCount(&RelativePathFromSource, _T(".git"), sizeof(".git") - 1) == 0 ||
-        YoriLibCompareStringWithLiteralCount(&RelativePathFromSource, _T(".svn"), sizeof(".svn") - 1) == 0) {
+    if (YoriLibCompareStringLitCnt(&RelativePathFromSource, _T(".git"), sizeof(".git") - 1) == 0 ||
+        YoriLibCompareStringLitCnt(&RelativePathFromSource, _T(".svn"), sizeof(".svn") - 1) == 0) {
 
         return TRUE;
     }

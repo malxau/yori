@@ -91,10 +91,10 @@ YoriCmd_JOB(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 JobHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
@@ -139,7 +139,7 @@ YoriCmd_JOB(
 
     } else {
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[1], _T("errors")) == 0) {
+        if (YoriLibCompareStringLitIns(&ArgV[1], _T("errors")) == 0) {
             YORI_STRING Output;
             YORI_STRING Errors;
             if (ArgC < 3) {
@@ -162,7 +162,7 @@ YoriCmd_JOB(
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Errors);
             YoriCallFreeYoriString(&Errors);
             YoriCallFreeYoriString(&Output);
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[1], _T("exitcode")) == 0) {
+        } else if (YoriLibCompareStringLitIns(&ArgV[1], _T("exitcode")) == 0) {
             BOOL HasCompleted;
             BOOL HasOutput;
             DWORD ExitCode;
@@ -198,7 +198,7 @@ YoriCmd_JOB(
             }
 
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i"), ExitCode);
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[1], _T("kill")) == 0) {
+        } else if (YoriLibCompareStringLitIns(&ArgV[1], _T("kill")) == 0) {
             if (ArgC < 3) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Job not specified\n"));
                 return EXIT_FAILURE;
@@ -216,7 +216,7 @@ YoriCmd_JOB(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%i could not be terminated.\n"), JobId);
                 return EXIT_FAILURE;
             }
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[1], _T("nice")) == 0) {
+        } else if (YoriLibCompareStringLitIns(&ArgV[1], _T("nice")) == 0) {
             if (ArgC < 3) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Job not specified\n"));
                 return EXIT_FAILURE;
@@ -234,7 +234,7 @@ YoriCmd_JOB(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%i could not have its priority changed.\n"), JobId);
                 return EXIT_FAILURE;
             }
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[1], _T("output")) == 0) {
+        } else if (YoriLibCompareStringLitIns(&ArgV[1], _T("output")) == 0) {
             YORI_STRING Output;
             YORI_STRING Errors;
             if (ArgC < 3) {

@@ -2881,15 +2881,15 @@ YoriLibGenerateArch(
     __in PYORI_STRING String
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("None")) == 0) {
+    if (YoriLibCompareStringLitIns(String, _T("None")) == 0) {
         Entry->Architecture = 0;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("i386")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("i386")) == 0) {
         Entry->Architecture = IMAGE_FILE_MACHINE_I386;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("amd64")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("amd64")) == 0) {
         Entry->Architecture = IMAGE_FILE_MACHINE_AMD64;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("arm")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("arm")) == 0) {
         Entry->Architecture = IMAGE_FILE_MACHINE_ARMNT;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("arm64")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("arm64")) == 0) {
         Entry->Architecture = IMAGE_FILE_MACHINE_ARM64;
     } else {
         return FALSE;
@@ -2914,9 +2914,9 @@ YoriLibGenerateCaseSensitivity(
     __in PYORI_STRING String
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ci")) == 0) {
+    if (YoriLibCompareStringLitIns(String, _T("ci")) == 0) {
         Entry->CaseSensitive = FALSE;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("cs")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("cs")) == 0) {
         Entry->CaseSensitive = TRUE;
     } else {
         return FALSE;
@@ -2941,25 +2941,25 @@ YoriLibGenerateCompressionAlgorithm(
     __in PYORI_STRING String
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("None")) == 0) {
+    if (YoriLibCompareStringLitIns(String, _T("None")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionNone;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("LZNT")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("LZNT")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionLznt;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("NTFS")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("NTFS")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionNtfsUnknown;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("WIM")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("WIM")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionWim;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("LZX")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("LZX")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionLzx;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Xp4")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Xp4")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionXpress4k;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Xp8")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Xp8")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionXpress8k;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Xp16")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Xp16")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionXpress16k;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("File")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("File")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionWofFileUnknown;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Wof")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Wof")) == 0) {
         Entry->CompressionAlgorithm = YoriLibCompressionWofUnknown;
     } else {
         return FALSE;
@@ -3512,35 +3512,35 @@ YoriLibGenerateSubsystem (
     __in PYORI_STRING String
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("None")) == 0) {
+    if (YoriLibCompareStringLitIns(String, _T("None")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_UNKNOWN;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("NT")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("NT")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_NATIVE;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("GUI")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("GUI")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_WINDOWS_GUI;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Cons")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Cons")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("OS/2")) == 0 || YoriLibCompareStringWithLiteralInsensitive(String, _T("OS2")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("OS/2")) == 0 || YoriLibCompareStringLitIns(String, _T("OS2")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_OS2_CUI;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Posx")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Posx")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_POSIX_CUI;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("w9x")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("w9x")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_NATIVE_WINDOWS;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("CE")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("CE")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CE_GUI;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("EFIa")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("EFIa")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_EFI_APPLICATION;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("EFIb")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("EFIb")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("EFId")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("EFId")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("EFIr")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("EFIr")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_EFI_ROM;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Xbox")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Xbox")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_XBOX;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Xbcc")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Xbcc")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("Boot")) == 0) {
+    } else if (YoriLibCompareStringLitIns(String, _T("Boot")) == 0) {
         Entry->Subsystem = IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION;
     } else {
         return FALSE;

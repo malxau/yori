@@ -455,41 +455,41 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 MakeHelp();
                 Result = EXIT_SUCCESS;
                 goto Cleanup;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2021"));
                 Result = EXIT_SUCCESS;
                 goto Cleanup;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 if (i + 1 < ArgC) {
                     FileName = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("j")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("j")) == 0) {
                 if (i + 1 < ArgC) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], FALSE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
                         MakeContext.NumberProcesses = (YORI_ALLOC_SIZE_T)llTemp;
                         ArgumentUnderstood = TRUE;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("k")) == 0) {
                 MakeContext.KeepGoing = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("m")) == 0) {
                 Priority = MakePriorityLow;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("mm")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("mm")) == 0) {
                 Priority = MakePriorityVeryLow;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nologo")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("nologo")) == 0) {
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("perf")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("perf")) == 0) {
                 MakeContext.PerfDisplay = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("pru")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("pru")) == 0) {
                 if (MakeContext.PreprocessorCache == NULL) {
                     MakeContext.PreprocessorCache = YoriLibAllocateHashTable(100);
                     if (MakeContext.PreprocessorCache == NULL) {
@@ -499,13 +499,13 @@ ENTRYPOINT(
                 }
                 ArgumentUnderstood = TRUE;
 
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 MakeContext.SilentCommandLaunching = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("wundef")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("wundef")) == 0) {
                 MakeContext.WarnOnUndefinedVariable = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;
@@ -518,7 +518,7 @@ ENTRYPOINT(
             //
 
             for (j = 0; j < sizeof(MakeArgsWithParameter)/sizeof(MakeArgsWithParameter[0]); j++) {
-                if (YoriLibCompareStringInsensitive(&Arg, &MakeArgsWithParameter[j]) == 0) {
+                if (YoriLibCompareStringIns(&Arg, &MakeArgsWithParameter[j]) == 0) {
                     i++;
                     break;
                 }
@@ -549,7 +549,7 @@ ENTRYPOINT(
     if (MakeContext.NumberProcesses == 0) {
         YORI_STRING JobCount;
         YoriLibInitEmptyString(&JobCount);
-        if (YoriLibAllocateAndGetEnvironmentVariable(_T("YMAKE_JOB_COUNT"), &JobCount)) {
+        if (YoriLibAllocateAndGetEnvVar(_T("YMAKE_JOB_COUNT"), &JobCount)) {
             if (YoriLibStringToNumber(&JobCount, FALSE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
                 MakeContext.NumberProcesses = (WORD)llTemp;
             }
@@ -698,7 +698,7 @@ ENTRYPOINT(
 
         if (i < StartArg && YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
             for (j = 0; j < sizeof(MakeArgsWithParameter)/sizeof(MakeArgsWithParameter[0]); j++) {
-                if (YoriLibCompareStringInsensitive(&Arg, &MakeArgsWithParameter[j]) == 0) {
+                if (YoriLibCompareStringIns(&Arg, &MakeArgsWithParameter[j]) == 0) {
                     i++;
                     break;
                 }
@@ -771,7 +771,7 @@ ENTRYPOINT(
 
         if (i < StartArg && YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
             for (j = 0; j < sizeof(MakeArgsWithParameter)/sizeof(MakeArgsWithParameter[0]); j++) {
-                if (YoriLibCompareStringInsensitive(&Arg, &MakeArgsWithParameter[j]) == 0) {
+                if (YoriLibCompareStringIns(&Arg, &MakeArgsWithParameter[j]) == 0) {
                     i++;
                     break;
                 }

@@ -286,14 +286,14 @@ HiliteProcessStream(
                 MatchFound = FALSE;
                 if (MatchCriteria->MatchType == HiliteMatchTypeBeginsWith) {
                     if (HiliteContext->Insensitive) {
-                        if (YoriLibCompareStringInsensitiveCount(&Substring,
+                        if (YoriLibCompareStringInsCnt(&Substring,
                                                                  &MatchCriteria->MatchString,
                                                                  MatchCriteria->MatchString.LengthInChars) == 0) {
                             MatchFound = TRUE;
                             MatchOffset = 0;
                         }
                     } else {
-                        if (YoriLibCompareStringCount(&Substring,
+                        if (YoriLibCompareStringCnt(&Substring,
                                                       &MatchCriteria->MatchString,
                                                       MatchCriteria->MatchString.LengthInChars) == 0) {
                             MatchFound = TRUE;
@@ -309,7 +309,7 @@ HiliteProcessStream(
                         TailOfLine.StartOfString = &Substring.StartOfString[Substring.LengthInChars - MatchCriteria->MatchString.LengthInChars];
 
                         if (HiliteContext->Insensitive) {
-                            if (YoriLibCompareStringInsensitive(&TailOfLine, &MatchCriteria->MatchString) == 0) {
+                            if (YoriLibCompareStringIns(&TailOfLine, &MatchCriteria->MatchString) == 0) {
                                 MatchFound = TRUE;
                                 MatchOffset = Substring.LengthInChars - MatchCriteria->MatchString.LengthInChars;
                             }
@@ -322,11 +322,11 @@ HiliteProcessStream(
                     }
                 } else if (MatchCriteria->MatchType == HiliteMatchTypeContains) {
                     if (HiliteContext->Insensitive) {
-                        if (YoriLibFindFirstMatchingSubstringInsensitive(&Substring, 1, &MatchCriteria->MatchString, &MatchOffset)) {
+                        if (YoriLibFindFirstMatchSubstrIns(&Substring, 1, &MatchCriteria->MatchString, &MatchOffset)) {
                             MatchFound = TRUE;
                         }
                     } else {
-                        if (YoriLibFindFirstMatchingSubstring(&Substring, 1, &MatchCriteria->MatchString, &MatchOffset)) {
+                        if (YoriLibFindFirstMatchSubstr(&Substring, 1, &MatchCriteria->MatchString, &MatchOffset)) {
                             MatchFound = TRUE;
                         }
                     }
@@ -399,9 +399,9 @@ HiliteProcessStream(
                     ColorToUse.Win32Attr = BestMatchCriteria->Color.Win32Attr;
                 }
 
-                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, ColorToUse.Win32Attr);
+                YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, ColorToUse.Win32Attr);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
-                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, HiliteContext->DefaultColor.Win32Attr);
+                YoriLibVtSetConsoleTextAttr(YORI_LIB_OUTPUT_STDOUT, HiliteContext->DefaultColor.Win32Attr);
                 Substring.StartOfString = &Substring.StartOfString[DisplayString.LengthInChars];
                 Substring.LengthInChars = Substring.LengthInChars - DisplayString.LengthInChars;
             }
@@ -638,18 +638,18 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 HiliteHelp();
                 HiliteCleanupContext(&HiliteContext);
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2021"));
                 HiliteCleanupContext(&HiliteContext);
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 if (i + 2 < ArgC) {
                     NewCriteria = YoriLibMalloc(sizeof(HILITE_MATCH_CRITERIA));
                     if (NewCriteria == NULL) {
@@ -666,7 +666,7 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("h")) == 0) {
                 if (i + 2 < ArgC) {
                     NewCriteria = YoriLibMalloc(sizeof(HILITE_MATCH_CRITERIA));
                     if (NewCriteria == NULL) {
@@ -683,16 +683,16 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 HiliteContext.Insensitive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("m")) == 0) {
                 HiliteContext.HighlightMatchText = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 HiliteContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("t")) == 0) {
                 if (i + 2 < ArgC) {
                     NewCriteria = YoriLibMalloc(sizeof(HILITE_MATCH_CRITERIA));
                     if (NewCriteria == NULL) {
@@ -709,7 +709,7 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;

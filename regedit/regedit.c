@@ -375,7 +375,7 @@ RegeditPopulateKeyValueList(
             YoriWinListAddItems(KeyListCtrl, StringArray, Index);
             if (SelectKey != NULL) {
                 for (SelectIndex = 0; SelectIndex < Index; SelectIndex++) {
-                    if (YoriLibCompareStringInsensitive(&StringArray[SelectIndex], SelectKey) >= 0) {
+                    if (YoriLibCompareStringIns(&StringArray[SelectIndex], SelectKey) >= 0) {
                         break;
                     }
                 }
@@ -434,7 +434,7 @@ RegeditPopulateKeyValueList(
             YoriWinListAddItems(ValueListCtrl, StringArray, Index);
             if (SelectValue != NULL) {
                 for (SelectIndex = 0; SelectIndex < Index; SelectIndex++) {
-                    if (YoriLibCompareStringInsensitive(&StringArray[SelectIndex], SelectValue) >= 0) {
+                    if (YoriLibCompareStringIns(&StringArray[SelectIndex], SelectValue) >= 0) {
                         break;
                     }
                 }
@@ -923,7 +923,7 @@ RegeditNavigateToSelectedKey(
     YoriLibInitEmptyString(&String);
     YoriWinListGetItemText(KeyList, SelectedKeyIndex, &String);
 
-    if (YoriLibCompareStringWithLiteral(&String, _T("..")) == 0) {
+    if (YoriLibCompareStringLit(&String, _T("..")) == 0) {
         LPTSTR FinalSlash;
         FinalSlash = YoriLibFindRightMostCharacter(&RegeditContext->Subkey, '\\');
         if (FinalSlash != NULL) {
@@ -2184,13 +2184,13 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 RegeditHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(strRegeditCopyrightYear);
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("a")) == 0) {
                 RegeditContext.UseAsciiDrawing = TRUE;
                 ArgumentUnderstood = TRUE;
             }

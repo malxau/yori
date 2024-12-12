@@ -120,23 +120,23 @@ VerExpandVariables(
 
     VerContext = (PVER_VERSION_RESULT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("LIBMAJOR")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("LIBMAJOR")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("libmajor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("libmajor")) == 0) {
         CharsNeeded = 3;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("LIBMINOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("LIBMINOR")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("libminor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("libminor")) == 0) {
         CharsNeeded = 3;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHMAJOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("SHMAJOR")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("shmajor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("shmajor")) == 0) {
         CharsNeeded = 3;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHMINOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("SHMINOR")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("shminor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("shminor")) == 0) {
         CharsNeeded = 3;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("VERDATE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("VERDATE")) == 0) {
         CharsNeeded = (YORI_ALLOC_SIZE_T)strlen(__DATE__);
     } else {
         return 0;
@@ -146,39 +146,39 @@ VerExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("LIBMAJOR")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("LIBMAJOR")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), VerContext->LibMajorVersion);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("LIBMINOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("LIBMINOR")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), VerContext->LibMinorVersion);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("libmajor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("libmajor")) == 0) {
         if (VerContext->LibMajorVersion < 1000) {
             CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VerContext->LibMajorVersion);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("libminor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("libminor")) == 0) {
         if (VerContext->LibMinorVersion < 1000) {
             CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VerContext->LibMinorVersion);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHMAJOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("SHMAJOR")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), VerContext->ShMajorVersion);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHMINOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("SHMINOR")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), VerContext->ShMinorVersion);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("shmajor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("shmajor")) == 0) {
         if (VerContext->ShMajorVersion < 1000) {
             CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VerContext->ShMajorVersion);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("shminor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("shminor")) == 0) {
         if (VerContext->ShMinorVersion < 1000) {
             CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VerContext->ShMinorVersion);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("VERDATE")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("VERDATE")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%hs"), __DATE__);
     }
 
@@ -223,10 +223,10 @@ YoriCmd_VER(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 VerHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }

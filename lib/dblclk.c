@@ -47,7 +47,7 @@ YoriLibGetSelectionDoubleClickBreakChars(
     YORI_STRING Substring;
 
     YoriLibInitEmptyString(BreakChars);
-    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), BreakChars) || BreakChars->LengthInChars == 0) {
+    if (!YoriLibAllocateAndGetEnvVar(_T("YORIQUICKEDITBREAKCHARS"), BreakChars) || BreakChars->LengthInChars == 0) {
 
         //
         //  0x2500 is Unicode full horizontal line (used by sdir)
@@ -112,7 +112,7 @@ YoriLibIsYoriQuickEditEnabled(VOID)
     YORI_ALLOC_SIZE_T CharsConsumed;
 
     YoriLibInitEmptyString(&EnvVar);
-    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDIT"), &EnvVar)) {
+    if (!YoriLibAllocateAndGetEnvVar(_T("YORIQUICKEDIT"), &EnvVar)) {
         return FALSE;
     }
 

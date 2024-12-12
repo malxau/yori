@@ -236,7 +236,7 @@ CpuInfoCaptureProcessorIdleTime(
                     InstanceString.LengthInChars--;
                 }
 
-                if (YoriLibCompareStringWithLiteralInsensitive(&InstanceString, _T("_Total")) == 0) {
+                if (YoriLibCompareStringLitIns(&InstanceString, _T("_Total")) == 0) {
                     break;
                 }
 
@@ -413,19 +413,19 @@ CpuInfoExpandVariables(
     YORI_ALLOC_SIZE_T CharsNeeded;
     PCPUINFO_CONTEXT CpuInfoContext = (PCPUINFO_CONTEXT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("CORECOUNT")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("CORECOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->CoreCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("EFFICIENCYCORECOUNT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("EFFICIENCYCORECOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->EfficiencyCoreCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("GROUPCOUNT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("GROUPCOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->GroupCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("LOGICALCOUNT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("LOGICALCOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->LogicalProcessorCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("NUMANODECOUNT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("NUMANODECOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->NumaNodeCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PERFORMANCECORECOUNT")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("PERFORMANCECORECOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->PerformanceCoreCount, 10, OutputBuffer);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("UTILIZATION")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("UTILIZATION")) == 0) {
         if (!CpuInfoContext->UtilizationLoaded) {
             CpuInfoLoadProcessorUtilization(CpuInfoContext);
         }
@@ -1085,35 +1085,35 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 CpuInfoHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019-2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("a")) == 0) {
                 DisplayCores = TRUE;
                 DisplayGroups = TRUE;
                 DisplayNuma = TRUE;
                 DisplaySockets = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 DisplayCores = TRUE;
                 DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("g")) == 0) {
                 DisplayGroups = TRUE;
                 DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("n")) == 0) {
                 DisplayNuma = TRUE;
                 DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 DisplaySockets = TRUE;
                 DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0 &&
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("w")) == 0 &&
                        i + 1 < ArgC) {
 
                 YORI_MAX_SIGNED_T llTemp;

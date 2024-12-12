@@ -283,7 +283,7 @@ YoriLibConsCnvProcessAndOutputEscape(
 
     UNREFERENCED_PARAMETER(hOutput);
 
-    YoriLibVtFinalColorFromSequence(CvtContext->CurrentAttributes, String, &CvtContext->CurrentAttributes);
+    YoriLibVtFinalColorFromEsc(CvtContext->CurrentAttributes, String, &CvtContext->CurrentAttributes);
     return TRUE;
 }
 

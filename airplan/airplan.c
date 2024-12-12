@@ -102,13 +102,13 @@ AirplaneExpandVariables(
     YORI_ALLOC_SIZE_T CharsNeeded;
     PAIRPLANE_CONTEXT AirplaneContext = (PAIRPLANE_CONTEXT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("ENABLED_STRING")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("ENABLED_STRING")) == 0) {
         if (AirplaneContext->AirplaneModeEnabled) {
             CharsNeeded = YoriLibSPrintfSize(_T("Enabled"));
         } else {
             CharsNeeded = YoriLibSPrintfSize(_T("Disabled"));
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ENABLED")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("ENABLED")) == 0) {
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), AirplaneContext->AirplaneModeEnabled);
     } else {
         return 0;
@@ -118,13 +118,13 @@ AirplaneExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("ENABLED_STRING")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("ENABLED_STRING")) == 0) {
         if (AirplaneContext->AirplaneModeEnabled) {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("Enabled"));
         } else {
             YoriLibSPrintf(OutputBuffer->StartOfString, _T("Disabled"));
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ENABLED")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("ENABLED")) == 0) {
         YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), AirplaneContext->AirplaneModeEnabled);
     }
 
@@ -178,17 +178,17 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 AirplaneHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("disable")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("disable")) == 0) {
                 SetAirplaneMode = TRUE;
                 NewAirplaneModeState = FALSE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("enable")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("enable")) == 0) {
                 SetAirplaneMode = TRUE;
                 NewAirplaneModeState = TRUE;
                 ArgumentUnderstood = TRUE;

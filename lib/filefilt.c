@@ -302,41 +302,41 @@ YoriLibFileFiltParseFilterOperator(
     //
 
     YoriLibInitEmptyString(ErrorSubstring);
-    if (YoriLibCompareStringWithLiteral(Operator, _T(">")) == 0) {
+    if (YoriLibCompareStringLit(Operator, _T(">")) == 0) {
         Criteria->CompareFn = MatchedOption->CompareFn;
         Criteria->TruthStates[YORI_LIB_LESS_THAN] = FALSE;
         Criteria->TruthStates[YORI_LIB_GREATER_THAN] = TRUE;
         Criteria->TruthStates[YORI_LIB_EQUAL] = FALSE;
-    } else if (YoriLibCompareStringWithLiteral(Operator, _T(">=")) == 0) {
+    } else if (YoriLibCompareStringLit(Operator, _T(">=")) == 0) {
         Criteria->CompareFn = MatchedOption->CompareFn;
         Criteria->TruthStates[YORI_LIB_LESS_THAN] = FALSE;
         Criteria->TruthStates[YORI_LIB_GREATER_THAN] = TRUE;
         Criteria->TruthStates[YORI_LIB_EQUAL] = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(Operator, _T("<")) == 0) {
+    } else if (YoriLibCompareStringLit(Operator, _T("<")) == 0) {
         Criteria->CompareFn = MatchedOption->CompareFn;
         Criteria->TruthStates[YORI_LIB_LESS_THAN] = TRUE;
         Criteria->TruthStates[YORI_LIB_GREATER_THAN] = FALSE;
         Criteria->TruthStates[YORI_LIB_EQUAL] = FALSE;
-    } else if (YoriLibCompareStringWithLiteral(Operator, _T("<=")) == 0) {
+    } else if (YoriLibCompareStringLit(Operator, _T("<=")) == 0) {
         Criteria->CompareFn = MatchedOption->CompareFn;
         Criteria->TruthStates[YORI_LIB_LESS_THAN] = TRUE;
         Criteria->TruthStates[YORI_LIB_GREATER_THAN] = FALSE;
         Criteria->TruthStates[YORI_LIB_EQUAL] = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(Operator, _T("!=")) == 0) {
+    } else if (YoriLibCompareStringLit(Operator, _T("!=")) == 0) {
         Criteria->CompareFn = MatchedOption->CompareFn;
         Criteria->TruthStates[YORI_LIB_LESS_THAN] = TRUE;
         Criteria->TruthStates[YORI_LIB_GREATER_THAN] = TRUE;
         Criteria->TruthStates[YORI_LIB_EQUAL] = FALSE;
-    } else if (YoriLibCompareStringWithLiteral(Operator, _T("=")) == 0) {
+    } else if (YoriLibCompareStringLit(Operator, _T("=")) == 0) {
         Criteria->CompareFn = MatchedOption->CompareFn;
         Criteria->TruthStates[YORI_LIB_LESS_THAN] = FALSE;
         Criteria->TruthStates[YORI_LIB_GREATER_THAN] = FALSE;
         Criteria->TruthStates[YORI_LIB_EQUAL] = TRUE;
-    } else if (YoriLibCompareStringWithLiteral(Operator, _T("&")) == 0) {
+    } else if (YoriLibCompareStringLit(Operator, _T("&")) == 0) {
         Criteria->CompareFn = MatchedOption->BitwiseCompareFn;
         Criteria->TruthStates[YORI_LIB_EQUAL] = TRUE;
         Criteria->TruthStates[YORI_LIB_NOT_EQUAL] = FALSE;
-    } else if (YoriLibCompareStringWithLiteral(Operator, _T("!&")) == 0) {
+    } else if (YoriLibCompareStringLit(Operator, _T("!&")) == 0) {
         Criteria->CompareFn = MatchedOption->BitwiseCompareFn;
         Criteria->TruthStates[YORI_LIB_EQUAL] = FALSE;
         Criteria->TruthStates[YORI_LIB_NOT_EQUAL] = TRUE;
@@ -416,11 +416,11 @@ YoriLibFileFiltParseFilterOptAndOperator(
 
     YoriLibTrimSpaces(&SwitchName);
 
-    SwitchName.LengthInChars = YoriLibCountStringNotContainingChars(&SwitchName, _T("&<>=!"));
+    SwitchName.LengthInChars = YoriLibCntStringNotWithChars(&SwitchName, _T("&<>=!"));
     FoundOpt = NULL;
 
     for (Count = 0; Count < sizeof(YoriLibFileFiltFilterOptions)/sizeof(YoriLibFileFiltFilterOptions[0]); Count++) {
-        if (YoriLibCompareStringWithLiteralInsensitive(&SwitchName, YoriLibFileFiltFilterOptions[Count].Switch) == 0) {
+        if (YoriLibCompareStringLitIns(&SwitchName, YoriLibFileFiltFilterOptions[Count].Switch) == 0) {
             FoundOpt = &YoriLibFileFiltFilterOptions[Count];
             break;
         }
@@ -439,7 +439,7 @@ YoriLibFileFiltParseFilterOptAndOperator(
     Operator->StartOfString = SwitchName.StartOfString + SwitchName.LengthInChars;
     Operator->LengthInChars = FilterElement->LengthInChars - SwitchName.LengthInChars - (YORI_ALLOC_SIZE_T)(SwitchName.StartOfString - FilterElement->StartOfString);
 
-    Operator->LengthInChars = YoriLibCountStringContainingChars(Operator, _T("&<>=!"));
+    Operator->LengthInChars = YoriLibCntStringWithChars(Operator, _T("&<>=!"));
     return TRUE;
 }
 
@@ -531,7 +531,7 @@ YoriLibFileFiltParseColorElement(
     CharsRemaining = FilterElement->LengthInChars - Operator.LengthInChars - (YORI_ALLOC_SIZE_T)(Operator.StartOfString - FilterElement->StartOfString);
     Value.LengthInChars = CharsRemaining;
 
-    CharsToCompare = YoriLibCountStringNotContainingChars(&Value, _T(","));
+    CharsToCompare = YoriLibCntStringNotWithChars(&Value, _T(","));
     if (Value.LengthInChars == CharsToCompare) {
         YoriLibInitEmptyString(ErrorSubstring);
         ErrorSubstring->StartOfString = FilterElement->StartOfString;

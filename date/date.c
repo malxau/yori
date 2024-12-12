@@ -123,35 +123,35 @@ DateExpandVariables(
 
     liClock.QuadPart = 0;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("YEAR")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("YEAR")) == 0) {
         CharsNeeded = 4;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("year")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("year")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MON")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MON")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("mon")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("mon")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DAY")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("DAY")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("day")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("day")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HOUR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("HOUR")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("hour")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("hour")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MIN")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MIN")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("min")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("min")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SEC")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("SEC")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("sec")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("sec")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MS")) == 0) {
         CharsNeeded = 4;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ms")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("ms")) == 0) {
         CharsNeeded = 4;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COUNT_MS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("COUNT_MS")) == 0) {
         if (!SystemTimeToFileTime(&DateContext->Time, &Clock)) {
             return 0;
         }
@@ -159,7 +159,7 @@ DateExpandVariables(
         liClock.LowPart = Clock.dwLowDateTime;
         liClock.QuadPart = liClock.QuadPart / 10000;
         CharsNeeded = YoriLibSPrintfSize(_T("%016lli"), liClock.QuadPart);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("count_ms")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("count_ms")) == 0) {
         if (!SystemTimeToFileTime(&DateContext->Time, &Clock)) {
             return 0;
         }
@@ -167,9 +167,9 @@ DateExpandVariables(
         liClock.LowPart = Clock.dwLowDateTime;
         liClock.QuadPart = liClock.QuadPart / 10000;
         CharsNeeded = YoriLibSPrintfSize(_T("%lli"), liClock.QuadPart);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TICK")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TICK")) == 0) {
         CharsNeeded = YoriLibSPrintfSize(_T("%016lli"), DateContext->Tick.QuadPart);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("tick")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("tick")) == 0) {
         CharsNeeded = YoriLibSPrintfSize(_T("%lli"), DateContext->Tick.QuadPart);
     } else {
         return 0;
@@ -179,65 +179,65 @@ DateExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("YEAR")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("YEAR")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), DateContext->Time.wYear);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("year")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("year")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wYear % 100);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MON")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MON")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wMonth);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("mon")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("mon")) == 0) {
         if (DateContext->Time.wMonth < 100) {
             CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wMonth);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DAY")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("DAY")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wDay);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("day")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("day")) == 0) {
         if (DateContext->Time.wDay < 100) {
             CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wDay);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HOUR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("HOUR")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wHour);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("hour")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("hour")) == 0) {
         if (DateContext->Time.wHour < 100) {
             CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wHour);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MIN")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MIN")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wMinute);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("min")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("min")) == 0) {
         if (DateContext->Time.wMinute < 100) {
             CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wMinute);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SEC")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("SEC")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wSecond);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("sec")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("sec")) == 0) {
         if (DateContext->Time.wSecond < 100) {
             CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wSecond);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MS")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), DateContext->Time.wMilliseconds);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ms")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("ms")) == 0) {
         if (DateContext->Time.wMilliseconds < 10000) {
             CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wMilliseconds);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COUNT_MS")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("COUNT_MS")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%016lli"), liClock.QuadPart);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("count_ms")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("count_ms")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%lli"), liClock.QuadPart);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TICK")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("TICK")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%016lli"), DateContext->Tick.QuadPart);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("tick")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("tick")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%lli"), DateContext->Tick.QuadPart);
     }
 
@@ -441,13 +441,13 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 DateHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 YORI_ALLOC_SIZE_T CharsConsumed;
                 YORI_MAX_SIGNED_T llTemp;
                 LARGE_INTEGER liTemp;
@@ -466,17 +466,17 @@ ENTRYPOINT(
                     IntegerTimeProvided = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 if (i + 1 < ArgC) {
                     NewDate = &ArgV[i + 1];
                     i++;
                     SetDate = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("t")) == 0) {
                 DisplayTime = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("u")) == 0) {
                 UseUtc = TRUE;
                 ArgumentUnderstood = TRUE;
             }

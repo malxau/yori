@@ -52,7 +52,7 @@ WORD YoriLibVtResetColor;
  if the value has not yet been determined, and will be queried before changing
  the console color.
  */
-BOOLEAN YoriLibVtResetColorSet;
+BOOLEAN YoriLibVtResetColorSet = FALSE;
 
 /**
  The line ending to apply when writing to a file.  Note that this is not
@@ -142,7 +142,7 @@ YoriLibVtGetLineEnding(VOID)
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibOutputTextToMultibyteDevice(
+YoriLibOutputTextToMbyteDev(
     __in HANDLE hOutput,
     __in PCYORI_STRING String
     )
@@ -156,7 +156,7 @@ YoriLibOutputTextToMultibyteDevice(
         YORI_ALLOC_SIZE_T AnsiBytesNeeded;
         LPSTR AnsiBuf;
 
-        AnsiBytesNeeded = (YORI_ALLOC_SIZE_T)YoriLibGetMultibyteOutputSizeNeeded(String->StartOfString, String->LengthInChars);
+        AnsiBytesNeeded = (YORI_ALLOC_SIZE_T)YoriLibGetMbyteOutputSizeNeeded(String->StartOfString, String->LengthInChars);
 
         if (AnsiBytesNeeded > (int)sizeof(AnsiStackBuf)) {
             AnsiBuf = YoriLibMalloc(AnsiBytesNeeded);
@@ -201,7 +201,7 @@ YoriLibOutputTextToMultibyteDevice(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibOutputTextToMultibyteNormalizeLineEnding(
+YoriLibOutputTextMbyteFixLnEnd(
     __in HANDLE hOutput,
     __in PCYORI_STRING String
     )
@@ -218,7 +218,7 @@ YoriLibOutputTextToMultibyteNormalizeLineEnding(
     SearchString.LengthInChars = String->LengthInChars;
 
     while(TRUE) {
-        NonLineEndLength = YoriLibCountStringNotContainingChars(&SearchString, _T("\r\n"));
+        NonLineEndLength = YoriLibCntStringNotWithChars(&SearchString, _T("\r\n"));
 
         CharsToIgnore = 0;
         GenerateLineEnd = FALSE;
@@ -243,14 +243,14 @@ YoriLibOutputTextToMultibyteNormalizeLineEnding(
             DisplayString.StartOfString = SearchString.StartOfString;
             DisplayString.LengthInChars = NonLineEndLength;
 
-            if (!YoriLibOutputTextToMultibyteDevice(hOutput, &DisplayString)) {
+            if (!YoriLibOutputTextToMbyteDev(hOutput, &DisplayString)) {
                 return FALSE;
             }
         }
 
         if (GenerateLineEnd) {
             YoriLibConstantString(&DisplayString, YoriLibVtLineEnding);
-            if (!YoriLibOutputTextToMultibyteDevice(hOutput, &DisplayString)) {
+            if (!YoriLibOutputTextToMbyteDev(hOutput, &DisplayString)) {
                 return FALSE;
             }
         }
@@ -326,7 +326,7 @@ YoriLibConsoleEndStream(
  @return TRUE for success, FALSE on failure.
  */
 BOOL
-YoriLibConsoleProcessAndOutputText(
+YoriLibConsoleProcOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
     __inout PYORI_MAX_UNSIGNED_T Context
@@ -356,7 +356,7 @@ YoriLibConsoleProcessAndOutputText(
          can't exactly fail.
  */
 BOOL
-YoriLibConsoleProcessAndIgnoreEscape(
+YoriLibConsoleProcIgnoreEsc(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
     __inout PYORI_MAX_UNSIGNED_T Context
@@ -368,6 +368,20 @@ YoriLibConsoleProcessAndIgnoreEscape(
 
     return TRUE;
 }
+
+/**
+ A mapping of ANSI 8 color indexes to Win32 colors.
+ */
+CONST WORD
+YoriLibColorTable[] = {0,
+                       FOREGROUND_RED,
+                       FOREGROUND_GREEN,
+                       FOREGROUND_RED|FOREGROUND_GREEN,
+                       FOREGROUND_BLUE,
+                       FOREGROUND_BLUE|FOREGROUND_RED,
+                       FOREGROUND_BLUE|FOREGROUND_GREEN,
+                       FOREGROUND_BLUE|FOREGROUND_GREEN|FOREGROUND_RED};
+
 
 /**
  Specifies the value to indicate a new color derives its foreground from the
@@ -405,7 +419,7 @@ YoriLibConsoleProcessAndIgnoreEscape(
  @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
 BOOL
-YoriLibVtFinalColorFromSequenceEx(
+YoriLibVtFinalColorFromEscEx(
     __in WORD InitialColor,
     __in PCYORI_STRING EscapeSequence,
     __out PWORD FinalColor,
@@ -433,15 +447,6 @@ YoriLibVtFinalColorFromSequenceEx(
 
         DWORD Code;
         BOOLEAN NewUnderline = FALSE;
-        DWORD ColorTable[] = {0,
-                              FOREGROUND_RED,
-                              FOREGROUND_GREEN,
-                              FOREGROUND_RED|FOREGROUND_GREEN,
-                              FOREGROUND_BLUE,
-                              FOREGROUND_BLUE|FOREGROUND_RED,
-                              FOREGROUND_BLUE|FOREGROUND_GREEN,
-                              FOREGROUND_BLUE|FOREGROUND_GREEN|FOREGROUND_RED};
-
         CurrentPoint++;
         RemainingLength--;
 
@@ -482,16 +487,16 @@ YoriLibVtFinalColorFromSequenceEx(
                 NewColor = (WORD)((NewColor & ~(0xf0)) | (YoriLibVtResetColor & 0xf0));
             } else if (Code >= 30 && Code <= 37) {
                 ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_FOREGROUND));
-                NewColor = (WORD)((NewColor & ~(0xf)) | ColorTable[Code - 30]);
+                NewColor = (WORD)((NewColor & ~(0xf)) | YoriLibColorTable[Code - 30]);
             } else if (Code >= 40 && Code <= 47) {
                 ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_BACKGROUND));
-                NewColor = (WORD)((NewColor & ~(0xf0)) | (ColorTable[Code - 40]<<4));
+                NewColor = (WORD)((NewColor & ~(0xf0)) | (YoriLibColorTable[Code - 40]<<4));
             } else if (Code >= 90 && Code <= 97) {
                 ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_FOREGROUND));
-                NewColor = (WORD)((NewColor & ~(0xf)) | FOREGROUND_INTENSITY | ColorTable[Code - 90]);
+                NewColor = (WORD)((NewColor & ~(0xf)) | FOREGROUND_INTENSITY | YoriLibColorTable[Code - 90]);
             } else if (Code >= 100 && Code <= 107) {
                 ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_BACKGROUND));
-                NewColor = (WORD)((NewColor & ~(0xf0)) | BACKGROUND_INTENSITY | (ColorTable[Code - 100]<<4));
+                NewColor = (WORD)((NewColor & ~(0xf0)) | BACKGROUND_INTENSITY | (YoriLibColorTable[Code - 100]<<4));
             }
 
             //
@@ -503,7 +508,7 @@ YoriLibVtFinalColorFromSequenceEx(
             YoriLibInitEmptyString(&SearchString);
             SearchString.StartOfString = CurrentPoint;
             SearchString.LengthInChars = RemainingLength;
-            CurrentOffset = YoriLibCountStringContainingChars(&SearchString, _T("0123456789"));
+            CurrentOffset = YoriLibCntStringWithChars(&SearchString, _T("0123456789"));
             CurrentPoint += CurrentOffset;
             RemainingLength = RemainingLength - CurrentOffset;
 
@@ -539,7 +544,7 @@ YoriLibVtFinalColorFromSequenceEx(
  @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
 BOOL
-YoriLibVtFinalColorFromSequence(
+YoriLibVtFinalColorFromEsc(
     __in WORD InitialColor,
     __in PCYORI_STRING EscapeSequence,
     __out PWORD FinalColor
@@ -547,7 +552,7 @@ YoriLibVtFinalColorFromSequence(
 {
     WORD InitialComponentsUsed;
 
-    return YoriLibVtFinalColorFromSequenceEx(InitialColor, EscapeSequence, FinalColor, &InitialComponentsUsed);
+    return YoriLibVtFinalColorFromEscEx(InitialColor, EscapeSequence, FinalColor, &InitialComponentsUsed);
 }
 
 /**
@@ -563,7 +568,7 @@ YoriLibVtFinalColorFromSequence(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibConsoleProcessAndOutputEscape(
+YoriLibConsoleProcOutputEsc(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
     __inout PYORI_MAX_UNSIGNED_T Context
@@ -595,7 +600,7 @@ YoriLibConsoleProcessAndOutputEscape(
         //  the result without querying the previous color.
         //
 
-        if (YoriLibVtFinalColorFromSequenceEx(0, String, &NewColor, &InitialComponentsUsed)) {
+        if (YoriLibVtFinalColorFromEscEx(0, String, &NewColor, &InitialComponentsUsed)) {
             if (InitialComponentsUsed == 0) {
                 SetConsoleTextAttribute(hOutput, NewColor);
                 *Context = ((1 << 16) | NewColor);
@@ -616,7 +621,7 @@ YoriLibConsoleProcessAndOutputEscape(
 
     }
 
-    if (YoriLibVtFinalColorFromSequence(NewColor, String, &NewColor)) {
+    if (YoriLibVtFinalColorFromEsc(NewColor, String, &NewColor)) {
         SetConsoleTextAttribute(hOutput, NewColor);
         *Context = ((1 << 16) | NewColor);
     }
@@ -632,14 +637,14 @@ YoriLibConsoleProcessAndOutputEscape(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibConsoleSetFunctions(
+YoriLibConsoleSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     )
 {
     CallbackFunctions->InitializeStream = YoriLibConsoleInitializeStream;
     CallbackFunctions->EndStream = YoriLibConsoleEndStream;
-    CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcessAndOutputText;
-    CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcessAndOutputEscape;
+    CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcOutputText;
+    CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcOutputEsc;
     CallbackFunctions->Context = 0;
     return TRUE;
 }
@@ -653,14 +658,14 @@ YoriLibConsoleSetFunctions(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibConsoleNoEscapeSetFunctions(
+YoriLibConsoleNoEscSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     )
 {
     CallbackFunctions->InitializeStream = YoriLibConsoleInitializeStream;
     CallbackFunctions->EndStream = YoriLibConsoleEndStream;
-    CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcessAndOutputText;
-    CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcessAndIgnoreEscape;
+    CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcOutputText;
+    CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcIgnoreEsc;
     CallbackFunctions->Context = 0;
     return TRUE;
 }
@@ -674,14 +679,14 @@ YoriLibConsoleNoEscapeSetFunctions(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibConsoleIncludeEscapeSetFunctions(
+YoriLibConsoleIncludeEscSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     )
 {
     CallbackFunctions->InitializeStream = YoriLibConsoleInitializeStream;
     CallbackFunctions->EndStream = YoriLibConsoleEndStream;
-    CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcessAndOutputText;
-    CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcessAndOutputText;
+    CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcOutputText;
+    CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcOutputText;
     CallbackFunctions->Context = 0;
     return TRUE;
 }
@@ -746,14 +751,14 @@ YoriLibUtf8TextEndStream(
  @return TRUE for success, FALSE on failure.
  */
 BOOL
-YoriLibUtf8TextProcessAndOutputText(
+YoriLibUtf8TextProcOutputText(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
     __inout PYORI_MAX_UNSIGNED_T Context
     )
 {
     UNREFERENCED_PARAMETER(Context);
-    return YoriLibOutputTextToMultibyteNormalizeLineEnding(hOutput, String);
+    return YoriLibOutputTextMbyteFixLnEnd(hOutput, String);
 }
 
 /**
@@ -768,7 +773,7 @@ YoriLibUtf8TextProcessAndOutputText(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibUtf8TextProcessAndOutputEscape(
+YoriLibUtf8TextProcOutputEsc(
     __in HANDLE hOutput,
     __in PCYORI_STRING String,
     __inout PYORI_MAX_UNSIGNED_T Context
@@ -790,14 +795,14 @@ YoriLibUtf8TextProcessAndOutputEscape(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibUtf8TextNoEscapesSetFunctions(
+YoriLibUtf8TextNoEscSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     )
 {
     CallbackFunctions->InitializeStream = YoriLibUtf8TextInitializeStream;
     CallbackFunctions->EndStream = YoriLibUtf8TextEndStream;
-    CallbackFunctions->ProcessAndOutputText = YoriLibUtf8TextProcessAndOutputText;
-    CallbackFunctions->ProcessAndOutputEscape = YoriLibUtf8TextProcessAndOutputEscape;
+    CallbackFunctions->ProcessAndOutputText = YoriLibUtf8TextProcOutputText;
+    CallbackFunctions->ProcessAndOutputEscape = YoriLibUtf8TextProcOutputEsc;
     CallbackFunctions->Context = 0;
     return TRUE;
 }
@@ -811,171 +816,23 @@ YoriLibUtf8TextNoEscapesSetFunctions(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibUtf8TextWithEscapesSetFunctions(
+YoriLibUtf8TextWithEscSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     )
 {
     CallbackFunctions->InitializeStream = YoriLibUtf8TextInitializeStream;
     CallbackFunctions->EndStream = YoriLibUtf8TextEndStream;
-    CallbackFunctions->ProcessAndOutputText = YoriLibUtf8TextProcessAndOutputText;
-    CallbackFunctions->ProcessAndOutputEscape = YoriLibUtf8TextProcessAndOutputText;
+    CallbackFunctions->ProcessAndOutputText = YoriLibUtf8TextProcOutputText;
+    CallbackFunctions->ProcessAndOutputEscape = YoriLibUtf8TextProcOutputText;
     CallbackFunctions->Context = 0;
     return TRUE;
 }
 
-//
-//  Debugger functions
-//
-
 /**
- Initialize the output stream with any header information.  For debugger
- output, this is pointless.
-
- @param hOutput The output stream to initialize.
-
- @param Context Pointer to context (unused.)
-
- @return TRUE for success, FALSE on failure.
+ A list of break characters that indicate a range of text up to this char
+ should be processed as text.
  */
-BOOL
-YoriLibDebuggerInitializeStream(
-    __in HANDLE hOutput,
-    __inout PYORI_MAX_UNSIGNED_T Context
-    )
-{
-    UNREFERENCED_PARAMETER(hOutput);
-    UNREFERENCED_PARAMETER(Context);
-
-    return TRUE;
-}
-
-/**
- End processing for the specified stream.  For debugger output, this is
- pointless.
-
- @param hOutput Handle to the output device, ignored for debugger.
-
- @param Context Pointer to context (unused.)
-
- @return TRUE for success, FALSE on failure.
- */
-BOOL
-YoriLibDebuggerEndStream(
-    __in HANDLE hOutput,
-    __inout PYORI_MAX_UNSIGNED_T Context
-    )
-{
-    UNREFERENCED_PARAMETER(hOutput);
-    UNREFERENCED_PARAMETER(Context);
-
-    return TRUE;
-}
-
-/**
- Output text between escapes to the debugger.
-
- @param hOutput Handle to the output device, ignored for debugger.
-
- @param String Pointer to the string to output.
-
- @param Context Pointer to context (unused.)
-
- @return TRUE for success, FALSE on failure.
- */
-BOOL
-YoriLibDebuggerProcessAndOutputText(
-    __in HANDLE hOutput,
-    __in PCYORI_STRING String,
-    __inout PYORI_MAX_UNSIGNED_T Context
-    )
-{
-    TCHAR StackBuf[64 + 1];
-    LPTSTR Buffer;
-    DWORD ReadIndex;
-    DWORD WriteIndex;
-
-    UNREFERENCED_PARAMETER(hOutput);
-    UNREFERENCED_PARAMETER(Context);
-
-    if (String->LengthInChars <= 64) {
-        Buffer = StackBuf;
-    } else {
-        Buffer = YoriLibMalloc((String->LengthInChars + 1) * sizeof(TCHAR));
-        if (Buffer == NULL) {
-            return FALSE;
-        }
-    }
-
-    WriteIndex = 0;
-    for (ReadIndex = 0; ReadIndex < String->LengthInChars; ReadIndex++) {
-        if (String->StartOfString[ReadIndex] == '\r') {
-            if (ReadIndex + 1 < String->LengthInChars &&
-                String->StartOfString[ReadIndex] == '\n') {
-
-                ReadIndex++;
-            } else {
-                Buffer[WriteIndex++] = '\n';
-            }
-        } else {
-            Buffer[WriteIndex++] = String->StartOfString[ReadIndex];
-        }
-    }
-
-    Buffer[WriteIndex] = '\0';
-
-    OutputDebugString(Buffer);
-    if (Buffer != StackBuf) {
-        YoriLibFree(Buffer);
-    }
-
-    return TRUE;
-}
-
-/**
- A dummy callback function to receive an escape and not do anything with it.
- 
- @param hOutput Handle to the output device (ignored.)
-
- @param String Pointer to a buffer describing the escape (ignored.)
-
- @param Context Pointer to context (unused.)
-
- @return TRUE for success, FALSE for failure.
- */
-BOOL
-YoriLibDebuggerProcessAndOutputEscape(
-    __in HANDLE hOutput,
-    __in PCYORI_STRING String,
-    __inout PYORI_MAX_UNSIGNED_T Context
-    )
-{
-    UNREFERENCED_PARAMETER(hOutput);
-    UNREFERENCED_PARAMETER(String);
-    UNREFERENCED_PARAMETER(Context);
-
-    return TRUE;
-}
-
-/**
- Initialize callback functions to a set which will output text to the debugger
- and remove any escape sequences.
-
- @param CallbackFunctions The callback functions to initialize.
-
- @return TRUE for success, FALSE for failure.
- */
-BOOL
-YoriLibDebuggerSetFunctions(
-    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
-    )
-{
-    CallbackFunctions->InitializeStream = YoriLibDebuggerInitializeStream;
-    CallbackFunctions->EndStream = YoriLibDebuggerEndStream;
-    CallbackFunctions->ProcessAndOutputText = YoriLibDebuggerProcessAndOutputText;
-    CallbackFunctions->ProcessAndOutputEscape = YoriLibDebuggerProcessAndOutputEscape;
-    CallbackFunctions->Context = 0;
-    return TRUE;
-}
+CONST TCHAR YoriLibVtEscape[] = {27, '\0'};
 
 /**
  Walk through an input string and process any VT100/ANSI escapes by invoking
@@ -993,7 +850,7 @@ YoriLibDebuggerSetFunctions(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibProcessVtEscapesOnOpenStream(
+YoriLibProcVtEscOnOpenStream(
     __in LPTSTR String,
     __in YORI_ALLOC_SIZE_T StringLength,
     __in HANDLE hOutput,
@@ -1003,7 +860,6 @@ YoriLibProcessVtEscapesOnOpenStream(
     LPTSTR CurrentPoint;
     YORI_ALLOC_SIZE_T CurrentOffset;
     YORI_ALLOC_SIZE_T PreviouslyConsumed;
-    TCHAR VtEscape[] = {27, '\0'};
     YORI_STRING SearchString;
     YORI_STRING DisplayString;
 
@@ -1012,7 +868,7 @@ YoriLibProcessVtEscapesOnOpenStream(
     YoriLibInitEmptyString(&DisplayString);
     SearchString.StartOfString = CurrentPoint;
     SearchString.LengthInChars = StringLength;
-    CurrentOffset = YoriLibCountStringNotContainingChars(&SearchString, VtEscape);
+    CurrentOffset = YoriLibCntStringNotWithChars(&SearchString, YoriLibVtEscape);
     PreviouslyConsumed = 0;
 
     while (TRUE) {
@@ -1048,7 +904,7 @@ YoriLibProcessVtEscapesOnOpenStream(
                 YORI_ALLOC_SIZE_T EndOfEscape;
                 SearchString.StartOfString = &CurrentPoint[2];
                 SearchString.LengthInChars = StringLength - PreviouslyConsumed - 2;
-                EndOfEscape = YoriLibCountStringContainingChars(&SearchString, _T("0123456789;"));
+                EndOfEscape = YoriLibCntStringWithChars(&SearchString, _T("0123456789;"));
 
                 //
                 //  If our buffer is full and we still have an incomplete escape,
@@ -1100,7 +956,7 @@ YoriLibProcessVtEscapesOnOpenStream(
 
         SearchString.StartOfString = CurrentPoint;
         SearchString.LengthInChars = StringLength - PreviouslyConsumed;
-        CurrentOffset = YoriLibCountStringNotContainingChars(&SearchString, VtEscape);
+        CurrentOffset = YoriLibCntStringNotWithChars(&SearchString, YoriLibVtEscape);
     }
 
     return TRUE;
@@ -1124,7 +980,7 @@ YoriLibProcessVtEscapesOnOpenStream(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibProcessVtEscapesOnNewStream(
+YoriLibProcVtEscOnNewStream(
     __in LPTSTR String,
     __in YORI_ALLOC_SIZE_T StringLength,
     __in HANDLE hOutput,
@@ -1135,7 +991,7 @@ YoriLibProcessVtEscapesOnNewStream(
 
     Callbacks->InitializeStream(hOutput, &Callbacks->Context);
 
-    Result = YoriLibProcessVtEscapesOnOpenStream(String, StringLength, hOutput, Callbacks);
+    Result = YoriLibProcVtEscOnOpenStream(String, StringLength, hOutput, Callbacks);
 
     Callbacks->EndStream(hOutput, &Callbacks->Context);
     return Result;
@@ -1154,10 +1010,10 @@ YoriLibProcessVtEscapesOnNewStream(
 
  @return TRUE for success, FALSE for failure.
  */
-BOOL
+BOOL CDECL
 YoriLibOutputInternal(
     __in HANDLE hOut,
-    __in DWORD Flags,
+    __in WORD Flags,
     __in LPCTSTR szFmt,
     __in va_list marker
     )
@@ -1184,19 +1040,19 @@ YoriLibOutputInternal(
     //
 
     if (hOut == YORI_LIB_DEBUGGER_HANDLE) {
-        YoriLibDebuggerSetFunctions(&Callbacks);
+        YoriLibDbgSetFn(&Callbacks);
     } else if (GetConsoleMode(hOut, &CurrentMode)) {
         if ((Flags & YORI_LIB_OUTPUT_STRIP_VT) != 0) {
-            YoriLibConsoleNoEscapeSetFunctions(&Callbacks);
+            YoriLibConsoleNoEscSetFn(&Callbacks);
         } else if ((Flags & YORI_LIB_OUTPUT_PASSTHROUGH_VT) != 0) {
-            YoriLibConsoleIncludeEscapeSetFunctions(&Callbacks);
+            YoriLibConsoleIncludeEscSetFn(&Callbacks);
         } else {
-            YoriLibConsoleSetFunctions(&Callbacks);
+            YoriLibConsoleSetFn(&Callbacks);
         }
     } else if ((Flags & YORI_LIB_OUTPUT_STRIP_VT) != 0) {
-        YoriLibUtf8TextNoEscapesSetFunctions(&Callbacks);
+        YoriLibUtf8TextNoEscSetFn(&Callbacks);
     } else {
-        YoriLibUtf8TextWithEscapesSetFunctions(&Callbacks);
+        YoriLibUtf8TextWithEscSetFn(&Callbacks);
     }
 
     len = YoriLibVSPrintfSize(szFmt, marker);
@@ -1214,7 +1070,7 @@ YoriLibOutputInternal(
     len = YoriLibVSPrintf(buf, len, szFmt, marker);
 
     __analysis_assume(hOut != 0);
-    Result = YoriLibProcessVtEscapesOnNewStream(buf, len, hOut, &Callbacks);
+    Result = YoriLibProcVtEscOnNewStream(buf, len, hOut, &Callbacks);
 
     if (buf != stack_buf) {
         YoriLibFree(buf);
@@ -1233,7 +1089,7 @@ YoriLibOutputInternal(
  */
 BOOL
 YoriLibOutput(
-    __in DWORD Flags,
+    __in WORD Flags,
     __in LPCTSTR szFmt,
     ...
     )
@@ -1275,7 +1131,7 @@ YoriLibOutput(
 BOOL
 YoriLibOutputString(
     __in HANDLE hOut,
-    __in DWORD Flags,
+    __in WORD Flags,
     __in PYORI_STRING String
     )
 {
@@ -1290,19 +1146,19 @@ YoriLibOutputString(
 
     if (GetConsoleMode(hOut, &CurrentMode)) {
         if ((Flags & YORI_LIB_OUTPUT_STRIP_VT) != 0) {
-            YoriLibConsoleNoEscapeSetFunctions(&Callbacks);
+            YoriLibConsoleNoEscSetFn(&Callbacks);
         } else if ((Flags & YORI_LIB_OUTPUT_PASSTHROUGH_VT) != 0) {
-            YoriLibConsoleIncludeEscapeSetFunctions(&Callbacks);
+            YoriLibConsoleIncludeEscSetFn(&Callbacks);
         } else {
-            YoriLibConsoleSetFunctions(&Callbacks);
+            YoriLibConsoleSetFn(&Callbacks);
         }
     } else if ((Flags & YORI_LIB_OUTPUT_STRIP_VT) != 0) {
-        YoriLibUtf8TextNoEscapesSetFunctions(&Callbacks);
+        YoriLibUtf8TextNoEscSetFn(&Callbacks);
     } else {
-        YoriLibUtf8TextWithEscapesSetFunctions(&Callbacks);
+        YoriLibUtf8TextWithEscSetFn(&Callbacks);
     }
 
-    Result = YoriLibProcessVtEscapesOnNewStream(String->StartOfString, String->LengthInChars, hOut, &Callbacks);
+    Result = YoriLibProcVtEscOnNewStream(String->StartOfString, String->LengthInChars, hOut, &Callbacks);
 
     return Result;
 }
@@ -1321,7 +1177,7 @@ YoriLibOutputString(
 BOOL
 YoriLibOutputToDevice(
     __in HANDLE hOut,
-    __in DWORD Flags,
+    __in WORD Flags,
     __in LPCTSTR szFmt,
     ...
     )
@@ -1361,9 +1217,9 @@ YoriLibVtStringForTextAttribute(
     CHAR  AnsiForeground;
     CHAR  AnsiBackground;
 
-    if (String->LengthAllocated < YORI_MAX_INTERNAL_VT_ESCAPE_CHARS) {
+    if (String->LengthAllocated < YORI_MAX_VT_ESCAPE_CHARS) {
         YoriLibFreeStringContents(String);
-        if (!YoriLibAllocateString(String, YORI_MAX_INTERNAL_VT_ESCAPE_CHARS)) {
+        if (!YoriLibAllocateString(String, YORI_MAX_VT_ESCAPE_CHARS)) {
             return FALSE;
         }
     }
@@ -1415,14 +1271,14 @@ YoriLibVtStringForTextAttribute(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibVtSetConsoleTextAttributeOnDevice(
+YoriLibVtSetConsoleTextAttrDev(
     __in HANDLE hOut,
-    __in DWORD Flags,
+    __in WORD Flags,
     __in UCHAR Ctrl,
     __in WORD Attribute
     )
 {
-    TCHAR OutputStringBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    TCHAR OutputStringBuffer[YORI_MAX_VT_ESCAPE_CHARS];
     YORI_STRING OutputString;
 
     YoriLibInitEmptyString(&OutputString);
@@ -1460,8 +1316,8 @@ YoriLibVtSetConsoleTextAttributeOnDevice(
  @return TRUE for success, FALSE for failure.
  */
 BOOL
-YoriLibVtSetConsoleTextAttribute(
-    __in DWORD Flags,
+YoriLibVtSetConsoleTextAttr(
+    __in WORD Flags,
     __in WORD Attribute
     )
 {
@@ -1471,7 +1327,7 @@ YoriLibVtSetConsoleTextAttribute(
     } else {
         hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     }
-    return YoriLibVtSetConsoleTextAttributeOnDevice(hOut, Flags, 0, Attribute);
+    return YoriLibVtSetConsoleTextAttrDev(hOut, Flags, 0, Attribute);
 }
 
 /**
@@ -1509,7 +1365,7 @@ YoriLibStripVtEscapes(
             YoriLibInitEmptyString(&EscapeSubset);
             EscapeSubset.StartOfString = &VtText->StartOfString[CharIndex + 2];
             EscapeSubset.LengthInChars = VtText->LengthInChars - CharIndex - 2;
-            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
             if (VtText->LengthInChars > CharIndex + 2 + EndOfEscape) {
                 EscapeChars += 3 + EndOfEscape;
                 CharIndex += 2 + EndOfEscape;
@@ -1533,7 +1389,7 @@ YoriLibStripVtEscapes(
             YoriLibInitEmptyString(&EscapeSubset);
             EscapeSubset.StartOfString = &VtText->StartOfString[CharIndex + 2];
             EscapeSubset.LengthInChars = VtText->LengthInChars - CharIndex - 2;
-            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
             if (VtText->LengthInChars > CharIndex + 2 + EndOfEscape) {
                 EscapeChars += 3 + EndOfEscape;
                 CharIndex += 2 + EndOfEscape;
@@ -1584,7 +1440,7 @@ YoriLibGetWindowDimensions(
     }
 
     if (Width != NULL) {
-        if (!YoriLibGetEnvironmentVariableAsNumber(_T("COLUMNS"), &Temp)) {
+        if (!YoriLibGetEnvVarAsNumber(_T("COLUMNS"), &Temp)) {
             *Width = 80;
         } else {
             *Width = (WORD)Temp;
@@ -1592,7 +1448,7 @@ YoriLibGetWindowDimensions(
     }
 
     if (Height != NULL) {
-        if (!YoriLibGetEnvironmentVariableAsNumber(_T("LINES"), &Temp)) {
+        if (!YoriLibGetEnvVarAsNumber(_T("LINES"), &Temp)) {
             *Height = 25;
         } else {
             *Height = (WORD)Temp;
@@ -1677,7 +1533,7 @@ YoriLibQueryConsoleCapabilities(
     //
 
     YoriLibInitEmptyString(&TermString);
-    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORITERM"), &TermString)) {
+    if (!YoriLibAllocateAndGetEnvVar(_T("YORITERM"), &TermString)) {
         return TRUE;
     }
 
@@ -1696,19 +1552,19 @@ YoriLibQueryConsoleCapabilities(
             SubString.LengthInChars = (YORI_ALLOC_SIZE_T)(NextSeperator - SubString.StartOfString);
         }
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&SubString, _T("color")) == 0) {
+        if (YoriLibCompareStringLitIns(&SubString, _T("color")) == 0) {
             if (SupportsColor != NULL) {
                 *SupportsColor = TRUE;
             }
         }
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&SubString, _T("extendedchars")) == 0) {
+        if (YoriLibCompareStringLitIns(&SubString, _T("extendedchars")) == 0) {
             if (SupportsExtendedChars != NULL) {
                 *SupportsExtendedChars = TRUE;
             }
         }
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&SubString, _T("autolinewrap")) == 0) {
+        if (YoriLibCompareStringLitIns(&SubString, _T("autolinewrap")) == 0) {
             if (SupportsAutoLineWrap != NULL) {
                 *SupportsAutoLineWrap = TRUE;
             }

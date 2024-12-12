@@ -154,11 +154,11 @@ ReplProcessStream(
             //
 
             if (ReplContext->Insensitive) {
-                if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchSubset, 1, ReplContext->MatchString, &MatchOffset) == NULL) {
+                if (YoriLibFindFirstMatchSubstrIns(&SearchSubset, 1, ReplContext->MatchString, &MatchOffset) == NULL) {
                     break;
                 }
             } else {
-                if (YoriLibFindFirstMatchingSubstring(&SearchSubset, 1, ReplContext->MatchString, &MatchOffset) == NULL) {
+                if (YoriLibFindFirstMatchSubstr(&SearchSubset, 1, ReplContext->MatchString, &MatchOffset) == NULL) {
                     break;
                 }
             }
@@ -379,22 +379,22 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ReplHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 ReplContext.Insensitive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 ReplContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;

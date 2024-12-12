@@ -152,7 +152,7 @@ YuiTaskbarIncludeWindow(
     ClassName.LengthInChars = (YORI_ALLOC_SIZE_T)GetClassName(hWnd, ClassName.StartOfString, ClassName.LengthAllocated);
 
     YoriLibConstantString(&ExcludePrefix, _T("Windows.Internal.Shell."));
-    if (YoriLibCompareStringCount(&ExcludePrefix, &ClassName, ExcludePrefix.LengthInChars) == 0) {
+    if (YoriLibCompareStringCnt(&ExcludePrefix, &ClassName, ExcludePrefix.LengthInChars) == 0) {
         return FALSE;
     }
 

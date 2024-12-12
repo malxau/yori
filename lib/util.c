@@ -448,9 +448,9 @@ YoriLibIsPathUrl(
     __in PCYORI_STRING PackagePath
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(PackagePath, _T("http://"), sizeof("http://") - 1) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitiveCount(PackagePath, _T("https://"), sizeof("https://") - 1) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitiveCount(PackagePath, _T("ftp://"), sizeof("ftp://") - 1) == 0) {
+    if (YoriLibCompareStringLitInsCnt(PackagePath, _T("http://"), sizeof("http://") - 1) == 0 ||
+        YoriLibCompareStringLitInsCnt(PackagePath, _T("https://"), sizeof("https://") - 1) == 0 ||
+        YoriLibCompareStringLitInsCnt(PackagePath, _T("ftp://"), sizeof("ftp://") - 1) == 0) {
 
         return TRUE;
     }

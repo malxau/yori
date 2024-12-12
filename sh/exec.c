@@ -160,25 +160,25 @@ YoriShExecuteSingleProgram(
             YsExt.StartOfString = szExt;
             YsExt.LengthInChars = ExecContext->CmdToExec.ArgV[0].LengthInChars - (YORI_ALLOC_SIZE_T)(szExt - ExecContext->CmdToExec.ArgV[0].StartOfString);
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
+            if (YoriLibCompareStringLitIns(&YsExt, _T(".com")) == 0) {
                 if (YoriShExecuteNamedModuleInProc(ExecContext->CmdToExec.ArgV[0].StartOfString, ExecContext, &ExitCode)) {
                     ExecProcess = FALSE;
                 } else {
                     ExitCode = 0;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&YsExt, _T(".ys1")) == 0) {
                 ExecProcess = FALSE;
                 YoriLibShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
                 ExitCode = YoriShBuckPass(ExecContext, 1, _T("ys"));
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
-                       YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&YsExt, _T(".cmd")) == 0 ||
+                       YoriLibCompareStringLitIns(&YsExt, _T(".bat")) == 0) {
                 ExecProcess = FALSE;
                 YoriLibShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
                 if (ExecContext->WaitForCompletion) {
                     ExecContext->CaptureEnvironmentOnExit = TRUE;
                 }
                 ExitCode = YoriShBuckPassToCmd(ExecContext);
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) != 0) {
+            } else if (YoriLibCompareStringLitIns(&YsExt, _T(".exe")) != 0) {
                 LaunchViaShellExecute = TRUE;
                 ExecContext->SuppressTaskCompletion = TRUE;
             }
@@ -417,7 +417,7 @@ YoriShExecExecPlan(
         if (YoriLibIsPathUrl(&ExecContext->CmdToExec.ArgV[0])) {
             YoriShGlobal.ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
         } else if (ExecContext->CmdToExec.ArgC >= 2 &&
-                   YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], _T("BUILTIN")) == 0) {
+                   YoriLibCompareStringLitIns(&ExecContext->CmdToExec.ArgV[0], _T("BUILTIN")) == 0) {
 
             PYORI_STRING ArgV;
             ArgV = ExecContext->CmdToExec.ArgV;

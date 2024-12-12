@@ -193,30 +193,30 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 WinPosHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("a")) == 0) {
                 if (ArgC > i + 1) {
                     Operation = WinPosOperationActivate;
                     WindowTitle = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 Operation = WinPosOperationCascade;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("m")) == 0) {
                 if (ArgC > i + 1) {
                     Operation = WinPosOperationMinimize;
                     WindowTitle = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("n")) == 0) {
                 if (ArgC > i + 2) {
                     Operation = WinPosOperationName;
                     WindowTitle = &ArgV[i + 1];
@@ -224,7 +224,7 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("p")) == 0) {
                 if (ArgC > i + 2) {
                     Operation = WinPosOperationMove;
                     WindowTitle = &ArgV[i + 1];
@@ -232,14 +232,14 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 if (ArgC > i + 1) {
                     Operation = WinPosOperationRestore;
                     WindowTitle = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 if (ArgC > i + 2) {
                     Operation = WinPosOperationSize;
                     WindowTitle = &ArgV[i + 1];
@@ -247,10 +247,10 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("t")) == 0) {
                 Operation = WinPosOperationTile;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("x")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("x")) == 0) {
                 if (ArgC > i + 1) {
                     Operation = WinPosOperationMaximize;
                     WindowTitle = &ArgV[i + 1];

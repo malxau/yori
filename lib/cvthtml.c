@@ -332,7 +332,7 @@ YoriLibHtmlGenerateTextString(
         AddToDestOffset = 0;
         SearchString.StartOfString = SrcPoint;
         SearchString.LengthInChars = SrcString->LengthInChars - SrcConsumed;
-        SrcOffset = YoriLibCountStringNotContainingChars(&SearchString, LookFor);
+        SrcOffset = YoriLibCntStringNotWithChars(&SearchString, LookFor);
         if (SrcOffset > 0) {
             if (DestOffset + SrcOffset < TextString->LengthAllocated) {
                 memcpy(&TextString->StartOfString[DestOffset], SrcPoint, SrcOffset * sizeof(TCHAR));
@@ -531,7 +531,7 @@ YoriLibHtmlGenerateEscapeStringInternal(
             YoriLibInitEmptyString(&SearchString);
             SearchString.StartOfString = SrcPoint;
             SearchString.LengthInChars = RemainingLength;
-            SrcOffset = YoriLibCountStringContainingChars(&SearchString, _T("0123456789"));
+            SrcOffset = YoriLibCntStringWithChars(&SearchString, _T("0123456789"));
 
             SrcPoint += SrcOffset;
             RemainingLength = RemainingLength - SrcOffset;
@@ -726,7 +726,7 @@ YoriLibHtmlCvtAppendWithReallocate(
     if (LengthNeeded > StringToAppendTo->LengthAllocated) {
         YORI_ALLOC_SIZE_T AllocSize;
         AllocSize = YoriLibMaximumAllocationInRange(LengthNeeded, LengthNeeded * 4);
-        if (!YoriLibReallocateString(StringToAppendTo, AllocSize)) {
+        if (!YoriLibReallocString(StringToAppendTo, AllocSize)) {
             return FALSE;
         }
     }
@@ -973,10 +973,10 @@ YoriLibHtmlConvertToHtmlFromVt(
         return FALSE;
     }
 
-    if (!YoriLibProcessVtEscapesOnOpenStream(VtText->StartOfString,
-                                             VtText->LengthInChars,
-                                             (HANDLE)&HtmlContext,
-                                             &CallbackFunctions)) {
+    if (!YoriLibProcVtEscOnOpenStream(VtText->StartOfString,
+                                      VtText->LengthInChars,
+                                      (HANDLE)&HtmlContext,
+                                      &CallbackFunctions)) {
 
         if (FreeColorTable) {
             YoriLibDereference(HtmlContext.ColorTable);

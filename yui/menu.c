@@ -817,9 +817,9 @@ YuiCreateMenuFile(
             Ext.LengthInChars = IconPath.LengthInChars - (YORI_ALLOC_SIZE_T)(Ext.StartOfString - IconPath.StartOfString);
         }
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".exe")) == 0 ||
-            YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".dll")) == 0 ||
-            YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".ico")) == 0) {
+        if (YoriLibCompareStringLitIns(&Ext, _T(".exe")) == 0 ||
+            YoriLibCompareStringLitIns(&Ext, _T(".dll")) == 0 ||
+            YoriLibCompareStringLitIns(&Ext, _T(".ico")) == 0) {
 
             Entry->Item.Icon = YuiIconCacheCreateOrReference(YuiContext, &IconPath, IconIndex, Entry->Item.TallItem);
         }
@@ -882,7 +882,7 @@ YuiDirectoryNodeExists(
     ListEntry = YoriLibGetPreviousListEntry(&Parent->ChildDirectories, ListEntry);
     while (ListEntry != NULL) {
         Existing = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
-        CompareResult = YoriLibCompareStringInsensitive(&Existing->Item.Text, ChildName);
+        CompareResult = YoriLibCompareStringIns(&Existing->Item.Text, ChildName);
         if (CompareResult == 0) {
             return TRUE;
         }
@@ -914,7 +914,7 @@ YuiInsertDirectoryInOrder(
     ListEntry = YoriLibGetPreviousListEntry(&Parent->ChildDirectories, ListEntry);
     while (ListEntry != NULL) {
         Existing = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
-        CompareResult = YoriLibCompareStringInsensitive(&Existing->Item.Text, &Child->Item.Text);
+        CompareResult = YoriLibCompareStringIns(&Existing->Item.Text, &Child->Item.Text);
         if (CompareResult < 0) {
             break;
         }
@@ -951,7 +951,7 @@ YuiInsertFileInOrder(
     ListEntry = YoriLibGetPreviousListEntry(&Parent->ChildFiles, ListEntry);
     while (ListEntry != NULL) {
         Existing = CONTAINING_RECORD(ListEntry, YUI_MENU_FILE, ListEntry);
-        CompareResult = YoriLibCompareStringInsensitive(&Existing->Item.Text, &Child->Item.Text);
+        CompareResult = YoriLibCompareStringIns(&Existing->Item.Text, &Child->Item.Text);
         if (CompareResult < 0) {
             break;
         }
@@ -1007,7 +1007,7 @@ YuiFindStartingNode(
         ListEntry = YoriLibGetNextListEntry(&Current->ChildDirectories, ListEntry);
         while (ListEntry != NULL) {
             Child = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
-            if (YoriLibCompareStringInsensitive(&Child->Item.Text, &Component) == 0) {
+            if (YoriLibCompareStringIns(&Child->Item.Text, &Component) == 0) {
                 break;
             }
             ListEntry = YoriLibGetNextListEntry(&Current->ChildDirectories, ListEntry);
@@ -1466,7 +1466,7 @@ YuiFileFoundCallback(
 
     if (YuiContext->FilterDirectory.LengthInChars > 0) {
         if (FilePath->LengthInChars >= YuiContext->FilterDirectory.LengthInChars &&
-            YoriLibCompareStringInsensitiveCount(FilePath, &YuiContext->FilterDirectory, YuiContext->FilterDirectory.LengthInChars) == 0) {
+            YoriLibCompareStringInsCnt(FilePath, &YuiContext->FilterDirectory, YuiContext->FilterDirectory.LengthInChars) == 0) {
             return TRUE;
         }
 
@@ -1485,7 +1485,7 @@ YuiFileFoundCallback(
                 Ext.LengthInChars = FilePath->LengthInChars - (YORI_ALLOC_SIZE_T)(Ext.StartOfString - FilePath->StartOfString);
             }
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".lnk")) == 0 &&
+            if (YoriLibCompareStringLitIns(&Ext, _T(".lnk")) == 0 &&
                 YuiFindDepthComponent(FilePath, &FriendlyName, 0, TRUE)) {
 
                 NewFile = YuiCreateMenuFile(YuiContext, FilePath, &FriendlyName, TRUE);
@@ -1527,7 +1527,7 @@ YuiFileFoundCallback(
         }
 
         if (Parent != NULL &&
-            YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".lnk")) == 0 &&
+            YoriLibCompareStringLitIns(&Ext, _T(".lnk")) == 0 &&
             YuiFindDepthComponent(FilePath, &FriendlyName, 0, TRUE)) {
             NewFile = YuiCreateMenuFile(YuiContext, FilePath, &FriendlyName, FALSE);
             if (NewFile != NULL) {

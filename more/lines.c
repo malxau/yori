@@ -112,7 +112,7 @@ MoreFindNextSearchMatch(
 
     CountFound = MoreSearchCountActive(MoreContext);
 
-    Found = YoriLibFindFirstMatchingSubstringInsensitive(StringToSearch, CountFound, MoreContext->SearchStrings, MatchOffset);
+    Found = YoriLibFindFirstMatchSubstrIns(StringToSearch, CountFound, MoreContext->SearchStrings, MatchOffset);
     if (Found != NULL) {
         if (MatchIndex != NULL) {
 
@@ -278,7 +278,7 @@ MoreTruncateStringToVisibleChars(
             YoriLibInitEmptyString(&EscapeSubset);
             EscapeSubset.StartOfString = &String->StartOfString[Index + 2];
             EscapeSubset.LengthInChars = String->LengthInChars - Index - 2;
-            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
             //
             //  Note the trailing char is a letter.  This points index to that
             //  char.
@@ -535,7 +535,7 @@ MoreGetLogicalLineLength(
     WORD CurrentColor = InitialDisplayColor;
     WORD CurrentUserColor = InitialUserColor;
     YORI_STRING MatchEscapeChars;
-    TCHAR MatchEscapeCharsBuf[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    TCHAR MatchEscapeCharsBuf[YORI_MAX_VT_ESCAPE_CHARS];
     YORI_ALLOC_SIZE_T MatchOffset;
     YORI_ALLOC_SIZE_T MatchLength;
     BOOLEAN MatchFound;
@@ -600,7 +600,7 @@ MoreGetLogicalLineLength(
             YoriLibInitEmptyString(&EscapeSubset);
             EscapeSubset.StartOfString = &PhysicalLineSubset->StartOfString[SourceIndex + 2];
             EscapeSubset.LengthInChars = PhysicalLineSubset->LengthInChars - SourceIndex - 2;
-            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
 
             //
             //  Count everything as consuming the source and needing buffer
@@ -614,7 +614,7 @@ MoreGetLogicalLineLength(
 
                 EscapeSubset.StartOfString -= 2;
                 EscapeSubset.LengthInChars = EndOfEscape + 3;
-                YoriLibVtFinalColorFromSequence(CurrentUserColor, &EscapeSubset, &CurrentUserColor);
+                YoriLibVtFinalColorFromEsc(CurrentUserColor, &EscapeSubset, &CurrentUserColor);
                 if (!MatchFound || SourceIndex < MatchOffset) {
                     CurrentColor = CurrentUserColor;
                 }
@@ -822,7 +822,7 @@ MoreCopyRangeIntoLogicalLine(
         YORI_STRING MatchEscapeChars;
         YORI_STRING EscapeSubset;
         YORI_ALLOC_SIZE_T EndOfEscape;
-        TCHAR MatchEscapeCharsBuf[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+        TCHAR MatchEscapeCharsBuf[YORI_MAX_VT_ESCAPE_CHARS];
         YORI_ALLOC_SIZE_T MatchOffset;
         YORI_ALLOC_SIZE_T MatchLength;
         BOOLEAN MatchFound;
@@ -890,7 +890,7 @@ MoreCopyRangeIntoLogicalLine(
                 YoriLibInitEmptyString(&EscapeSubset);
                 EscapeSubset.StartOfString = &PhysicalLineSubset.StartOfString[SourceIndex + 2];
                 EscapeSubset.LengthInChars = PhysicalLineSubset.LengthInChars - SourceIndex - 2;
-                EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+                EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
 
                 //
                 //  Count everything as consuming the source and needing buffer
@@ -905,7 +905,7 @@ MoreCopyRangeIntoLogicalLine(
 
                     EscapeSubset.StartOfString -= 2;
                     EscapeSubset.LengthInChars = EndOfEscape + 3;
-                    YoriLibVtFinalColorFromSequence(CurrentUserColor, &EscapeSubset, &CurrentUserColor);
+                    YoriLibVtFinalColorFromEsc(CurrentUserColor, &EscapeSubset, &CurrentUserColor);
                 } else {
                     memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], &PhysicalLineSubset.StartOfString[SourceIndex], (2 + EndOfEscape) * sizeof(TCHAR));
                     CharsInOutputBuffer += 2 + EndOfEscape;
@@ -1374,7 +1374,7 @@ MoreFindNextLineWithSearchMatch(
                 break;
             }
         } else {
-            if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
+            if (YoriLibFindFirstMatchSubstrIns(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
                 break;
             }
         }
@@ -1469,7 +1469,7 @@ MoreFindPreviousLineWithSearchMatch(
                 break;
             }
         } else {
-            if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
+            if (YoriLibFindFirstMatchSubstrIns(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
                 break;
             }
         }

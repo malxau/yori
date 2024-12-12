@@ -109,7 +109,7 @@ YoriLibShLoadDll(
         ListEntry = YoriLibGetNextListEntry(&YoriLibShBuiltinGlobal.LoadedModules, NULL);
         while (ListEntry != NULL) {
             FoundEntry = CONTAINING_RECORD(ListEntry, YORI_LIBSH_LOADED_MODULE, ListEntry);
-            if (YoriLibCompareStringWithLiteralInsensitive(&FoundEntry->DllName, DllName) == 0) {
+            if (YoriLibCompareStringLitIns(&FoundEntry->DllName, DllName) == 0) {
                 FoundEntry->ReferenceCount++;
                 return FoundEntry;
             }

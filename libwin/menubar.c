@@ -160,7 +160,7 @@ YoriWinMenuGenerateHotkey(
     Remainder.LengthInChars = HotkeyString->LengthInChars;
 
     if (Remainder.LengthInChars > sizeof("Ctrl+") - 1 &&
-        YoriLibCompareStringWithLiteralCount(&Remainder, _T("Ctrl+"), sizeof("Ctrl+") - 1) == 0) {
+        YoriLibCompareStringLitCnt(&Remainder, _T("Ctrl+"), sizeof("Ctrl+") - 1) == 0) {
 
         RequiresCtrl = TRUE;
         Remainder.LengthInChars -= sizeof("Ctrl+") - 1;
@@ -168,7 +168,7 @@ YoriWinMenuGenerateHotkey(
     }
 
     if (Remainder.LengthInChars > sizeof("Shift+") - 1 &&
-        YoriLibCompareStringWithLiteralCount(&Remainder, _T("Shift+"), sizeof("Shift+") - 1) == 0) {
+        YoriLibCompareStringLitCnt(&Remainder, _T("Shift+"), sizeof("Shift+") - 1) == 0) {
 
         RequiresShift = TRUE;
         Remainder.LengthInChars -= sizeof("Shift+") - 1;
@@ -212,7 +212,7 @@ YoriWinMenuGenerateHotkey(
             HotkeyInfo->EntryToInvoke = NULL;
             return TRUE;
         }
-    } else if (YoriLibCompareStringWithLiteralInsensitiveCount(&Remainder, _T("Del"), sizeof("Del") - 1) == 0) {
+    } else if (YoriLibCompareStringLitInsCnt(&Remainder, _T("Del"), sizeof("Del") - 1) == 0) {
         HotkeyInfo->CtrlKeyMaskToCheck = LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED;
         HotkeyInfo->CtrlKeyMaskToEqual = 0;
         if (RequiresCtrl) {

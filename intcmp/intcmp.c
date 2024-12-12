@@ -146,13 +146,13 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 IntCmpHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 if (i + 1 < ArgC) {
                     ArgumentUnderstood = TRUE;
                     StartArg = i + 1;
@@ -186,7 +186,7 @@ ENTRYPOINT(
     YoriLibConstantString(&OperatorMatches[INTCMP_OPERATOR_GREATER], _T(">"));
     YoriLibConstantString(&OperatorMatches[INTCMP_OPERATOR_LESS], _T("<"));
 
-    MatchingOperator = YoriLibFindFirstMatchingSubstring(&EntireExpression, sizeof(OperatorMatches)/sizeof(OperatorMatches[0]), OperatorMatches, &OperatorIndex);
+    MatchingOperator = YoriLibFindFirstMatchSubstr(&EntireExpression, sizeof(OperatorMatches)/sizeof(OperatorMatches[0]), OperatorMatches, &OperatorIndex);
     if (MatchingOperator == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("intcmp: missing operator\n"));
         YoriLibFreeStringContents(&EntireExpression);

@@ -680,8 +680,8 @@ YoriLibExecuteShortcut(
             YsExt.StartOfString = Extension;
             YsExt.LengthInChars = ExpandedFileTarget.LengthInChars - (YORI_ALLOC_SIZE_T)(Extension - ExpandedFileTarget.StartOfString);
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) == 0 ||
-                YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
+            if (YoriLibCompareStringLitIns(&YsExt, _T(".exe")) == 0 ||
+                YoriLibCompareStringLitIns(&YsExt, _T(".com")) == 0) {
 
                 STARTUPINFO si;
                 PROCESS_INFORMATION pi;

@@ -1339,9 +1339,11 @@ YoriLibGetEnvironmentStrings(
 
 __success(return)
 BOOL
-YoriLibAreEnvironmentStringsValid(
+YoriLibAreEnvStringsValid(
     __inout PYORI_STRING EnvStrings
     );
+
+#ifdef UNICODE
 
 __success(return)
 BOOL
@@ -1351,23 +1353,25 @@ YoriLibAreAnsiEnvironmentStringsValid(
     __out PYORI_STRING UnicodeStrings
     );
 
+#endif
+
 __success(return)
 BOOL
-YoriLibAllocateAndGetEnvironmentVariable(
+YoriLibAllocateAndGetEnvVar(
     __in LPCTSTR Name,
     __inout PYORI_STRING Value
     );
 
 __success(return)
 BOOL
-YoriLibGetEnvironmentVariableAsNumber(
+YoriLibGetEnvVarAsNumber(
     __in LPCTSTR Name,
     __out PYORI_MAX_SIGNED_T Value
     );
 
 __success(return)
 BOOL
-YoriLibAddEnvironmentComponentToString(
+YoriLibAddEnvCompToString(
     __inout PYORI_STRING ExistingString,
     __in PCYORI_STRING NewComponent,
     __in BOOL InsertAtFront
@@ -1375,7 +1379,7 @@ YoriLibAddEnvironmentComponentToString(
 
 __success(return)
 BOOL
-YoriLibAddEnvironmentComponentReturnString(
+YoriLibAddEnvCompReturnString(
     __in PYORI_STRING EnvironmentVariable,
     __in PYORI_STRING NewComponent,
     __in BOOL InsertAtFront,
@@ -1384,7 +1388,7 @@ YoriLibAddEnvironmentComponentReturnString(
 
 __success(return)
 BOOL
-YoriLibAddEnvironmentComponent(
+YoriLibAddEnvComponent(
     __in LPTSTR EnvironmentVariable,
     __in PYORI_STRING NewComponent,
     __in BOOL InsertAtFront
@@ -1392,7 +1396,7 @@ YoriLibAddEnvironmentComponent(
 
 __success(return)
 BOOL
-YoriLibRemoveEnvironmentComponentFromString(
+YoriLibRmEnvCompFromString(
     __in PYORI_STRING String,
     __in PYORI_STRING ComponentToRemove,
     __out PYORI_STRING Result
@@ -1400,7 +1404,7 @@ YoriLibRemoveEnvironmentComponentFromString(
 
 __success(return)
 BOOL
-YoriLibRemoveEnvironmentComponentReturnString(
+YoriLibRmEnvCompReturnString(
     __in PYORI_STRING EnvironmentVariable,
     __in PYORI_STRING ComponentToRemove,
     __out PYORI_STRING Result
@@ -1408,7 +1412,7 @@ YoriLibRemoveEnvironmentComponentReturnString(
 
 __success(return)
 BOOL
-YoriLibRemoveEnvironmentComponent(
+YoriLibRemoveEnvComponent(
     __in LPTSTR EnvironmentVariable,
     __in PYORI_STRING ComponentToRemove
     );
@@ -2822,7 +2826,7 @@ YoriLibSetMultibyteInputEncoding(
     );
 
 YORI_ALLOC_SIZE_T
-YoriLibGetMultibyteOutputSizeNeeded(
+YoriLibGetMbyteOutputSizeNeeded(
     __in LPCTSTR StringBuffer,
     __in YORI_ALLOC_SIZE_T BufferLength
     );
@@ -3736,13 +3740,13 @@ YoriLibAllocateString(
     );
 
 BOOL
-YoriLibReallocateString(
+YoriLibReallocString(
     __inout PYORI_STRING String,
     __in YORI_ALLOC_SIZE_T CharsToAllocate
     );
 
 BOOL
-YoriLibReallocateStringWithoutPreservingContents(
+YoriLibReallocStringNoContents(
     __inout PYORI_STRING String,
     __in YORI_ALLOC_SIZE_T CharsToAllocate
     );
@@ -3782,7 +3786,7 @@ YoriLibDecimalStringToInt(
 
 __success(return)
 BOOL
-YoriLibStringToNumberSpecifyBase(
+YoriLibStringToNumberBase(
     __in PCYORI_STRING String,
     __in WORD Base,
     __in BOOL IgnoreSeperators,
@@ -3836,26 +3840,26 @@ YoriLibRightAlignString(
     );
 
 int
-YoriLibCompareStringWithLiteral(
+YoriLibCompareStringLit(
     __in PCYORI_STRING Str1,
     __in LPCTSTR str2
     );
 
 int
-YoriLibCompareStringWithLiteralCount(
+YoriLibCompareStringLitCnt(
     __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
     __in YORI_ALLOC_SIZE_T count
     );
 
 int
-YoriLibCompareStringWithLiteralInsensitive(
+YoriLibCompareStringLitIns(
     __in PCYORI_STRING Str1,
     __in LPCTSTR str2
     );
 
 int
-YoriLibCompareStringWithLiteralInsensitiveCount(
+YoriLibCompareStringLitInsCnt(
     __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
     __in YORI_ALLOC_SIZE_T count
@@ -3868,57 +3872,57 @@ YoriLibCompareString(
     );
 
 int
-YoriLibCompareStringInsensitive(
+YoriLibCompareStringIns(
     __in PCYORI_STRING Str1,
     __in PCYORI_STRING Str2
     );
 
 int
-YoriLibCompareStringInsensitiveCount(
+YoriLibCompareStringInsCnt(
     __in PCYORI_STRING Str1,
     __in PCYORI_STRING Str2,
     __in YORI_ALLOC_SIZE_T count
     );
 
 int
-YoriLibCompareStringCount(
+YoriLibCompareStringCnt(
     __in PCYORI_STRING Str1,
     __in PCYORI_STRING Str2,
     __in YORI_ALLOC_SIZE_T count
     );
 
 YORI_ALLOC_SIZE_T
-YoriLibCountStringMatchingChars(
+YoriLibCntStringMatchChars(
     __in PYORI_STRING Str1,
     __in PYORI_STRING Str2
     );
 
 YORI_ALLOC_SIZE_T
-YoriLibCountStringMatchingCharsInsensitive(
+YoriLibCntStringMatchCharsIns(
     __in PYORI_STRING Str1,
     __in PYORI_STRING Str2
     );
 
 YORI_ALLOC_SIZE_T
-YoriLibCountStringContainingChars(
+YoriLibCntStringWithChars(
     __in PCYORI_STRING String,
     __in LPCTSTR chars
     );
 
 YORI_ALLOC_SIZE_T
-YoriLibCountStringNotContainingChars(
+YoriLibCntStringNotWithChars(
     __in PCYORI_STRING String,
     __in LPCTSTR match
     );
 
 YORI_ALLOC_SIZE_T
-YoriLibCountStringTrailingChars(
+YoriLibCntStringTrailingChars(
     __in PCYORI_STRING String,
     __in LPCTSTR chars
     );
 
 PYORI_STRING
-YoriLibFindFirstMatchingSubstring(
+YoriLibFindFirstMatchSubstr(
     __in PCYORI_STRING String,
     __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
@@ -3926,7 +3930,7 @@ YoriLibFindFirstMatchingSubstring(
     );
 
 PYORI_STRING
-YoriLibFindFirstMatchingSubstringInsensitive(
+YoriLibFindFirstMatchSubstrIns(
     __in PCYORI_STRING String,
     __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
@@ -3934,7 +3938,7 @@ YoriLibFindFirstMatchingSubstringInsensitive(
     );
 
 PYORI_STRING
-YoriLibFindLastMatchingSubstring(
+YoriLibFindLastMatchSubstr(
     __in PCYORI_STRING String,
     __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
@@ -3942,7 +3946,7 @@ YoriLibFindLastMatchingSubstring(
     );
 
 PYORI_STRING
-YoriLibFindLastMatchingSubstringInsensitive(
+YoriLibFindLastMatchSubstrIns(
     __in PCYORI_STRING String,
     __in YORI_ALLOC_SIZE_T NumberMatches,
     __in PYORI_STRING MatchArray,
@@ -4018,13 +4022,13 @@ YoriLibSortStringArray(
     );
 
 BOOLEAN
-YoriLibStringConcatenate(
+YoriLibStringConcat(
     __inout PYORI_STRING String,
     __in PCYORI_STRING AppendString
     );
 
 BOOLEAN
-YoriLibStringConcatenateWithLiteral(
+YoriLibStringConcatWithLiteral(
     __inout PYORI_STRING String,
     __in LPCTSTR AppendString
     );
@@ -4256,10 +4260,10 @@ YoriLibShellExecuteInstanceToError(
  The maximum length of a string used to describe a VT sequence generated
  internally by one of these tools.
  */
-#define YORI_MAX_INTERNAL_VT_ESCAPE_CHARS sizeof("E[0;999;999;1m")
+#define YORI_MAX_VT_ESCAPE_CHARS sizeof("E[0;999;999;1m")
 
 BOOL
-YoriLibOutputTextToMultibyteDevice(
+YoriLibOutputTextToMbyteDev(
     __in HANDLE hOutput,
     __in PCYORI_STRING String
     );
@@ -4345,27 +4349,32 @@ typedef struct _YORI_LIB_VT_CALLBACK_FUNCTIONS {
 } YORI_LIB_VT_CALLBACK_FUNCTIONS, *PYORI_LIB_VT_CALLBACK_FUNCTIONS;
 
 BOOL
-YoriLibConsoleSetFunctions(
+YoriLibConsoleSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     );
 
 BOOL
-YoriLibConsoleNoEscapeSetFunctions(
+YoriLibConsoleNoEscSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     );
 
 BOOL
-YoriLibUtf8TextWithEscapesSetFunctions(
+YoriLibUtf8TextWithEscSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     );
 
 BOOL
-YoriLibUtf8TextNoEscapesSetFunctions(
+YoriLibUtf8TextNoEscSetFn(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     );
 
 BOOL
-YoriLibProcessVtEscapesOnOpenStream(
+YoriLibDbgSetFn(
+    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
+    );
+
+BOOL
+YoriLibProcVtEscOnOpenStream(
     __in LPTSTR String,
     __in YORI_ALLOC_SIZE_T StringLength,
     __in HANDLE hOutput,
@@ -4374,7 +4383,7 @@ YoriLibProcessVtEscapesOnOpenStream(
 
 BOOL
 YoriLibOutput(
-    __in DWORD Flags,
+    __in WORD Flags,
     __in LPCTSTR szFmt,
     ...
     );
@@ -4382,7 +4391,7 @@ YoriLibOutput(
 BOOL
 YoriLibOutputToDevice(
     __in HANDLE hOut,
-    __in DWORD Flags,
+    __in WORD Flags,
     __in LPCTSTR szFmt,
     ...
     );
@@ -4390,14 +4399,14 @@ YoriLibOutputToDevice(
 BOOL
 YoriLibOutputString(
     __in HANDLE hOut,
-    __in DWORD Flags,
+    __in WORD Flags,
     __in PYORI_STRING String
     );
 
 BOOL
-YoriLibVtSetConsoleTextAttributeOnDevice(
+YoriLibVtSetConsoleTextAttrDev(
     __in HANDLE hOut,
-    __in DWORD Flags,
+    __in WORD Flags,
     __in UCHAR Ctrl,
     __in WORD Attribute
     );
@@ -4411,8 +4420,8 @@ YoriLibVtStringForTextAttribute(
     );
 
 BOOL
-YoriLibVtSetConsoleTextAttribute(
-    __in DWORD Flags,
+YoriLibVtSetConsoleTextAttr(
+    __in WORD Flags,
     __in WORD Attribute
     );
 
@@ -4433,7 +4442,7 @@ WORD
 YoriLibVtGetDefaultColor(VOID);
 
 BOOL
-YoriLibVtFinalColorFromSequence(
+YoriLibVtFinalColorFromEsc(
     __in WORD InitialColor,
     __in PCYORI_STRING EscapeSequence,
     __out PWORD FinalColor

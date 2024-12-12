@@ -1003,86 +1003,86 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 CopyHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 CompressionAlgorithm.EntireAlgorithm = 0;
                 CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_XPRESS16K;
                 CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ds")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("ds")) == 0) {
                 if (i + 1 < ArgC) {
                     CopyContext.DeviceSize = YoriLibStringToFileSize(&ArgV[i + 1]);
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:lzx")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c:lzx")) == 0) {
 
                 CompressionAlgorithm.EntireAlgorithm = 0;
                 CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_LZX;
                 CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:ntfs")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c:ntfs")) == 0) {
                 CompressionAlgorithm.EntireAlgorithm = 0;
                 CompressionAlgorithm.NtfsAlgorithm = COMPRESSION_FORMAT_DEFAULT;
                 CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:xpress")) == 0 ||
-                       YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:xp4k")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c:xpress")) == 0 ||
+                       YoriLibCompareStringLitIns(&Arg, _T("c:xp4k")) == 0) {
                 CompressionAlgorithm.EntireAlgorithm = 0;
                 CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_XPRESS4K;
                 CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:xp8k")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c:xp8k")) == 0) {
                 CompressionAlgorithm.EntireAlgorithm = 0;
                 CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_XPRESS8K;
                 CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:xp16k")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c:xp16k")) == 0) {
                 CompressionAlgorithm.EntireAlgorithm = 0;
                 CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_XPRESS16K;
                 CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
                 CopyContext.CopyAsLinks = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("n")) == 0) {
                 CopyContext.PreserveExisting = FALSE;
                 CopyContext.SkipDataCopy = FALSE;
                 CopyContext.CopyNewOnly = TRUE;
                 CopyContext.CopyChangedTimestamps = FALSE;
                 CopyContext.CopyTimestamps = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nt")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("nt")) == 0) {
                 CopyContext.PreserveExisting = FALSE;
                 CopyContext.SkipDataCopy = FALSE;
                 CopyContext.CopyNewOnly = TRUE;
                 CopyContext.CopyChangedTimestamps = TRUE;
                 CopyContext.CopyTimestamps = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("p")) == 0) {
                 CopyContext.CopyNewOnly = FALSE;
                 CopyContext.SkipDataCopy = FALSE;
                 CopyContext.PreserveExisting = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("t")) == 0) {
                 CopyContext.CopyTimestamps = TRUE;
                 CopyContext.SkipDataCopy = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("v")) == 0) {
                 CopyContext.Verbose = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("x")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("x")) == 0) {
                 if (i + 1 < ArgC) {
                     CopyAddExclude(&CopyContext, &ArgV[i + 1]);
                     ArgumentUnderstood = TRUE;

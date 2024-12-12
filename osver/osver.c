@@ -281,7 +281,7 @@ OsVerDisplayMatchingBuilds(
         DisplayString.LengthInChars = YoriLibSPrintf(DisplayString.StartOfString, _T("%hs"), OsVerBuildDescriptions[Index].BuildDescription);
 
         if (MatchString == NULL ||
-            YoriLibFindFirstMatchingSubstringInsensitive(&DisplayString, 1, MatchString, NULL) != NULL) {
+            YoriLibFindFirstMatchSubstrIns(&DisplayString, 1, MatchString, NULL) != NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i: %y\n"), OsVerBuildDescriptions[Index].BuildNumber, &DisplayString);
         }
     }
@@ -360,26 +360,26 @@ OsVerExpandVariables(
     YORI_ALLOC_SIZE_T CharsNeeded;
     POSVER_VERSION_RESULT OsVerContext = (POSVER_VERSION_RESULT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("arch")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("arch")) == 0) {
         CharsNeeded = OsVerLengthOfArchitectureDescription(OsVerContext->Architecture);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("BUILD")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("BUILD")) == 0) {
         CharsNeeded = 5;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("build")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("build")) == 0) {
         CharsNeeded = 5;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("desc")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("desc")) == 0) {
         CharsNeeded = OsVerLengthOfBuildDescription(OsVerContext->BuildNumber);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("edition")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("edition")) == 0) {
         if (OsVerContext->Edition.LengthInChars == 0) {
             YoriLibLoadOsEdition(&OsVerContext->Edition);
         }
         CharsNeeded = OsVerContext->Edition.LengthInChars;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MAJOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MAJOR")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("major")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("major")) == 0) {
         CharsNeeded = 3;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MINOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MINOR")) == 0) {
         CharsNeeded = 2;
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("minor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("minor")) == 0) {
         CharsNeeded = 3;
     } else {
         return 0;
@@ -389,31 +389,31 @@ OsVerExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("arch")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("arch")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%hs"), OsVerGetArchitectureDescriptionString(OsVerContext->Architecture));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("BUILD")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("BUILD")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%05i"), OsVerContext->BuildNumber);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("build")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("build")) == 0) {
         if (OsVerContext->MinorVersion < 100000) {
             CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), OsVerContext->BuildNumber);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("desc")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("desc")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%hs"), OsVerGetBuildDescriptionString(OsVerContext->BuildNumber));
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("edition")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("edition")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &OsVerContext->Edition);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MAJOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MAJOR")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), OsVerContext->MajorVersion);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MINOR")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("MINOR")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), OsVerContext->MinorVersion);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("major")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("major")) == 0) {
         if (OsVerContext->MajorVersion < 1000) {
             CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), OsVerContext->MajorVersion);
         } else {
             CharsNeeded = 0;
         }
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("minor")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("minor")) == 0) {
         if (OsVerContext->MinorVersion < 1000) {
             CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), OsVerContext->MinorVersion);
         } else {
@@ -489,16 +489,16 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 OsVerHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
                 ListAllBuilds = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 if (i + 1 < ArgC) {
                     SearchString = &ArgV[i + 1];
                     i++;

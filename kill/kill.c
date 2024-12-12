@@ -143,7 +143,7 @@ KillTerminateProcessByName(
         BaseName.StartOfString = CurrentEntry->ImageName;
         BaseName.LengthInChars = CurrentEntry->ImageNameLengthInBytes / sizeof(WCHAR);
 
-        if (YoriLibCompareStringInsensitiveCount(&BaseName, &NameToCompare, CharsToCompare) == 0) {
+        if (YoriLibCompareStringInsCnt(&BaseName, &NameToCompare, CharsToCompare) == 0) {
             if (KillTerminateProcessById((DWORD)CurrentEntry->ProcessId)) {
                 KillCount++;
             }
@@ -204,10 +204,10 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 KillHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2020"));
                 return EXIT_SUCCESS;
             }

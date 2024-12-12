@@ -1017,7 +1017,7 @@ YoriPkgConvertUserPackagePathToMirroredPath(
 
         Equals[0] = '\0';
 
-        if (YoriLibCompareStringInsensitiveCount(&Find, &HumanFullPath, Find.LengthInChars) == 0) {
+        if (YoriLibCompareStringInsCnt(&Find, &HumanFullPath, Find.LengthInChars) == 0) {
             YORI_STRING SubstringToKeep;
             YoriLibInitEmptyString(&SubstringToKeep);
             SubstringToKeep.StartOfString = &HumanFullPath.StartOfString[Find.LengthInChars];

@@ -735,16 +735,16 @@ YDbgPumpDebugEvents(
                     if (DisplayLoaderSnaps) {
                         YORI_STRING SearchText;
                         YoriLibConstantString(&SearchText, _T("- Ldrp"));
-                        if (YoriLibFindFirstMatchingSubstring(&OutputString, 1, &SearchText, NULL)) {
+                        if (YoriLibFindFirstMatchSubstr(&OutputString, 1, &SearchText, NULL)) {
                             DisplayString = FALSE;
                         }
                         if (!DisplayString) {
                             YoriLibConstantString(&SearchText, _T("ERROR"));
-                            if (YoriLibFindFirstMatchingSubstring(&OutputString, 1, &SearchText, NULL)) {
+                            if (YoriLibFindFirstMatchSubstr(&OutputString, 1, &SearchText, NULL)) {
                                 DisplayString = TRUE;
                             }
                             YoriLibConstantString(&SearchText, _T("WARNING"));
-                            if (YoriLibFindFirstMatchingSubstring(&OutputString, 1, &SearchText, NULL)) {
+                            if (YoriLibFindFirstMatchSubstr(&OutputString, 1, &SearchText, NULL)) {
                                 DisplayString = TRUE;
                             }
                         }
@@ -1191,20 +1191,20 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 YDbgHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
                     Op = YDbgOperationCompleteDump;
                     FileName = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i += 1;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("d")) == 0) {
                 if (ArgC > i + 2) {
                     Op = YDbgOperationProcessDump;
                     if (!YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed)) {
@@ -1216,21 +1216,21 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("e")) == 0) {
                 if (ArgC > i + 1) {
                     Op = YDbgOperationDebugChildProcess;
                     StartArg = i + 1;
                     ArgumentUnderstood = TRUE;
                     break;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("k")) == 0) {
                 if (ArgC > i + 1) {
                     Op = YDbgOperationKernelDump;
                     FileName = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i += 1;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ks")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("ks")) == 0) {
                 if (ArgC > i + 2) {
                     Op = YDbgOperationProcessKernelStacks;
                     if (!YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed)) {
@@ -1242,10 +1242,10 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
                 EnableLoaderSnaps = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("w")) == 0) {
                 CreateNewWindow = TRUE;
                 ArgumentUnderstood = TRUE;
             }

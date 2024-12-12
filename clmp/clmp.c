@@ -86,7 +86,7 @@ typedef struct _CLMP_PIPE_BUFFER {
     /**
      The flags to use when outputting anything from this stream.
      */
-    DWORD OutputFlags;
+    WORD OutputFlags;
 } CLMP_PIPE_BUFFER, *PCLMP_PIPE_BUFFER;
 
 /**
@@ -263,7 +263,7 @@ ymain(
     YoriLibInitEmptyString(&CommonString);
     YoriLibInitEmptyString(&CompleteString);
 
-    if (!YoriLibStringConcatenateWithLiteral(&CommonString, _T("cl "))) {
+    if (!YoriLibStringConcatWithLiteral(&CommonString, _T("cl "))) {
         return EXIT_FAILURE;
     }
 
@@ -286,9 +286,9 @@ ymain(
             //  compiler
             //
 
-            if (YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("?"), 1) == 0) {
+            if (YoriLibCompareStringLitInsCnt(&Arg, _T("?"), 1) == 0) {
                 ClmpHelp();
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2015-2023"));
                 return EXIT_SUCCESS;
             }
@@ -298,7 +298,7 @@ ymain(
             //  as requested.  Don't tell the compiler about this.
             //
 
-            if (YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("MP"), 2) == 0) {
+            if (YoriLibCompareStringLitInsCnt(&Arg, _T("MP"), 2) == 0) {
                 if (Arg.LengthInChars > 2) {
                     YORI_STRING NumberProcessesString;
                     YORI_MAX_SIGNED_T LlNumberProcesses;
@@ -313,8 +313,8 @@ ymain(
                 }
 
             } else {
-                if (!YoriLibStringConcatenateWithLiteral(&CommonString, _T(" ")) ||
-                    !YoriLibStringConcatenate(&CommonString, &ArgV[i])) {
+                if (!YoriLibStringConcatWithLiteral(&CommonString, _T(" ")) ||
+                    !YoriLibStringConcat(&CommonString, &ArgV[i])) {
 
                     YoriLibFreeStringContents(&CommonString);
                     return EXIT_FAILURE;
@@ -327,7 +327,7 @@ ymain(
             //  with different portions would generate the wrong result
             //
 
-            if (YoriLibCompareStringWithLiteralCount(&Arg, _T("c"), 1) == 0) {
+            if (YoriLibCompareStringLitCnt(&Arg, _T("c"), 1) == 0) {
                 MultiProcPossible = TRUE;
             }
 
@@ -336,7 +336,7 @@ ymain(
             //  generating garbage
             //
 
-            if (YoriLibCompareStringWithLiteralCount(&Arg, _T("E"), 1) == 0) {
+            if (YoriLibCompareStringLitCnt(&Arg, _T("E"), 1) == 0) {
                 MultiProcNotPossible = TRUE;
             }
 
@@ -345,7 +345,7 @@ ymain(
             //  or we'll get sharing violations on the PDB
             //
 
-            if (YoriLibCompareStringWithLiteralCount(&Arg, _T("Z"), 1) == 0) {
+            if (YoriLibCompareStringLitCnt(&Arg, _T("Z"), 1) == 0) {
                 for (j = 1; j < Arg.LengthInChars; j++) {
                     if (Arg.StartOfString[j] == 'i' ||
                         Arg.StartOfString[j] == 'I') {
@@ -360,7 +360,7 @@ ymain(
             //  get sharing violations on the precompiled header file
             //
 
-            if (YoriLibCompareStringWithLiteralCount(&Arg, _T("Y"), 1) == 0) {
+            if (YoriLibCompareStringLitCnt(&Arg, _T("Y"), 1) == 0) {
                 for (j = 1; j < Arg.LengthInChars; j++) {
                     if (Arg.StartOfString[j] == 'c' ||
                         Arg.StartOfString[j] == 'X') {
@@ -415,9 +415,9 @@ ymain(
             DWORD ThreadId;
 
             CompleteString.LengthInChars = 0;
-            if (!YoriLibStringConcatenate(&CompleteString, &CommonString) ||
-                !YoriLibStringConcatenateWithLiteral(&CompleteString, _T(" ")) ||
-                !YoriLibStringConcatenate(&CompleteString, &ArgV[i])) {
+            if (!YoriLibStringConcat(&CompleteString, &CommonString) ||
+                !YoriLibStringConcatWithLiteral(&CompleteString, _T(" ")) ||
+                !YoriLibStringConcat(&CompleteString, &ArgV[i])) {
 
                 GlobalExitCode = EXIT_FAILURE;
                 goto drain;

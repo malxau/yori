@@ -139,46 +139,46 @@ ConToolExpandVariables(
     PCONTOOL_RESULT ConToolContext = (PCONTOOL_RESULT)Context;
 
     if (ConToolContext->Have.ScreenBufferInfo &&
-        YoriLibCompareStringWithLiteral(VariableName, _T("buffer_x")) == 0) {
+        YoriLibCompareStringLit(VariableName, _T("buffer_x")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->ScreenBufferInfo.dwSize.X);
     } else if (ConToolContext->Have.ScreenBufferInfo &&
-               YoriLibCompareStringWithLiteral(VariableName, _T("buffer_y")) == 0) {
+               YoriLibCompareStringLit(VariableName, _T("buffer_y")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->ScreenBufferInfo.dwSize.Y);
 
     } else if (ConToolContext->Have.FontInfo &&
-               YoriLibCompareStringWithLiteral(VariableName, _T("font")) == 0) {
+               YoriLibCompareStringLit(VariableName, _T("font")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%s"), ConToolContext->FontInfo.FaceName);
 
     } else if (ConToolContext->Have.FontInfo &&
-               YoriLibCompareStringWithLiteral(VariableName, _T("font_weight")) == 0) {
+               YoriLibCompareStringLit(VariableName, _T("font_weight")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FontInfo.FontWeight);
 
     } else if (ConToolContext->Have.FontInfo &&
-               YoriLibCompareStringWithLiteral(VariableName, _T("font_x")) == 0) {
+               YoriLibCompareStringLit(VariableName, _T("font_x")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FontInfo.dwFontSize.X);
 
     } else if (ConToolContext->Have.FontInfo &&
-               YoriLibCompareStringWithLiteral(VariableName, _T("font_y")) == 0) {
+               YoriLibCompareStringLit(VariableName, _T("font_y")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FontInfo.dwFontSize.Y);
 
     } else if (ConToolContext->Have.FullScreenInfo &&
-               YoriLibCompareStringWithLiteral(VariableName, _T("fullscreen")) == 0) {
+               YoriLibCompareStringLit(VariableName, _T("fullscreen")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FullScreen?1:0);
 
     } else if (ConToolContext->Have.ScreenBufferInfo &&
-               YoriLibCompareStringWithLiteral(VariableName, _T("window_x")) == 0) {
+               YoriLibCompareStringLit(VariableName, _T("window_x")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->ScreenBufferInfo.srWindow.Right - ConToolContext->ScreenBufferInfo.srWindow.Left + 1);
 
     } else if (ConToolContext->Have.ScreenBufferInfo &&
-               YoriLibCompareStringWithLiteral(VariableName, _T("window_y")) == 0) {
+               YoriLibCompareStringLit(VariableName, _T("window_y")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->ScreenBufferInfo.srWindow.Bottom - ConToolContext->ScreenBufferInfo.srWindow.Top + 1);
 
@@ -191,23 +191,23 @@ ConToolExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("buffer_x")) == 0) {
+    if (YoriLibCompareStringLit(VariableName, _T("buffer_x")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->ScreenBufferInfo.dwSize.X);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("buffer_y")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("buffer_y")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->ScreenBufferInfo.dwSize.Y);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("font")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%s"), ConToolContext->FontInfo.FaceName);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font_weight")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("font_weight")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FontInfo.FontWeight);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font_x")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("font_x")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FontInfo.dwFontSize.X);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font_y")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("font_y")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FontInfo.dwFontSize.Y);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("fullscreen")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("fullscreen")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FullScreen?1:0);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("window_x")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("window_x")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->ScreenBufferInfo.srWindow.Right - ConToolContext->ScreenBufferInfo.srWindow.Left + 1);
-    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("window_y")) == 0) {
+    } else if (YoriLibCompareStringLit(VariableName, _T("window_y")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->ScreenBufferInfo.srWindow.Bottom - ConToolContext->ScreenBufferInfo.srWindow.Top + 1);
     }
 
@@ -393,13 +393,13 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ConToolHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
                     YsFormatString.StartOfString = ArgV[i + 1].StartOfString;
                     YsFormatString.LengthInChars = ArgV[i + 1].LengthInChars;
@@ -407,16 +407,16 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("fullscreen")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("fullscreen")) == 0) {
                 Fullscreen = TRUE;
                 FullscreenSet = TRUE;
                 ModifyConsole = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("noscroll")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("noscroll")) == 0) {
                 ModifyConsole = TRUE;
                 RemoveScroll = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("window")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("window")) == 0) {
                 Fullscreen = FALSE;
                 FullscreenSet = TRUE;
                 ModifyConsole = TRUE;

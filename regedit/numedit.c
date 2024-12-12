@@ -108,7 +108,7 @@ RegeditNumEditGetNumberFromDialog(
     }
 
     if (!YoriWinEditGetText(ValueEdit, &ValueText) ||
-        !YoriLibStringToNumberSpecifyBase(&ValueText, NewBase, TRUE, &NewNumberValue, &CharsConsumed) ||
+        !YoriLibStringToNumberBase(&ValueText, NewBase, TRUE, &NewNumberValue, &CharsConsumed) ||
         CharsConsumed == 0) {
 
         PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;

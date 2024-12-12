@@ -146,7 +146,7 @@ YoriLibSetMultibyteInputEncoding(
  @return The number of bytes needed to store the output form.
  */
 YORI_ALLOC_SIZE_T
-YoriLibGetMultibyteOutputSizeNeeded(
+YoriLibGetMbyteOutputSizeNeeded(
     __in LPCTSTR StringBuffer,
     __in YORI_ALLOC_SIZE_T BufferLength
     )

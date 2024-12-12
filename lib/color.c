@@ -127,14 +127,14 @@ YoriLibAttributeFromString(
         //  Look for the next element
         //
 
-        SingleElement.LengthInChars = YoriLibCountStringNotContainingChars(&SingleElement, _T("+"));
+        SingleElement.LengthInChars = YoriLibCntStringNotWithChars(&SingleElement, _T("+"));
 
         //
         //  Walk through the string table for a match.
         //
 
         for (Element = 0; Element < sizeof(YoriLibColorStringTable)/sizeof(YoriLibColorStringTable[0]); Element++) {
-            if (YoriLibCompareStringWithLiteralInsensitive(&SingleElement, YoriLibColorStringTable[Element].String) == 0) {
+            if (YoriLibCompareStringLitIns(&SingleElement, YoriLibColorStringTable[Element].String) == 0) {
 
                 if (Background) {
                     if (YoriLibColorStringTable[Element].Attr.Ctrl != 0) {
@@ -602,7 +602,7 @@ YoriLibGetMetadataColor(
                 FoundColorString.LengthInChars = (YORI_ALLOC_SIZE_T)(Element.LengthInChars - FoundAttributeCodeString.LengthInChars - 1);
 
 
-                if (YoriLibCompareStringInsensitive(RequestedAttributeCodeString, &FoundAttributeCodeString) == 0) {
+                if (YoriLibCompareStringIns(RequestedAttributeCodeString, &FoundAttributeCodeString) == 0) {
                     YoriLibAttributeFromString(&FoundColorString, &FoundColor);
                     WindowColor.Ctrl = 0;
                     WindowColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();

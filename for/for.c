@@ -687,7 +687,7 @@ ForExecuteCommand(
 
         YoriLibShCheckIfArgNeedsQuotes(&NewCmd, Count + PrefixArgCount);
 
-        while (YoriLibFindFirstMatchingSubstring(&OldArg, 1, ExecContext->SubstituteVariable, &FoundOffset)) {
+        while (YoriLibFindFirstMatchSubstr(&OldArg, 1, ExecContext->SubstituteVariable, &FoundOffset)) {
             SubstitutesFound++;
             OldArg.StartOfString += FoundOffset + 1;
             OldArg.LengthInChars -= FoundOffset + 1;
@@ -707,7 +707,7 @@ ForExecuteCommand(
         OldArg.LengthInChars = ExecContext->ArgV[Count].LengthInChars;
 
         while (TRUE) {
-            if (YoriLibFindFirstMatchingSubstring(&OldArg, 1, ExecContext->SubstituteVariable, &FoundOffset)) {
+            if (YoriLibFindFirstMatchSubstr(&OldArg, 1, ExecContext->SubstituteVariable, &FoundOffset)) {
                 memcpy(NewArgWritePoint.StartOfString, OldArg.StartOfString, FoundOffset * sizeof(TCHAR));
                 NewArgWritePoint.StartOfString += FoundOffset;
                 NewArgWritePoint.LengthAllocated = NewArgWritePoint.LengthAllocated - FoundOffset;
@@ -888,22 +888,22 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 ForHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 ExecContext.InvokeCmd = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("d")) == 0) {
                 MatchDirectories = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("i")) == 0) {
                 if (i + 1 < ArgC) {
                     YORI_STRING ErrorSubstring;
                     YORI_LIB_FILE_FILTER Filter;
@@ -921,10 +921,10 @@ ENTRYPOINT(
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
                 StepMode = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("p")) == 0) {
                 if (i + 1 < ArgC) {
                     YORI_MAX_SIGNED_T LlNumberProcesses = 0;
                     YORI_ALLOC_SIZE_T CharsConsumed = 0;
@@ -939,10 +939,10 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 Recurse = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;
@@ -974,12 +974,12 @@ ENTRYPOINT(
         goto cleanup_and_exit;
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[StartArg + 1], _T("in")) != 0) {
+    if (YoriLibCompareStringLitIns(&ArgV[StartArg + 1], _T("in")) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("for: 'in' not found\n"));
         goto cleanup_and_exit;
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(&ArgV[StartArg + 2], _T("("), 1) != 0) {
+    if (YoriLibCompareStringLitInsCnt(&ArgV[StartArg + 2], _T("("), 1) != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("for: left bracket not found\n"));
         goto cleanup_and_exit;
     }
@@ -999,7 +999,7 @@ ENTRYPOINT(
                 LeftBraceOpen = FALSE;
             }
         } else {
-            if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[ArgIndex], _T("do")) == 0) {
+            if (YoriLibCompareStringLitIns(&ArgV[ArgIndex], _T("do")) == 0) {
                 CmdArg = ArgIndex + 1;
                 break;
             }

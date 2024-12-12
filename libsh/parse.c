@@ -304,7 +304,7 @@ YoriLibShCountCharsAtBackslash(
     BOOLEAN TerminateArg;
     BOOLEAN TerminateNextArg;
 
-    ConsecutiveBackslashes = YoriLibCountStringContainingChars(Char, _T("\\"));
+    ConsecutiveBackslashes = YoriLibCntStringWithChars(Char, _T("\\"));
 
     YoriLibInitEmptyString(&Remaining);
     Remaining.StartOfString = &Char->StartOfString[ConsecutiveBackslashes];
@@ -1252,7 +1252,7 @@ YoriLibShBuildCmdlineFromCmdContext(
     BufferLength += 1;
 
     if (CmdLine->LengthAllocated < BufferLength) {
-        if (!YoriLibReallocateStringWithoutPreservingContents(CmdLine, BufferLength)) {
+        if (!YoriLibReallocStringNoContents(CmdLine, BufferLength)) {
             return FALSE;
         }
     }
@@ -1708,18 +1708,18 @@ YoriLibShIsArgumentProgramSeperator(
     __in BOOL EndOfExpression
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(Arg, _T("&")) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitive(Arg, _T("&&")) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitive(Arg, _T("\n")) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitive(Arg, _T("|")) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitive(Arg, _T("||")) == 0) {
+    if (YoriLibCompareStringLitIns(Arg, _T("&")) == 0 ||
+        YoriLibCompareStringLitIns(Arg, _T("&&")) == 0 ||
+        YoriLibCompareStringLitIns(Arg, _T("\n")) == 0 ||
+        YoriLibCompareStringLitIns(Arg, _T("|")) == 0 ||
+        YoriLibCompareStringLitIns(Arg, _T("||")) == 0) {
 
         return TRUE;
     }
 
     if (EndOfExpression) {
-        if (YoriLibCompareStringWithLiteralInsensitive(Arg, _T("&!")) == 0 ||
-            YoriLibCompareStringWithLiteralInsensitive(Arg, _T("&!!")) == 0) {
+        if (YoriLibCompareStringLitIns(Arg, _T("&!")) == 0 ||
+            YoriLibCompareStringLitIns(Arg, _T("&!!")) == 0) {
 
             return TRUE;
         }
@@ -2265,7 +2265,7 @@ YoriLibShParseCmdContextToExecPlan(
             if (!CmdContext->ArgContexts[CurrentArg + ArgsConsumed].Quoted &&
                 ThisArg->StartOfString[0] == '&') {
 
-                if (YoriLibCompareStringWithLiteral(ThisArg, _T("&")) == 0) {
+                if (YoriLibCompareStringLit(ThisArg, _T("&")) == 0) {
                     ExecPlan->WaitForCompletion = FALSE;
                     ExecPlan->EntireCmd.WaitForCompletion = FALSE;
 
@@ -2274,7 +2274,7 @@ YoriLibShParseCmdContextToExecPlan(
                     YoriLibFreeStringContents(&ExecPlan->EntireCmd.CmdToExec.ArgV[CurrentArg + ArgsConsumed]);
                     ExecPlan->EntireCmd.CmdToExec.ArgC--;
                     ArgsConsumed++;
-                } else if (YoriLibCompareStringWithLiteral(ThisArg, _T("&!")) == 0) {
+                } else if (YoriLibCompareStringLit(ThisArg, _T("&!")) == 0) {
                     ExecPlan->WaitForCompletion = FALSE;
 
                     ExecPlan->EntireCmd.WaitForCompletion = FALSE;
@@ -2294,7 +2294,7 @@ YoriLibShParseCmdContextToExecPlan(
                     YoriLibFreeStringContents(&ExecPlan->EntireCmd.CmdToExec.ArgV[CurrentArg + ArgsConsumed]);
                     ExecPlan->EntireCmd.CmdToExec.ArgC--;
                     ArgsConsumed++;
-                } else if (YoriLibCompareStringWithLiteral(ThisArg, _T("&!!")) == 0) {
+                } else if (YoriLibCompareStringLit(ThisArg, _T("&!!")) == 0) {
                     ExecPlan->WaitForCompletion = FALSE;
 
                     ExecPlan->EntireCmd.WaitForCompletion = FALSE;
@@ -2348,14 +2348,14 @@ YoriLibShParseCmdContextToExecPlan(
             ArgOfLastOperator = &CmdContext->ArgV[ArgOfLastOperatorIndex];
 
             PreviousProgram->NextProgram = ThisProgram;
-            if (YoriLibCompareStringWithLiteralInsensitive(ArgOfLastOperator, _T("&")) == 0 ||
-                YoriLibCompareStringWithLiteralInsensitive(ArgOfLastOperator, _T("\n")) == 0) {
+            if (YoriLibCompareStringLitIns(ArgOfLastOperator, _T("&")) == 0 ||
+                YoriLibCompareStringLitIns(ArgOfLastOperator, _T("\n")) == 0) {
                 PreviousProgram->NextProgramType = NextProgramExecUnconditionally;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(ArgOfLastOperator, _T("&&")) == 0) {
+            } else if (YoriLibCompareStringLitIns(ArgOfLastOperator, _T("&&")) == 0) {
                 PreviousProgram->NextProgramType = NextProgramExecOnSuccess;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(ArgOfLastOperator, _T("||")) == 0) {
+            } else if (YoriLibCompareStringLitIns(ArgOfLastOperator, _T("||")) == 0) {
                 PreviousProgram->NextProgramType = NextProgramExecOnFailure;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(ArgOfLastOperator, _T("|")) == 0) {
+            } else if (YoriLibCompareStringLitIns(ArgOfLastOperator, _T("|")) == 0) {
                 PreviousProgram->NextProgramType = NextProgramExecConcurrently;
                 if (PreviousProgram->StdOutType == StdOutTypeDefault) {
                     PreviousProgram->StdOutType = StdOutTypePipe;

@@ -588,7 +588,7 @@ YoriLibDoesSystemSupportBackgroundColors(VOID)
         YORI_MAX_SIGNED_T Enabled;
 
         YoriLibBackgroundColorSupported = FALSE;
-        if (!YoriLibGetEnvironmentVariableAsNumber(_T("YORIBACKGROUND"), &Enabled)) {
+        if (!YoriLibGetEnvVarAsNumber(_T("YORIBACKGROUND"), &Enabled)) {
             Enabled = 0;
         }
 

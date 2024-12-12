@@ -201,7 +201,7 @@ YoriLibHashLookupByKey(
     ListEntry = YoriLibGetNextListEntry(&HashTable->Buckets[BucketIndex].ListHead, NULL);
     while (ListEntry != NULL) {
         HashEntry = CONTAINING_RECORD(ListEntry, YORI_HASH_ENTRY, ListEntry);
-        if (YoriLibCompareStringInsensitive(KeyString, &HashEntry->Key) == 0) {
+        if (YoriLibCompareStringIns(KeyString, &HashEntry->Key) == 0) {
             break;
         }
         HashEntry = NULL;

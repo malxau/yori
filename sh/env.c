@@ -523,7 +523,7 @@ YoriShGetEnvironmentVariable(
 
         YoriLibConstantString(&RawVariable, DataVariable);
         CurrentOffset = 0;
-        FoundMatch = YoriLibFindFirstMatchingSubstring(&RawVariable, 1, &SearchExpr, &FoundAt);
+        FoundMatch = YoriLibFindFirstMatchSubstr(&RawVariable, 1, &SearchExpr, &FoundAt);
         while (FoundMatch) {
             if (Variable != NULL && CurrentOffset + FoundAt < Size) {
                 memcpy(Variable + CurrentOffset, RawVariable.StartOfString, FoundAt * sizeof(TCHAR));
@@ -537,7 +537,7 @@ YoriShGetEnvironmentVariable(
             CurrentOffset = CurrentOffset + ReplaceExpr.LengthInChars;
             RawVariable.StartOfString += FoundAt + SearchExpr.LengthInChars;
             RawVariable.LengthInChars -= FoundAt + SearchExpr.LengthInChars;
-            FoundMatch = YoriLibFindFirstMatchingSubstring(&RawVariable, 1, &SearchExpr, &FoundAt);
+            FoundMatch = YoriLibFindFirstMatchSubstr(&RawVariable, 1, &SearchExpr, &FoundAt);
         }
         if (Variable != NULL && CurrentOffset + RawVariable.LengthInChars < Size) {
             memcpy(Variable + CurrentOffset,

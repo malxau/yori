@@ -209,7 +209,7 @@ YoriPkgCheckIfPackageDeleteable(
                 //  is executing from a different name (eg. short file name.)
                 //
 
-                if (YoriLibCompareStringInsensitive(&ModuleName, FileBeingDeleted) == 0) {
+                if (YoriLibCompareStringIns(&ModuleName, FileBeingDeleted) == 0) {
                     DeleteResult = TRUE;
                 }
                 YoriLibFreeStringContents(&ModuleName);
@@ -424,7 +424,7 @@ YoriPkgDeletePackageInternal(
                 //  is executing from a different name (eg. short file name.)
                 //
 
-                if (YoriLibCompareStringInsensitive(&ModuleName, FileBeingDeleted) == 0) {
+                if (YoriLibCompareStringIns(&ModuleName, FileBeingDeleted) == 0) {
                     DeleteResult = ERROR_SUCCESS;
                 }
                 YoriLibFreeStringContents(&ModuleName);
@@ -898,7 +898,7 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
     ExistingArchAndExtension.LengthInChars = sizeof(".cab") - 1;
     ExistingArchAndExtension.StartOfString = &UpgradePath->StartOfString[UpgradePath->LengthInChars - ExistingArchAndExtension.LengthInChars];
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&ExistingArchAndExtension, _T(".cab")) != 0) {
+    if (YoriLibCompareStringLitIns(&ExistingArchAndExtension, _T(".cab")) != 0) {
         YoriLibFreeStringContents(&IniValue);
         return FALSE;
     }
@@ -906,12 +906,12 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
     ExistingArchAndExtension.StartOfString -= IniValue.LengthInChars;
     ExistingArchAndExtension.LengthInChars = IniValue.LengthInChars;
 
-    if (YoriLibCompareStringInsensitive(&ExistingArchAndExtension, &IniValue) != 0) {
+    if (YoriLibCompareStringIns(&ExistingArchAndExtension, &IniValue) != 0) {
         YoriLibFreeStringContents(&IniValue);
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&ExistingArchAndExtension, _T("noarch")) == 0) {
+    if (YoriLibCompareStringLitIns(&ExistingArchAndExtension, _T("noarch")) == 0) {
         YoriLibFreeStringContents(&IniValue);
         return FALSE;
     }

@@ -622,7 +622,7 @@ YoriShEnsureStringHasEnoughCharacters(
             NewLength = CharactersNeeded + 1;
         }
 
-        if (!YoriLibReallocateString(String, NewLength)) {
+        if (!YoriLibReallocString(String, NewLength)) {
             return FALSE;
         }
     }
@@ -848,7 +848,7 @@ YoriShUpdateSelectionWithSearchResult(
     //  than a rectangle
     //
 
-    if (YoriLibFindFirstMatchingSubstringInsensitive(&Buffer->String, 1, &Buffer->SearchString, &StringOffsetOfMatch)) {
+    if (YoriLibFindFirstMatchSubstrIns(&Buffer->String, 1, &Buffer->SearchString, &StringOffsetOfMatch)) {
         Buffer->CurrentOffset = StringOffsetOfMatch + Buffer->SearchString.LengthInChars;
     } else {
         Buffer->CurrentOffset = Buffer->PreSearchOffset;

@@ -151,7 +151,7 @@ ENTRYPOINT(
         YoriLibIsCommandLineOption(&ArgV[1], &Arg)) {
 
         for (i = 0; i < sizeof(YpmCallbackFunctions)/sizeof(YpmCallbackFunctions[0]); i++) {
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, YpmCallbackFunctions[i].CommandArg) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, YpmCallbackFunctions[i].CommandArg) == 0) {
                 CallbackFn = YpmCallbackFunctions[i].Fn;
                 break;
             }
@@ -169,13 +169,13 @@ ENTRYPOINT(
 
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            if (YoriLibCompareStringLitIns(&Arg, _T("?")) == 0) {
                 YpmHelp();
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
                 break;

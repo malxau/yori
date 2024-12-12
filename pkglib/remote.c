@@ -415,7 +415,7 @@ YoriPkgCollectSourcesFromIni(
             ListEntry = YoriLibGetNextListEntry(SourcesList, NULL);
             while (ListEntry != NULL) {
                 ExistingSource = CONTAINING_RECORD(ListEntry, YORIPKG_REMOTE_SOURCE, SourceList);
-                if (YoriLibCompareStringInsensitive(&ExistingSource->SourceRootUrl, &Source->SourceRootUrl) == 0) {
+                if (YoriLibCompareStringIns(&ExistingSource->SourceRootUrl, &Source->SourceRootUrl) == 0) {
                     DuplicateFound = TRUE;
                     break;
                 }
@@ -885,7 +885,7 @@ YoriPkgDisplayAvailableRemotePackageNames(VOID)
             NestedPackage = CONTAINING_RECORD(NestedPackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
             NestedPackageEntry = YoriLibGetNextListEntry(&PackageList, NestedPackageEntry);
             ASSERT(Package != NestedPackage);
-            if (YoriLibCompareStringInsensitive(&Package->PackageName, &NestedPackage->PackageName) == 0) {
+            if (YoriLibCompareStringIns(&Package->PackageName, &NestedPackage->PackageName) == 0) {
                 YoriLibRemoveListItem(&NestedPackage->PackageList);
                 YoriLibAppendList(&DuplicatePackageList, &NestedPackage->PackageList);
             }
@@ -1091,7 +1091,7 @@ YoriPkgFindRemotePackageMatchingArchitecture(
     while (PackageEntry != NULL) {
         Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
         PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
-        if (YoriLibCompareStringInsensitive(Architecture, &Package->Architecture) == 0) {
+        if (YoriLibCompareStringIns(Architecture, &Package->Architecture) == 0) {
             YoriLibRemoveListItem(&Package->PackageList);
             YoriLibAppendList(MatchingPackages, &Package->PackageList);
             return TRUE;
@@ -1166,7 +1166,7 @@ YoriPkgFindRemotePackages(
         while (PackageEntry != NULL) {
             Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
             PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
-            if (YoriLibCompareStringInsensitive(&PackageNames[PkgIndex], &Package->PackageName) == 0) {
+            if (YoriLibCompareStringIns(&PackageNames[PkgIndex], &Package->PackageName) == 0) {
                 YoriLibRemoveListItem(&Package->PackageList);
                 YoriLibAppendList(&PackagesMatchingName, &Package->PackageList);
             }
@@ -1186,7 +1186,7 @@ YoriPkgFindRemotePackages(
                 Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
                 PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
                 if (LookingForVersion == NULL ||
-                    YoriLibCompareStringInsensitive(&Package->Version, LookingForVersion) > 0) {
+                    YoriLibCompareStringIns(&Package->Version, LookingForVersion) > 0) {
 
                     LookingForVersion = &Package->Version;
                 }
@@ -1212,7 +1212,7 @@ YoriPkgFindRemotePackages(
         while (PackageEntry != NULL) {
             Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
             PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
-            if (YoriLibCompareStringInsensitive(LookingForVersion, &Package->Version) == 0) {
+            if (YoriLibCompareStringIns(LookingForVersion, &Package->Version) == 0) {
                 YoriLibRemoveListItem(&Package->PackageList);
                 YoriLibAppendList(&PackagesMatchingVersion, &Package->PackageList);
             }

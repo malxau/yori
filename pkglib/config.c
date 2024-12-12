@@ -157,7 +157,7 @@ YoriPkgGetYoriExecutablePath(
 
     YoriLibInitEmptyString(&LocalExePath);
     UseAppDir = FALSE;
-    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORISPEC"), &LocalExePath)) {
+    if (!YoriLibAllocateAndGetEnvVar(_T("YORISPEC"), &LocalExePath)) {
         UseAppDir = TRUE;
     } else if (LocalExePath.LengthInChars == 0) {
         YoriLibFreeStringContents(&LocalExePath);
@@ -309,7 +309,7 @@ YoriPkgWriteTerminalProfile(
     //  Convert that into UTF-8 for the file contents
     //
 
-    BytesNeeded = YoriLibGetMultibyteOutputSizeNeeded(EscapedExePath.StartOfString, EscapedExePath.LengthInChars);
+    BytesNeeded = YoriLibGetMbyteOutputSizeNeeded(EscapedExePath.StartOfString, EscapedExePath.LengthInChars);
     MultibyteEscapedExePath = YoriLibMalloc(BytesNeeded);
     if (MultibyteEscapedExePath == NULL) {
         YoriLibFreeStringContents(&EscapedExePath);

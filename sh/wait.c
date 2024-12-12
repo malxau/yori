@@ -256,7 +256,7 @@ YoriShSuckEnv(
         YoriLibFreeStringContents(EnvString);
         memcpy(EnvString, &UnicodeEnvString, sizeof(YORI_STRING));
     } else {
-        if (!YoriLibAreEnvironmentStringsValid(EnvString)) {
+        if (!YoriLibAreEnvStringsValid(EnvString)) {
 #if YORI_SH_DEBUG_DEBUGGER
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvString not valid\n"));
 #endif
