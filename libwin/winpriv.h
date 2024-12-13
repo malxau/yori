@@ -767,6 +767,18 @@ YoriWinScrollBarReposition(
     __in PSMALL_RECT CtrlRect
     );
 
+// TEXT.C
+
+BOOLEAN
+YoriWinTextStringToDisplayCells(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PYORI_STRING String,
+    __in YORI_ALLOC_SIZE_T LeftPadding,
+    __in YORI_ALLOC_SIZE_T TabWidth,
+    __in YORI_ALLOC_SIZE_T MaxCells,
+    __inout PYORI_STRING CellsString
+    );
+
 // WINDOW.C
 
 BOOLEAN

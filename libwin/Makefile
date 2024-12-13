@@ -19,6 +19,7 @@ OBJS=\
 	 mledit.obj   \
 	 radio.obj    \
 	 scrolbar.obj \
+	 text.obj     \
 	 window.obj   \
 	 winmgr.obj   \
 

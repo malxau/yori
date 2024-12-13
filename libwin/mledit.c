@@ -894,27 +894,22 @@ YoriWinMultilineEditGenerateDisplayLine(
     __out PYORI_STRING DisplayLine
     )
 {
-    YORI_ALLOC_SIZE_T BufferChar;
-    YORI_ALLOC_SIZE_T CharIndex;
     PYORI_STRING SourceLine;
+    YORI_STRING SourceString;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+    YORI_ALLOC_SIZE_T BufferChar;
     YORI_ALLOC_SIZE_T Remainder;
-    YORI_ALLOC_SIZE_T CellsDisplayed;
-    TCHAR Char;
-    BOOLEAN NeedDoubleBuffer;
-    BOOLEAN DoubleWideCharSupported;
-    BOOLEAN IsNanoServer;
-
-    DoubleWideCharSupported = YoriWinMultilineEditIsDoubleWideCharSupported(MultilineEdit);
-    IsNanoServer = YoriLibIsNanoServer();
 
     ASSERT(LineIndex < MultilineEdit->LinesPopulated);
 
+    TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
+    WinMgr = YoriWinGetWindowManagerHandle(TopLevelWindow);
     SourceLine = &MultilineEdit->LineArray[LineIndex];
 
     //
-    //  MSFIX This needs to return a "remainder" to say the number of
-    //  display cells not describable before this buffer char.  If
-    //  this is nonzero, NeedDoubleBuffer = TRUE
+    //  Create a string that corresponds to the current position in the
+    //  viewport.
     //
 
     YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit,
@@ -932,90 +927,21 @@ YoriWinMultilineEditGenerateDisplayLine(
         return TRUE;
     }
 
-    CellsDisplayed = 0;
-    NeedDoubleBuffer = FALSE;
+    YoriLibInitEmptyString(DisplayLine);
+    YoriLibInitEmptyString(&SourceString);
+    SourceString.StartOfString = &SourceLine->StartOfString[BufferChar];
+    SourceString.LengthInChars = SourceLine->LengthInChars - BufferChar;
 
     //
-    //  Count how many chars are required to fill the viewport.  If the
-    //  chars are all single width and not tab, the line buffer can be
-    //  used directly.  Otherwise, count the size of the buffer needed.
-    //  Note this sizing can be pessimistic (assume wide chars fit, tabs
-    //  are fully expanded.)
+    //  Generate display cells for the text.
     //
 
-    if (Remainder > 0) {
-        NeedDoubleBuffer = TRUE;
-        CellsDisplayed = Remainder;
-    }
-
-    for (CharIndex = BufferChar;
-         CharIndex < SourceLine->LengthInChars && CellsDisplayed < ClientWidth;
-         CharIndex++) {
-
-        Char = SourceLine->StartOfString[CharIndex];
-
-        if (Char == '\t') {
-            NeedDoubleBuffer = TRUE;
-            CellsDisplayed = CellsDisplayed + MultilineEdit->TabWidth;
-        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
-            NeedDoubleBuffer = TRUE;
-            CellsDisplayed = CellsDisplayed + 2;
-        } else if (IsNanoServer && Char == '\0') {
-            NeedDoubleBuffer = TRUE;
-            CellsDisplayed++;
-        } else {
-            CellsDisplayed++;
-        }
-    }
-
-    if (!NeedDoubleBuffer) {
-        YoriLibInitEmptyString(DisplayLine);
-        DisplayLine->StartOfString = &SourceLine->StartOfString[BufferChar];
-        DisplayLine->LengthInChars = SourceLine->LengthInChars - BufferChar;
-        return TRUE;
-    }
-
-    if (!YoriLibAllocateString(DisplayLine, CellsDisplayed)) {
-        return FALSE;
-    }
-
-    for (CellsDisplayed = 0; CellsDisplayed < Remainder; CellsDisplayed++) {
-        DisplayLine->StartOfString[CellsDisplayed] = ' ';
-    }
-
-    for (CharIndex = BufferChar;
-         CharIndex < SourceLine->LengthInChars && CellsDisplayed < ClientWidth;
-         CharIndex++) {
-
-        Char = SourceLine->StartOfString[CharIndex];
-
-        if (Char == '\t') {
-            YORI_ALLOC_SIZE_T TabIndex;
-            for (TabIndex = 0; TabIndex < MultilineEdit->TabWidth && CellsDisplayed < ClientWidth; TabIndex++) {
-                DisplayLine->StartOfString[CellsDisplayed] = ' ';
-                CellsDisplayed++;
-            }
-        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
-            if (CellsDisplayed + 1 < ClientWidth) {
-                DisplayLine->StartOfString[CellsDisplayed] = Char;
-                CellsDisplayed++;
-                DisplayLine->StartOfString[CellsDisplayed] = ' ';
-                CellsDisplayed++;
-            } else {
-                DisplayLine->StartOfString[CellsDisplayed] = ' ';
-                CellsDisplayed++;
-            }
-        } else if (IsNanoServer && Char == '\0') {
-            DisplayLine->StartOfString[CellsDisplayed] = ' ';
-            CellsDisplayed++;
-        } else {
-            DisplayLine->StartOfString[CellsDisplayed] = Char;
-            CellsDisplayed++;
-        }
-    }
-
-    DisplayLine->LengthInChars = CellsDisplayed;
-    return TRUE;
+    return YoriWinTextStringToDisplayCells(WinMgr,
+                                           &SourceString,
+                                           Remainder,
+                                           MultilineEdit->TabWidth,
+                                           ClientWidth,
+                                           DisplayLine);
 }
 
 /**
