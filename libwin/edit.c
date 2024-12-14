@@ -321,6 +321,13 @@ YoriWinEditEnsureCursorVisible(
     )
 {
     COORD ClientSize;
+    YORI_ALLOC_SIZE_T CursorDisplayCell;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(Edit->Ctrl.Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
     YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
 
     //
@@ -334,8 +341,17 @@ YoriWinEditEnsureCursorVisible(
         YORI_ALLOC_SIZE_T StartSelection;
         YORI_ALLOC_SIZE_T EndSelection;
 
-        StartSelection = Edit->Selection.FirstCharOffset;
-        EndSelection = Edit->Selection.LastCharOffset;
+        YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgrHandle,
+                                                     &Edit->Text,
+                                                     1,
+                                                     Edit->Selection.FirstCharOffset,
+                                                     &StartSelection);
+
+        YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgrHandle,
+                                                     &Edit->Text,
+                                                     1,
+                                                     Edit->Selection.LastCharOffset,
+                                                     &EndSelection);
 
         if (StartSelection < Edit->DisplayOffset) {
             Edit->DisplayOffset = StartSelection;
@@ -343,10 +359,17 @@ YoriWinEditEnsureCursorVisible(
             Edit->DisplayOffset = EndSelection - ClientSize.X + 1;
         }
     }
-    if (Edit->CursorOffset < Edit->DisplayOffset) {
-        Edit->DisplayOffset = Edit->CursorOffset;
-    } else if (Edit->CursorOffset >= Edit->DisplayOffset + ClientSize.X) {
-        Edit->DisplayOffset = Edit->CursorOffset - ClientSize.X + 1;
+
+    YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgrHandle,
+                                                 &Edit->Text,
+                                                 1,
+                                                 Edit->CursorOffset,
+                                                 &CursorDisplayCell);
+
+    if (CursorDisplayCell < Edit->DisplayOffset) {
+        Edit->DisplayOffset = CursorDisplayCell;
+    } else if (CursorDisplayCell >= Edit->DisplayOffset + ClientSize.X) {
+        Edit->DisplayOffset = CursorDisplayCell - ClientSize.X + 1;
     }
 }
 
@@ -400,43 +423,72 @@ YoriWinEditPaint(
     WORD StartColumn;
     WORD CellIndex;
     WORD CharIndex;
-    WORD DisplayCursorOffset;
+    YORI_ALLOC_SIZE_T DisplayCursorOffset;
     COORD ClientSize;
-    YORI_STRING DisplayLine;
     BOOLEAN SelectionActive;
     TCHAR Char;
+    YORI_ALLOC_SIZE_T ViewportBufferOffset;
+    YORI_ALLOC_SIZE_T Remainder;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+    YORI_STRING VisibleString;
+    YORI_STRING DisplayCells;
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(Edit->Ctrl.Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
 
     YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
     WinAttributes = Edit->Ctrl.DefaultAttributes;
     TextAttributes = Edit->TextAttributes;
 
-    YoriLibInitEmptyString(&DisplayLine);
+    YoriWinTextBufferOffsetFromDisplayCellOffset(WinMgrHandle,
+                                                 &Edit->Text,
+                                                 1,
+                                                 Edit->DisplayOffset,
+                                                 FALSE,
+                                                 &ViewportBufferOffset,
+                                                 &Remainder);
 
-    //
-    //  This should be ensured by YoriWinEditEnsureCursorVisible.
-    //
+    YoriLibInitEmptyString(&VisibleString);
+    VisibleString.StartOfString = &Edit->Text.StartOfString[ViewportBufferOffset];
+    VisibleString.LengthInChars = Edit->Text.LengthInChars - ViewportBufferOffset;
 
-    ASSERT(Edit->CursorOffset >= Edit->DisplayOffset && Edit->CursorOffset < Edit->DisplayOffset + ClientSize.X);
+    YoriLibInitEmptyString(&DisplayCells);
 
-    DisplayCursorOffset = (WORD)(Edit->CursorOffset - Edit->DisplayOffset);
-
-    if (Edit->DisplayOffset < Edit->Text.LengthInChars) {
-        DisplayLine.StartOfString = Edit->Text.StartOfString + Edit->DisplayOffset;
-        DisplayLine.LengthInChars = Edit->Text.LengthInChars - Edit->DisplayOffset;
-        if (DisplayLine.LengthInChars > (WORD)ClientSize.X) {
-            DisplayLine.LengthInChars = (WORD)ClientSize.X;
+    if (!YoriWinTextStringToDisplayCells(WinMgrHandle,
+                                         &VisibleString,
+                                         Remainder,
+                                         1,
+                                         ClientSize.X,
+                                         &DisplayCells)) {
+        DisplayCells.StartOfString = VisibleString.StartOfString;
+        DisplayCells.LengthInChars = VisibleString.LengthInChars;
+        if (DisplayCells.LengthInChars > (YORI_ALLOC_SIZE_T)ClientSize.X) {
+            DisplayCells.LengthInChars = ClientSize.X;
         }
     }
+
+    ASSERT(DisplayCells.LengthInChars <= (YORI_ALLOC_SIZE_T)ClientSize.X);
+    ASSERT(Edit->CursorOffset >= ViewportBufferOffset);
+
+    YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgrHandle,
+                                                 &VisibleString,
+                                                 1,
+                                                 Edit->CursorOffset - ViewportBufferOffset,
+                                                 &DisplayCursorOffset);
+    DisplayCursorOffset = DisplayCursorOffset + Remainder;
+    ASSERT(DisplayCursorOffset <= (YORI_ALLOC_SIZE_T)ClientSize.X);
 
     //
     //  Calculate the starting cell for the text from the left based
     //  on alignment specification
     //
+
     StartColumn = 0;
     if (Edit->TextAlign == YoriWinTextAlignRight) {
-        StartColumn = (WORD)(ClientSize.X - DisplayLine.LengthInChars);
+        StartColumn = (WORD)(ClientSize.X - DisplayCells.LengthInChars);
     } else if (Edit->TextAlign == YoriWinTextAlignCenter) {
-        StartColumn = (WORD)((ClientSize.X - DisplayLine.LengthInChars) / 2);
+        StartColumn = (WORD)((ClientSize.X - DisplayCells.LengthInChars) / 2);
     }
 
     //
@@ -452,16 +504,32 @@ YoriWinEditPaint(
     //
 
     SelectionActive = YoriWinEditSelectionActive(&Edit->Ctrl);
-    for (CharIndex = 0; CharIndex < DisplayLine.LengthInChars; CharIndex++) {
+    for (CharIndex = 0; CharIndex < DisplayCells.LengthInChars; CharIndex++) {
         if (SelectionActive) {
+            YORI_ALLOC_SIZE_T DisplayFirstCharOffset;
+            YORI_ALLOC_SIZE_T DisplayLastCharOffset;
+
             TextAttributes = Edit->TextAttributes;
-            if (CharIndex + Edit->DisplayOffset >= Edit->Selection.FirstCharOffset &&
-                CharIndex + Edit->DisplayOffset < Edit->Selection.LastCharOffset) {
+
+            YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgrHandle,
+                                                         &Edit->Text,
+                                                         1,
+                                                         Edit->Selection.FirstCharOffset,
+                                                         &DisplayFirstCharOffset);
+
+            YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgrHandle,
+                                                         &Edit->Text,
+                                                         1,
+                                                         Edit->Selection.LastCharOffset,
+                                                         &DisplayLastCharOffset);
+
+            if (CharIndex + Edit->DisplayOffset >= DisplayFirstCharOffset &&
+                CharIndex + Edit->DisplayOffset < DisplayLastCharOffset) {
 
                 TextAttributes = Edit->SelectedTextAttributes;
             }
         }
-        Char = DisplayLine.StartOfString[CharIndex];
+        Char = DisplayCells.StartOfString[CharIndex];
 
         //
         //  Nano server interprets NULL as "leave previous contents alone"
@@ -479,13 +547,15 @@ YoriWinEditPaint(
     //  Pad the area after the text
     //
 
-    for (CellIndex = (WORD)(StartColumn + DisplayLine.LengthInChars); CellIndex < (DWORD)(ClientSize.X); CellIndex++) {
+    for (CellIndex = (WORD)(StartColumn + DisplayCells.LengthInChars); CellIndex < (DWORD)(ClientSize.X); CellIndex++) {
         YoriWinSetControlClientCell(&Edit->Ctrl, CellIndex, 0, ' ', WinAttributes);
     }
 
     if (Edit->HasFocus) {
         YoriWinSetControlClientCursorLocation(&Edit->Ctrl, (WORD)(StartColumn + DisplayCursorOffset), 0);
     }
+
+    YoriLibFreeStringContents(&DisplayCells);
 
     return TRUE;
 }

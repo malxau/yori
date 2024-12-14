@@ -307,6 +307,12 @@ YoriWinListPaintHorizontalList(
     WORD WindowAttributes;
     PYORI_WIN_ITEM_ENTRY Element;
     COORD ClientSize;
+    YORI_STRING DisplayLine;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(List->Ctrl.Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
 
     WindowAttributes = List->Ctrl.DefaultAttributes;
     YoriWinGetControlClientSize(&List->Ctrl, &ClientSize);
@@ -325,10 +331,15 @@ YoriWinListPaintHorizontalList(
 
             Attributes = (WORD)(((Attributes & 0xf0) >> 4) | ((Attributes & 0x0f) << 4));
         }
+        YoriLibInitEmptyString(&DisplayLine);
+        if (!YoriWinTextStringToDisplayCells(WinMgrHandle, &Element->String, 0, 3, List->HorizontalItemWidth, &DisplayLine)) {
+            DisplayLine.StartOfString = Element->String.StartOfString;
+            DisplayLine.LengthInChars = Element->String.LengthInChars;
+        }
         if (List->MultiSelect) {
             CharsToDisplay = (WORD)(List->HorizontalItemWidth - 4);
-            if (CharsToDisplay > Element->String.LengthInChars) {
-                CharsToDisplay = (WORD)Element->String.LengthInChars;
+            if (CharsToDisplay > DisplayLine.LengthInChars) {
+                CharsToDisplay = (WORD)DisplayLine.LengthInChars;
             }
             YoriWinSetControlClientCell(&List->Ctrl, CellOffset, 0, ' ', Attributes);
             if (Element->Flags & YORI_WIN_ITEM_SELECTED) {
@@ -338,7 +349,7 @@ YoriWinListPaintHorizontalList(
             }
             YoriWinSetControlClientCell(&List->Ctrl, (WORD)(CellOffset + 2), 0, ' ', Attributes);
             for (CellIndex = 0; CellIndex < CharsToDisplay; CellIndex++) {
-                YoriWinSetControlClientCell(&List->Ctrl, (WORD)(CellOffset + CellIndex + 3), 0, Element->String.StartOfString[CellIndex], Attributes);
+                YoriWinSetControlClientCell(&List->Ctrl, (WORD)(CellOffset + CellIndex + 3), 0, DisplayLine.StartOfString[CellIndex], Attributes);
             }
             for (;CellIndex < List->HorizontalItemWidth - 3; CellIndex++) {
                 YoriWinSetControlClientCell(&List->Ctrl, (WORD)(CellOffset + CellIndex + 3), 0, ' ', Attributes);
@@ -346,17 +357,18 @@ YoriWinListPaintHorizontalList(
 
         } else {
             CharsToDisplay = (WORD)(List->HorizontalItemWidth - 2);
-            if (CharsToDisplay > Element->String.LengthInChars) {
-                CharsToDisplay = (WORD)Element->String.LengthInChars;
+            if (CharsToDisplay > DisplayLine.LengthInChars) {
+                CharsToDisplay = (WORD)DisplayLine.LengthInChars;
             }
             YoriWinSetControlClientCell(&List->Ctrl, CellOffset, 0, ' ', Attributes);
             for (CellIndex = 0; CellIndex < CharsToDisplay; CellIndex++) {
-                YoriWinSetControlClientCell(&List->Ctrl, (WORD)(CellOffset + CellIndex + 1), 0, Element->String.StartOfString[CellIndex], Attributes);
+                YoriWinSetControlClientCell(&List->Ctrl, (WORD)(CellOffset + CellIndex + 1), 0, DisplayLine.StartOfString[CellIndex], Attributes);
             }
             for (;CellIndex < List->HorizontalItemWidth - 1; CellIndex++) {
                 YoriWinSetControlClientCell(&List->Ctrl, (WORD)(CellOffset + CellIndex + 1), 0, ' ', Attributes);
             }
         }
+        YoriLibFreeStringContents(&DisplayLine);
     }
 
     //

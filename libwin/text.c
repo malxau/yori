@@ -29,6 +29,138 @@
 #include "yoriwin.h"
 #include "winpriv.h"
 
+/**
+ Given a cursor offset expressed in terms of the display location of the
+ cursor, find the offset within the string buffer.  These are typically the
+ same but tab expansion means they are not guaranteed to be identical.
+
+ @param WinMgr Pointer to the window manager.
+ 
+ @param String The string of text to parse.
+
+ @param TabWidth The number of cells to display a tab.
+
+ @param CellOffset The offset to find as specified by display cell.
+
+ @param AllowOffsetBeyondString If TRUE, allow returning an offset beyond
+        the end of the string, assuming all characters beyond the end of
+        the string is single width.  If FALSE, limit the returned offset to
+        be the length of the string.
+
+ @param BufferOffset On completion, populated with the offset in the string
+        corresponding to the display offset.
+
+ @param Remainder If specified, on completion, updated with the number of
+        empty display cells before the data at CursorChar is displayed.
+        This can be caused by a tab or wide char that encompasses the
+        DisplayChar cell along with other cells, where no single character
+        starts at the requested DisplayChar.
+ */
+VOID
+YoriWinTextBufferOffsetFromDisplayCellOffset(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PYORI_STRING String,
+    __in YORI_ALLOC_SIZE_T TabWidth,
+    __in YORI_ALLOC_SIZE_T CellOffset,
+    __in BOOLEAN AllowOffsetBeyondString,
+    __out PYORI_ALLOC_SIZE_T BufferOffset,
+    __out_opt PYORI_ALLOC_SIZE_T Remainder
+    )
+{
+    YORI_ALLOC_SIZE_T CharIndex;
+    YORI_ALLOC_SIZE_T CurrentDisplayIndex;
+    YORI_ALLOC_SIZE_T DesiredCursorChar;
+    TCHAR Char;
+    BOOLEAN DoubleWideCharSupported;
+
+    DoubleWideCharSupported = YoriWinIsDoubleWideCharSupported(WinMgr);
+
+    CurrentDisplayIndex = 0;
+    for (CharIndex = 0; CharIndex < String->LengthInChars; CharIndex++) {
+        if (CurrentDisplayIndex >= CellOffset) {
+            if (Remainder != NULL) {
+                *Remainder = (CurrentDisplayIndex - CellOffset);
+            }
+            *BufferOffset = CharIndex;
+            return;
+        }
+
+        Char = String->StartOfString[CharIndex];
+
+        if (Char == '\t') {
+            CurrentDisplayIndex = CurrentDisplayIndex + TabWidth;
+        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
+            CurrentDisplayIndex = CurrentDisplayIndex + 2;
+        } else {
+            CurrentDisplayIndex++;
+        }
+    }
+
+    DesiredCursorChar = CellOffset - (CurrentDisplayIndex - CharIndex);
+    if (!AllowOffsetBeyondString) {
+        if (DesiredCursorChar > String->LengthInChars) {
+            DesiredCursorChar = String->LengthInChars;
+        }
+    }
+
+    if (Remainder != NULL) {
+        *Remainder = 0;
+    }
+    *BufferOffset = DesiredCursorChar;
+}
+
+/**
+ Given a cursor offset expressed in terms of the display location of the
+ cursor, find the offset within the string buffer.  These are typically the
+ same but tab expansion means they are not guaranteed to be identical.
+
+ @param WinMgr Pointer to the window manager.
+ 
+ @param String The string of text to parse.
+
+ @param TabWidth The number of cells to display a tab.
+
+ @param BufferOffset The offset to find as specified by string offset.
+
+ @param CellOffset On completion, populated with the offset in the display
+        that would be written by displaying the string.
+ */
+VOID
+YoriWinTextDisplayCellOffsetFromBufferOffset(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PYORI_STRING String,
+    __in YORI_ALLOC_SIZE_T TabWidth,
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __out PYORI_ALLOC_SIZE_T CellOffset
+    )
+{
+    YORI_ALLOC_SIZE_T CharIndex;
+    YORI_ALLOC_SIZE_T CurrentDisplayIndex;
+    TCHAR Char;
+    BOOLEAN DoubleWideCharSupported;
+
+    DoubleWideCharSupported = YoriWinIsDoubleWideCharSupported(WinMgr);
+
+    CurrentDisplayIndex = 0;
+    for (CharIndex = 0; CharIndex < String->LengthInChars; CharIndex++) {
+        if (CharIndex >= BufferOffset) {
+            *CellOffset = CurrentDisplayIndex;
+            return;
+        }
+
+        Char = String->StartOfString[CharIndex];
+
+        if (Char == '\t') {
+            CurrentDisplayIndex = CurrentDisplayIndex + TabWidth;
+        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
+            CurrentDisplayIndex = CurrentDisplayIndex + 2;
+        } else {
+            CurrentDisplayIndex++;
+        }
+    }
+
+    *CellOffset = BufferOffset + (CurrentDisplayIndex - CharIndex);
+}
 
 /**
  Calculate a range of cells on a single line to display.  This is often the

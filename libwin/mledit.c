@@ -547,12 +547,12 @@ YoriWinMultilineEditFindCursorCharFromDisplayChar(
     __out_opt PYORI_ALLOC_SIZE_T Remainder
     )
 {
-    YORI_ALLOC_SIZE_T CharIndex;
-    YORI_ALLOC_SIZE_T CurrentDisplayIndex;
-    YORI_ALLOC_SIZE_T DesiredCursorChar;
     PYORI_STRING Line;
-    TCHAR Char;
-    BOOLEAN DoubleWideCharSupported;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
+    WinMgr = YoriWinGetWindowManagerHandle(TopLevelWindow);
 
     if (LineIndex >= MultilineEdit->LinesPopulated) {
         *CursorChar = DisplayChar;
@@ -562,47 +562,15 @@ YoriWinMultilineEditFindCursorCharFromDisplayChar(
         return;
     }
 
-    DoubleWideCharSupported = YoriWinMultilineEditIsDoubleWideCharSupported(MultilineEdit);
-
     Line = &MultilineEdit->LineArray[LineIndex];
 
-    CurrentDisplayIndex = 0;
-    for (CharIndex = 0; CharIndex < Line->LengthInChars; CharIndex++) {
-        if (CurrentDisplayIndex >= DisplayChar) {
-            if (Remainder != NULL) {
-                *Remainder = (CurrentDisplayIndex - DisplayChar);
-            }
-            *CursorChar = CharIndex;
-            return;
-        }
-
-        Char = Line->StartOfString[CharIndex];
-
-        if (Char == '\t') {
-            CurrentDisplayIndex = CurrentDisplayIndex + MultilineEdit->TabWidth;
-        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
-            CurrentDisplayIndex = CurrentDisplayIndex + 2;
-        } else {
-            CurrentDisplayIndex++;
-        }
-    }
-
-    //
-    //  In a modern control, the cursor can't be beyond the end of the text,
-    //  so cap it here.
-    //
-
-    DesiredCursorChar = DisplayChar - (CurrentDisplayIndex - CharIndex);
-    if (!MultilineEdit->TraditionalEditNavigation) {
-        if (DesiredCursorChar > Line->LengthInChars) {
-            DesiredCursorChar = Line->LengthInChars;
-        }
-    }
-
-    if (Remainder != NULL) {
-        *Remainder = 0;
-    }
-    *CursorChar = DesiredCursorChar;
+    YoriWinTextBufferOffsetFromDisplayCellOffset(WinMgr,
+                                                 Line,
+                                                 MultilineEdit->TabWidth,
+                                                 DisplayChar,
+                                                 MultilineEdit->TraditionalEditNavigation,
+                                                 CursorChar,
+                                                 Remainder);
 }
 
 /**
@@ -627,40 +595,25 @@ YoriWinMultilineEditFindDisplayCharFromCursorChar(
     __out PYORI_ALLOC_SIZE_T DisplayChar
     )
 {
-    YORI_ALLOC_SIZE_T CharIndex;
-    YORI_ALLOC_SIZE_T CurrentDisplayIndex;
     PYORI_STRING Line;
-    TCHAR Char;
-    BOOLEAN DoubleWideCharSupported;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
+    WinMgr = YoriWinGetWindowManagerHandle(TopLevelWindow);
 
     if (LineIndex >= MultilineEdit->LinesPopulated) {
         *DisplayChar = CursorChar;
         return;
     }
 
-    DoubleWideCharSupported = YoriWinMultilineEditIsDoubleWideCharSupported(MultilineEdit);
-
     Line = &MultilineEdit->LineArray[LineIndex];
 
-    CurrentDisplayIndex = 0;
-    for (CharIndex = 0; CharIndex < Line->LengthInChars; CharIndex++) {
-        if (CharIndex >= CursorChar) {
-            *DisplayChar = CurrentDisplayIndex;
-            return;
-        }
-
-        Char = Line->StartOfString[CharIndex];
-
-        if (Char == '\t') {
-            CurrentDisplayIndex = CurrentDisplayIndex + MultilineEdit->TabWidth;
-        } else if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(Char)) {
-            CurrentDisplayIndex = CurrentDisplayIndex + 2;
-        } else {
-            CurrentDisplayIndex++;
-        }
-    }
-
-    *DisplayChar = CursorChar + (CurrentDisplayIndex - CharIndex);
+    YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgr,
+                                                 Line,
+                                                 MultilineEdit->TabWidth,
+                                                 CursorChar,
+                                                 DisplayChar);
 }
 
 /**

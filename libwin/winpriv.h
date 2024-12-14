@@ -769,6 +769,26 @@ YoriWinScrollBarReposition(
 
 // TEXT.C
 
+VOID
+YoriWinTextBufferOffsetFromDisplayCellOffset(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PYORI_STRING String,
+    __in YORI_ALLOC_SIZE_T TabWidth,
+    __in YORI_ALLOC_SIZE_T CellOffset,
+    __in BOOLEAN AllowOffsetBeyondString,
+    __out PYORI_ALLOC_SIZE_T BufferOffset,
+    __out_opt PYORI_ALLOC_SIZE_T Remainder
+    );
+
+VOID
+YoriWinTextDisplayCellOffsetFromBufferOffset(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PYORI_STRING String,
+    __in YORI_ALLOC_SIZE_T TabWidth,
+    __in YORI_ALLOC_SIZE_T BufferOffset,
+    __out PYORI_ALLOC_SIZE_T CellOffset
+    );
+
 BOOLEAN
 YoriWinTextStringToDisplayCells(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
