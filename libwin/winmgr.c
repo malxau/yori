@@ -783,13 +783,13 @@ CONST TCHAR YoriWinAsciiMenu[] =  { '+', '-', '+', '*', '>' };
 /**
  Characters forming a scroll bar, in order of appearance
  */
-CONST TCHAR YoriWinScrollBar[] = { 0x2191, 0x2588, 0x2591, 0x2193 };
+CONST TCHAR YoriWinScrollBar[] = { 0x2191, 0x2190, 0x2588, 0x2591, 0x2193, 0x2192 };
 
 /**
  Characters forming a scroll bar using only ASCII characters, in order of
  appearance
  */
-CONST TCHAR YoriWinAsciiScrollBar[] = { '^', '#', ' ', 'v' };
+CONST TCHAR YoriWinAsciiScrollBar[] = { '^', '<', '#', ' ', 'v', '>' };
 
 /**
  Characters forming a window shadow, from least dense to most dense
