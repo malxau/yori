@@ -3,7 +3,7 @@
  *
  * Yori shell single line menu
  *
- * Copyright (c) 2018-2021 Malcolm J. Smith
+ * Copyright (c) 2018-2024 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,9 +37,10 @@ CHAR strSlmenuHelpText[] =
         "\n"
         "Displays a menu based on standard input and displays selection to output."
         "\n"
-        "SLMENU [-license] [-b|-t|-l <lines>] [-p <text>]\n"
+        "SLMENU [-license] [-b|-t|-l <lines>|-f] [-p <text>]\n"
         "\n"
         "   -b             Display single line at the bottom of the window\n"
+        "   -f             Display a full screen list\n"
         "   -l <lines>     Display in multiple lines and specify the number of lines\n" 
         "   -p <text>      Display prompt text before items\n" 
         "   -t             Display single line at the top of the window\n";
@@ -413,11 +414,33 @@ SlmenuCreateMultilineMenu(
         return FALSE;
     }
 
-    WindowHeight = (WORD)(DisplayLineCount + 8);
+    if (DisplayLineCount == 0) {
+        YoriWinGetWinMgrDimensions(WinMgr, &WindowSize);
+        WindowHeight = WindowSize.Y;
 
-    if (!YoriWinCreateWindow(WinMgr, 30, WindowHeight, 60, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
-        YoriWinCloseWindowManager(WinMgr);
-        return FALSE;
+        if (WindowSize.X < 40 || WindowSize.Y < 12) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("slmenu: window size too small\n"));
+            YoriWinCloseWindowManager(WinMgr);
+            return FALSE;
+        }
+
+        if (!YoriWinCreateWindow(WinMgr, WindowSize.X, WindowSize.Y, WindowSize.X, WindowSize.Y, 0, NULL, &Parent)) {
+            YoriWinCloseWindowManager(WinMgr);
+            return FALSE;
+        }
+    } else {
+        WindowHeight = (WORD)(DisplayLineCount + 8);
+
+        if (WindowHeight < 12) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("slmenu: window size too small\n"));
+            YoriWinCloseWindowManager(WinMgr);
+            return FALSE;
+        }
+
+        if (!YoriWinCreateWindow(WinMgr, 30, WindowHeight, 60, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
+            YoriWinCloseWindowManager(WinMgr);
+            return FALSE;
+        }
     }
 
     YoriWinGetClientSize(Parent, &WindowSize);
@@ -655,10 +678,15 @@ ENTRYPOINT(
                 SlmenuHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2021"));
+                YoriLibDisplayMitLicense(_T("2021-2024"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
+                Op = SlmenuDisplaySinglelineMenu;
                 Location = SlmenuBottomLine;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
+                Op = SlmenuDisplayMultilineMenu;
+                DisplayLineCount = 0;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
 
@@ -683,6 +711,7 @@ ENTRYPOINT(
                     DisplayPrompt = &Prompt;
                 }
             } else if (YoriLibCompareStringLitIns(&Arg, _T("t")) == 0) {
+                Op = SlmenuDisplaySinglelineMenu;
                 Location = SlmenuTopLine;
                 ArgumentUnderstood = TRUE;
             }
