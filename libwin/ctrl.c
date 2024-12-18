@@ -113,6 +113,34 @@ YoriWinCreateControl(
 }
 
 /**
+ Notify a control that it should close.  This allows it to cleanup any
+ control specific state before cleaning up the common control structures.
+
+ @param Ctrl Pointer to the control to clean up.
+ */
+VOID
+YoriWinCloseControl(
+    __in PYORI_WIN_CTRL Ctrl
+    )
+{
+    YORI_WIN_EVENT Event;
+    ZeroMemory(&Event, sizeof(Event));
+    Event.EventType = YoriWinEventParentDestroyed;
+
+    //
+    //  Normally a control should destroy itself when notified of parent
+    //  destruction.  If it doesn't support notification, clean it up
+    //  explicitly.
+    //
+
+    if (Ctrl->NotifyEventFn != NULL) {
+        Ctrl->NotifyEventFn(Ctrl, &Event);
+    } else {
+        YoriWinDestroyControl(Ctrl);
+    }
+}
+
+/**
  Close any initialized state within the common control header.
 
  @param Ctrl Pointer to the control to clean up.

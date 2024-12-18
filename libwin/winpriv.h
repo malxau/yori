@@ -588,6 +588,11 @@ YoriWinCreateControl(
     );
 
 VOID
+YoriWinCloseControl(
+    __in PYORI_WIN_CTRL Ctrl
+    );
+
+VOID
 YoriWinDestroyControl(
     __in PYORI_WIN_CTRL Ctrl
     );
