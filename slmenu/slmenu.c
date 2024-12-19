@@ -450,7 +450,7 @@ SlmenuCreateMultilineMenu(
     ListRect.Right = (SHORT)(WindowSize.X - 2);
     ListRect.Bottom = (SHORT)(WindowSize.Y - 3 - 1);
 
-    List = YoriWinListCreate(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR);
+    List = YoriWinListCreate(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_AUTO_HSCROLLBAR);
     if (List == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);

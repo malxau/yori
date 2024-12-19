@@ -2052,7 +2052,7 @@ RegeditCreateMainWindow(
     Area.Bottom = (WORD)(WindowSize.Y - 4);
     Area.Right = (WORD)(WindowSize.X / 2 - 1);
 
-    KeyList = YoriWinListCreate(Parent, &Area, YORI_WIN_LIST_STYLE_VSCROLLBAR);
+    KeyList = YoriWinListCreate(Parent, &Area, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_AUTO_HSCROLLBAR);
     if (KeyList == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -2083,7 +2083,7 @@ RegeditCreateMainWindow(
     Area.Bottom = (WORD)(WindowSize.Y - 4);
     Area.Right = (WORD)(WindowSize.X - 2);
 
-    ValueList = YoriWinListCreate(Parent, &Area, YORI_WIN_LIST_STYLE_VSCROLLBAR);
+    ValueList = YoriWinListCreate(Parent, &Area, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_AUTO_HSCROLLBAR);
     if (ValueList == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);

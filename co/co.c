@@ -1208,7 +1208,7 @@ CoCreateSynchronousMenu(VOID)
 
     YoriWinGetClientSize(Parent, &WindowSize);
 
-    List = YoriWinListCreate(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_MULTISELECT);
+    List = YoriWinListCreate(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_AUTO_HSCROLLBAR | YORI_WIN_LIST_STYLE_MULTISELECT);
     if (List == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);

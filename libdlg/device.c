@@ -625,7 +625,7 @@ YoriDlgDevice(
     Area.Bottom = (WORD)(WindowSize.Y - OptionCount - 6);
     Area.Right = (WORD)(WindowSize.X - 2);
 
-    Ctrl = YoriWinListCreate(Parent, &Area, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_DESELECT_ON_LOSE_FOCUS);
+    Ctrl = YoriWinListCreate(Parent, &Area, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_DESELECT_ON_LOSE_FOCUS | YORI_WIN_LIST_STYLE_AUTO_HSCROLLBAR);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         return FALSE;
