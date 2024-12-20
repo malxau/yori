@@ -34,7 +34,7 @@
  cursor, find the offset within the string buffer.  These are typically the
  same but tab expansion means they are not guaranteed to be identical.
 
- @param WinMgr Pointer to the window manager.
+ @param WinMgrHandle Pointer to the window manager.
  
  @param String The string of text to parse.
 
@@ -58,7 +58,7 @@
  */
 VOID
 YoriWinTextBufferOffsetFromDisplayCellOffset(
-    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING String,
     __in YORI_ALLOC_SIZE_T TabWidth,
     __in YORI_ALLOC_SIZE_T CellOffset,
@@ -73,7 +73,7 @@ YoriWinTextBufferOffsetFromDisplayCellOffset(
     TCHAR Char;
     BOOLEAN DoubleWideCharSupported;
 
-    DoubleWideCharSupported = YoriWinIsDoubleWideCharSupported(WinMgr);
+    DoubleWideCharSupported = YoriWinIsDoubleWideCharSupported(WinMgrHandle);
 
     CurrentDisplayIndex = 0;
     for (CharIndex = 0; CharIndex < String->LengthInChars; CharIndex++) {
@@ -114,7 +114,7 @@ YoriWinTextBufferOffsetFromDisplayCellOffset(
  cursor, find the offset within the string buffer.  These are typically the
  same but tab expansion means they are not guaranteed to be identical.
 
- @param WinMgr Pointer to the window manager.
+ @param WinMgrHandle Pointer to the window manager.
  
  @param String The string of text to parse.
 
@@ -127,7 +127,7 @@ YoriWinTextBufferOffsetFromDisplayCellOffset(
  */
 VOID
 YoriWinTextDisplayCellOffsetFromBufferOffset(
-    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING String,
     __in YORI_ALLOC_SIZE_T TabWidth,
     __in YORI_ALLOC_SIZE_T BufferOffset,
@@ -139,7 +139,7 @@ YoriWinTextDisplayCellOffsetFromBufferOffset(
     TCHAR Char;
     BOOLEAN DoubleWideCharSupported;
 
-    DoubleWideCharSupported = YoriWinIsDoubleWideCharSupported(WinMgr);
+    DoubleWideCharSupported = YoriWinIsDoubleWideCharSupported(WinMgrHandle);
 
     CurrentDisplayIndex = 0;
     for (CharIndex = 0; CharIndex < String->LengthInChars; CharIndex++) {
@@ -167,7 +167,7 @@ YoriWinTextDisplayCellOffsetFromBufferOffset(
  exact string as the input, but can diverge due to display requirements such
  as tab expansion or wide characters.
 
- @param WinMgr Pointer to the window manager.
+ @param WinMgrHandle Pointer to the window manager.
  
  @param String The string of text to display.
 
@@ -186,7 +186,7 @@ YoriWinTextDisplayCellOffsetFromBufferOffset(
  */
 BOOLEAN
 YoriWinTextStringToDisplayCells(
-    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING String,
     __in YORI_ALLOC_SIZE_T LeftPadding,
     __in YORI_ALLOC_SIZE_T TabWidth,
@@ -202,7 +202,7 @@ YoriWinTextStringToDisplayCells(
     BOOLEAN IsNanoServer;
 
     IsNanoServer = YoriLibIsNanoServer();
-    DoubleWideCharSupported = YoriWinIsDoubleWideCharSupported(WinMgr);
+    DoubleWideCharSupported = YoriWinIsDoubleWideCharSupported(WinMgrHandle);
 
     CellsDisplayed = 0;
     NeedDoubleBuffer = FALSE;

@@ -1,7 +1,7 @@
 /**
  * @file co/co.c
  *
- * Yori shell mini file manager
+ * Yori shell window manager test
  *
  * Copyright (c) 2019-2021 Malcolm J. Smith
  *
@@ -59,8 +59,13 @@ WinTestCreateWindow(
     PYORI_WIN_WINDOW_HANDLE Window;
     COORD WindowSize;
     SMALL_RECT ButtonArea;
+    SMALL_RECT LabelArea;
     YORI_STRING Caption;
     WORD ButtonWidth;
+    YORI_ALLOC_SIZE_T Index;
+    YORI_ALLOC_SIZE_T StringOffset;
+    YORI_ALLOC_SIZE_T WordLength;
+    YORI_ALLOC_SIZE_T WordOffset;
     PYORI_WIN_CTRL_HANDLE Ctrl;
 
     if (!YoriWinGetWinMgrDimensions(WinMgr, &WindowSize)) {
@@ -89,6 +94,59 @@ WinTestCreateWindow(
     ButtonArea.Right = (WORD)(ButtonArea.Left + 1 + WINTEST_BUTTON_WIDTH);
 
     Ctrl = YoriWinButtonCreate(Window, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, WinTestExitButtonClicked);
+    if (Ctrl == NULL) {
+        YoriWinDestroyWindow(Window);
+        return NULL;
+    }
+
+    if (!YoriLibAllocateString(&Caption, 128)) {
+        YoriWinDestroyWindow(Window);
+        return NULL;
+    }
+
+    LabelArea.Left = 1;
+    LabelArea.Top = 1;
+    LabelArea.Bottom = 8;
+    LabelArea.Right = (SHORT)(ButtonArea.Left - 1);
+
+    //
+    //  Create some double wide chars, normal chars, and an accelerator
+    //  in the middle
+    //
+    StringOffset = 0;
+    for (Index = 1; Index < 12; Index++) {
+        WordLength = Index;
+        if (WordLength > 6) {
+            WordLength = WordLength - 6;
+        }
+        for (WordOffset = 0; WordOffset < WordLength && StringOffset < Caption.LengthAllocated; WordOffset++) {
+            if (WordLength == 5 && WordOffset == 2 && StringOffset + 1 < Caption.LengthAllocated) {
+                Caption.StartOfString[StringOffset] = '&';
+                StringOffset++;
+            }
+            Caption.StartOfString[StringOffset] = 0x3405;
+            StringOffset++;
+        }
+
+        if (StringOffset < Caption.LengthAllocated) {
+            Caption.StartOfString[StringOffset] = ' ';
+            StringOffset++;
+        }
+
+        for (WordOffset = 0; WordOffset < WordLength && StringOffset < Caption.LengthAllocated; WordOffset++) {
+            Caption.StartOfString[StringOffset] = 'x';
+            StringOffset++;
+        }
+
+        if (StringOffset < Caption.LengthAllocated) {
+            Caption.StartOfString[StringOffset] = ' ';
+            StringOffset++;
+        }
+    }
+    Caption.LengthInChars = StringOffset;
+
+    Ctrl = YoriWinLabelCreate(Window, &LabelArea, &Caption, 0);
+    YoriLibFreeStringContents(&Caption);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Window);
         return NULL;

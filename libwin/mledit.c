@@ -549,10 +549,10 @@ YoriWinMultilineEditFindCursorCharFromDisplayChar(
 {
     PYORI_STRING Line;
     PYORI_WIN_WINDOW TopLevelWindow;
-    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
-    WinMgr = YoriWinGetWindowManagerHandle(TopLevelWindow);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
 
     if (LineIndex >= MultilineEdit->LinesPopulated) {
         *CursorChar = DisplayChar;
@@ -564,7 +564,7 @@ YoriWinMultilineEditFindCursorCharFromDisplayChar(
 
     Line = &MultilineEdit->LineArray[LineIndex];
 
-    YoriWinTextBufferOffsetFromDisplayCellOffset(WinMgr,
+    YoriWinTextBufferOffsetFromDisplayCellOffset(WinMgrHandle,
                                                  Line,
                                                  MultilineEdit->TabWidth,
                                                  DisplayChar,
@@ -597,10 +597,10 @@ YoriWinMultilineEditFindDisplayCharFromCursorChar(
 {
     PYORI_STRING Line;
     PYORI_WIN_WINDOW TopLevelWindow;
-    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
-    WinMgr = YoriWinGetWindowManagerHandle(TopLevelWindow);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
 
     if (LineIndex >= MultilineEdit->LinesPopulated) {
         *DisplayChar = CursorChar;
@@ -609,7 +609,7 @@ YoriWinMultilineEditFindDisplayCharFromCursorChar(
 
     Line = &MultilineEdit->LineArray[LineIndex];
 
-    YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgr,
+    YoriWinTextDisplayCellOffsetFromBufferOffset(WinMgrHandle,
                                                  Line,
                                                  MultilineEdit->TabWidth,
                                                  CursorChar,
@@ -850,14 +850,14 @@ YoriWinMultilineEditGenerateDisplayLine(
     PYORI_STRING SourceLine;
     YORI_STRING SourceString;
     PYORI_WIN_WINDOW TopLevelWindow;
-    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
     YORI_ALLOC_SIZE_T BufferChar;
     YORI_ALLOC_SIZE_T Remainder;
 
     ASSERT(LineIndex < MultilineEdit->LinesPopulated);
 
     TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
-    WinMgr = YoriWinGetWindowManagerHandle(TopLevelWindow);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
     SourceLine = &MultilineEdit->LineArray[LineIndex];
 
     //
@@ -889,7 +889,7 @@ YoriWinMultilineEditGenerateDisplayLine(
     //  Generate display cells for the text.
     //
 
-    return YoriWinTextStringToDisplayCells(WinMgr,
+    return YoriWinTextStringToDisplayCells(WinMgrHandle,
                                            &SourceString,
                                            Remainder,
                                            MultilineEdit->TabWidth,

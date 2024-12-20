@@ -576,6 +576,7 @@ YoriWinLabelParseAccelerator(
 
 YORI_ALLOC_SIZE_T
 YoriWinLabelCountLinesRequiredForText(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Text,
     __in YORI_ALLOC_SIZE_T CtrlWidth,
     __out_opt PYORI_ALLOC_SIZE_T MaximumWidth

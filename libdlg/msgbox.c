@@ -108,7 +108,10 @@ YoriDlgMessageBox(
     //
 
     DisplayLength = WindowSize.X - 8;
-    LabelLinesRequired = YoriWinLabelCountLinesRequiredForText(Text, DisplayLength, &LabelWidthRequired);
+    LabelLinesRequired = YoriWinLabelCountLinesRequiredForText(WinMgrHandle,
+                                                               Text,
+                                                               DisplayLength,
+                                                               &LabelWidthRequired);
 
     //
     //  Vertically, the window has 7 lines of overhead (title bar, padding

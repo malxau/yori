@@ -113,13 +113,19 @@ YoriDlgAbout(
 
     DisplayLength = WindowSize.X - 10;
     if (CenteredText->LengthInChars > 0) {
-        CenteredLabelLinesRequired = YoriWinLabelCountLinesRequiredForText(CenteredText, DisplayLength, &CenteredLabelWidthRequired);
+        CenteredLabelLinesRequired = YoriWinLabelCountLinesRequiredForText(WinMgrHandle,
+                                                                           CenteredText,
+                                                                           DisplayLength,
+                                                                           &CenteredLabelWidthRequired);
     } else {
         CenteredLabelLinesRequired = 0;
         CenteredLabelWidthRequired = 0;
     }
     if (LeftText->LengthInChars > 0) {
-        LeftLabelLinesRequired = YoriWinLabelCountLinesRequiredForText(LeftText, DisplayLength, &LeftLabelWidthRequired);
+        LeftLabelLinesRequired = YoriWinLabelCountLinesRequiredForText(WinMgrHandle,
+                                                                       LeftText,
+                                                                       DisplayLength,
+                                                                       &LeftLabelWidthRequired);
     } else {
         LeftLabelLinesRequired = 0;
         LeftLabelWidthRequired = 0;
