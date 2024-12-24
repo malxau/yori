@@ -8754,18 +8754,6 @@ ALLOCATE_AND_INITIALIZE_SID(PSID_IDENTIFIER_AUTHORITY, BYTE, DWORD, DWORD, DWORD
 typedef ALLOCATE_AND_INITIALIZE_SID *PALLOCATE_AND_INITIALIZE_SID;
 
 /**
- Prototype for the CheckTokenMembership function.
- */
-typedef
-BOOL WINAPI
-CHECK_TOKEN_MEMBERSHIP(HANDLE, PSID, PBOOL);
-
-/**
- Prototype for a pointer to the CheckTokenMembership function.
- */
-typedef CHECK_TOKEN_MEMBERSHIP *PCHECK_TOKEN_MEMBERSHIP;
-
-/**
  Prototype for the CommandLineFromMsiDescriptor function.
  */
 typedef
@@ -9262,11 +9250,6 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to AllocateAndInitializeSid.
      */
     PALLOCATE_AND_INITIALIZE_SID pAllocateAndInitializeSid;
-
-    /**
-     If it's available on the current system, a pointer to CheckTokenMembership.
-     */
-    PCHECK_TOKEN_MEMBERSHIP pCheckTokenMembership;
 
     /**
      If it's available on the current system, a pointer to CommandLineFromMsiDescriptor.
