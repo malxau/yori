@@ -2608,6 +2608,14 @@ YoriLibGetDiskFreeSpace(
 
 __success(return)
 BOOL
+YoriLibCheckTokenMembership(
+    __in HANDLE TokenHandle,
+    __in PSID SidToCheck,
+    __out PBOOL IsMember
+    );
+
+__success(return)
+BOOL
 YoriLibIsCurrentUserInGroup(
     __in PYORI_STRING GroupName,
     __out PBOOL IsMember
