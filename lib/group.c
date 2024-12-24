@@ -29,6 +29,97 @@
 
 
 /**
+ Query whether the specified group SID is present and enabled in the specified
+ access token.
+
+ @param TokenHandle A handle to an access token. If NULL, the current thread's
+        token is used if available, otherwise the current process's token.
+
+ @param SidToCheck The group SID to check for.
+
+ @param IsMember On successful completion, set to TRUE to indicate the SID is
+        present and enabled in the access token, FALSE if not.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibCheckTokenMembership(
+    __in HANDLE TokenHandle,
+    __in PSID SidToCheck,
+    __out PBOOL IsMember
+    )
+{
+    BOOL TokenOpened = FALSE;
+    PTOKEN_GROUPS Groups;
+    DWORD GroupsSize;
+    YORI_ALLOC_SIZE_T Count;
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pOpenThreadToken == NULL ||
+        DllAdvApi32.pOpenProcessToken == NULL ||
+        DllAdvApi32.pGetTokenInformation == NULL ||
+        DllAdvApi32.pEqualSid == NULL) {
+
+        return FALSE;
+    }
+
+    if (TokenHandle == NULL) {
+        if (!DllAdvApi32.pOpenThreadToken(GetCurrentThread(), TOKEN_QUERY, TRUE, &TokenHandle)) {
+            if (GetLastError() != ERROR_NO_TOKEN) {
+                return FALSE;
+            }
+            if (!DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &TokenHandle)) {
+                return FALSE;
+            }
+        }
+        TokenOpened = TRUE;
+    }
+
+    DllAdvApi32.pGetTokenInformation(TokenHandle, TokenGroups, NULL, 0, &GroupsSize);
+    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+        if (TokenOpened) {
+            CloseHandle(TokenHandle);
+        }
+        return FALSE;
+    }
+
+    Groups = YoriLibMalloc(GroupsSize);
+    if (Groups == NULL) {
+        if (TokenOpened) {
+            CloseHandle(TokenHandle);
+        }
+        return FALSE;
+    }
+
+    if (!DllAdvApi32.pGetTokenInformation(TokenHandle, TokenGroups, Groups, GroupsSize, &GroupsSize)) {
+        if (TokenOpened) {
+            CloseHandle(TokenHandle);
+        }
+        YoriLibFree(Groups);
+        return FALSE;
+    }
+
+    *IsMember = FALSE;
+
+    for (Count = 0; Count < Groups->GroupCount; Count++) {
+        if (DllAdvApi32.pEqualSid(Groups->Groups[Count].Sid, SidToCheck) &&
+            Groups->Groups[Count].Attributes & SE_GROUP_ENABLED) {
+
+            *IsMember = TRUE;
+            break;
+        }
+    }
+
+    if (TokenOpened) {
+        CloseHandle(TokenHandle);
+    }
+    YoriLibFree(Groups);
+    return TRUE;
+}
+
+/**
  Query whether the current process is running as part of the specified group.
 
  @param GroupName The group name to check whether the process is running with
@@ -59,9 +150,7 @@ YoriLibIsCurrentUserInGroup(
 
     YoriLibLoadAdvApi32Functions();
 
-    if (DllAdvApi32.pLookupAccountNameW == NULL ||
-        DllAdvApi32.pCheckTokenMembership == NULL) {
-
+    if (DllAdvApi32.pLookupAccountNameW == NULL) {
         return FALSE;
     }
 
@@ -76,7 +165,7 @@ YoriLibIsCurrentUserInGroup(
         return FALSE;
     }
 
-    if (!DllAdvApi32.pCheckTokenMembership(NULL, &Sid.Sid, IsMember)) {
+    if (!YoriLibCheckTokenMembership(NULL, &Sid.Sid, IsMember)) {
         return FALSE;
     }
 
@@ -107,7 +196,6 @@ YoriLibIsCurrentUserInWellKnownGroup(
     YoriLibLoadAdvApi32Functions();
 
     if (DllAdvApi32.pAllocateAndInitializeSid == NULL ||
-        DllAdvApi32.pCheckTokenMembership == NULL ||
         DllAdvApi32.pFreeSid == NULL) {
 
         return FALSE;
@@ -128,7 +216,7 @@ YoriLibIsCurrentUserInWellKnownGroup(
         return FALSE;
     }
 
-    if (!DllAdvApi32.pCheckTokenMembership(NULL, Sid, IsMember)) {
+    if (!YoriLibCheckTokenMembership(NULL, Sid, IsMember)) {
         DllAdvApi32.pFreeSid(Sid);
         return FALSE;
     }

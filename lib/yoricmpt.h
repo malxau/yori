@@ -8850,6 +8850,18 @@ CRYPT_RELEASE_CONTEXT(DWORD_PTR, DWORD);
 typedef CRYPT_RELEASE_CONTEXT *PCRYPT_RELEASE_CONTEXT;
 
 /**
+ Prototype for the EqualSid function.
+ */
+typedef
+BOOL WINAPI
+EQUAL_SID(PSID, PSID);
+
+/**
+ Prototype for a pointer to the EqualSid function.
+ */
+typedef EQUAL_SID *PEQUAL_SID;
+
+/**
  Prototype for the FreeSid function.
  */
 typedef
@@ -8896,6 +8908,18 @@ GET_SECURITY_DESCRIPTOR_OWNER(PSECURITY_DESCRIPTOR, PSID, LPBOOL);
  Prototype for a pointer to the GetSecurityDescriptorOwner function.
  */
 typedef GET_SECURITY_DESCRIPTOR_OWNER *PGET_SECURITY_DESCRIPTOR_OWNER;
+
+/**
+ A prototype for the GetTokenInformation function.
+ */
+typedef
+BOOL WINAPI
+GET_TOKEN_INFORMATION(HANDLE, TOKEN_INFORMATION_CLASS, LPVOID, DWORD, PDWORD);
+
+/**
+ Prototype for a pointer to the GetTokenInformation function.
+ */
+typedef GET_TOKEN_INFORMATION *PGET_TOKEN_INFORMATION;
 
 /**
  A prototype for the ImpersonateSelf function.
@@ -9280,6 +9304,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
     PCRYPT_RELEASE_CONTEXT pCryptReleaseContext;
 
     /**
+     If it's available on the current system, a pointer to EqualSid.
+     */
+    PEQUAL_SID pEqualSid;
+
+    /**
      If it's available on the current system, a pointer to FreeSid.
      */
     PFREE_SID pFreeSid;
@@ -9298,6 +9327,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to GetSecurityDescriptorOwner.
      */
     PGET_SECURITY_DESCRIPTOR_OWNER pGetSecurityDescriptorOwner;
+
+    /**
+     If it's available on the current system, a pointer to GetTokenInformation.
+     */
+    PGET_TOKEN_INFORMATION pGetTokenInformation;
 
     /**
      If it's available on the current system, a pointer to ImpersonateSelf.

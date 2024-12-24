@@ -133,7 +133,10 @@ ENTRYPOINT(
     if (DllAdvApi32.pAllocateAndInitializeSid == NULL ||
         DllAdvApi32.pLookupAccountNameW == NULL ||
         DllAdvApi32.pFreeSid == NULL ||
-        DllAdvApi32.pCheckTokenMembership == NULL) {
+        DllAdvApi32.pOpenThreadToken == NULL ||
+        DllAdvApi32.pOpenProcessToken == NULL ||
+        DllAdvApi32.pGetTokenInformation == NULL ||
+        DllAdvApi32.pEqualSid == NULL) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("grpcmp: OS functionality not available\n"));
         return EXIT_FAILURE;
@@ -168,7 +171,7 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
 
-        if (DllAdvApi32.pCheckTokenMembership(NULL, pSid, &IsMember)) {
+        if (YoriLibCheckTokenMembership(NULL, pSid, &IsMember)) {
             DllAdvApi32.pFreeSid(pSid);
             if (IsMember) {
                 return EXIT_SUCCESS;
@@ -203,7 +206,7 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
 
-        if (DllAdvApi32.pCheckTokenMembership(NULL, &Sid.Sid, &IsMember)) {
+        if (YoriLibCheckTokenMembership(NULL, &Sid.Sid, &IsMember)) {
             if (IsMember) {
                 return EXIT_SUCCESS;
             }
