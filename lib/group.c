@@ -77,8 +77,8 @@ YoriLibCheckTokenMembership(
         TokenOpened = TRUE;
     }
 
-    DllAdvApi32.pGetTokenInformation(TokenHandle, TokenGroups, NULL, 0, &GroupsSize);
-    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+    if (DllAdvApi32.pGetTokenInformation(TokenHandle, TokenGroups, NULL, 0, &GroupsSize) ||
+        (GetLastError() != ERROR_INSUFFICIENT_BUFFER)) {
         if (TokenOpened) {
             CloseHandle(TokenHandle);
         }
@@ -105,7 +105,7 @@ YoriLibCheckTokenMembership(
 
     for (Count = 0; Count < Groups->GroupCount; Count++) {
         if (DllAdvApi32.pEqualSid(Groups->Groups[Count].Sid, SidToCheck) &&
-            Groups->Groups[Count].Attributes & SE_GROUP_ENABLED) {
+            (Groups->Groups[Count].Attributes & SE_GROUP_ENABLED) != 0) {
 
             *IsMember = TRUE;
             break;
