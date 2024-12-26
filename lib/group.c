@@ -45,7 +45,7 @@
 __success(return)
 BOOL
 YoriLibCheckTokenMembership(
-    __in HANDLE TokenHandle,
+    __in_opt HANDLE TokenHandle,
     __in PSID SidToCheck,
     __out PBOOL IsMember
     )

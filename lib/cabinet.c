@@ -1662,7 +1662,7 @@ YoriLibCreateCab(
                                       NULL,
                                       DefaultPtr);
 
-    if (CharsCopied <= 0 || CharsCopied >= sizeof(CabHandle->CompressContext.CabPath)) {
+    if (CharsCopied <= 0 || (DWORD)CharsCopied >= sizeof(CabHandle->CompressContext.CabPath)) {
         YoriLibDereference(CabHandle);
         return FALSE;
     }
