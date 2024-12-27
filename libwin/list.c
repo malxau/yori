@@ -61,6 +61,19 @@ typedef struct _YORI_WIN_CTRL_LIST {
     YORI_WIN_ITEM_ARRAY ItemArray;
 
     /**
+     A string of keystrokes that the user has entered indicating the item to
+     find.
+     */
+    YORI_STRING SearchString;
+
+    /**
+     The tick of when the last keystroke was entered.  Any key pressed quickly
+     is appended to the string; if a delay occurs, the string is reset and the
+     key constitutes a new search.
+     */
+    DWORD LastKeyTick;
+
+    /**
      The index within ItemArray of the first array element to display in the
      list
      */
@@ -422,7 +435,6 @@ YoriWinListPaintVerticalList(
         YoriWinScrollBarSetPosition(List->VScrollCtrl, List->FirstDisplayedOption, ElementCountToDisplay, MaximumTopValue);
     }
 
-
     if (List->HScrollCtrl != NULL) {
         YORI_MAX_UNSIGNED_T MaximumInitialValue;
         if (List->LongestItemLength > MaxCharsToDisplay) {
@@ -565,7 +577,6 @@ YoriWinListPaintHorizontalList(
 
     return TRUE;
 }
-
 
 
 /**
@@ -830,14 +841,36 @@ YoriWinListFindItemByChar(
 {
     YORI_ALLOC_SIZE_T Index;
     PYORI_WIN_ITEM_ENTRY Element;
-    TCHAR UpcaseChar;
+    DWORD CurrentTick;
 
-    UpcaseChar = YoriLibUpcaseChar(Char);
+    //
+    //  If a key press took longer than 500ms, treat it as the beginning of
+    //  a new search
+    //
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 28159) // Deprecated GetTickCount; overflows are
+                                 // deterministic
+#endif
+    CurrentTick = GetTickCount();
+    if (List->LastKeyTick + 500 < CurrentTick) {
+        List->SearchString.LengthInChars = 0;
+    }
+
+    if (List->SearchString.LengthInChars + 1 > List->SearchString.LengthAllocated) {
+        if (!YoriLibReallocString(&List->SearchString, List->SearchString.LengthAllocated + 128)) {
+            return FALSE;
+        }
+    }
+
+    List->SearchString.StartOfString[List->SearchString.LengthInChars] = Char;
+    List->SearchString.LengthInChars = List->SearchString.LengthInChars++;
+    List->LastKeyTick = CurrentTick;
 
     //
     //  If nothing is selected, search from the top.  If something is
-    //  selected, start from one after that, and wrap from the top if
-    //  nothing is found.
+    //  selected, start from that one, and wrap from the top if nothing is
+    //  found.
     //
 
     if (!List->ItemActive) {
@@ -845,7 +878,7 @@ YoriWinListFindItemByChar(
         for (Index = 0; Index < List->ItemArray.Count; Index++) {
             Element = &List->ItemArray.Items[Index];
             if (Element->String.LengthInChars > 0 &&
-                UpcaseChar == YoriLibUpcaseChar(Element->String.StartOfString[0])) {
+                YoriLibCompareStringInsCnt(&List->SearchString, &Element->String, List->SearchString.LengthInChars) == 0) {
 
                 List->ItemActive = TRUE;
                 List->ActiveOption = Index;
@@ -855,20 +888,20 @@ YoriWinListFindItemByChar(
 
     } else {
 
-        for (Index = List->ActiveOption + 1; Index < List->ItemArray.Count; Index++) {
+        for (Index = List->ActiveOption; Index < List->ItemArray.Count; Index++) {
             Element = &List->ItemArray.Items[Index];
             if (Element->String.LengthInChars > 0 &&
-                UpcaseChar == YoriLibUpcaseChar(Element->String.StartOfString[0])) {
+                YoriLibCompareStringInsCnt(&List->SearchString, &Element->String, List->SearchString.LengthInChars) == 0) {
 
                 List->ActiveOption = Index;
                 return TRUE;
             }
         }
 
-        for (Index = 0; Index <= List->ActiveOption; Index++) {
+        for (Index = 0; Index < List->ActiveOption; Index++) {
             Element = &List->ItemArray.Items[Index];
             if (Element->String.LengthInChars > 0 &&
-                UpcaseChar == YoriLibUpcaseChar(Element->String.StartOfString[0])) {
+                YoriLibCompareStringInsCnt(&List->SearchString, &Element->String, List->SearchString.LengthInChars) == 0) {
 
                 List->ActiveOption = Index;
                 return TRUE;
@@ -1006,18 +1039,6 @@ YoriWinListEventHandler(
                         List->DisplayOffset = List->DisplayOffset + 1;
                         YoriWinListPaint(List);
                     }
-                } else if ((Event->KeyDown.Char >= 'A' && Event->KeyDown.Char <= 'Z') ||
-                           (Event->KeyDown.Char >= 'a' && Event->KeyDown.Char <= 'z') ||
-                           (Event->KeyDown.Char >= '0' && Event->KeyDown.Char <= '9')) {
-
-                    if (YoriWinListFindItemByChar(List, Event->KeyDown.Char)) {
-                        YoriWinListEnsureActiveItemVisible(List);
-                        if (List->SelectionChangeCallback) {
-                            List->SelectionChangeCallback(&List->Ctrl);
-                        }
-                        YoriWinListPaint(List);
-                    }
-
                 } else if (Event->KeyDown.Char == ' ' &&
                            List->ItemActive &&
                            List->MultiSelect) {
@@ -1030,6 +1051,14 @@ YoriWinListEventHandler(
                         List->SelectionChangeCallback(&List->Ctrl);
                     }
                     YoriWinListPaint(List);
+                } else if (Event->KeyDown.Char >= ' ') {
+                    if (YoriWinListFindItemByChar(List, Event->KeyDown.Char)) {
+                        YoriWinListEnsureActiveItemVisible(List);
+                        if (List->SelectionChangeCallback) {
+                            List->SelectionChangeCallback(&List->Ctrl);
+                        }
+                        YoriWinListPaint(List);
+                    }
                 }
             }
             break;
@@ -1128,6 +1157,7 @@ YoriWinListEventHandler(
             break;
 
         case YoriWinEventParentDestroyed:
+            YoriLibFreeStringContents(&List->SearchString);
             YoriWinItemArrayCleanup(&List->ItemArray);
             YoriWinDestroyControl(Ctrl);
             YoriLibDereference(List);
