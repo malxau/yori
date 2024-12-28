@@ -26,8 +26,8 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include <yoricall.h>
 #include <yoriwin.h>
+#include <yoridlg.h>
 
 /**
  Help text to display to the user.
@@ -79,7 +79,20 @@ typedef struct _SLMENU_CONTEXT {
      The number of strings populated in the StringArray.
      */
     YORI_ALLOC_SIZE_T StringCount;
+
+    /**
+     The string that was most recently searched for.
+     */
+    YORI_STRING SearchString;
+
 } SLMENU_CONTEXT, *PSLMENU_CONTEXT;
+
+/**
+ A list of well known control IDs.
+ */
+typedef enum _SLMENU_CONTROLS {
+    SlmenuControlList = 1
+} SLMENU_CONTROLS;
 
 /**
  A callback invoked when the ok button is clicked.
@@ -109,6 +122,88 @@ SlmenuCancelButtonClicked(
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
     YoriWinCloseWindow(Parent, FALSE);
+}
+
+/**
+ A callback invoked when the find button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+SlmenuFindButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_CTRL_HANDLE List;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+    PSLMENU_CONTEXT MenuContext;
+    YORI_STRING Title;
+    BOOLEAN MatchCase;
+    YORI_STRING Text;
+    YORI_ALLOC_SIZE_T ActiveIndex;
+    YORI_ALLOC_SIZE_T SearchIndex;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    WinMgr = YoriWinGetWindowManagerHandle(Parent);
+    MenuContext = YoriWinGetControlContext(Parent);
+
+    YoriLibConstantString(&Title, _T("Find"));
+    YoriLibInitEmptyString(&Text);
+
+    if (!YoriDlgFindText(WinMgr,
+                         &Title,
+                         &MenuContext->SearchString,
+                         &MatchCase,
+                         &Text)) {
+
+        return;
+    }
+
+    List = YoriWinFindControlById(Parent, SlmenuControlList);
+    ASSERT(List != NULL);
+
+    //
+    //  If nothing is selected, start from the top, and search to the end.
+    //
+
+    if (!YoriWinListGetActiveOption(List, &ActiveIndex)) {
+        for (SearchIndex = 0; SearchIndex < MenuContext->StringCount; SearchIndex++) {
+            if (YoriLibFindFirstMatchSubstrIns(&MenuContext->StringArray[SearchIndex], 1, &Text, NULL) != NULL) {
+                break;
+            }
+        }
+
+    } else {
+
+        //
+        //  If something is selected, search from the next item to the end.
+        //  If it's still not found, start from the top up to the selected
+        //  item.
+        //
+
+        for (SearchIndex = ActiveIndex + 1; SearchIndex < MenuContext->StringCount; SearchIndex++) {
+            if (YoriLibFindFirstMatchSubstrIns(&MenuContext->StringArray[SearchIndex], 1, &Text, NULL) != NULL) {
+                break;
+            }
+        }
+
+        if (SearchIndex == MenuContext->StringCount) {
+            for (SearchIndex = 0; SearchIndex < ActiveIndex; SearchIndex++) {
+                if (YoriLibFindFirstMatchSubstrIns(&MenuContext->StringArray[SearchIndex], 1, &Text, NULL) != NULL) {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (SearchIndex < MenuContext->StringCount) {
+        YoriWinListSetActiveOption(List, SearchIndex);
+    }
+
+    YoriLibFreeStringContents(&MenuContext->SearchString);
+    YoriLibCloneString(&MenuContext->SearchString, &Text);
+    YoriLibFreeStringContents(&Text);
 }
 
 /**
@@ -186,9 +281,7 @@ SlmenuCalculateColumnWidthForItems(
 /**
  Display a popup window containing a list of items.
 
- @param MenuOptions Pointer to an array of list items.
-
- @param NumberOptions The number of elements within the array.
+ @param MenuContext Pointer to the application context.
 
  @param Location The location to display the line.
 
@@ -204,8 +297,7 @@ SlmenuCalculateColumnWidthForItems(
 __success(return)
 BOOL
 SlmenuCreateSinglelineMenu(
-    __in PYORI_STRING MenuOptions,
-    __in YORI_ALLOC_SIZE_T NumberOptions,
+    __in PSLMENU_CONTEXT MenuContext,
     __in SLMENU_LOCATION Location,
     __in_opt PYORI_STRING Title,
     __out PYORI_ALLOC_SIZE_T ActiveOption
@@ -223,7 +315,7 @@ SlmenuCreateSinglelineMenu(
     DWORD_PTR Result;
     COORD WinMgrSize;
 
-    if (NumberOptions == 0) {
+    if (MenuContext->StringCount == 0) {
         return FALSE;
     }
 
@@ -303,10 +395,10 @@ SlmenuCreateSinglelineMenu(
     }
 
     YoriWinGetClientSize(List, &WindowSize);
-    ButtonWidth = SlmenuCalculateColumnWidthForItems(MenuOptions, NumberOptions, WindowSize.X);
+    ButtonWidth = SlmenuCalculateColumnWidthForItems(MenuContext->StringArray, MenuContext->StringCount, WindowSize.X);
     YoriWinListSetHorizontalItemWidth(List, ButtonWidth);
 
-    if (!YoriWinListAddItems(List, MenuOptions, NumberOptions)) {
+    if (!YoriWinListAddItems(List, MenuContext->StringArray, MenuContext->StringCount)) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
@@ -350,6 +442,8 @@ SlmenuCreateSinglelineMenu(
         return FALSE;
     }
 
+    YoriWinSetControlContext(Parent, MenuContext);
+
     Result = FALSE;
     if (!YoriWinProcessInputForWindow(Parent, &Result)) {
         Result = FALSE;
@@ -368,9 +462,7 @@ SlmenuCreateSinglelineMenu(
 /**
  Display a popup window containing a list of items.
 
- @param MenuOptions Pointer to an array of list items.
-
- @param NumberOptions The number of elements within the array.
+ @param MenuContext Pointer to the application context.
 
  @param Title The string to display on the title bar of the dialog.
 
@@ -387,8 +479,7 @@ SlmenuCreateSinglelineMenu(
 __success(return)
 BOOL
 SlmenuCreateMultilineMenu(
-    __in PYORI_STRING MenuOptions,
-    __in YORI_ALLOC_SIZE_T NumberOptions,
+    __in PSLMENU_CONTEXT MenuContext,
     __in PYORI_STRING Title,
     __in YORI_ALLOC_SIZE_T DisplayLineCount,
     __out PYORI_ALLOC_SIZE_T ActiveOption
@@ -406,7 +497,7 @@ SlmenuCreateMultilineMenu(
     DWORD_PTR Result;
     WORD WindowHeight;
 
-    if (NumberOptions == 0) {
+    if (MenuContext->StringCount == 0) {
         return FALSE;
     }
 
@@ -457,13 +548,14 @@ SlmenuCreateMultilineMenu(
         return FALSE;
     }
 
-    if (!YoriWinListAddItems(List, MenuOptions, NumberOptions)) {
+    if (!YoriWinListAddItems(List, MenuContext->StringArray, MenuContext->StringCount)) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
 
     YoriWinListSetActiveOption(List, 0);
+    YoriWinSetControlId(List, SlmenuControlList);
 
     ButtonWidth = (WORD)(sizeof("Cancel") - 1 + 2);
 
@@ -500,6 +592,20 @@ SlmenuCreateMultilineMenu(
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+
+    ButtonArea.Left = (SHORT)(1);
+    ButtonArea.Right = (WORD)(ButtonArea.Left + ButtonWidth + 1);
+
+    YoriLibConstantString(&Caption, _T("&Find"));
+
+    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, 0, SlmenuFindButtonClicked);
+    if (Ctrl == NULL) {
+        YoriWinDestroyWindow(Parent);
+        YoriWinCloseWindowManager(WinMgr);
+        return FALSE;
+    }
+
+    YoriWinSetControlContext(Parent, MenuContext);
 
     Result = FALSE;
     if (!YoriWinProcessInputForWindow(Parent, &Result)) {
@@ -607,6 +713,8 @@ SlmenuCleanupContext(
     if (MenuContext->StringArray != NULL) {
         YoriLibDereference(MenuContext->StringArray);
     }
+
+    YoriLibFreeStringContents(&MenuContext->SearchString);
 }
 
 /**
@@ -736,7 +844,7 @@ ENTRYPOINT(
         }
 
         if (Result == EXIT_SUCCESS) {
-            if (!SlmenuCreateSinglelineMenu(MenuContext.StringArray, MenuContext.StringCount, Location, DisplayPrompt, &Index)) {
+            if (!SlmenuCreateSinglelineMenu(&MenuContext, Location, DisplayPrompt, &Index)) {
                 Result = EXIT_FAILURE;
             }
         }
@@ -756,7 +864,7 @@ ENTRYPOINT(
         }
 
         if (Result == EXIT_SUCCESS) {
-            if (!SlmenuCreateMultilineMenu(MenuContext.StringArray, MenuContext.StringCount, &Prompt, DisplayLineCount, &Index)) {
+            if (!SlmenuCreateMultilineMenu(&MenuContext, &Prompt, DisplayLineCount, &Index)) {
                 Result = EXIT_FAILURE;
             }
         }
