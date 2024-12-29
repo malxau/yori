@@ -360,15 +360,8 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
     BOOLEAN AutoIndentApplied;
 
     /**
-     When AutoIndentApplied is TRUE, specifies the line used to supply the
-     auto indent.  When backspace is pressed, earlier lines are examined to
-     find the previous indent.
-     */
-    YORI_ALLOC_SIZE_T AutoIndentSourceLine;
-
-    /**
      When AutoIndentApplied is TRUE, specifies the number of characters to
-     obtain from the AutoIndentSourceLine.  This can be less than the total
+     obtain from the previous indented line.  This can be less than the total
      number of indentation characters if the lines contain different
      white space characters (eg. if the first line contains a space and tab,
      and a later line contains two spaces, the first space is considered a
@@ -2196,6 +2189,38 @@ YoriWinMultilineEditGetTextRangeLength(
  Count the leading whitespace characters in a line and return a substring
  that can be used to apply an indentation to a later line.
 
+ @param Line Specifies the contents of the line that contains the indentation
+        string to return.
+
+ @param Indent On successful completion, updated to point to the substring
+        within the line that consists of initial white space characters.
+ */
+VOID
+YoriWinMultilineEditGetIndentationOnString(
+    __in PCYORI_STRING Line,
+    __out PYORI_STRING Indent
+    )
+{
+    YORI_ALLOC_SIZE_T Index;
+
+    YoriLibInitEmptyString(Indent);
+    for (Index = 0; Index < Line->LengthInChars; Index++) {
+        if (Line->StartOfString[Index] != ' ' &&
+            Line->StartOfString[Index] != '\t') {
+
+            break;
+        }
+    }
+    if (Index > 0) {
+        Indent->StartOfString = Line->StartOfString;
+        Indent->LengthInChars = Index;
+    }
+}
+
+/**
+ Count the leading whitespace characters in a line and return a substring
+ that can be used to apply an indentation to a later line.
+
  @param MultilineEdit Pointer to the multiline edit control containing the
         contents of the buffer.
 
@@ -2212,22 +2237,10 @@ YoriWinMultilineEditGetIndentationOnLine(
     __out PYORI_STRING Indent
     )
 {
-    PYORI_STRING Line;
-    YORI_ALLOC_SIZE_T Index;
+    PCYORI_STRING Line;
 
-    YoriLibInitEmptyString(Indent);
     Line = &MultilineEdit->LineArray[LineIndex];
-    for (Index = 0; Index < Line->LengthInChars; Index++) {
-        if (Line->StartOfString[Index] != ' ' &&
-            Line->StartOfString[Index] != '\t') {
-
-            break;
-        }
-    }
-    if (Index > 0) {
-        Indent->StartOfString = Line->StartOfString;
-        Indent->LengthInChars = Index;
-    }
+    YoriWinMultilineEditGetIndentationOnString(Line, Indent);
 }
 
 /**
@@ -2255,12 +2268,14 @@ YoriWinMultilineEditFindPreviousIndentLine(
     )
 {
     YORI_ALLOC_SIZE_T ProbeLine;
+    PCYORI_STRING ProbeLineString;
     YORI_STRING ProbeIndent;
     YORI_STRING CurrentIndent;
     YORI_ALLOC_SIZE_T MatchingLength;
 
     ASSERT(MultilineEdit->AutoIndentApplied);
-    YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, MultilineEdit->AutoIndentSourceLine, &CurrentIndent);
+    YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, MultilineEdit->AutoIndentAppliedLine, &CurrentIndent);
+    ASSERT(CurrentIndent.LengthInChars >= MultilineEdit->AutoIndentSourceLength);
     CurrentIndent.LengthInChars = MultilineEdit->AutoIndentSourceLength;
 
     //
@@ -2268,14 +2283,17 @@ YoriWinMultilineEditFindPreviousIndentLine(
     //  to the first
     //
 
-    for (ProbeLine = MultilineEdit->AutoIndentSourceLine; ProbeLine > 0; ProbeLine--) {
-        YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, ProbeLine - 1, &ProbeIndent);
-        MatchingLength = YoriLibCntStringMatchChars(&CurrentIndent, &ProbeIndent);
-        if (MatchingLength < CurrentIndent.LengthInChars) {
-            *NewLine = ProbeLine - 1;
-            ProbeIndent.LengthInChars = MatchingLength;
-            memcpy(NewIndent, &ProbeIndent, sizeof(YORI_STRING));
-            return;
+    for (ProbeLine = MultilineEdit->AutoIndentAppliedLine; ProbeLine > 0; ProbeLine--) {
+        ProbeLineString = &MultilineEdit->LineArray[ProbeLine - 1];
+        if (ProbeLineString->LengthInChars > 0) {
+            YoriWinMultilineEditGetIndentationOnString(ProbeLineString, &ProbeIndent);
+            MatchingLength = YoriLibCntStringMatchChars(&CurrentIndent, &ProbeIndent);
+            if (MatchingLength < CurrentIndent.LengthInChars) {
+                *NewLine = ProbeLine - 1;
+                ProbeIndent.LengthInChars = MatchingLength;
+                memcpy(NewIndent, &ProbeIndent, sizeof(YORI_STRING));
+                return;
+            }
         }
     }
 
@@ -3170,7 +3188,6 @@ YoriWinMultilineEditInsertTextRange(
                                AutoIndentLeadingString.LengthInChars * sizeof(TCHAR));
                         Line->LengthInChars = AutoIndentLeadingString.LengthInChars;
                         MultilineEdit->AutoIndentApplied = TRUE;
-                        MultilineEdit->AutoIndentSourceLine = FirstLine;
                         MultilineEdit->AutoIndentSourceLength = AutoIndentLeadingString.LengthInChars;
                         MultilineEdit->AutoIndentAppliedLine = LocalLastLine;
                     }
@@ -5008,7 +5025,6 @@ YoriWinMultilineEditBackspace(
         if (NewIndent.LengthInChars == 0) {
             MultilineEdit->AutoIndentApplied = FALSE;
         } else {
-            MultilineEdit->AutoIndentSourceLine = NewIndentSourceLine;
             MultilineEdit->AutoIndentSourceLength = NewIndent.LengthInChars;
         }
 
