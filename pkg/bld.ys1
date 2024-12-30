@@ -60,7 +60,7 @@ pushd ..
 ymake clean >NUL
 popd
 
-mkdir %OUTDIR% >NUL 2>&1
+mkdir "%OUTDIR%" >NUL 2>&1
 
 echo *** Building %ARCH% debug
 ymake -f ..\Makefile -m DEBUG=1 YORI_BUILD_ID=%BLDID% FDI=%FDI% .
