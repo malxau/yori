@@ -781,6 +781,7 @@ HexDumpBinaryParseLine(
 
     ReverseContext->BytesThisLine = 0;
 
+    StartChar = 0;
     Index = 0;
     Result = TRUE;
 
