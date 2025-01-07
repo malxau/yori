@@ -37,7 +37,11 @@ CHAR strIfHelpText[] =
         "\n"
         "Execute a command to evaluate a condition.\n"
         "\n"
-        "IF [-license] <test cmd>; <true cmd>; <false cmd>\n";
+        "IF -license\n"
+        "IF <test cmd>; <true cmd>\n"
+        "IF <test cmd>; [<true cmd>]; <false cmd>\n"
+        "\n"
+        "<test cmd> should return an exit code of 0 for true or non-zero for false.\n";
 
 /**
  Display usage text to the user.
@@ -90,7 +94,10 @@ IfFindOffsetOfNextComponent(
             EscapeSubset.LengthInChars = String->LengthInChars - CharIndex - 2;
             EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
             CharIndex += 2 + EndOfEscape;
-        } else if (String->StartOfString[CharIndex] == ';') {
+        } else if (String->LengthInChars > CharIndex + 2 &&
+                   String->StartOfString[CharIndex] == ';' &&
+                   String->StartOfString[CharIndex + 1] == ' ') {
+
             String->StartOfString[CharIndex] = '\0';
             *Offset = CharIndex;
             return TRUE;
