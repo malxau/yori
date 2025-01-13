@@ -69,7 +69,7 @@ YoriLibGetOnDiskCaseForPath(
         return TRUE;
     }
 
-    if (!YoriLibFindEffectiveRoot(Path, &EffectiveRoot)) {
+    if (!YoriLibFindEffRoot(Path, &EffectiveRoot)) {
         return FALSE;
     }
 
@@ -111,9 +111,9 @@ YoriLibGetOnDiskCaseForPath(
         }
     }
 
-    if (YoriLibIsDriveLetterWithColonAndSlash(&NewPath)) {
+    if (YoriLibIsDrvLetterColonSlash(&NewPath)) {
         NewPath.StartOfString[0] = YoriLibUpcaseChar(NewPath.StartOfString[0]);
-    } else if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(&NewPath)) {
+    } else if (YoriLibIsPfxDrvLetterColonSlash(&NewPath)) {
         NewPath.StartOfString[4] = YoriLibUpcaseChar(NewPath.StartOfString[4]);
     }
 
@@ -134,7 +134,7 @@ YoriLibGetOnDiskCaseForPath(
  */
 __success(return)
 BOOLEAN
-YoriLibGetCurrentDirectoryOnDrive(
+YoriLibGetCurDirOnDrive(
     __in TCHAR Drive,
     __out PYORI_STRING DriveCurrentDirectory
     )

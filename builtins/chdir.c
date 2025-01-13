@@ -170,7 +170,7 @@ YoriCmd_CHDIR(
             return EXIT_SUCCESS;
         }
 
-        if (!YoriLibGetCurrentDirectoryOnDrive(NewDir->StartOfString[0], &NewCurrentDirectory)) {
+        if (!YoriLibGetCurDirOnDrive(NewDir->StartOfString[0], &NewCurrentDirectory)) {
             YoriLibFreeStringContents(&OldCurrentDirectory);
             return EXIT_FAILURE;
         }
@@ -248,7 +248,7 @@ YoriCmd_CHDIR(
             } else {
 
                 if (Component.LengthInChars > 0 &&
-                    !YoriLibGetFullPathNameRelativeTo(&Component, NewDir, SetToLongPath, &NewCurrentDirectory, NULL)) {
+                    !YoriLibGetFullPathNameRelTo(&Component, NewDir, SetToLongPath, &NewCurrentDirectory, NULL)) {
                     LastError = GetLastError();
 
                     //

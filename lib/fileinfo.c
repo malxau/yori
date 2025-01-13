@@ -397,7 +397,7 @@ YoriLibCollectAllocationSize (
                 //  systems can fail when given a directory to GetDiskFreeSpace.
                 //
 
-                if (YoriLibFindEffectiveRoot(&ParentPath, &EffectiveRoot)) {
+                if (YoriLibFindEffRoot(&ParentPath, &EffectiveRoot)) {
                     EffectiveRoot.StartOfString[EffectiveRoot.LengthInChars] = '\0';
                     GetDiskFreeSpace(EffectiveRoot.StartOfString, &SectorsPerCluster, &BytesPerSector, &FreeClusters, &TotalClusters);
                 }

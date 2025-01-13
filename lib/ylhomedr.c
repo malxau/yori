@@ -410,7 +410,7 @@ YoriLibIsFileNameDeviceName(
     if (Prefixed && 
         NameToCheck.LengthInChars == 2) {
 
-        if (YoriLibIsDriveLetterWithColon(&NameToCheck)) {
+        if (YoriLibIsDrvLetterColon(&NameToCheck)) {
             return TRUE;
         }
     }
@@ -506,10 +506,10 @@ YoriLibUserStringToSingleFilePath(
     YoriLibInitEmptyString(FullPath);
 
     if (YoriLibExpandHomeDirectories(&PathToTranslate, &ExpandedString)) {
-        ReturnValue = YoriLibGetFullPathNameReturnAllocation(&ExpandedString, ReturnEscapedPath, FullPath, NULL);
+        ReturnValue = YoriLibGetFullPathNameAlloc(&ExpandedString, ReturnEscapedPath, FullPath, NULL);
         YoriLibFreeStringContents(&ExpandedString);
     } else {
-        ReturnValue = YoriLibGetFullPathNameReturnAllocation(&PathToTranslate, ReturnEscapedPath, FullPath, NULL);
+        ReturnValue = YoriLibGetFullPathNameAlloc(&PathToTranslate, ReturnEscapedPath, FullPath, NULL);
     }
 
     if (ReturnValue == 0) {

@@ -331,7 +331,7 @@ ZResolveSpecificationToFullPath(
             return FALSE;
         }
 
-        if (!YoriLibGetCurrentDirectoryOnDrive(UserSpecification->StartOfString[0], &LocalDir)) {
+        if (!YoriLibGetCurDirOnDrive(UserSpecification->StartOfString[0], &LocalDir)) {
             return FALSE;
         }
 

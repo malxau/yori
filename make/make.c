@@ -625,7 +625,7 @@ ENTRYPOINT(
     if (FileName == NULL) {
         YoriLibInitEmptyString(&RootDir);
         YoriLibConstantString(&Arg, _T("."));
-        if (!YoriLibGetFullPathNameReturnAllocation(&Arg, FALSE, &RootDir, NULL)) {
+        if (!YoriLibGetFullPathNameAlloc(&Arg, FALSE, &RootDir, NULL)) {
             Result = EXIT_FAILURE;
             goto Cleanup;
         }

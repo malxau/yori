@@ -184,6 +184,11 @@
  */
 #define YORI_LIB_MAX_FILE_NAME            (MAX_PATH)
 
+/**
+ Win32 builds should include UNC support.
+ */
+#define YORI_UNC_SUPPORT                  1
+
 #include <yoricrt.h>
 
 #ifndef __analysis_assume

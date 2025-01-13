@@ -1014,7 +1014,7 @@ YoriLibGetOnDiskCaseForPath(
 
 __success(return)
 BOOLEAN
-YoriLibGetCurrentDirectoryOnDrive(
+YoriLibGetCurDirOnDrive(
     __in TCHAR Drive,
     __out PYORI_STRING DriveCurrentDirectory
     );
@@ -2475,40 +2475,42 @@ YoriLibIsPathPrefixed(
     );
 
 BOOL
-YoriLibIsDriveLetterWithColon(
+YoriLibIsDrvLetterColon(
     __in PCYORI_STRING Path
     );
 
 BOOL
-YoriLibIsDriveLetterWithColonAndSlash(
+YoriLibIsDrvLetterColonSlash(
     __in PCYORI_STRING Path
     );
 
 BOOL
-YoriLibIsPrefixedDriveLetterWithColon(
+YoriLibIsPfxDrvLetterColon(
     __in PCYORI_STRING Path
     );
 
 BOOL
-YoriLibIsPrefixedDriveLetterWithColonAndSlash(
+YoriLibIsPfxDrvLetterColonSlash(
     __in PCYORI_STRING Path
     );
 
+#if YORI_UNC_SUPPORT
 BOOL
 YoriLibIsFullPathUnc(
     __in PCYORI_STRING Path
     );
+#endif
 
 __success(return)
 BOOL
-YoriLibFindEffectiveRoot(
+YoriLibFindEffRoot(
     __in PYORI_STRING Path,
     __out PYORI_STRING EffectiveRoot
     );
 
 __success(return)
 BOOL
-YoriLibGetFullPathNameReturnAllocation(
+YoriLibGetFullPathNameAlloc(
     __in PYORI_STRING FileName,
     __in BOOL bReturnEscapedPath,
     __inout PYORI_STRING Buffer,
@@ -2517,7 +2519,7 @@ YoriLibGetFullPathNameReturnAllocation(
 
 __success(return)
 BOOL
-YoriLibGetFullPathNameRelativeTo(
+YoriLibGetFullPathNameRelTo(
     __in PYORI_STRING PrimaryDirectory,
     __in PYORI_STRING FileName,
     __in BOOL ReturnEscapedPath,

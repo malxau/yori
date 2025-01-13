@@ -95,7 +95,7 @@ typedef struct _YORILIB_FOREACHFILE_CONTEXT {
  If a string contains a directory that ends with a seperator, and it's not
  referring to a drive root, remove the seperator.
 
- This can be thought of as a mini version of @ref YoriLibFindEffectiveRoot .
+ This can be thought of as a mini version of @ref YoriLibFindEffRoot .
  Unlike that function, this one has to run on purely relative paths that
  haven't been converted to their full form, where seperators could go
  either way, where relative components are still present.  Also, it doesn't
@@ -120,11 +120,11 @@ YoriLibTruncateTrailingSeperatorIfBenign(
     if (String->LengthInChars > 1 &&
         YoriLibIsSep(String->StartOfString[String->LengthInChars - 1])) {
 
-        if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(String)) {
+        if (YoriLibIsPfxDrvLetterColonSlash(String)) {
             if (String->LengthInChars >= sizeof("\\\\?\\c:\\")) {
                 String->LengthInChars--;
             }
-        } else if (YoriLibIsDriveLetterWithColonAndSlash(String)) {
+        } else if (YoriLibIsDrvLetterColonSlash(String)) {
             if (String->LengthInChars >= sizeof("c:\\")) {
                 String->LengthInChars--;
             }
@@ -258,7 +258,7 @@ YoriLibForEachFileEnum(
                 (FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
 
                 YoriLibInitEmptyString(&NewFileSpec);
-                if (!YoriLibGetFullPathNameReturnAllocation(&ForEachContext->EffectiveFileSpec, TRUE, &NewFileSpec, NULL)) {
+                if (!YoriLibGetFullPathNameAlloc(&ForEachContext->EffectiveFileSpec, TRUE, &NewFileSpec, NULL)) {
                     YoriLibFree(ForEachContext);
                     return FALSE;
                 }
@@ -295,7 +295,7 @@ YoriLibForEachFileEnum(
         //
 
         if (ForEachContext->CharsToFinalSlash == 1 &&
-            YoriLibIsDriveLetterWithColon(&ForEachContext->EffectiveFileSpec)) {
+            YoriLibIsDrvLetterColon(&ForEachContext->EffectiveFileSpec)) {
 
             ForEachContext->CharsToFinalSlash++;
             FinalSlashFound = TRUE;
@@ -319,7 +319,7 @@ YoriLibForEachFileEnum(
 
         YoriLibTruncateTrailingSeperatorIfBenign(&DirectoryPart);
 
-        if (!YoriLibGetFullPathNameReturnAllocation(&DirectoryPart, TRUE, &ForEachContext->ParentFullPath, NULL)) {
+        if (!YoriLibGetFullPathNameAlloc(&DirectoryPart, TRUE, &ForEachContext->ParentFullPath, NULL)) {
             YoriLibFreeStringContents(&ForEachContext->EffectiveFileSpec);
             YoriLibFree(ForEachContext);
             return FALSE;
@@ -327,7 +327,7 @@ YoriLibForEachFileEnum(
     } else {
         YORI_STRING ThisDir;
         YoriLibConstantString(&ThisDir, _T("."));
-        if (!YoriLibGetFullPathNameReturnAllocation(&ThisDir, TRUE, &ForEachContext->ParentFullPath, NULL)) {
+        if (!YoriLibGetFullPathNameAlloc(&ThisDir, TRUE, &ForEachContext->ParentFullPath, NULL)) {
             YoriLibFreeStringContents(&ForEachContext->EffectiveFileSpec);
             YoriLibFree(ForEachContext);
             return FALSE;
@@ -448,8 +448,8 @@ YoriLibForEachFileEnum(
             //
 
             if (hFind == INVALID_HANDLE_VALUE) {
-                if ((ForEachContext->FullPath.LengthInChars == 3 && YoriLibIsDriveLetterWithColonAndSlash(&ForEachContext->FullPath)) ||
-                    (ForEachContext->FullPath.LengthInChars == 7 && YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ForEachContext->FullPath))) {
+                if ((ForEachContext->FullPath.LengthInChars == 3 && YoriLibIsDrvLetterColonSlash(&ForEachContext->FullPath)) ||
+                    (ForEachContext->FullPath.LengthInChars == 7 && YoriLibIsPfxDrvLetterColonSlash(&ForEachContext->FullPath))) {
 
                     if (YoriLibUpdateFindDataFromFileInformation(&ForEachContext->FileInfo, ForEachContext->FullPath.StartOfString, FALSE)) {
                         ForEachContext->FileInfo.cFileName[0] = '\0';

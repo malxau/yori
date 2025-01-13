@@ -575,7 +575,7 @@ DirFileFoundCallback(
         ThisDirName.StartOfString = FilePath->StartOfString;
         ThisDirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - FilePath->StartOfString);
         if (ThisDirName.LengthInChars == (sizeof("\\\\?\\c:") - 1) &&
-            YoriLibIsPrefixedDriveLetterWithColon(&ThisDirName)) {
+            YoriLibIsPfxDrvLetterColon(&ThisDirName)) {
 
             ThisDirName.LengthInChars++;
         }

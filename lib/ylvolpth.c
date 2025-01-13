@@ -100,7 +100,7 @@ YoriLibGetVolumePathName(
         if (!YoriLibIsPathPrefixed(VolumeName)) {
             YORI_STRING EscapedVolumeName;
             YoriLibInitEmptyString(&EscapedVolumeName);
-            if (!YoriLibGetFullPathNameReturnAllocation(VolumeName, TRUE, &EscapedVolumeName, NULL)) {
+            if (!YoriLibGetFullPathNameAlloc(VolumeName, TRUE, &EscapedVolumeName, NULL)) {
                 if (FreeOnFailure) {
                     YoriLibFreeStringContents(VolumeName);
                 }

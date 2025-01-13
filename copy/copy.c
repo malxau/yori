@@ -282,7 +282,7 @@ CopyBuildDestinationPath(
             return FALSE;
         }
         DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y\\%y"), &CopyContext->Dest, RelativePathFromSource);
-        if (!YoriLibGetFullPathNameReturnAllocation(&DestWithFile, TRUE, FullDest, NULL)) {
+        if (!YoriLibGetFullPathNameAlloc(&DestWithFile, TRUE, FullDest, NULL)) {
             return FALSE;
         }
         YoriLibFreeStringContents(&DestWithFile);

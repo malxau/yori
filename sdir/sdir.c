@@ -574,8 +574,8 @@ SdirEnumeratePathWithDepth (
         YoriLibFreeStringContents(&Opts->ParentName);
     }
 
-    if (!YoriLibGetFullPathNameReturnAllocation(FindStr, TRUE, &Opts->ParentName, &FinalPart)) {
-        SdirDisplayError(GetLastError(), _T("YoriLibGetFullPathNameReturnAllocation"));
+    if (!YoriLibGetFullPathNameAlloc(FindStr, TRUE, &Opts->ParentName, &FinalPart)) {
+        SdirDisplayError(GetLastError(), _T("YoriLibGetFullPathNameAlloc"));
         return FALSE;
     }
 

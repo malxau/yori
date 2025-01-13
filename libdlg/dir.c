@@ -68,7 +68,7 @@ typedef struct _YORI_DLG_DIR_STATE {
 
 
 /**
- The generic YoriLibGetFullPathNameRelativeTo fails if it is given a different
+ The generic YoriLibGetFullPathNameRelTo fails if it is given a different
  drive but fails to specify an absolute path, because resolving it would
  require a current directory which was not specified to the function.  This
  wrapper resolves this case by checking if the drive specifies no path, and
@@ -115,10 +115,10 @@ YoriDlgDirGetFullPathNameRelativeTo(
 
         if (FileName->LengthInChars == 2) {
 
-            if (!YoriLibGetFullPathNameReturnAllocation(&DriveRoot,
-                                                        ReturnEscapedPath,
-                                                        Buffer,
-                                                        NULL)) {
+            if (!YoriLibGetFullPathNameAlloc(&DriveRoot,
+                                             ReturnEscapedPath,
+                                             Buffer,
+                                             NULL)) {
 
                 return FALSE;
             }
@@ -127,21 +127,21 @@ YoriDlgDirGetFullPathNameRelativeTo(
             YoriLibInitEmptyString(&RelativeFileName);
             RelativeFileName.StartOfString = &FileName->StartOfString[2];
             RelativeFileName.LengthInChars = FileName->LengthInChars - 2;
-            if (!YoriLibGetFullPathNameRelativeTo(&DriveRoot,
-                                                  &RelativeFileName,
-                                                  ReturnEscapedPath,
-                                                  Buffer,
-                                                  NULL)) {
+            if (!YoriLibGetFullPathNameRelTo(&DriveRoot,
+                                             &RelativeFileName,
+                                             ReturnEscapedPath,
+                                             Buffer,
+                                             NULL)) {
                 return FALSE;
             }
         }
     } else {
 
-        if (!YoriLibGetFullPathNameRelativeTo(PrimaryDirectory,
-                                              FileName,
-                                              ReturnEscapedPath,
-                                              Buffer,
-                                              NULL)) {
+        if (!YoriLibGetFullPathNameRelTo(PrimaryDirectory,
+                                         FileName,
+                                         ReturnEscapedPath,
+                                         Buffer,
+                                         NULL)) {
             return FALSE;
         }
     }

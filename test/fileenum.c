@@ -90,7 +90,7 @@ TestEnumFileFoundCallback(
             return FALSE;
         }
 
-        if (!YoriLibIsPrefixedDriveLetterWithColonAndSlash(FilePath)) {
+        if (!YoriLibIsPfxDrvLetterColonSlash(FilePath)) {
             TestContext->Failed = TRUE;
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i File path is not prefixed with drive letter and slash\n"), __FILE__, __LINE__);
             return FALSE;

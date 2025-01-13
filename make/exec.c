@@ -297,7 +297,7 @@ MakeProcessCd(
 
     YoriLibInitEmptyString(&NewCurrentDirectory);
 
-    if (!YoriLibGetFullPathNameRelativeTo(&ChildRecipe->CurrentDirectory, &ArgV[1], FALSE, &NewCurrentDirectory, NULL)) {
+    if (!YoriLibGetFullPathNameRelTo(&ChildRecipe->CurrentDirectory, &ArgV[1], FALSE, &NewCurrentDirectory, NULL)) {
         return EXIT_FAILURE;
     }
 
@@ -419,7 +419,7 @@ MakeProcessIf(
     }
 
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibGetFullPathNameRelativeTo(&ChildRecipe->CurrentDirectory, &ArgV[Index + 1], TRUE, &FullPath, NULL)) {
+    if (!YoriLibGetFullPathNameRelTo(&ChildRecipe->CurrentDirectory, &ArgV[Index + 1], TRUE, &FullPath, NULL)) {
         return FALSE;
     }
 

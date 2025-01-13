@@ -152,7 +152,7 @@ YoriLibSearchEnv(
 
     if (hFind != INVALID_HANDLE_VALUE) {
         FindClose(hFind);
-        if (!YoriLibGetFullPathNameReturnAllocation(FileName, FullPath, Out, &fn) || fn == NULL) {
+        if (!YoriLibGetFullPathNameAlloc(FileName, FullPath, Out, &fn) || fn == NULL) {
             Out->LengthInChars = 0;
             Out->StartOfString[0] = '\0';
             return;
@@ -205,7 +205,7 @@ YoriLibSearchEnv(
 
             if (hFind != INVALID_HANDLE_VALUE) {
                 FindClose(hFind);
-                if (!YoriLibGetFullPathNameReturnAllocation(ScratchArea, FullPath, Out, &fn) || fn == NULL) {
+                if (!YoriLibGetFullPathNameAlloc(ScratchArea, FullPath, Out, &fn) || fn == NULL) {
                     Out->LengthInChars = 0;
                     Out->StartOfString[0] = '\0';
                     return;
@@ -317,7 +317,7 @@ YoriLibLocateBuildFullName(
     memcpy(&FoundPath.StartOfString[FoundPath.LengthInChars], Match->cFileName, (FileNameLen + 1) * sizeof(TCHAR));
     FoundPath.LengthInChars = FoundPath.LengthInChars + FileNameLen;
 
-    if (!YoriLibGetFullPathNameReturnAllocation(&FoundPath, FullPath, Out, &fn)) {
+    if (!YoriLibGetFullPathNameAlloc(&FoundPath, FullPath, Out, &fn)) {
         YoriLibFreeStringContents(&FoundPath);
         return FALSE;
     }
@@ -929,11 +929,11 @@ YoriLibPathLocateUnknownExtensionKnownLocation(
 
             if (YoriLibIsSep(DirectoryToSearch.StartOfString[PathSeperator])) {
                 if (PathSeperator == 2 &&
-                    YoriLibIsDriveLetterWithColonAndSlash(&DirectoryToSearch)) {
+                    YoriLibIsDrvLetterColonSlash(&DirectoryToSearch)) {
 
                     DirectoryToSearch.LengthInChars = PathSeperator + 1;
                 } else if (PathSeperator == 6 &&
-                           YoriLibIsPrefixedDriveLetterWithColonAndSlash(&DirectoryToSearch)) {
+                           YoriLibIsPfxDrvLetterColonSlash(&DirectoryToSearch)) {
                     DirectoryToSearch.LengthInChars = PathSeperator + 1;
                 } else {
                     DirectoryToSearch.LengthInChars = PathSeperator;

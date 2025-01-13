@@ -42,6 +42,11 @@
 #endif
 #endif
 
+/**
+ OS error type.
+ */
+typedef DWORD SYSERR;
+
 #ifndef FILE_SHARE_DELETE
 /**
  Definition for share delete for compilers that don't contain it.

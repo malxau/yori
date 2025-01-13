@@ -161,12 +161,12 @@ MoveFileFoundCallback(
             DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y\\%s"), &MoveContext->Dest, FileInfo->cFileName);
         }
 
-        if (!YoriLibGetFullPathNameReturnAllocation(&DestWithFile, TRUE, &FullDest, NULL)) {
+        if (!YoriLibGetFullPathNameAlloc(&DestWithFile, TRUE, &FullDest, NULL)) {
             return FALSE;
         }
         YoriLibFreeStringContents(&DestWithFile);
     } else {
-        if (!YoriLibGetFullPathNameReturnAllocation(&MoveContext->Dest, TRUE, &FullDest, NULL)) {
+        if (!YoriLibGetFullPathNameAlloc(&MoveContext->Dest, TRUE, &FullDest, NULL)) {
             return FALSE;
         }
         if (MoveContext->FilesMoved > 0) {

@@ -1548,7 +1548,7 @@ MakeInclude(
     }
 
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibGetFullPathNameRelativeTo(&ScopeContext->CurrentIncludeDirectory, Name, FALSE, &FullPath, &FilePart)) {
+    if (!YoriLibGetFullPathNameRelTo(&ScopeContext->CurrentIncludeDirectory, Name, FALSE, &FullPath, &FilePart)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not open include file: %y\n"), Name);
         ScopeContext->MakeContext->ErrorTermination = TRUE;
         return FALSE;

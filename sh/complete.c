@@ -311,7 +311,7 @@ YoriShFindFinalSlashIfSpecified(
         }
 
         if (CharsInFileName == 2 &&
-            YoriLibIsDriveLetterWithColon(String)) {
+            YoriLibIsDrvLetterColon(String)) {
 
             break;
         }

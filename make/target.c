@@ -256,7 +256,7 @@ MakeResolveFullTargetName(
         TargetNoQuotes->LengthInChars = TargetNoQuotes->LengthInChars - 2;
     }
     YoriLibInitEmptyString(FullPath);
-    if (!YoriLibGetFullPathNameRelativeTo(&ScopeContext->HashEntry.Key, TargetNoQuotes, FALSE, FullPath, NULL)) {
+    if (!YoriLibGetFullPathNameRelTo(&ScopeContext->HashEntry.Key, TargetNoQuotes, FALSE, FullPath, NULL)) {
         return FALSE;
     }
     return TRUE;
@@ -1871,7 +1871,7 @@ MakeMarkCommandLineTargetForBuild(
 
     YoriLibInitEmptyString(&FullTarget);
 
-    if (!YoriLibGetFullPathNameReturnAllocation(&EffectiveName, FALSE, &FullTarget, NULL)) {
+    if (!YoriLibGetFullPathNameAlloc(&EffectiveName, FALSE, &FullTarget, NULL)) {
         return FALSE;
     }
 

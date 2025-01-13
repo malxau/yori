@@ -298,11 +298,11 @@ ENTRYPOINT(
 
         KeepTrailingSlashesBefore = 0;
         if (UseLongPath) {
-            if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(&PathComponents.EntireNaturalPath)) {
+            if (YoriLibIsPfxDrvLetterColonSlash(&PathComponents.EntireNaturalPath)) {
                 KeepTrailingSlashesBefore = sizeof("\\\\?\\C:\\") - 1;
             }
         } else {
-            if (YoriLibIsDriveLetterWithColonAndSlash(&PathComponents.EntireNaturalPath)) {
+            if (YoriLibIsDrvLetterColonSlash(&PathComponents.EntireNaturalPath)) {
                 KeepTrailingSlashesBefore = sizeof("C:\\") - 1;
             }
         }
@@ -441,7 +441,7 @@ ENTRYPOINT(
                         PathComponents.Extension.LengthInChars = 0;
                     }
                 }
-            } else if (YoriLibIsDriveLetterWithColonAndSlash(&PathAfterPrefix)) {
+            } else if (YoriLibIsDrvLetterColonSlash(&PathAfterPrefix)) {
 
                 //
                 //  We have a drive letter, colon and slash in an escaped path
@@ -458,7 +458,7 @@ ENTRYPOINT(
                 }
             }
         } else {
-            if (YoriLibIsDriveLetterWithColonAndSlash(&PathComponents.EntireNaturalPath)) {
+            if (YoriLibIsDrvLetterColonSlash(&PathComponents.EntireNaturalPath)) {
 
                 //
                 //  We have a drive letter, colon and slash in a non escaped path

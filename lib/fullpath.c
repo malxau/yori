@@ -45,7 +45,7 @@ TCHAR YoriLibPathPrefixChar;
  @return TRUE if the string starts with a drive letter and colon.
  */
 BOOL
-YoriLibIsDriveLetterWithColon(
+YoriLibIsDrvLetterColon(
     __in PCYORI_STRING Path
     )
 {
@@ -73,7 +73,7 @@ YoriLibIsDriveLetterWithColon(
          seperator; FALSE otherwise.
  */
 BOOL
-YoriLibIsDriveLetterWithColonAndSlash(
+YoriLibIsDrvLetterColonSlash(
     __in PCYORI_STRING Path
     )
 {
@@ -81,7 +81,7 @@ YoriLibIsDriveLetterWithColonAndSlash(
         return FALSE;
     }
 
-    if (YoriLibIsDriveLetterWithColon(Path) &&
+    if (YoriLibIsDrvLetterColon(Path) &&
         YoriLibIsSep(Path->StartOfString[2])) {
 
         return TRUE;
@@ -126,7 +126,7 @@ YoriLibIsPathPrefixed(
          FALSE otherwise.
  */
 BOOL
-YoriLibIsPrefixedDriveLetterWithColon(
+YoriLibIsPfxDrvLetterColon(
     __in PCYORI_STRING Path
     )
 {
@@ -158,7 +158,7 @@ YoriLibIsPrefixedDriveLetterWithColon(
          seperator; FALSE otherwise.
  */
 BOOL
-YoriLibIsPrefixedDriveLetterWithColonAndSlash(
+YoriLibIsPfxDrvLetterColonSlash(
     __in PCYORI_STRING Path
     )
 {
@@ -180,6 +180,8 @@ YoriLibIsPrefixedDriveLetterWithColonAndSlash(
 
     return FALSE;
 }
+
+#if YORI_UNC_SUPPORT
 
 
 /**
@@ -215,6 +217,8 @@ YoriLibIsFullPathUnc(
     return FALSE;
 }
 
+#endif
+
 /**
  Given a fully qualified path containing a drive letter or UNC root, determine
  where the root component is that cannot be traversed above.  The path may
@@ -240,10 +244,12 @@ YoriLibIsFullPathUnc(
  */
 __success(return)
 BOOL
-YoriLibFindEffectiveRootInternal(
+YoriLibFindEffRootInternal(
     __in PYORI_STRING Path,
     __in BOOL PathHasPrefix,
+#if YORI_UNC_SUPPORT
     __in BOOL PathIsUnc,
+#endif
     __out PYORI_STRING EffectiveRoot
     )
 {
@@ -257,6 +263,7 @@ YoriLibFindEffectiveRootInternal(
 
     if (PathHasPrefix) {
 
+#if YORI_UNC_SUPPORT
         if (PathIsUnc) {
 
             ASSERT(Path->LengthInChars >= sizeof("\\\\?\\UNC\\") - 1);
@@ -286,6 +293,7 @@ YoriLibFindEffectiveRootInternal(
             //
 
         } else {
+#endif
 
             //
             //  If a path has a prefix, it needs to have characters for one,
@@ -306,8 +314,11 @@ YoriLibFindEffectiveRootInternal(
             if (StringPtr != NULL) {
                 StringPtr++;
             }
+#if YORI_UNC_SUPPORT
         }
+#endif
     } else {
+#if YORI_UNC_SUPPORT
         if (PathIsUnc) {
 
             ASSERT(Path->LengthInChars >= sizeof("\\\\") - 1);
@@ -337,6 +348,7 @@ YoriLibFindEffectiveRootInternal(
             //
 
         } else {
+#endif
 
             StringPtr = YoriLibFindLeftMostCharacter(Path, '\\');
 
@@ -347,7 +359,9 @@ YoriLibFindEffectiveRootInternal(
             if (StringPtr != NULL) {
                 StringPtr++;
             }
+#if YORI_UNC_SUPPORT
         }
+#endif
     }
 
     if (StringPtr == NULL) {
@@ -378,15 +392,20 @@ YoriLibFindEffectiveRootInternal(
  */
 __success(return)
 BOOL
-YoriLibFindEffectiveRoot(
+YoriLibFindEffRoot(
     __in PYORI_STRING Path,
     __out PYORI_STRING EffectiveRoot
     )
 {
     BOOL PrefixedPath = FALSE;
+#if YORI_UNC_SUPPORT
     BOOL UncPath = FALSE;
+#endif
+    BOOL Result;
+
     if (YoriLibIsPathPrefixed(Path)) {
         PrefixedPath = TRUE;
+#if YORI_UNC_SUPPORT
         if (YoriLibIsFullPathUnc(Path)) {
             UncPath = TRUE;
         }
@@ -396,9 +415,16 @@ YoriLibFindEffectiveRoot(
             Path->StartOfString[1] == '\\') {
             UncPath = TRUE;
         }
+#endif
     }
 
-    return YoriLibFindEffectiveRootInternal(Path, PrefixedPath, UncPath, EffectiveRoot);
+    Result = YoriLibFindEffRootInternal(Path,
+                                        PrefixedPath,
+#if YORI_UNC_SUPPORT
+                                        UncPath,
+#endif
+                                        EffectiveRoot);
+    return Result;
 }
 
 /**
@@ -440,11 +466,13 @@ typedef union _YORI_LIB_FULL_PATH_TYPE {
          */
         BOOLEAN PrefixPresent:1;
 
+#if YORI_UNC_SUPPORT
         /**
          If TRUE, the "\\" UNC prefix, including the "\\?\UNC\" prefix, is
          present in a path.
          */
         BOOLEAN UncPath:1;
+#endif
     } Flags;
 } YORI_LIB_FULL_PATH_TYPE, *PYORI_LIB_FULL_PATH_TYPE;
 
@@ -495,8 +523,8 @@ typedef union _YORI_LIB_FULL_PATH_TYPE {
          completion.
  */
 __success(return == ERROR_SUCCESS)
-DWORD
-YoriLibGetFullPathDeterminePathType(
+SYSERR
+YoriLibGetFullPathPathType(
     __in PYORI_STRING FileName,
     __out PYORI_LIB_FULL_PATH_TYPE PathType,
     __out_opt PYORI_STRING StartOfRelativePath
@@ -535,7 +563,9 @@ YoriLibGetFullPathDeterminePathType(
         YoriLibIsSep(FileName->StartOfString[0]) &&
         YoriLibIsSep(FileName->StartOfString[1])) {
 
+#if YORI_UNC_SUPPORT
         PathType->Flags.UncPath = TRUE;
+#endif
 
         if (FileName->LengthInChars >= 4 &&
             (FileName->StartOfString[2] == '?' ||
@@ -544,12 +574,14 @@ YoriLibGetFullPathDeterminePathType(
 
             PathType->Flags.PrefixPresent = TRUE;
 
+#if YORI_UNC_SUPPORT
             if (!YoriLibIsFullPathUnc(FileName)) {
                 PathType->Flags.UncPath = FALSE;
             }
+#endif
         }
 
-    } else if (YoriLibIsDriveLetterWithColon(FileName)) {
+    } else if (YoriLibIsDrvLetterColon(FileName)) {
 
         if (FileName->LengthInChars == 2 ||
             (FileName->LengthInChars >= 3 && !YoriLibIsSep(FileName->StartOfString[2]))) {
@@ -600,8 +632,8 @@ YoriLibGetFullPathDeterminePathType(
  @return A win32 error code, or ERROR_SUCCESS to indicate successful
          completion.
  */
-DWORD
-YoriLibFullPathMergeRootWithRelative(
+SYSERR
+YoriLibFullPathMergeRootWithRel(
     __in PYORI_STRING PrimaryDirectory,
     __in PYORI_STRING RelativePath,
     __in BOOL ReturnEscapedPath,
@@ -639,13 +671,16 @@ YoriLibFullPathMergeRootWithRelative(
         (CurrentDirectory.StartOfString[2] == '?' || CurrentDirectory.StartOfString[2] == '.') &&
         CurrentDirectory.StartOfString[3] == '\\') {
 
+#if YORI_UNC_SUPPORT
         if (YoriLibIsFullPathUnc(&CurrentDirectory)) {
             CurrentDirectory.StartOfString += 7;
             CurrentDirectory.LengthInChars -= 7;
             PathType->Flags.UncPath = TRUE;
         } else {
+#endif
             CurrentDirectory.StartOfString += 4;
             CurrentDirectory.LengthInChars -= 4;
+#if YORI_UNC_SUPPORT
         }
     } else {
 
@@ -657,6 +692,7 @@ YoriLibFullPathMergeRootWithRelative(
             CurrentDirectory.LengthInChars -= 1;
             PathType->Flags.UncPath = TRUE;
         }
+#endif
     }
 
     //
@@ -666,6 +702,7 @@ YoriLibFullPathMergeRootWithRelative(
 
     if (PathType->Flags.AbsoluteWithoutDrive) {
         if (CurrentDirectory.LengthInChars > 2) {
+#if YORI_UNC_SUPPORT
             if (PathType->Flags.UncPath) {
                 YORI_STRING CurrentDirectorySubstring;
                 LPTSTR Slash;
@@ -691,6 +728,7 @@ YoriLibFullPathMergeRootWithRelative(
                     }
                 }
             } else {
+#endif
 
                 //
                 //  If it's a drive letter path, just truncate the string
@@ -698,7 +736,9 @@ YoriLibFullPathMergeRootWithRelative(
                 //
 
                 CurrentDirectory.LengthInChars = 2;
+#if YORI_UNC_SUPPORT
             }
+#endif
         }
     }
 
@@ -711,14 +751,18 @@ YoriLibFullPathMergeRootWithRelative(
 
     if (ReturnEscapedPath) {
         Result = 4 + CurrentDirectory.LengthInChars + 1 + RelativePath->LengthInChars + 1;
+#if YORI_UNC_SUPPORT
         if (PathType->Flags.UncPath) {
             Result += 4; // Remove "\" and add "\UNC\"
         }
+#endif
     } else {
         Result = CurrentDirectory.LengthInChars + 1 + RelativePath->LengthInChars + 1;
+#if YORI_UNC_SUPPORT
         if (PathType->Flags.UncPath) {
             Result += 1;
         }
+#endif
     }
 
     if (Result > Buffer->LengthAllocated) {
@@ -739,6 +783,7 @@ YoriLibFullPathMergeRootWithRelative(
     //
 
     if (ReturnEscapedPath) {
+#if YORI_UNC_SUPPORT
         if (PathType->Flags.UncPath) {
             if (RelativePath->LengthInChars > 0) {
                 Buffer->LengthInChars =
@@ -757,6 +802,7 @@ YoriLibFullPathMergeRootWithRelative(
                                     &CurrentDirectory);
             }
         } else {
+#endif
             if (RelativePath->LengthInChars > 0) {
                 Buffer->LengthInChars =
                     YoriLibSPrintfS(Buffer->StartOfString,
@@ -773,8 +819,11 @@ YoriLibFullPathMergeRootWithRelative(
                                     YoriLibPathPrefixChar,
                                     &CurrentDirectory);
             }
+#if YORI_UNC_SUPPORT
         }
+#endif
     } else {
+#if YORI_UNC_SUPPORT
         if (PathType->Flags.UncPath) {
             if (RelativePath->LengthInChars > 0) {
                 Buffer->LengthInChars =
@@ -791,6 +840,7 @@ YoriLibFullPathMergeRootWithRelative(
                                     &CurrentDirectory);
             }
         } else {
+#endif
             if (RelativePath->LengthInChars > 0) {
                 Buffer->LengthInChars =
                     YoriLibSPrintfS(Buffer->StartOfString,
@@ -805,7 +855,9 @@ YoriLibFullPathMergeRootWithRelative(
                                     _T("%y"),
                                     &CurrentDirectory);
             }
+#if YORI_UNC_SUPPORT
         }
+#endif
     }
 
     return ERROR_SUCCESS;
@@ -839,7 +891,7 @@ YoriLibFullPathMergeRootWithRelative(
  @return A win32 error code, or ERROR_SUCCESS to indicate successful
          completion.
  */
-DWORD
+SYSERR
 YoriLibFullPathNormalize(
     __in PYORI_STRING FileName,
     __in BOOL ReturnEscapedPath,
@@ -858,9 +910,11 @@ YoriLibFullPathNormalize(
 
     if (ReturnEscapedPath) {
         Result = FileName->LengthInChars + 1 + 4;
+#if YORI_UNC_SUPPORT
         if (!PathType->Flags.PrefixPresent && PathType->Flags.UncPath) {
             Result += 4;
         }
+#endif
     } else {
         Result = FileName->LengthInChars + 1;
     }
@@ -878,6 +932,7 @@ YoriLibFullPathNormalize(
     Subset.LengthAllocated = 0;
     Subset.MemoryToFree = NULL;
 
+#if YORI_UNC_SUPPORT
     if (ReturnEscapedPath) {
         if (!PathType->Flags.PrefixPresent && PathType->Flags.UncPath) {
             //
@@ -889,7 +944,9 @@ YoriLibFullPathNormalize(
             Subset.LengthInChars -= 2;
         }
     } else {
+#endif
         if (PathType->Flags.PrefixPresent) {
+#if YORI_UNC_SUPPORT
             if (PathType->Flags.UncPath) {
 
                 //
@@ -900,6 +957,7 @@ YoriLibFullPathNormalize(
                 Subset.StartOfString += 7;
                 Subset.LengthInChars -= 7;
             } else {
+#endif
 
                 //
                 //  Input string is \\?\C:\, output is C:\, chop off
@@ -908,8 +966,10 @@ YoriLibFullPathNormalize(
 
                 Subset.StartOfString += 4;
                 Subset.LengthInChars -= 4;
+#if YORI_UNC_SUPPORT
             }
         }
+#endif
     }
 
     if (ReturnEscapedPath) {
@@ -917,18 +977,25 @@ YoriLibFullPathNormalize(
         if (PathType->Flags.PrefixPresent) {
 
             Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("%y"), &Subset);
+#if YORI_UNC_SUPPORT
         } else if (PathType->Flags.UncPath) {
             Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\\\%c\\UNC\\%y"), YoriLibPathPrefixChar, &Subset);
         } else {
+#endif
+
             Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\\\%c\\%y"), YoriLibPathPrefixChar, &Subset);
         }
     } else {
         if (PathType->Flags.PrefixPresent) {
+#if YORI_UNC_SUPPORT
             if (PathType->Flags.UncPath) {
                 Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\%y"), &Subset);
             } else {
+#endif
                 Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("%y"), &Subset);
+#if YORI_UNC_SUPPORT
             }
+#endif
         } else {
             Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("%y"), &Subset);
         }
@@ -959,16 +1026,18 @@ YoriLibFullPathNormalize(
          completion.
  */
 __success(return == ERROR_SUCCESS)
-DWORD
-YoriLibGetFullPathSquashRelativeComponents(
+SYSERR
+YoriLibGetFullPathSquashRelCmp(
     __inout PYORI_STRING Buffer,
+#if YORI_UNC_SUPPORT
     __in PYORI_LIB_FULL_PATH_TYPE PathType,
+#endif
     __in BOOL ReturnEscapedPath,
     __deref_opt_out_opt LPTSTR* lpFilePart
     )
 {
 
-    DWORD Result;
+    SYSERR Result;
     LPTSTR EffectiveRoot;
     YORI_STRING EffectiveRootSubstring;
     LPTSTR CurrentReadChar;
@@ -993,6 +1062,7 @@ YoriLibGetFullPathSquashRelativeComponents(
     //  before \\?\X:\ or \\?\UNC\server\share.
     //
 
+#if YORI_UNC_SUPPORT
     if (ReturnEscapedPath) {
         if (YoriLibIsFullPathUnc(Buffer)) {
             PathType->Flags.UncPath = TRUE;
@@ -1006,8 +1076,14 @@ YoriLibGetFullPathSquashRelativeComponents(
             PathType->Flags.UncPath = FALSE;
         }
     }
+#endif
 
-    if (!YoriLibFindEffectiveRootInternal(Buffer, ReturnEscapedPath, PathType->Flags.UncPath, &EffectiveRootSubstring)) {
+    if (!YoriLibFindEffRootInternal(Buffer,
+                                    ReturnEscapedPath,
+#if YORI_UNC_SUPPORT
+                                    PathType->Flags.UncPath,
+#endif
+                                    &EffectiveRootSubstring)) {
         return ERROR_BAD_PATHNAME;
     }
 
@@ -1239,7 +1315,7 @@ YoriLibGetFullPathSquashRelativeComponents(
  */
 __success(return)
 BOOL
-YoriLibGetFullPathNameReturnAllocation(
+YoriLibGetFullPathNameAlloc(
     __in PYORI_STRING FileName,
     __in BOOL ReturnEscapedPath,
     __inout PYORI_STRING Buffer,
@@ -1263,11 +1339,11 @@ YoriLibGetFullPathNameReturnAllocation(
 
     YORI_STRING StartOfRelativePath;
 
-    DWORD Result;
+    SYSERR Result;
 
-    Result = YoriLibGetFullPathDeterminePathType(FileName,
-                                                 &PathType,
-                                                 &StartOfRelativePath);
+    Result = YoriLibGetFullPathPathType(FileName,
+                                        &PathType,
+                                        &StartOfRelativePath);
     if (Result != ERROR_SUCCESS) {
         SetLastError(Result);
         return FALSE;
@@ -1310,19 +1386,19 @@ YoriLibGetFullPathNameReturnAllocation(
                 YoriLibUpcaseChar(CurrentDirectory.StartOfString[0]) != YoriLibUpcaseChar(FileName->StartOfString[0])) {
 
                 YoriLibFreeStringContents(&CurrentDirectory);
-                if (!YoriLibGetCurrentDirectoryOnDrive(FileName->StartOfString[0], &CurrentDirectory)) {
+                if (!YoriLibGetCurDirOnDrive(FileName->StartOfString[0], &CurrentDirectory)) {
                     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
                     return FALSE;
                 }
             }
         }
 
-        Result = YoriLibFullPathMergeRootWithRelative(&CurrentDirectory,
-                                                      &StartOfRelativePath,
-                                                      ReturnEscapedPath,
-                                                      &PathType,
-                                                      Buffer,
-                                                      &FreeOnFailure);
+        Result = YoriLibFullPathMergeRootWithRel(&CurrentDirectory,
+                                                 &StartOfRelativePath,
+                                                 ReturnEscapedPath,
+                                                 &PathType,
+                                                 Buffer,
+                                                 &FreeOnFailure);
         YoriLibFreeStringContents(&CurrentDirectory);
 
     } else {
@@ -1343,7 +1419,12 @@ YoriLibGetFullPathNameReturnAllocation(
         return FALSE;
     }
 
-    Result = YoriLibGetFullPathSquashRelativeComponents(Buffer, &PathType, ReturnEscapedPath, lpFilePart);
+    Result = YoriLibGetFullPathSquashRelCmp(Buffer,
+#if YORI_UNC_SUPPORT
+                                            &PathType,
+#endif
+                                            ReturnEscapedPath,
+                                            lpFilePart);
     if (Result != ERROR_SUCCESS) {
         if (FreeOnFailure) {
             YoriLibFreeStringContents(Buffer);
@@ -1387,7 +1468,7 @@ YoriLibGetFullPathNameReturnAllocation(
  */
 __success(return)
 BOOL
-YoriLibGetFullPathNameRelativeTo(
+YoriLibGetFullPathNameRelTo(
     __in PYORI_STRING PrimaryDirectory,
     __in PYORI_STRING FileName,
     __in BOOL ReturnEscapedPath,
@@ -1400,11 +1481,11 @@ YoriLibGetFullPathNameRelativeTo(
 
     YORI_STRING StartOfRelativePath;
 
-    DWORD Result;
+    SYSERR Result;
 
-    Result = YoriLibGetFullPathDeterminePathType(FileName,
-                                                 &PathType,
-                                                 &StartOfRelativePath);
+    Result = YoriLibGetFullPathPathType(FileName,
+                                        &PathType,
+                                        &StartOfRelativePath);
     if (Result != ERROR_SUCCESS) {
         SetLastError(Result);
         return FALSE;
@@ -1423,9 +1504,9 @@ YoriLibGetFullPathNameRelativeTo(
                PathType.Flags.AbsoluteWithoutDrive) {
 
         YORI_LIB_FULL_PATH_TYPE PrimaryDirPathType;
-        Result = YoriLibGetFullPathDeterminePathType(PrimaryDirectory,
-                                                     &PrimaryDirPathType,
-                                                     NULL);
+        Result = YoriLibGetFullPathPathType(PrimaryDirectory,
+                                            &PrimaryDirPathType,
+                                            NULL);
         if (Result != ERROR_SUCCESS) {
             SetLastError(Result);
             return FALSE;
@@ -1445,12 +1526,12 @@ YoriLibGetFullPathNameRelativeTo(
             return FALSE;
         }
 
-        Result = YoriLibFullPathMergeRootWithRelative(PrimaryDirectory,
-                                                      &StartOfRelativePath,
-                                                      ReturnEscapedPath,
-                                                      &PathType,
-                                                      Buffer,
-                                                      &FreeOnFailure);
+        Result = YoriLibFullPathMergeRootWithRel(PrimaryDirectory,
+                                                 &StartOfRelativePath,
+                                                 ReturnEscapedPath,
+                                                 &PathType,
+                                                 Buffer,
+                                                 &FreeOnFailure);
     } else {
 
         Result = YoriLibFullPathNormalize(FileName,
@@ -1469,7 +1550,12 @@ YoriLibGetFullPathNameRelativeTo(
         return FALSE;
     }
 
-    Result = YoriLibGetFullPathSquashRelativeComponents(Buffer, &PathType, ReturnEscapedPath, lpFilePart);
+    Result = YoriLibGetFullPathSquashRelCmp(Buffer,
+#if YORI_UNC_SUPPORT
+                                            &PathType,
+#endif
+                                            ReturnEscapedPath,
+                                            lpFilePart);
     if (Result != ERROR_SUCCESS) {
         if (FreeOnFailure) {
             YoriLibFreeStringContents(Buffer);
@@ -1501,7 +1587,9 @@ YoriLibUnescapePath(
     )
 {
     BOOLEAN HasEscape = FALSE;
+#if YORI_UNC_SUPPORT
     BOOLEAN UncPath = FALSE;
+#endif
     YORI_ALLOC_SIZE_T Offset;
     YORI_ALLOC_SIZE_T BufferLength;
     YORI_STRING SubsetToCopy;
@@ -1523,12 +1611,16 @@ YoriLibUnescapePath(
 
         HasEscape = TRUE;
 
+#if YORI_UNC_SUPPORT
         if (YoriLibIsFullPathUnc(Path)) {
             UncPath = TRUE;
             Offset = 7;
         } else {
+#endif
             Offset = 4;
+#if YORI_UNC_SUPPORT
         }
+#endif
     }
 
     //
@@ -1538,9 +1630,11 @@ YoriLibUnescapePath(
     //
 
     BufferLength = Path->LengthInChars - Offset + 1;
+#if YORI_UNC_SUPPORT
     if (UncPath) {
         BufferLength++;
     }
+#endif
 
     if (UnescapedPath->LengthAllocated < BufferLength) {
         YoriLibFreeStringContents(UnescapedPath);
@@ -1553,13 +1647,17 @@ YoriLibUnescapePath(
     SubsetToCopy.StartOfString += Offset;
     SubsetToCopy.LengthInChars = SubsetToCopy.LengthInChars - Offset;
 
+#if YORI_UNC_SUPPORT
     if (UncPath) {
         YoriLibSPrintfS(UnescapedPath->StartOfString, BufferLength, _T("\\%y"), &SubsetToCopy);
         UnescapedPath->LengthInChars = SubsetToCopy.LengthInChars + 1;
     } else {
+#endif
         YoriLibSPrintfS(UnescapedPath->StartOfString, BufferLength, _T("%y"), &SubsetToCopy);
         UnescapedPath->LengthInChars = SubsetToCopy.LengthInChars;
+#if YORI_UNC_SUPPORT
     }
+#endif
 
     return TRUE;
 }

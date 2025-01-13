@@ -516,7 +516,7 @@ CoGetTargetDirectory(
     //
 
     YoriLibInitEmptyString(&CurrentDirectory);
-    if (!YoriLibGetFullPathNameReturnAllocation(&CoContext->CurrentDirectory, TRUE, &CurrentDirectory, NULL)) {
+    if (!YoriLibGetFullPathNameAlloc(&CoContext->CurrentDirectory, TRUE, &CurrentDirectory, NULL)) {
         YoriLibFreeStringContents(&FullDir);
         YoriLibFreeStringContents(&Directory);
         return FALSE;
@@ -639,7 +639,7 @@ CoChdirButtonClicked(
         if (CoContext.FileArray[Index]->IsDirectory) {
 
             YoriLibInitEmptyString(&FullDir);
-            if (!YoriLibGetFullPathNameReturnAllocation(&CoContext.FileArray[Index]->FullFilePath, TRUE, &FullDir, NULL)) {
+            if (!YoriLibGetFullPathNameAlloc(&CoContext.FileArray[Index]->FullFilePath, TRUE, &FullDir, NULL)) {
                 LastError = GetLastError();
                 ErrText = YoriLibGetWinErrorText(LastError);
                 if (ErrText != NULL) {

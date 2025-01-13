@@ -448,7 +448,7 @@ DuInitializeDirectoryStack(
 
             DirStack->AllocationSize = 4096;
 
-            if (YoriLibFindEffectiveRoot(&DirStack->DirectoryName, &EffectiveRoot) &&
+            if (YoriLibFindEffRoot(&DirStack->DirectoryName, &EffectiveRoot) &&
                 EffectiveRoot.LengthInChars < DirStack->DirectoryName.LengthInChars) {
 
                 TCHAR SavedChar;
@@ -736,7 +736,7 @@ DuFileFoundCallback(
         ThisDirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - FilePath->StartOfString);
         if (ThisDirName.LengthInChars == 6) {
             ThisDirName.LengthInChars++;
-            if (!YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ThisDirName)) {
+            if (!YoriLibIsPfxDrvLetterColonSlash(&ThisDirName)) {
                 ThisDirName.LengthInChars--;
             }
         }
@@ -764,7 +764,7 @@ DuFileFoundCallback(
             ThisDirName.LengthInChars = (YORI_ALLOC_SIZE_T)(FilePart - ThisDirName.StartOfString);
             if (ThisDirName.LengthInChars == 6) {
                 ThisDirName.LengthInChars++;
-                if (!YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ThisDirName)) {
+                if (!YoriLibIsPfxDrvLetterColonSlash(&ThisDirName)) {
                     ThisDirName.LengthInChars--;
                 }
             }
