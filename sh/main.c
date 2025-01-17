@@ -827,6 +827,7 @@ YoriShFixWindowIcon(VOID)
     HWND ConsoleWindow;
     YORI_STRING OldTitle;
     YORI_STRING TempTitle;
+    DWORD TickCount;
     DWORD CurrentProcessId;
     DWORD WindowProcessId;
     YORI_SH_ENUM_ICON_CONTEXT Icons;
@@ -846,6 +847,7 @@ YoriShFixWindowIcon(VOID)
         return FALSE;
     }
 
+    TickCount = GetTickCount();
     CurrentProcessId = GetCurrentProcessId();
 
     //
@@ -856,23 +858,28 @@ YoriShFixWindowIcon(VOID)
     YoriLibInitEmptyString(&TempTitle);
     if (!YoriLibAllocateString(&OldTitle, 4096) ||
         GetConsoleTitle(OldTitle.StartOfString, OldTitle.LengthAllocated) == 0 ||
-        YoriLibYPrintf(&TempTitle, _T("%i/%i"), GetTickCount(), CurrentProcessId) == -1 ||
+        YoriLibYPrintf(&TempTitle, _T("%i/%i"), TickCount, CurrentProcessId) == -1 ||
         !SetConsoleTitle(TempTitle.StartOfString)) {
 
         return FALSE;
     }
 
     //
-    //  Loop until the title is actually updated.
+    //  Loop until the title is actually updated. Assume failure if the handle
+    //  isn't returned within one second.
     //
 
     do {
         ConsoleWindow = DllUser32.pFindWindowW(_T("ConsoleWindowClass"), TempTitle.StartOfString);
-    } while (ConsoleWindow == NULL);
+    } while (ConsoleWindow == NULL && GetTickCount() - TickCount < 1000);
 
     SetConsoleTitle(OldTitle.StartOfString);
     YoriLibFreeStringContents(&OldTitle);
     YoriLibFreeStringContents(&TempTitle);
+
+    if (ConsoleWindow == NULL) {
+        return FALSE;
+    }
 
     DllUser32.pGetWindowThreadProcessId(ConsoleWindow, &WindowProcessId);
     if (WindowProcessId != CurrentProcessId) {
