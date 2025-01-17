@@ -10481,6 +10481,18 @@ GET_SHELL_WINDOW(VOID);
 typedef GET_SHELL_WINDOW *PGET_SHELL_WINDOW;
 
 /**
+ A prototype for the GetSystemMetrics function.
+ */
+typedef
+INT WINAPI
+GET_SYSTEM_METRICS(INT);
+
+/**
+ A prototype for a pointer to the GetSystemMetrics function.
+ */
+typedef GET_SYSTEM_METRICS *PGET_SYSTEM_METRICS;
+
+/**
  A prototype for the GetTaskmanWindow function.
  */
 typedef
@@ -10503,6 +10515,18 @@ GET_WINDOW_RECT(HWND, LPRECT);
  A prototype for a pointer to the GetWindowRect function.
  */
 typedef GET_WINDOW_RECT *PGET_WINDOW_RECT;
+
+/**
+ A prototype for the GetWindowThreadProcessId function.
+ */
+typedef
+DWORD WINAPI
+GET_WINDOW_THREAD_PROCESS_ID(HWND, LPDWORD);
+
+/**
+ A prototype for a pointer to the GetWindowThreadProcessId function.
+ */
+typedef GET_WINDOW_THREAD_PROCESS_ID *PGET_WINDOW_THREAD_PROCESS_ID;
 
 /**
  A prototype for the LoadImageW function.
@@ -10587,6 +10611,18 @@ REGISTER_SHELL_HOOK_WINDOW(HWND);
  A prototype for a pointer to the RegisterShellHookWindow function.
  */
 typedef REGISTER_SHELL_HOOK_WINDOW *PREGISTER_SHELL_HOOK_WINDOW;
+
+/**
+ A prototype for the SendMessageW function.
+ */
+typedef
+LRESULT WINAPI
+SEND_MESSAGEW(HWND, UINT, WPARAM, LPARAM);
+
+/**
+ A prototype for a pointer to the SendMessageW function.
+ */
+typedef SEND_MESSAGEW *PSEND_MESSAGEW;
 
 /**
  A prototype for the SendMessageTimeoutW function.
@@ -10846,6 +10882,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PGET_SHELL_WINDOW pGetShellWindow;
 
     /**
+     If it's available on the current system, a pointer to GetSystemMetrics.
+     */
+    PGET_SYSTEM_METRICS pGetSystemMetrics;
+
+    /**
      If it's available on the current system, a pointer to GetTaskmanWindow.
      */
     PGET_TASKMAN_WINDOW pGetTaskmanWindow;
@@ -10854,6 +10895,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to GetWindowRect.
      */
     PGET_WINDOW_RECT pGetWindowRect;
+
+    /**
+     If it's available on the current system, a pointer to GetWindowThreadProcessId.
+     */
+    PGET_WINDOW_THREAD_PROCESS_ID pGetWindowThreadProcessId;
 
     /**
      If it's available on the current system, a pointer to LoadImageW.
@@ -10889,6 +10935,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to RegisterShellHookWindow.
      */
     PREGISTER_SHELL_HOOK_WINDOW pRegisterShellHookWindow;
+
+    /**
+     If it's available on the current system, a pointer to SendMessageW.
+     */
+    PSEND_MESSAGEW pSendMessageW;
 
     /**
      If it's available on the current system, a pointer to SendMessageTimeoutW.

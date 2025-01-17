@@ -151,18 +151,6 @@ RELEASE_DC(HWND, HDC);
 typedef RELEASE_DC *PRELEASE_DC;
 
 /**
- A prototype for the SendMessageW function.
- */
-typedef
-LRESULT WINAPI
-SEND_MESSAGEW(HWND, DWORD, WPARAM, LPARAM);
-
-/**
- A prototype for a pointer to the SendMessageW function.
- */
-typedef SEND_MESSAGEW *PSEND_MESSAGEW;
-
-/**
  A prototype for the SystemParametersInfoW function.
  */
 typedef
