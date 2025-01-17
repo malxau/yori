@@ -752,6 +752,151 @@ YoriShPreCommand(
 }
 
 /**
+ Context passed to @ref YoriShEnumIconCallback. It will be filled with handles
+ to the large and small icons loaded from the first icon group in the
+ executable.
+ */
+typedef struct YORI_SH_ENUM_ICON_CONTEXT {
+
+    /**
+     A handle to a large icon.
+     */
+    HICON LargeIcon;
+
+    /**
+     A handle to a small icon.
+     */
+    HICON SmallIcon;
+} YORI_SH_ENUM_ICON_CONTEXT, *PYORI_SH_ENUM_ICON_CONTEXT;
+
+/**
+ A callback function passed to EnumResourceNames by @ref YoriShFixWindowIcon.
+ Load large and small icons from the first icon group in the module and stop
+ enumeration.
+
+ @param Module Pointer to the base of the module in memory.
+
+ @param Type Pointer to the type of the resource. Ignored here since we only
+        enumerate icon groups.
+
+ @param Name Pointer to the resource name, or the MAKEINTRESOURCE integer
+        identifier of the resource.
+
+ @param lParam Pointer to a YORI_SH_ENUM_ICON_CONTEXT structure that receives
+        the icon handles.
+
+ @return FALSE to stop enumeration after the first icon.
+ */
+BOOL CALLBACK
+YoriShEnumIconCallback(
+    __in HMODULE Module,
+    __in LPCTSTR Type,
+    __in LPTSTR Name,
+    __in LONG_PTR lParam
+    )
+{
+    PYORI_SH_ENUM_ICON_CONTEXT Icons = (PYORI_SH_ENUM_ICON_CONTEXT)lParam;
+
+    UNREFERENCED_PARAMETER(Type);
+
+    //
+    //  Loading the icon group with LoadIcon won't get the desired results when
+    //  sending a WM_SETICON message with ICON_SMALL. We have to obtain
+    //  separate handles for the large and small icon sizes.
+    //
+
+    Icons->LargeIcon = DllUser32.pLoadImageW(Module, Name, IMAGE_ICON, 0, 0, LR_DEFAULTSIZE);
+    Icons->SmallIcon = DllUser32.pLoadImageW(Module, Name, IMAGE_ICON, DllUser32.pGetSystemMetrics(SM_CXSMICON), DllUser32.pGetSystemMetrics(SM_CYSMICON), 0);
+    return FALSE;
+}
+
+/**
+ If Yori is running on NT 4.0 and was not launched from an existing console,
+ set the console window icon to the first icon group in the executable. This
+ works around NT 4.0 not utilizing the correctly sized icon in the console
+ title bar.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShFixWindowIcon(VOID)
+{
+    DWORD OsVerMajor;
+    DWORD OsVerMinor;
+    DWORD OsBuildNumber;
+    HWND ConsoleWindow;
+    YORI_STRING OldTitle;
+    YORI_STRING TempTitle;
+    DWORD CurrentProcessId;
+    DWORD WindowProcessId;
+    YORI_SH_ENUM_ICON_CONTEXT Icons;
+
+    YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
+    if (OsVerMajor != 4) {
+        return TRUE;
+    }
+
+    YoriLibLoadUser32Functions();
+    if (DllUser32.pFindWindowW == NULL ||
+        DllUser32.pGetSystemMetrics == NULL ||
+        DllUser32.pGetWindowThreadProcessId == NULL ||
+        DllUser32.pLoadImageW == NULL ||
+        DllUser32.pSendMessageW == NULL) {
+
+        return FALSE;
+    }
+
+    CurrentProcessId = GetCurrentProcessId();
+
+    //
+    //  Since NT 4.0 doesn't have GetConsoleWindow, set the title to a unique
+    //  string and use FindWindow to retrieve the handle.
+    //
+
+    YoriLibInitEmptyString(&TempTitle);
+    if (!YoriLibAllocateString(&OldTitle, 4096) ||
+        GetConsoleTitle(OldTitle.StartOfString, OldTitle.LengthAllocated) == 0 ||
+        YoriLibYPrintf(&TempTitle, _T("%i/%i"), GetTickCount(), CurrentProcessId) == -1 ||
+        !SetConsoleTitle(TempTitle.StartOfString)) {
+
+        return FALSE;
+    }
+
+    //
+    //  Loop until the title is actually updated.
+    //
+
+    do {
+        ConsoleWindow = DllUser32.pFindWindowW(_T("ConsoleWindowClass"), TempTitle.StartOfString);
+    } while (ConsoleWindow == NULL);
+
+    SetConsoleTitle(OldTitle.StartOfString);
+    YoriLibFreeStringContents(&OldTitle);
+    YoriLibFreeStringContents(&TempTitle);
+
+    DllUser32.pGetWindowThreadProcessId(ConsoleWindow, &WindowProcessId);
+    if (WindowProcessId != CurrentProcessId) {
+        return TRUE;
+    }
+
+    //
+    //  Despite what the documentation for EnumResourceNames says, passing NULL
+    //  as the first parameter doesn't work here. Something to do with being a
+    //  console application?
+    //
+
+    EnumResourceNames(GetModuleHandle(NULL), RT_GROUP_ICON, YoriShEnumIconCallback, (LONG_PTR)&Icons);
+    if (Icons.SmallIcon != NULL) {
+        DllUser32.pSendMessageW(ConsoleWindow, WM_SETICON, ICON_SMALL, (LPARAM)Icons.SmallIcon);
+    }
+    if (Icons.LargeIcon != NULL) {
+        DllUser32.pSendMessageW(ConsoleWindow, WM_SETICON, ICON_BIG, (LPARAM)Icons.LargeIcon);
+    }
+
+    return TRUE;
+}
+
+/**
  The entrypoint function for Yori.
 
  @param ArgC Count of the number of arguments.
@@ -769,6 +914,7 @@ ymain (
     YORI_STRING CurrentExpression;
     BOOLEAN TerminateApp = FALSE;
 
+    YoriShFixWindowIcon();
     YoriShInit();
     YoriShParseArgs(ArgC, ArgV, &TerminateApp, &YoriShGlobal.ExitProcessExitCode);
 
