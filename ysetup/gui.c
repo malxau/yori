@@ -229,11 +229,6 @@ typedef struct _YSETUP_GUI_DLL {
     PRELEASE_DC pReleaseDC;
 
     /**
-     If it exists on the system, a pointer to SendMessageW.
-     */
-    PSEND_MESSAGEW pSendMessageW;
-
-    /**
      If it exists on the system, a pointer to SystemParametersInfoW.
      */
     PSYSTEM_PARAMETERS_INFOW pSystemParametersInfoW;
@@ -301,11 +296,11 @@ SetupGuiInitialize(VOID)
     DllYsetupGui.pLoadIconW = (PLOAD_ICONW)GetProcAddress(DllYsetupGui.hUser32, "LoadIconW");
     DllYsetupGui.pMessageBoxW = (PMESSAGE_BOXW)GetProcAddress(DllYsetupGui.hUser32, "MessageBoxW");
     DllYsetupGui.pReleaseDC = (PRELEASE_DC)GetProcAddress(DllYsetupGui.hUser32, "ReleaseDC");
-    DllYsetupGui.pSendMessageW = (PSEND_MESSAGEW)GetProcAddress(DllYsetupGui.hUser32, "SendMessageW");
     DllYsetupGui.pSystemParametersInfoW = (PSYSTEM_PARAMETERS_INFOW)GetProcAddress(DllYsetupGui.hUser32, "SystemParametersInfoW");
 
     if (DllUser32.pGetDesktopWindow != NULL &&
         DllUser32.pGetWindowRect != NULL &&
+        DllUser32.pSendMessageW != NULL &&
         DllUser32.pSetWindowPos != NULL &&
         DllYsetupGui.pCreateFontW != NULL &&
         DllYsetupGui.pGetDeviceCaps != NULL &&
@@ -317,7 +312,6 @@ SetupGuiInitialize(VOID)
         DllYsetupGui.pLoadIconW != NULL &&
         DllYsetupGui.pMessageBoxW != NULL &&
         DllYsetupGui.pReleaseDC != NULL &&
-        DllYsetupGui.pSendMessageW != NULL &&
         DllYsetupGui.pSystemParametersInfoW != NULL) {
 
         return TRUE;
@@ -351,7 +345,7 @@ SetupGuiGetDlgItemText(
 {
     HWND hWndDlg;
     hWndDlg = DllYsetupGui.pGetDlgItem(hWnd, DlgId);
-    return (DWORD)DllYsetupGui.pSendMessageW(hWndDlg, WM_GETTEXT, StringLength, (DWORD_PTR)String);
+    return (DWORD)DllUser32.pSendMessageW(hWndDlg, WM_GETTEXT, StringLength, (DWORD_PTR)String);
 }
 
 /**
@@ -375,7 +369,7 @@ SetupGuiSetDlgItemText(
 {
     HWND hWndDlg;
     hWndDlg = DllYsetupGui.pGetDlgItem(hWnd, DlgId);
-    return (DWORD)DllYsetupGui.pSendMessageW(hWndDlg, WM_SETTEXT, 0, (DWORD_PTR)String);
+    return (DWORD)DllUser32.pSendMessageW(hWndDlg, WM_SETTEXT, 0, (DWORD_PTR)String);
 }
 
 /**
@@ -397,7 +391,7 @@ SetupGuiCheckDlgButton(
 {
     HWND hWndDlg;
     hWndDlg = DllYsetupGui.pGetDlgItem(hWnd, DlgId);
-    DllYsetupGui.pSendMessageW(hWndDlg, BM_SETCHECK, Check, 0);
+    DllUser32.pSendMessageW(hWndDlg, BM_SETCHECK, Check, 0);
 }
 
 /**
@@ -418,7 +412,7 @@ SetupGuiIsDlgButtonChecked(
 {
     HWND hWndDlg;
     hWndDlg = DllYsetupGui.pGetDlgItem(hWnd, DlgId);
-    return (DWORD)DllYsetupGui.pSendMessageW(hWndDlg, BM_GETCHECK, 0, 0);
+    return (DWORD)DllUser32.pSendMessageW(hWndDlg, BM_GETCHECK, 0, 0);
 }
 
 /**
@@ -556,7 +550,7 @@ SetupGuiInstallSelectedFromDialog(
     //  Query the install directory
     //
 
-    LengthNeeded = (YORI_ALLOC_SIZE_T)DllYsetupGui.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, IDC_INSTALLDIR), WM_GETTEXTLENGTH, 0, 0);
+    LengthNeeded = (YORI_ALLOC_SIZE_T)DllUser32.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, IDC_INSTALLDIR), WM_GETTEXTLENGTH, 0, 0);
     if (!YoriLibAllocateString(&InstallDir, LengthNeeded + 1)) {
         DllYsetupGui.pMessageBoxW(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
         return FALSE;
@@ -735,8 +729,8 @@ SetupGuiDialogProc(
             return TRUE;
         case WM_INITDIALOG:
             hIcon = DllYsetupGui.pLoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCE(1));
-            DllYsetupGui.pSendMessageW(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-            DllYsetupGui.pSendMessageW(hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            DllUser32.pSendMessageW(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            DllUser32.pSendMessageW(hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 
             //
             //  Get the primary monitor's display size.  This is reduced by
@@ -837,9 +831,9 @@ SetupGuiDialogProc(
                 DllYsetupGui.pReleaseDC(hDlg, hDC);
 
                 for (Index = 0; Index < sizeof(ControlArray)/sizeof(ControlArray[0]); Index++) {
-                    DllYsetupGui.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, ControlArray[Index]), WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
+                    DllUser32.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, ControlArray[Index]), WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
                 }
-                DllYsetupGui.pSendMessageW(hDlg, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(TRUE, 0));
+                DllUser32.pSendMessageW(hDlg, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(TRUE, 0));
 
                 //
                 //  Since we already have an NT 3.5x branch, disable controls

@@ -2822,7 +2822,7 @@ YuiMenuDisplayAndExecute(
 
     if (YuiContext->MenuActive) {
         YuiContext->MenuActive = FALSE;
-        SendMessage(YuiMonitor->hWndStart, BM_SETSTATE, FALSE, 0);
+        DllUser32.pSendMessageW(YuiMonitor->hWndStart, BM_SETSTATE, FALSE, 0);
     }
 
     if (MenuId > 0) {

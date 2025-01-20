@@ -407,13 +407,13 @@ YuiInitializeMonitors(
     DWORD ScreenWidth;
     DWORD ScreenHeight;
 
-    YuiContext->VirtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-    YuiContext->VirtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-    YuiContext->VirtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    YuiContext->VirtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    YuiContext->VirtualScreenLeft = DllUser32.pGetSystemMetrics(SM_XVIRTUALSCREEN);
+    YuiContext->VirtualScreenTop = DllUser32.pGetSystemMetrics(SM_YVIRTUALSCREEN);
+    YuiContext->VirtualScreenWidth = DllUser32.pGetSystemMetrics(SM_CXVIRTUALSCREEN);
+    YuiContext->VirtualScreenHeight = DllUser32.pGetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-    ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
-    ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+    ScreenWidth = DllUser32.pGetSystemMetrics(SM_CXSCREEN);
+    ScreenHeight = DllUser32.pGetSystemMetrics(SM_CYSCREEN);
 
     if (YuiContext->VirtualScreenWidth == 0 ||
         YuiContext->VirtualScreenHeight == 0) {
@@ -1094,10 +1094,10 @@ YuiInitializeBatteryWindow(
         return FALSE;
     }
 
-    SendMessage(YuiMonitor->hWndBattery,
-                WM_SETFONT,
-                (WPARAM)YuiMonitor->hFont,
-                MAKELPARAM(TRUE, 0));
+    DllUser32.pSendMessageW(YuiMonitor->hWndBattery,
+                            WM_SETFONT,
+                            (WPARAM)YuiMonitor->hFont,
+                            MAKELPARAM(TRUE, 0));
 
     //
     //  Shrink the space for taskbar buttons and notify the taskbar to

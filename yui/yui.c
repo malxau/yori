@@ -431,24 +431,24 @@ YuiNotifyResolutionChange(
         YuiMonitor->hFont = hFont;
 
         if (YuiMonitor->hWndTaskbar != NULL) {
-            SendMessage(YuiMonitor->hWndTaskbar,
-                        WM_SETFONT,
-                        (WPARAM)YuiMonitor->hFont,
-                        MAKELPARAM(TRUE, 0));
+            DllUser32.pSendMessageW(YuiMonitor->hWndTaskbar,
+                                    WM_SETFONT,
+                                    (WPARAM)YuiMonitor->hFont,
+                                    MAKELPARAM(TRUE, 0));
         }
 
         if (YuiMonitor->hWndBattery != NULL) {
-            SendMessage(YuiMonitor->hWndBattery,
-                        WM_SETFONT,
-                        (WPARAM)YuiMonitor->hFont,
-                        MAKELPARAM(TRUE, 0));
+            DllUser32.pSendMessageW(YuiMonitor->hWndBattery,
+                                    WM_SETFONT,
+                                    (WPARAM)YuiMonitor->hFont,
+                                    MAKELPARAM(TRUE, 0));
         }
 
         if (YuiMonitor->hWndClock != NULL) {
-            SendMessage(YuiMonitor->hWndClock,
-                        WM_SETFONT,
-                        (WPARAM)YuiMonitor->hFont,
-                        MAKELPARAM(TRUE, 0));
+            DllUser32.pSendMessageW(YuiMonitor->hWndClock,
+                                    WM_SETFONT,
+                                    (WPARAM)YuiMonitor->hFont,
+                                    MAKELPARAM(TRUE, 0));
         }
     }
 
@@ -459,10 +459,10 @@ YuiNotifyResolutionChange(
         YuiMonitor->hBoldFont = hBoldFont;
 
         if (YuiMonitor->hWndStart != NULL) {
-            SendMessage(YuiMonitor->hWndStart,
-                        WM_SETFONT,
-                        (WPARAM)YuiMonitor->hBoldFont,
-                        MAKELPARAM(TRUE, 0));
+            DllUser32.pSendMessageW(YuiMonitor->hWndStart,
+                                    WM_SETFONT,
+                                    (WPARAM)YuiMonitor->hBoldFont,
+                                    MAKELPARAM(TRUE, 0));
         }
     }
 
@@ -597,11 +597,11 @@ YuiDisplayMenu(
     }
     YuiTaskbarSuppressFullscreenHiding(YuiMonitor);
     YuiContext.MenuActive = TRUE;
-    SendMessage(YuiMonitor->hWndStart, BM_SETSTATE, TRUE, 0);
+    DllUser32.pSendMessageW(YuiMonitor->hWndStart, BM_SETSTATE, TRUE, 0);
     YuiMenuDisplayAndExecute(YuiMonitor, YuiMonitor->hWndTaskbar);
     if (YuiContext.MenuActive) {
         YuiContext.MenuActive = FALSE;
-        SendMessage(YuiMonitor->hWndStart, BM_SETSTATE, FALSE, 0);
+        DllUser32.pSendMessageW(YuiMonitor->hWndStart, BM_SETSTATE, FALSE, 0);
     }
     return TRUE;
 }
@@ -1288,7 +1288,7 @@ YuiInitializeMonitor(
         return FALSE;
     }
 
-    SendMessage(YuiMonitor->hWndTaskbar, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+    DllUser32.pSendMessageW(YuiMonitor->hWndTaskbar, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
     DllUser32.pGetClientRect(YuiMonitor->hWndTaskbar, &ClientRect);
 
@@ -1316,7 +1316,7 @@ YuiInitializeMonitor(
     }
     SetWindowLongPtr(YuiMonitor->hWndStart, GWLP_WNDPROC, (LONG_PTR)YuiStartButtonWndProc);
 
-    SendMessage(YuiMonitor->hWndStart, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(TRUE, 0));
+    DllUser32.pSendMessageW(YuiMonitor->hWndStart, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(TRUE, 0));
 
     YuiMonitor->hWndClock = CreateWindowEx(0,
                                            _T("STATIC"),
@@ -1336,7 +1336,7 @@ YuiInitializeMonitor(
         return FALSE;
     }
 
-    SendMessage(YuiMonitor->hWndClock, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+    DllUser32.pSendMessageW(YuiMonitor->hWndClock, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
     //
     //  If the application already knows about a battery, initialize it on
@@ -1421,10 +1421,10 @@ YuiInitializeApplication(
         return FALSE;
     }
 
-    Context->SmallTaskbarIconWidth = (WORD)GetSystemMetrics(SM_CXSMICON);
-    Context->SmallTaskbarIconHeight = (WORD)GetSystemMetrics(SM_CYSMICON);
-    Context->TallIconWidth = (WORD)GetSystemMetrics(SM_CXICON);
-    Context->TallIconHeight = (WORD)GetSystemMetrics(SM_CYICON);
+    Context->SmallTaskbarIconWidth = (WORD)DllUser32.pGetSystemMetrics(SM_CXSMICON);
+    Context->SmallTaskbarIconHeight = (WORD)DllUser32.pGetSystemMetrics(SM_CYSMICON);
+    Context->TallIconWidth = (WORD)DllUser32.pGetSystemMetrics(SM_CXICON);
+    Context->TallIconHeight = (WORD)DllUser32.pGetSystemMetrics(SM_CYICON);
 
     //
     //  Adjust the small start menu icon to the next multiple of 4.
@@ -1841,8 +1841,11 @@ ymain(
 
     if (DllUser32.pDrawIconEx == NULL ||
         DllUser32.pGetClientRect == NULL ||
+        DllUser32.pGetSystemMetrics == NULL ||
         DllUser32.pGetWindowRect == NULL ||
+        DllUser32.pGetWindowThreadProcessId == NULL ||
         DllUser32.pMoveWindow == NULL ||
+        DllUser32.pSendMessageW == NULL ||
         DllUser32.pSetForegroundWindow == NULL ||
         DllUser32.pSetWindowTextW == NULL ||
         DllUser32.pShowWindow == NULL ||

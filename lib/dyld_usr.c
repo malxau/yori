@@ -70,6 +70,7 @@ CONST YORI_DLL_NAME_MAP DllUser32Symbols[] = {
     {(FARPROC *)&DllUser32.pEnumDisplayMonitors, "EnumDisplayMonitors"},
     {(FARPROC *)&DllUser32.pExitWindowsEx, "ExitWindowsEx"},
     {(FARPROC *)&DllUser32.pFindWindowW, "FindWindowW"},
+    {(FARPROC *)&DllUser32.pFindWindowExW, "FindWindowExW"},
     {(FARPROC *)&DllUser32.pGetClipboardData, "GetClipboardData"},
     {(FARPROC *)&DllUser32.pGetClipboardFormatNameW, "GetClipboardFormatNameW"},
     {(FARPROC *)&DllUser32.pGetClientRect, "GetClientRect"},
