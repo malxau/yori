@@ -513,7 +513,7 @@ YuiWifiPopulateList(VOID)
 
     Index = 0;
     ListEntry = NULL;
-    SendMessage(YuiWifiContext.hWndList, LB_RESETCONTENT, 0, 0);
+    DllUser32.pSendMessageW(YuiWifiContext.hWndList, LB_RESETCONTENT, 0, 0);
     ConnectedIndex = (DWORD)-1;
     ListEntry = YoriLibGetNextListEntry(&YuiWifiContext.NetworkList, ListEntry);
     while (ListEntry != NULL) {
@@ -524,7 +524,7 @@ YuiWifiPopulateList(VOID)
             ConnectedIndex = Index;
         }
 
-        SendMessage(YuiWifiContext.hWndList, LB_ADDSTRING, 0, (LPARAM)Network);
+        DllUser32.pSendMessageW(YuiWifiContext.hWndList, LB_ADDSTRING, 0, (LPARAM)Network);
         ListEntry = YoriLibGetNextListEntry(&YuiWifiContext.NetworkList, ListEntry);
         Index++;
     }
@@ -536,11 +536,11 @@ YuiWifiPopulateList(VOID)
 
     if (ConnectedIndex != (DWORD)-1) {
         YuiWifiContext.SelectedItemConnected = TRUE;
-        SendMessage(YuiWifiContext.hWndList, LB_SETCURSEL, ConnectedIndex, 0);
+        DllUser32.pSendMessageW(YuiWifiContext.hWndList, LB_SETCURSEL, ConnectedIndex, 0);
         EnableWindow(YuiWifiContext.hWndButtonConnect, TRUE);
     } else if (Index > 0) {
         YuiWifiContext.SelectedItemConnected = FALSE;
-        SendMessage(YuiWifiContext.hWndList, LB_SETCURSEL, 0, 0);
+        DllUser32.pSendMessageW(YuiWifiContext.hWndList, LB_SETCURSEL, 0, 0);
         EnableWindow(YuiWifiContext.hWndButtonConnect, TRUE);
     }
 
@@ -837,9 +837,9 @@ YuiWifiWindowProc(
             if (HIWORD(wParam) == BN_CLICKED) {
                 if (LOWORD(wParam) == YUI_WIFI_CONNECT) {
                     DWORD Error;
-                    SelectedIndex = (DWORD)SendMessage(YuiWifiContext.hWndList, LB_GETCURSEL, 0, 0);
+                    SelectedIndex = (DWORD)DllUser32.pSendMessageW(YuiWifiContext.hWndList, LB_GETCURSEL, 0, 0);
                     if (SelectedIndex != LB_ERR) {
-                        Network = (PYUI_WIFI_NETWORK)SendMessage(YuiWifiContext.hWndList, LB_GETITEMDATA, SelectedIndex, 0);
+                        Network = (PYUI_WIFI_NETWORK)DllUser32.pSendMessageW(YuiWifiContext.hWndList, LB_GETITEMDATA, SelectedIndex, 0);
                         if (Network->Connected) {
                             Error = DllWlanApi.pWlanDisconnect(YuiWifiContext.WlanHandle, &YuiWifiContext.Interface, NULL);
                             if (Error == ERROR_SUCCESS) {
@@ -879,15 +879,15 @@ YuiWifiWindowProc(
 
                     if (YoriLibSetAirplaneMode(NewAirplaneMode)) {
                         YuiWifiContext.AirplaneModeEnabled = NewAirplaneMode;
-                        SendMessage(YuiWifiContext.hWndButtonAirplane, BM_SETSTATE, NewAirplaneMode, 0);
+                        DllUser32.pSendMessageW(YuiWifiContext.hWndButtonAirplane, BM_SETSTATE, NewAirplaneMode, 0);
                     }
                 }
             } else if (HIWORD(wParam) == LBN_SELCHANGE) {
-                SelectedIndex = (DWORD)SendMessage(YuiWifiContext.hWndList, LB_GETCURSEL, 0, 0);
+                SelectedIndex = (DWORD)DllUser32.pSendMessageW(YuiWifiContext.hWndList, LB_GETCURSEL, 0, 0);
                 if (SelectedIndex == (DWORD)-1) {
                     EnableWindow(YuiWifiContext.hWndButtonConnect, FALSE);
                 } else {
-                    Network = (PYUI_WIFI_NETWORK)SendMessage(YuiWifiContext.hWndList, LB_GETITEMDATA, SelectedIndex, 0);
+                    Network = (PYUI_WIFI_NETWORK)DllUser32.pSendMessageW(YuiWifiContext.hWndList, LB_GETITEMDATA, SelectedIndex, 0);
                     EnableWindow(YuiWifiContext.hWndButtonConnect, TRUE);
                     if (Network->Connected) {
                         if (YuiWifiContext.SelectedItemConnected == FALSE) {
@@ -924,7 +924,7 @@ YuiWifiWindowProc(
                     } else if (CtrlId == YUI_WIFI_AIRPLANEMODE) {
                         YoriLibConstantString(&Str, _T("Airplane Mode"));
                     }
-                    ButtonState = (DWORD)SendMessage(DrawItemStruct->hwndItem, BM_GETSTATE, 0, 0);
+                    ButtonState = (DWORD)DllUser32.pSendMessageW(DrawItemStruct->hwndItem, BM_GETSTATE, 0, 0);
                     Pushed = FALSE;
                     Disabled = FALSE;
                     if (ButtonState & BST_PUSHED) {
@@ -1152,9 +1152,9 @@ YuiWifi(
         return;
     }
 
-    SendMessage(hWndButtonAirplane, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+    DllUser32.pSendMessageW(hWndButtonAirplane, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
     if (AirplaneModeEnabled) {
-        SendMessage(hWndButtonAirplane, BM_SETSTATE, TRUE, 0);
+        DllUser32.pSendMessageW(hWndButtonAirplane, BM_SETSTATE, TRUE, 0);
     }
     if (!AirplaneModeChangable) {
         EnableWindow(hWndButtonAirplane, FALSE);
@@ -1186,7 +1186,7 @@ YuiWifi(
     }
     EnableWindow(hWndButtonConnect, FALSE);
 
-    SendMessage(hWndButtonConnect, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+    DllUser32.pSendMessageW(hWndButtonConnect, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
     ButtonAreaHeight = (WORD)(ButtonAreaHeight + ButtonPadding);
 
@@ -1214,7 +1214,7 @@ YuiWifi(
         return;
     }
 
-    SendMessage(hWndList, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+    DllUser32.pSendMessageW(hWndList, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
     ShowWindow(hWnd, SW_SHOW);
     DllUser32.pSetForegroundWindow(hWnd);

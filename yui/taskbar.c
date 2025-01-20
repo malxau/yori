@@ -396,7 +396,7 @@ YuiTaskbarAllocateAndAddButton(
 
     CurrentTime = YoriLibGetSystemTimeAsInteger();
     ExpireTime = CurrentTime - (10 * 1000 * 1000 * 30);
-    GetWindowThreadProcessId(hWnd, &NewButton->ProcessId);
+    DllUser32.pGetWindowThreadProcessId(hWnd, &NewButton->ProcessId);
     ListEntry = NULL;
     ListEntry = YoriLibGetNextListEntry(&YuiContext->RecentProcessList, ListEntry);
     while (ListEntry != NULL) {
@@ -508,7 +508,7 @@ YuiTaskbarCreateButtonControl(
     }
 
     SetWindowLongPtr(ThisButton->hWndButton, GWLP_WNDPROC, (LONG_PTR)YuiTaskbarButtonWndProc);
-    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+    DllUser32.pSendMessageW(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
 
     return TRUE;
 }
@@ -578,8 +578,8 @@ YuiTaskbarMarkButtonActive(
 {
     ThisButton->Flashing = FALSE;
     ThisButton->WindowActive = TRUE;
-    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(FALSE, 0));
-    SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
+    DllUser32.pSendMessageW(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(FALSE, 0));
+    DllUser32.pSendMessageW(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
 }
 
 /**
@@ -597,8 +597,8 @@ YuiTaskbarMarkButtonInactive(
     )
 {
     ThisButton->WindowActive = FALSE;
-    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(FALSE, 0));
-    SendMessage(ThisButton->hWndButton, BM_SETSTATE, FALSE, 0);
+    DllUser32.pSendMessageW(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(FALSE, 0));
+    DllUser32.pSendMessageW(ThisButton->hWndButton, BM_SETSTATE, FALSE, 0);
 }
 
 /**
@@ -971,9 +971,9 @@ YuiTaskbarNotifyResolutionChange(
 
         if (ThisButton->hWndButton != NULL) {
             if (ThisButton->WindowActive) {
-                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(TRUE, 0));
+                DllUser32.pSendMessageW(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hBoldFont, MAKELPARAM(TRUE, 0));
             } else {
-                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
+                DllUser32.pSendMessageW(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiMonitor->hFont, MAKELPARAM(TRUE, 0));
             }
         }
         ListEntry = YoriLibGetNextListEntry(&YuiMonitor->TaskbarButtons, ListEntry);

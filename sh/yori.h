@@ -29,5 +29,6 @@
 #include <yorish.h>
 #include "yoristru.h"
 #include "yoriproc.h"
+#include "yorires.h"
 
 // vim:sw=4:ts=4:et:

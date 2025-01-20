@@ -10402,6 +10402,18 @@ FIND_WINDOWW(LPCTSTR, LPCTSTR);
 typedef FIND_WINDOWW *PFIND_WINDOWW;
 
 /**
+ A prototype for the FindWindowExW function.
+ */
+typedef
+HWND WINAPI
+FIND_WINDOW_EXW(HWND, HWND, LPCTSTR, LPCTSTR);
+
+/**
+ A prototype for a pointer to the FindWindowExW function.
+ */
+typedef FIND_WINDOW_EXW *PFIND_WINDOW_EXW;
+
+/**
  A prototype for the GetClientRect function.
  */
 typedef
@@ -10850,6 +10862,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to FindWindowW.
      */
     PFIND_WINDOWW pFindWindowW;
+
+    /**
+     If it's available on the current system, a pointer to FindWindowExW.
+     */
+    PFIND_WINDOW_EXW pFindWindowExW;
 
     /**
      If it's available on the current system, a pointer to GetClientRect.
