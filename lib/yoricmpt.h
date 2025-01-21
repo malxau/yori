@@ -10389,7 +10389,7 @@ typedef EXIT_WINDOWS_EX *PEXIT_WINDOWS_EX;
  */
 typedef
 HWND WINAPI
-FIND_WINDOWW(LPCTSTR, LPCTSTR);
+FIND_WINDOWW(LPCWSTR, LPCWSTR);
 
 /**
  A prototype for a pointer to the FindWindowW function.
@@ -10401,7 +10401,7 @@ typedef FIND_WINDOWW *PFIND_WINDOWW;
  */
 typedef
 HWND WINAPI
-FIND_WINDOW_EXW(HWND, HWND, LPCTSTR, LPCTSTR);
+FIND_WINDOW_EXW(HWND, HWND, LPCWSTR, LPCWSTR);
 
 /**
  A prototype for a pointer to the FindWindowExW function.
@@ -10713,7 +10713,7 @@ typedef SET_WINDOW_POS *PSET_WINDOW_POS;
  */
 typedef
 BOOL WINAPI
-SET_WINDOW_TEXTW(HWND, LPCTSTR);
+SET_WINDOW_TEXTW(HWND, LPCWSTR);
 
 /**
  A prototype for a pointer to the SetWindowTextW function.
