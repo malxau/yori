@@ -363,7 +363,7 @@ YoriShFixWindowIcon(VOID)
     HWND ConsoleWindow;
     DWORD CurrentProcessId;
     DWORD WindowProcessId;
-    DWORD CurrentThreadId;
+    HMODULE Module;
     HICON LargeIcon;
     HICON SmallIcon;
 
@@ -383,7 +383,6 @@ YoriShFixWindowIcon(VOID)
     }
 
     CurrentProcessId = GetCurrentProcessId();
-    CurrentThreadId = GetCurrentThreadId();
 
     //
     //  Loop through all the console windows in the system.  If one of them
@@ -402,7 +401,7 @@ YoriShFixWindowIcon(VOID)
             break;
         }
         ConsoleWindow = DllUser32.pFindWindowExW(NULL, ConsoleWindow, _T("ConsoleWindowClass"), NULL);
-    } while (ConsoleWindow != NULL);
+    }
 
     if (ConsoleWindow == NULL) {
         return FALSE;
@@ -412,13 +411,15 @@ YoriShFixWindowIcon(VOID)
     //  Load the application icon and apply it to the window.
     //
 
-    LargeIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL),
+    Module = GetModuleHandle(NULL);
+
+    LargeIcon = DllUser32.pLoadImageW(Module,
                                       MAKEINTRESOURCE(YORI_ICON_APPLICATION),
                                       IMAGE_ICON,
                                       DllUser32.pGetSystemMetrics(SM_CXICON),
                                       DllUser32.pGetSystemMetrics(SM_CYICON),
                                       0);
-    SmallIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL),
+    SmallIcon = DllUser32.pLoadImageW(Module,
                                       MAKEINTRESOURCE(YORI_ICON_APPLICATION),
                                       IMAGE_ICON,
                                       DllUser32.pGetSystemMetrics(SM_CXSMICON),
