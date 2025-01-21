@@ -347,10 +347,10 @@ YoriShExecuteInitScripts(
 }
 
 /**
- If Yori is running on NT 4.0 and was not launched from an existing console,
- set the console window icon to the first icon group in the executable. This
- works around NT 4.0 not utilizing the correctly sized icon in the console
- title bar.
+ If Yori was not launched from an existing console, set the console window icon
+ to the first icon group in the executable. This works around NT 4.0 (and
+ sometimes later) not utilizing the correctly sized icon in the console title
+ bar.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -368,7 +368,7 @@ YoriShFixWindowIcon(VOID)
     HICON SmallIcon;
 
     YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
-    if (OsVerMajor != 4) {
+    if (OsVerMajor < 4) {
         return TRUE;
     }
 
