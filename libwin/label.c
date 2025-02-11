@@ -209,7 +209,7 @@ YoriWinLabelGetNextDisplayLine(
 {
     YORI_ALLOC_SIZE_T PotentialBreakOffset;
     YORI_ALLOC_SIZE_T CellsProcessed;
-    YORI_ALLOC_SIZE_T MaxLengthOfLineInChars;
+    YORI_ALLOC_SIZE_T MaxLengthOfLineCharIndex;
     YORI_ALLOC_SIZE_T MaxLengthOfLineInCells;
     YORI_ALLOC_SIZE_T CharsToDisplayThisLine;
     YORI_ALLOC_SIZE_T CharsToConsumeThisLine;
@@ -224,8 +224,8 @@ YoriWinLabelGetNextDisplayLine(
     //  Check if the text is longer than can fit on one line
     //
 
-    MaxLengthOfLineInChars = Remaining->LengthInChars;
-    CharsToDisplayThisLine = MaxLengthOfLineInChars;
+    MaxLengthOfLineCharIndex = Remaining->LengthInChars - 1;
+    CharsToDisplayThisLine = MaxLengthOfLineCharIndex + 1;
     MaxLengthOfLineInCells = 0;
     SoftTruncationRequired = FALSE;
 
@@ -257,21 +257,17 @@ YoriWinLabelGetNextDisplayLine(
         //  processing from there.
         //
 
-        if (CellsProcessed >= ClientWidth) {
+        if (CellsProcessed > ClientWidth) {
             if (!YoriWinLabelIsCharSoftBreakChar(TestChar) ||
                 !YoriWinLabelShouldSwallowBreakChar(TestChar)) {
 
-                if (CellsProcessed > ClientWidth) {
-                    PotentialBreakOffset--;
-                    TestChar = Remaining->StartOfString[PotentialBreakOffset];
-                    if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(TestChar)) {
-                        CellsProcessed = CellsProcessed - 2;
-                    } else {
-                        CellsProcessed--;
-                    }
+                if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(TestChar)) {
+                    CellsProcessed = CellsProcessed - 2;
+                } else {
+                    CellsProcessed--;
                 }
-
-                MaxLengthOfLineInChars = PotentialBreakOffset;
+                PotentialBreakOffset--;
+                MaxLengthOfLineCharIndex = PotentialBreakOffset;
                 MaxLengthOfLineInCells = CellsProcessed;
                 SoftTruncationRequired = TRUE;
                 break;
@@ -289,18 +285,8 @@ YoriWinLabelGetNextDisplayLine(
     if (SoftTruncationRequired && !BreakCharFound) {
         BreakCharFound = TRUE;
 
-        PotentialBreakOffset = MaxLengthOfLineInChars;
+        PotentialBreakOffset = MaxLengthOfLineCharIndex;
         CellsProcessed = MaxLengthOfLineInCells;
-
-        /*
-        TestChar = Remaining->StartOfString[PotentialBreakOffset];
-        if (DoubleWideCharSupported && YoriLibIsDoubleWideChar(TestChar)) {
-            CellsProcessed = CellsProcessed - 2;
-        } else {
-            CellsProcessed--;
-        }
-        PotentialBreakOffset--;
-        */
         TestChar = Remaining->StartOfString[PotentialBreakOffset];
 
         while (!YoriWinLabelIsCharSoftBreakChar(TestChar)) {
@@ -318,16 +304,15 @@ YoriWinLabelGetNextDisplayLine(
         }
     }
 
+    //
+    //  If a break char is found, display up to (but not including) the break
+    //  char.  If one is not found, display up to (and including) what will
+    //  fit.
+    //
+
     if (SoftTruncationRequired && !BreakCharFound) {
-        PotentialBreakOffset = MaxLengthOfLineInChars;
-        BreakCharFound = TRUE;
-    }
-
-    //
-    //  Display the string after removing the break char
-    //
-
-    if (BreakCharFound) {
+        CharsToDisplayThisLine = MaxLengthOfLineCharIndex + 1;
+    } else if (BreakCharFound) {
         CharsToDisplayThisLine = PotentialBreakOffset;
     }
 
