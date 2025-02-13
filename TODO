@@ -2,6 +2,7 @@
 At this point, the TODO is more a list of tasks that might be useful and/or
 fun to write.
 
+ - Finish yextents move code
  - Replace a lot of LONGLONG/DWORDLONG with max int types
  - Scroll around input line on tiny windows, where the entire line doesn't
    fit in the window
@@ -23,6 +24,8 @@ fun to write.
  - Minimize in libwin, implying defining an icon form of a window
  - TreeView
  - Multi-column list
+ - File dialog vertical arrows when file name edit in focus
+
  - Edit horizontal scroll bar
  - Edit parse vim tags
 
@@ -37,6 +40,9 @@ fun to write.
  - Regedit "rename" keys
  - Regedit search
  - Regedit multi-sz editor
+
+ - Hexedit display device offset
+ - Hexedit reopen at different offset?
 
  - Yui should look deeper for background color
  - Win+X menu
