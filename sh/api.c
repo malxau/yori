@@ -3,7 +3,7 @@
  *
  * Yori exported API for modules to call
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2025 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -306,6 +306,32 @@ YoriApiGetEscapedArguments(
 {
     *ArgC = YoriShGlobal.EscapedArgC;
     *ArgV = YoriShGlobal.EscapedArgV;
+    return TRUE;
+}
+
+/**
+ Return the original arguments before escapes have been removed when calling
+ a builtin.
+
+ @param ArgC Pointer to a location to receive the number of arguments.
+
+ @param ArgV Pointer to a location to receive the array of strings.
+
+ @param ArgQuotesPresent Pointer to a location to receive indication of
+        whether each argument is quoted.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiGetEscapedArgumentsEx(
+    __out PDWORD ArgC,
+    __out PYORI_STRING * ArgV,
+    __out PBOOLEAN *ArgQuotesPresent
+    )
+{
+    *ArgC = YoriShGlobal.EscapedArgC;
+    *ArgV = YoriShGlobal.EscapedArgV;
+    *ArgQuotesPresent = YoriShGlobal.EscapedArgQuotesPresent;
     return TRUE;
 }
 

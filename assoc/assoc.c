@@ -896,7 +896,7 @@ ENTRYPOINT(
         {
             PYORI_STRING SubArgV;
             YORI_ALLOC_SIZE_T SubArgC;
-            SubArgV = YoriLibCmdlineToArgcArgv(GetCommandLine(), StartArg + 1, FALSE, &SubArgC);
+            SubArgV = YoriLibCmdlineToArgcArgv(GetCommandLine(), StartArg + 1, FALSE, &SubArgC, NULL);
             if (SubArgV == NULL) {
                 return EXIT_FAILURE;
             }

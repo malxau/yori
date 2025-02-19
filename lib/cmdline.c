@@ -541,7 +541,11 @@ YoriLibArgArrayToVariableValue(
         need to be retained and removed later so the builtin can observe the
         escaped arguments.
 
- @param argc On successful completion, populated with the count of arguments.
+ @param ArgC On successful completion, populated with the count of arguments.
+
+ @param ArgQuotesPresent If supplied, on successful completion, updated to
+        point to an array of size ArgC of type BOOLEAN indicating whether the
+        argument contains quotes.
 
  @return A pointer to an array of YORI_STRINGs containing the parsed
          arguments.
@@ -551,7 +555,8 @@ YoriLibCmdlineToArgcArgv(
     __in LPCTSTR CmdLine,
     __in YORI_ALLOC_SIZE_T MaxArgs,
     __in BOOLEAN ApplyCaretAsEscape,
-    __out PYORI_ALLOC_SIZE_T argc
+    __out PYORI_ALLOC_SIZE_T ArgC,
+    __out_opt PBOOLEAN * ArgQuotesPresent
     )
 {
     YORI_ALLOC_SIZE_T ArgCount = 0;
@@ -559,6 +564,7 @@ YoriLibCmdlineToArgcArgv(
     YORI_ALLOC_SIZE_T SlashCount;
     TCHAR CONST * c;
     PYORI_STRING ArgvArray;
+    PBOOLEAN ArgQuotes;
     LPTSTR ReturnStrings;
     BOOLEAN EndArg;
     BOOLEAN QuoteOpen;
@@ -631,24 +637,39 @@ YoriLibCmdlineToArgcArgv(
         }
     }
 
-    *argc = ArgCount;
+    *ArgC = ArgCount;
     if (ArgCount == 0) {
+        if (ArgQuotesPresent) {
+            *ArgQuotesPresent = NULL;
+        }
         return NULL;
     }
 
-    ArgvArray = YoriLibReferencedMalloc( (ArgCount * sizeof(YORI_STRING)) + (CharCount + ArgCount) * sizeof(TCHAR));
+    ArgvArray = YoriLibReferencedMalloc( (ArgCount * sizeof(YORI_STRING)) +
+                                         (ArgCount * sizeof(BOOLEAN)) +
+                                         (CharCount + ArgCount) * sizeof(TCHAR));
     if (ArgvArray == NULL) {
-        *argc = 0;
+        *ArgC = 0;
+        if (ArgQuotesPresent) {
+            *ArgQuotesPresent = NULL;
+        }
         return NULL;
     }
 
-    ReturnStrings = (LPTSTR)(ArgvArray + ArgCount);
+
+    ArgQuotes = (PBOOLEAN)(ArgvArray + ArgCount);
+    ReturnStrings = (LPTSTR)(ArgQuotes + ArgCount);
+
+    if (ArgQuotesPresent != NULL) {
+        *ArgQuotesPresent = ArgQuotes;
+    }
 
     ArgCount = 0;
     YoriLibInitEmptyString(&ArgvArray[ArgCount]);
     ArgvArray[ArgCount].StartOfString = ReturnStrings;
     ArgvArray[ArgCount].MemoryToFree = ArgvArray;
     YoriLibReference(ArgvArray);
+    ArgQuotes[ArgCount] = FALSE;
 
     //
     //  Consume all spaces.  After this, we're either at
@@ -691,6 +712,9 @@ YoriLibCmdlineToArgcArgv(
             }
         } else if (*c == '"') {
             QuoteOpen = (BOOLEAN)(!QuoteOpen);
+            if (QuoteOpen) {
+                ArgQuotes[ArgCount] = TRUE;
+            }
             c++;
             if (*c == '\0') {
                 *ReturnStrings = '\0';
@@ -714,6 +738,7 @@ YoriLibCmdlineToArgcArgv(
                 ArgvArray[ArgCount].StartOfString = ReturnStrings;
                 YoriLibReference(ArgvArray);
                 ArgvArray[ArgCount].MemoryToFree = ArgvArray;
+                ArgQuotes[ArgCount] = FALSE;
             }
         } else {
             *ReturnStrings = *c;

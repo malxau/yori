@@ -2439,7 +2439,7 @@ RunDialogProc(
 
                                 Cmd.LengthInChars = (YORI_ALLOC_SIZE_T)GetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString, Cmd.LengthAllocated);
 
-                                ArgV = YoriLibCmdlineToArgcArgv(Cmd.StartOfString, 2, FALSE, &ArgC);
+                                ArgV = YoriLibCmdlineToArgcArgv(Cmd.StartOfString, 2, FALSE, &ArgC, NULL);
                                 if (ArgV != NULL) {
                                     ArgString = NULL;
                                     if (ArgC > 1) {

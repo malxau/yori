@@ -59,8 +59,9 @@ TestArgTwoArgCmd(VOID)
     LPCTSTR InputString = _T("foo bar");
     PYORI_STRING ArgV;
     YORI_ALLOC_SIZE_T ArgC;
+    PBOOLEAN ArgQuotes;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC, &ArgQuotes);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -99,6 +100,19 @@ TestArgTwoArgCmd(VOID)
         return FALSE;
     }
 
+    if (ArgQuotes[0] != FALSE ||
+        ArgQuotes[1] != FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected quote state in '%s', have %i, %i expected 0, 0\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgQuotes[0],
+                      ArgQuotes[1]);
+        TestArgCleanupArg(ArgC, ArgV);
+        return FALSE;
+    }
+
     TestArgCleanupArg(ArgC, ArgV);
     return TRUE;
 }
@@ -113,8 +127,9 @@ TestArgOneArgContainingQuotesCmd(VOID)
     LPCTSTR InputString = _T("foo\" \"bar");
     PYORI_STRING ArgV;
     YORI_ALLOC_SIZE_T ArgC;
+    PBOOLEAN ArgQuotes;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC, &ArgQuotes);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -142,6 +157,17 @@ TestArgOneArgContainingQuotesCmd(VOID)
         return FALSE;
     }
 
+    if (ArgQuotes[0] == FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected quote state in '%s', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgQuotes[0]);
+        TestArgCleanupArg(ArgC, ArgV);
+        return FALSE;
+    }
+
     TestArgCleanupArg(ArgC, ArgV);
     return TRUE;
 }
@@ -156,8 +182,10 @@ TestArgOneArgWithStartingQuotesCmd(VOID)
     LPCTSTR InputString = _T("\"Program Files\"\\foo");
     PYORI_STRING ArgV;
     YORI_ALLOC_SIZE_T ArgC;
+    PBOOLEAN ArgQuotes;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC, &ArgQuotes);
+
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -185,6 +213,17 @@ TestArgOneArgWithStartingQuotesCmd(VOID)
         return FALSE;
     }
 
+    if (ArgQuotes[0] == FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected quote state in '%s', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgQuotes[0]);
+        TestArgCleanupArg(ArgC, ArgV);
+        return FALSE;
+    }
+
     TestArgCleanupArg(ArgC, ArgV);
 
     return TRUE;
@@ -199,8 +238,9 @@ TestArgOneArgEnclosedInQuotesCmd(VOID)
     LPCTSTR InputString = _T("\"foo\"==\"foo\" ");
     PYORI_STRING ArgV;
     YORI_ALLOC_SIZE_T ArgC;
+    PBOOLEAN ArgQuotes;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC, &ArgQuotes);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -228,6 +268,17 @@ TestArgOneArgEnclosedInQuotesCmd(VOID)
         return FALSE;
     }
 
+    if (ArgQuotes[0] == FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected quote state in '%s', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgQuotes[0]);
+        TestArgCleanupArg(ArgC, ArgV);
+        return FALSE;
+    }
+
     TestArgCleanupArg(ArgC, ArgV);
 
     return TRUE;
@@ -243,8 +294,9 @@ TestArgRedirectWithEndingQuoteCmd(VOID)
     LPCTSTR InputString = _T(">\"file name\"");
     PYORI_STRING ArgV;
     YORI_ALLOC_SIZE_T ArgC;
+    PBOOLEAN ArgQuotes;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC, &ArgQuotes);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -272,6 +324,17 @@ TestArgRedirectWithEndingQuoteCmd(VOID)
         return FALSE;
     }
 
+    if (ArgQuotes[0] == FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected quote state in '%s', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgQuotes[0]);
+        TestArgCleanupArg(ArgC, ArgV);
+        return FALSE;
+    }
+
     TestArgCleanupArg(ArgC, ArgV);
 
     return TRUE;
@@ -286,8 +349,9 @@ TestArgBackslashEscapeCmd(VOID)
     LPCTSTR InputString = _T("\\\\ \\\" \\\\\" \\\\\\\"");
     PYORI_STRING ArgV;
     YORI_ALLOC_SIZE_T ArgC;
+    PBOOLEAN ArgQuotes;
 
-    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(InputString, (YORI_ALLOC_SIZE_T)-1, FALSE, &ArgC, &ArgQuotes);
     if (ArgV == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv failed on '%s'\n"), __FILE__, __LINE__, InputString);
         return FALSE;
@@ -336,6 +400,22 @@ TestArgBackslashEscapeCmd(VOID)
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
+
+    if (ArgQuotes[0] != FALSE ||
+        ArgQuotes[1] != FALSE ||
+        ArgQuotes[2] == FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected quote state in '%s', have %i, %i, %i expected 0, 0, 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgQuotes[0],
+                      ArgQuotes[1],
+                      ArgQuotes[2]);
+        TestArgCleanupArg(ArgC, ArgV);
+        return FALSE;
+    }
+
 
     TestArgCleanupArg(ArgC, ArgV);
 

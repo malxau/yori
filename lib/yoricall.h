@@ -3,7 +3,7 @@
  *
  * Yori exported API for modules to call
  *
- * Copyright (c) 2017-2021 Malcolm J. Smith
+ * Copyright (c) 2017-2025 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -90,11 +90,13 @@ YoriCallFreeYoriString(
     __in PYORI_STRING String
     );
 
+__success(return)
 BOOL
 YoriCallGetAliasStrings(
     __out PYORI_STRING AliasStrings
     );
 
+__success(return)
 BOOL
 YoriCallGetEnvironmentVariable(
     __in PYORI_STRING VariableName,
@@ -104,18 +106,29 @@ YoriCallGetEnvironmentVariable(
 DWORD
 YoriCallGetErrorLevel(VOID);
 
+__success(return)
 BOOL
 YoriCallGetEscapedArguments(
     __out PDWORD ArgC,
     __out PYORI_STRING * ArgV
     );
 
+__success(return)
+BOOL
+YoriCallGetEscapedArgumentsEx(
+    __out PDWORD ArgC,
+    __out PYORI_STRING * ArgV,
+    __out PBOOLEAN * ArgContainsQuotes
+    );
+
+__success(return)
 BOOL
 YoriCallGetHistoryStrings(
     __in DWORD MaximumNumber,
     __out PYORI_STRING HistoryStrings
     );
 
+__success(return)
 BOOL
 YoriCallGetJobInformation(
     __in DWORD JobId,
@@ -125,6 +138,7 @@ YoriCallGetJobInformation(
     __inout PYORI_STRING Command
     );
 
+__success(return)
 BOOL
 YoriCallGetJobOutput(
     __in DWORD JobId,
@@ -137,11 +151,13 @@ YoriCallGetNextJobId(
     __in DWORD PreviousJobId
     );
 
+__success(return)
 BOOL
 YoriCallGetSystemAliasStrings(
     __out PYORI_STRING AliasStrings
     );
 
+__success(return)
 BOOL
 YoriCallGetYoriVersion(
     __out PDWORD MajorVersion,

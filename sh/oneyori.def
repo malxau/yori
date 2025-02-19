@@ -18,6 +18,7 @@ EXPORTS
     YoriApiGetEnvironmentVariable
     YoriApiGetErrorLevel
     YoriApiGetEscapedArguments
+    YoriApiGetEscapedArgumentsEx
     YoriApiGetHistoryStrings
     YoriApiGetJobInformation
     YoriApiGetJobOutput

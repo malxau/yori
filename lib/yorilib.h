@@ -826,7 +826,8 @@ YoriLibCmdlineToArgcArgv(
     __in LPCTSTR szCmdLine,
     __in YORI_ALLOC_SIZE_T MaxArgs,
     __in BOOLEAN ApplyCaretAsEscape,
-    __out PYORI_ALLOC_SIZE_T argc
+    __out PYORI_ALLOC_SIZE_T ArgC,
+    __out_opt PBOOLEAN * ArgQuotesPresent
     );
 
 /**

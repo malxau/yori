@@ -4,7 +4,7 @@
  * Yori call from modules into external API.  Functions in this file can only
  * be called from code running within the Yori process.
  *
- * Copyright (c) 2017-2021 Malcolm J. Smith
+ * Copyright (c) 2017-2025 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -738,6 +738,55 @@ YoriCallGetEscapedArguments(
         }
     }
     return pYoriApiGetEscapedArguments(ArgC, ArgV);
+}
+
+/**
+ Prototype for the @ref YoriApiGetEscapedArgumentsEx function.
+ */
+typedef BOOL YORI_API_GET_ESCAPED_ARGUMENTS_EX(PDWORD, PYORI_STRING*, PBOOLEAN *);
+
+/**
+ Prototype for a pointer to the @ref YoriApiGetEscapedArgumentsEx function.
+ */
+typedef YORI_API_GET_ESCAPED_ARGUMENTS_EX *PYORI_API_GET_ESCAPED_ARGUMENTS_EX;
+
+/**
+ Pointer to the @ref YoriApiGetEscapedArgumentsEx function.
+ */
+PYORI_API_GET_ESCAPED_ARGUMENTS_EX pYoriApiGetEscapedArgumentsEx;
+
+/**
+ Return the original arguments before escapes have been removed when calling
+ a builtin.
+
+ @param ArgC Pointer to a location to receive the number of arguments.
+
+ @param ArgV Pointer to a location to receive the array of strings.
+
+ @param ArgContainsQuotes Pointer to a location to receive indication of
+        whether each argument is quoted.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriCallGetEscapedArgumentsEx(
+    __out PDWORD ArgC,
+    __out PYORI_STRING * ArgV,
+    __out PBOOLEAN * ArgContainsQuotes
+    )
+{
+    if (pYoriApiGetEscapedArgumentsEx == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
+        pYoriApiGetEscapedArgumentsEx = (PYORI_API_GET_ESCAPED_ARGUMENTS_EX)GetProcAddress(hYori, "YoriApiGetEscapedArgumentsEx");
+        if (pYoriApiGetEscapedArgumentsEx == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiGetEscapedArgumentsEx(ArgC, ArgV, ArgContainsQuotes);
 }
 
 /**

@@ -4,7 +4,7 @@
  * Yori shell invoke an expression and perform different actions based on
  * the result
  *
- * Copyright (c) 2018-2021 Malcolm J. Smith
+ * Copyright (c) 2018-2025 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,7 +68,7 @@ IfHelp(VOID)
 __success(return)
 BOOLEAN
 IfFindOffsetOfNextComponent(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __out PYORI_ALLOC_SIZE_T Offset
     )
 {
@@ -91,13 +91,128 @@ IfFindOffsetOfNextComponent(
             EndOfEscape = YoriLibCntStringWithChars(&EscapeSubset, _T("0123456789;"));
             CharIndex += 2 + EndOfEscape;
         } else if (String->StartOfString[CharIndex] == ';') {
-            String->StartOfString[CharIndex] = '\0';
             *Offset = CharIndex;
             return TRUE;
         }
     }
 
     return FALSE;
+}
+
+/**
+ Look forward in an array of arguments for the next seperator between if test
+ and execution expressions.  If one is found, return a single string
+ corresponding to the range between the start of the search and the seperator.
+ Return the index of the arg containing the seperator, and index of the next
+ char to start searching from, so this function can be called repeatedly.
+
+ @param ArgC The number of arguments to search.
+
+ @param ArgV An array of arguments with ArgC elements.
+
+ @param ArgContainsQuotes An array of booleans indicating whether the argument
+        is quoted.
+
+ @param FirstArgStartChar The character offset to start searching within the
+        first argument.  This is to allow this function to be called on a
+        single argument array and resume searching partway through an
+        argument.
+
+ @param TempArgV A temporary ArgV array containing ArgC elements.  This is
+        constructed within this routine as part of building strings, and is
+        supplied to avoid repeated allocation and deallocation.  Contents are
+        undefined both on entry and exit.
+
+ @param Command On successful completion, populated with a single string
+        indicating the text between the start of the first argument and the
+        next seperator.
+
+ @param FinalArgC On successful completion, updated to indicate the argument
+        that contained the seperator.
+
+ @param FinalChar On successful completion, updated to indicate the character
+        offset following any found seperator.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+IfFindOffsetOfNextComponentInArgs(
+    __in YORI_ALLOC_SIZE_T ArgC,
+    __in PCYORI_STRING ArgV,
+    __in_opt PBOOLEAN ArgContainsQuotes,
+    __in YORI_ALLOC_SIZE_T FirstArgStartChar,
+    __in PYORI_STRING TempArgV,
+    __out PYORI_STRING Command,
+    __out PYORI_ALLOC_SIZE_T FinalArgC,
+    __out PYORI_ALLOC_SIZE_T FinalChar
+    )
+{
+    YORI_ALLOC_SIZE_T ArgIndex;
+    YORI_ALLOC_SIZE_T CharIndex;
+    YORI_ALLOC_SIZE_T StartOffset;
+    YORI_STRING TmpCommand;
+
+    //
+    //  If there are no args, successfully return an empty command
+    //
+
+    if (ArgC == 0) {
+        YoriLibInitEmptyString(Command);
+        *FinalArgC = 0;
+        *FinalChar = 0;
+        return TRUE;
+    }
+
+    //
+    //  Scan through the args.  For the first arg, bias based on the
+    //  initial offset.  If any arg is not quoted, look for a seperator.
+    //  Args within quotes are preserved regardless of containing a
+    //  seperator.  If a seperator is found, return the command as well
+    //  as the arg and offset within the arg to resume searching from.
+    //
+
+    CharIndex = 0;
+    YoriLibInitEmptyString(&TmpCommand);
+    StartOffset = FirstArgStartChar;
+    for (ArgIndex = 0; ArgIndex < ArgC; ArgIndex++) {
+        YoriLibInitEmptyString(&TempArgV[ArgIndex]);
+        TempArgV[ArgIndex].StartOfString = ArgV[ArgIndex].StartOfString;
+        TempArgV[ArgIndex].LengthInChars = ArgV[ArgIndex].LengthInChars;
+        if (ArgIndex == 0) {
+            ASSERT(FirstArgStartChar <= TempArgV[ArgIndex].LengthInChars);
+            TempArgV[ArgIndex].StartOfString = TempArgV[ArgIndex].StartOfString + StartOffset;
+            TempArgV[ArgIndex].LengthInChars = TempArgV[ArgIndex].LengthInChars - StartOffset;
+        }
+        if (ArgContainsQuotes == NULL || ArgContainsQuotes[ArgIndex] == FALSE) {
+            if (IfFindOffsetOfNextComponent(&TempArgV[ArgIndex], &CharIndex)) {
+                TempArgV[ArgIndex].LengthInChars = CharIndex;
+                ArgIndex++;
+                if (!YoriLibBuildCmdlineFromArgcArgv(ArgIndex, TempArgV, TRUE, TRUE, &TmpCommand)) {
+                    return FALSE;
+                }
+                *FinalArgC = ArgIndex - 1;
+                *FinalChar = StartOffset + CharIndex + 1;
+                memcpy(Command, &TmpCommand, sizeof(YORI_STRING));
+                return TRUE;
+            }
+        }
+        StartOffset = 0;
+    }
+
+    //
+    //  If no seperator is found, all of the remaining text is part of this
+    //  command.
+    //
+
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgIndex, TempArgV, TRUE, TRUE, &TmpCommand)) {
+        return FALSE;
+    }
+
+    memcpy(Command, &TmpCommand, sizeof(YORI_STRING));
+    *FinalArgC = ArgIndex - 1;
+    *FinalChar = ArgV[ArgIndex - 1].LengthInChars;
+    return TRUE;
 }
 
 /**
@@ -118,10 +233,9 @@ YoriCmd_IF(
 {
     BOOLEAN ArgumentUnderstood;
     BOOL Result;
-    YORI_STRING CmdLine;
-    YORI_STRING EscapedCmdLine;
     DWORD ErrorLevel;
-    YORI_ALLOC_SIZE_T CharIndex;
+    YORI_ALLOC_SIZE_T ArgIndex;
+    YORI_ALLOC_SIZE_T StartCharIndex;
     YORI_ALLOC_SIZE_T i;
     YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_ALLOC_SIZE_T EscapedStartArg = 0;
@@ -134,14 +248,21 @@ YoriCmd_IF(
     DWORD TempArgC;
     YORI_ALLOC_SIZE_T EscapedArgC;
     PYORI_STRING EscapedArgV;
+    PYORI_STRING TempArgV;
+    PBOOLEAN ArgContainsQuotes;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
     SavedErrorLevel = YoriCallGetErrorLevel();
 
-    if (!YoriCallGetEscapedArguments(&TempArgC, &EscapedArgV)) {
-        EscapedArgC = ArgC;
-        EscapedArgV = ArgV;
+    if (!YoriCallGetEscapedArgumentsEx(&TempArgC, &EscapedArgV, &ArgContainsQuotes)) {
+        ArgContainsQuotes = NULL;
+        if (!YoriCallGetEscapedArguments(&TempArgC, &EscapedArgV)) {
+            EscapedArgC = ArgC;
+            EscapedArgV = ArgV;
+        } else {
+            EscapedArgC = (YORI_ALLOC_SIZE_T)TempArgC;
+        }
     } else {
         EscapedArgC = (YORI_ALLOC_SIZE_T)TempArgC;
     }
@@ -156,7 +277,7 @@ YoriCmd_IF(
                 IfHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2021"));
+                YoriLibDisplayMitLicense(_T("2018-2025"));
                 return EXIT_SUCCESS;
             }
         } else {
@@ -182,75 +303,100 @@ YoriCmd_IF(
         return EXIT_FAILURE;
     }
 
-    //
-    //  Parse the arguments including escape characters.  This will be used
-    //  for the test condition.
-    //
+    ASSERT(StartArg == EscapedStartArg);
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - EscapedStartArg, &EscapedArgV[EscapedStartArg], TRUE, TRUE, &EscapedCmdLine)) {
+    TempArgV = YoriLibMalloc(sizeof(YORI_STRING) * EscapedArgC);
+    if (TempArgV == NULL) {
         return EXIT_FAILURE;
     }
 
     //
-    //  Parse the arguments after removing escape characters.  This will be used
-    //  for the execution conditions.
-    //
-
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, TRUE, &CmdLine)) {
-        YoriLibFreeStringContents(&EscapedCmdLine);
-        return EXIT_FAILURE;
-    }
+    //  NOTES
+    //  Need to scan arg by arg for semicolons
+    //  Note that YoriLibShRemoveEscapesFromArgCArgV ensures ArgC is identical,
+    //    args just have escapes removed from each component
+    //  ...But we don't know the offsets of semicolons across these
+    //  It might be a good time to use escaped ArgV for everything, despite
+    //    breaking compatibility
 
     YoriLibInitEmptyString(&TestCommand);
     YoriLibInitEmptyString(&TrueCommand);
     YoriLibInitEmptyString(&FalseCommand);
-    YoriLibInitEmptyString(&Arg);
 
-    Arg.StartOfString = CmdLine.StartOfString;
-    Arg.LengthInChars = CmdLine.LengthInChars;
+    //
+    //  YoriLibShRemoveEscapesFromArgCArgV walks component-by-component
+    //  removing escapes, which means the number of components is required to
+    //  match
+    //
 
-    TestCommand.StartOfString = EscapedCmdLine.StartOfString;
-    TestCommand.LengthInChars = EscapedCmdLine.LengthInChars;
-    if (IfFindOffsetOfNextComponent(&TestCommand, &CharIndex)) {
-        TestCommand.LengthInChars = CharIndex;
+    ASSERT(EscapedArgC == ArgC);
+
+    StartArg = EscapedStartArg;
+    if (!IfFindOffsetOfNextComponentInArgs(EscapedArgC - StartArg,
+                                           &EscapedArgV[StartArg],
+                                           &ArgContainsQuotes[StartArg],
+                                           0,
+                                           TempArgV,
+                                           &TestCommand,
+                                           &ArgIndex,
+                                           &StartCharIndex)) {
+
+        YoriLibFree(TempArgV);
+        return EXIT_FAILURE;
     }
 
-    if (!IfFindOffsetOfNextComponent(&Arg, &CharIndex)) {
-        CharIndex = Arg.LengthInChars;
-    }
+    StartArg = StartArg + ArgIndex;
 
-    Arg.StartOfString += CharIndex;
-    Arg.LengthInChars = Arg.LengthInChars - CharIndex;
-
-    if (Arg.LengthInChars > 0) {
-        Arg.StartOfString++;
-        Arg.LengthInChars--;
-        TrueCommand.StartOfString = Arg.StartOfString;
-        TrueCommand.LengthInChars = Arg.LengthInChars;
-        if (IfFindOffsetOfNextComponent(&Arg, &CharIndex)) {
-            TrueCommand.LengthInChars = CharIndex;
-        }
-        Arg.StartOfString += TrueCommand.LengthInChars;
-        Arg.LengthInChars = Arg.LengthInChars - TrueCommand.LengthInChars;
-    }
-
-    if (Arg.LengthInChars > 0) {
-        Arg.StartOfString++;
-        Arg.LengthInChars--;
-        FalseCommand.StartOfString = Arg.StartOfString;
-        FalseCommand.LengthInChars = Arg.LengthInChars;
-        if (IfFindOffsetOfNextComponent(&Arg, &CharIndex)) {
-            FalseCommand.LengthInChars = CharIndex;
+    StartCharIndex = 0;
+    if (StartArg < ArgC) {
+        if (IfFindOffsetOfNextComponent(&ArgV[StartArg], &StartCharIndex)) {
+            StartCharIndex++;
+        } else {
+            StartCharIndex = ArgV[StartArg].LengthInChars;
         }
     }
+
+    if (!IfFindOffsetOfNextComponentInArgs(ArgC - StartArg,
+                                           &EscapedArgV[StartArg],
+                                           &ArgContainsQuotes[StartArg],
+                                           StartCharIndex,
+                                           TempArgV,
+                                           &TrueCommand,
+                                           &ArgIndex,
+                                           &StartCharIndex)) {
+
+        YoriLibFreeStringContents(&TestCommand);
+        YoriLibFree(TempArgV);
+        return EXIT_FAILURE;
+    }
+
+    StartArg = StartArg + ArgIndex;
+
+    if (!IfFindOffsetOfNextComponentInArgs(ArgC - StartArg,
+                                           &EscapedArgV[StartArg],
+                                           &ArgContainsQuotes[StartArg],
+                                           StartCharIndex,
+                                           TempArgV,
+                                           &FalseCommand,
+                                           &ArgIndex,
+                                           &StartCharIndex)) {
+
+        YoriLibFreeStringContents(&TestCommand);
+        YoriLibFreeStringContents(&TrueCommand);
+        YoriLibFree(TempArgV);
+        return EXIT_FAILURE;
+    }
+
+    YoriLibFree(TempArgV);
 
     YoriLibBuiltinRemoveEmptyVariables(&TestCommand);
     TestCommand.StartOfString[TestCommand.LengthInChars] = '\0';
 
     Result = YoriCallExecuteExpression(&TestCommand);
     if (!Result) {
+        YoriLibFreeStringContents(&FalseCommand);
+        YoriLibFreeStringContents(&TrueCommand);
         YoriLibFreeStringContents(&TestCommand);
-        YoriLibFreeStringContents(&CmdLine);
         return EXIT_FAILURE;
     }
 
@@ -259,9 +405,9 @@ YoriCmd_IF(
         if (TrueCommand.LengthInChars > 0) {
             Result = YoriCallExecuteExpression(&TrueCommand);
             if (!Result) {
+                YoriLibFreeStringContents(&FalseCommand);
+                YoriLibFreeStringContents(&TrueCommand);
                 YoriLibFreeStringContents(&TestCommand);
-                YoriLibFreeStringContents(&CmdLine);
-                YoriLibFreeStringContents(&EscapedCmdLine);
                 return EXIT_FAILURE;
             }
         }
@@ -269,17 +415,17 @@ YoriCmd_IF(
         if (FalseCommand.LengthInChars > 0) {
             Result = YoriCallExecuteExpression(&FalseCommand);
             if (!Result) {
+                YoriLibFreeStringContents(&FalseCommand);
+                YoriLibFreeStringContents(&TrueCommand);
                 YoriLibFreeStringContents(&TestCommand);
-                YoriLibFreeStringContents(&CmdLine);
-                YoriLibFreeStringContents(&EscapedCmdLine);
                 return EXIT_FAILURE;
             }
         }
     }
 
+    YoriLibFreeStringContents(&FalseCommand);
+    YoriLibFreeStringContents(&TrueCommand);
     YoriLibFreeStringContents(&TestCommand);
-    YoriLibFreeStringContents(&CmdLine);
-    YoriLibFreeStringContents(&EscapedCmdLine);
     return SavedErrorLevel;
 }
 

@@ -448,6 +448,13 @@ typedef struct _YORI_SH_GLOBALS {
     PYORI_STRING EscapedArgV;
 
     /**
+     A pointer to the array of booleans indicating whether the corresponding
+     EscapedArgV element contained quotes or not.  This can be given to a
+     builtin if it needs to know the original escaped string.
+     */
+    PBOOLEAN EscapedArgQuotesPresent;
+
+    /**
      Count of recursion depth.  This is incremented when calling a builtin
      or when the shell is invoked from a subshell, and decremented when
      these return.  A recursion depth of zero implies a shell ready for user

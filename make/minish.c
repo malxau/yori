@@ -128,7 +128,7 @@ MakeShExecuteInProc(
     //
 
     ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
-    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (YORI_ALLOC_SIZE_T)-1, TRUE, &ArgC);
+    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (YORI_ALLOC_SIZE_T)-1, TRUE, &ArgC, NULL);
     YoriLibFreeStringContents(&CmdLine);
 
     if (EscapedArgV == NULL) {
