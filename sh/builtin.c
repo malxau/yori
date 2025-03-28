@@ -242,6 +242,9 @@ YoriShExecuteInProc(
 
     ExitCode = YoriLibShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
     if (ExitCode != ERROR_SUCCESS) {
+        LPTSTR ErrText = YoriLibGetWinErrorText(ExitCode);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failed to initialize redirection: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
         goto Cleanup;
     }
 
