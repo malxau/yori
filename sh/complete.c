@@ -1161,17 +1161,14 @@ YoriShFindMatchingStreamsForStringOrCursorPosition(
         //  cursor) and the suffix string (after the cursor)
         //
 
-        for (Index = 0; Index < CursorOffset; Index++) {
-            FileMidpointSearchString.StartOfString[Index] = SearchString->StartOfString[Index];
-        }
-
-        FileMidpointSearchString.StartOfString[Index] = '*';
+        memcpy(FileMidpointSearchString.StartOfString, SearchString->StartOfString, CursorOffset * sizeof(TCHAR));
+        FileMidpointSearchString.StartOfString[CursorOffset] = '*';
 
         //
         //  Don't copy the final char which should be '*'
         //
 
-        for (;Index < SearchString->LengthInChars - 1; Index++) {
+        for (Index = CursorOffset;Index < SearchString->LengthInChars - 1; Index++) {
             FileMidpointSearchString.StartOfString[Index + 1] = SearchString->StartOfString[Index];
         }
 
@@ -2355,8 +2352,6 @@ YoriShCompleteGenerateNewBufferString(
         YORI_STRING NewArg;
 
         if (CmdContext->CurrentArg >= CmdContext->ArgC) {
-            YORI_ALLOC_SIZE_T Count;
-
             OldArgCount = CmdContext->ArgC;
             OldArgv = CmdContext->ArgV;
             OldArgContext = CmdContext->ArgContexts;
@@ -2371,9 +2366,7 @@ YoriShCompleteGenerateNewBufferString(
             CmdContext->ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, CmdContext->ArgC * sizeof(YORI_STRING));
 
             memcpy(CmdContext->ArgV, OldArgv, OldArgCount * sizeof(YORI_STRING));
-            for (Count = 0; Count < OldArgCount; Count++) {
-                CmdContext->ArgContexts[Count] = OldArgContext[Count];
-            }
+            memcpy(CmdContext->ArgContexts, OldArgContext, OldArgCount * sizeof(CmdContext->ArgContexts[0]));
 
             YoriLibInitEmptyString(&CmdContext->ArgV[CmdContext->CurrentArg]);
         }

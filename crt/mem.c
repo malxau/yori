@@ -69,6 +69,15 @@
 #define MINICRT_BUILD
 #include "yoricrt.h"
 
+//
+//  Sigh, turn off optimizations now the optimizer is too aggressive to
+//  be helpful, and MSVC doesn't have finer grained tools
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1940)
+#pragma optimize("", off)
+#endif
+
 /**
  Copy the contents of one memory block into another memory block where the
  two memory blocks must be disjoint so no consideration is made for writing
@@ -130,15 +139,6 @@ mini_memmove(void * dest, const void * src, unsigned int len)
     }
     return dest;
 }
-
-//
-//  Sigh, turn off optimizations now the optimizer is too aggressive to
-//  be helpful, and MSVC doesn't have finer grained tools
-//
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1940) && defined(_M_IX86)
-#pragma optimize("", off)
-#endif
 
 /**
  Set a block of memory to a specific byte value.
