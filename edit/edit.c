@@ -855,12 +855,9 @@ EditSaveFile(
     if (Attributes != (DWORD)-1 &&
         DllKernel32.pReplaceFileW != NULL) {
 
-        if (!DllKernel32.pReplaceFileW(FileName->StartOfString, TempFileName.StartOfString, NULL, 0, NULL, NULL)) {
-            DeleteFile(TempFileName.StartOfString);
-            YoriLibFreeStringContents(&TempFileName);
-            return FALSE;
+        if (DllKernel32.pReplaceFileW(FileName->StartOfString, TempFileName.StartOfString, NULL, 0, NULL, NULL)) {
+            ReplaceSucceeded = TRUE;
         }
-        ReplaceSucceeded = TRUE;
     }
 
     if (!ReplaceSucceeded) {
