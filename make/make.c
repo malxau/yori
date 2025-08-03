@@ -511,6 +511,10 @@ ENTRYPOINT(
                 break;
             }
 
+            if (!ArgumentUnderstood) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
+            }
+
             //
             //  If the arg had a parameter, skip it.  Unlike other Yori tools,
             //  this logic is done seperately here so it can be replicated
@@ -525,10 +529,6 @@ ENTRYPOINT(
             }
         } else {
             ArgumentUnderstood = TRUE;
-        }
-
-        if (!ArgumentUnderstood) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
     }
 
