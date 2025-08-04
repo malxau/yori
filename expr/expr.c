@@ -121,16 +121,22 @@ ExprOutputNumber(
 {
     YORI_STRING String;
     WORD SeperatorDigits = 0;
+    TCHAR SeperatorChar = ',';
 
     if (!YoriLibAllocateString(&String, 32)) {
         return;
     }
 
     if (OutputSeperator) {
-        SeperatorDigits = 3;
+        if (Base == 16) {
+            SeperatorDigits = 4;
+            SeperatorChar = ' ';
+        } else {
+            SeperatorDigits = 3;
+        }
     }
 
-    YoriLibNumberToString(&String, Number.Value, Base, SeperatorDigits, ',');
+    YoriLibNumberToString(&String, Number.Value, Base, SeperatorDigits, SeperatorChar);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &String);
     YoriLibFreeStringContents(&String);
 }
