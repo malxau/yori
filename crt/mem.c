@@ -104,6 +104,26 @@ mini_memcpy(void * dest, const void * src, unsigned int len)
     return dest;
 }
 
+
+/**
+ Implementation of memcpy using compiler standard function signature so
+ it will be used for any implicitly generated calls.
+
+ @param dest Pointer to the memory block to write to.
+
+ @param src Pointer to the memory block to read from.
+
+ @param len The number of bytes to copy.
+
+ @return Pointer to the destination memory block, for some unknown reason.
+ */
+void *
+MCRT_VARARGFN
+memcpy(void * dest, void const * src, size_t len)
+{
+    return mini_memcpy(dest, src, (unsigned int)len);
+}
+
 /**
  Copy the contents of one memory block into another memory block in cases
  where the two memory blocks may overlap so the values must be read before
@@ -138,6 +158,25 @@ mini_memmove(void * dest, const void * src, unsigned int len)
         }
     }
     return dest;
+}
+
+/**
+ Implementation of memmove using compiler standard function signature so
+ it will be used for any implicitly generated calls.
+
+ @param dest Pointer to the memory block to write to.
+
+ @param src Pointer to the memory block to read from.
+
+ @param len The number of bytes to copy.
+
+ @return Pointer to the destination memory block, for some unknown reason.
+ */
+void *
+MCRT_VARARGFN
+memmove(void * dest, void const * src, size_t len)
+{
+    return mini_memmove(dest, src, (unsigned int)len);
 }
 
 /**
@@ -183,6 +222,25 @@ __attribute__((no_builtin("memset")))
     return dest;
 }
 
+/**
+ Implementation of memset using compiler standard function signature so
+ it will be used for any implicitly generated calls.
+
+ @param dest Pointer to the block of memory to initialize.
+
+ @param c The character value to replicate across the memory block.
+
+ @param len The length of the memory block, in bytes.
+
+ @return A pointer to the memory block, for some unknown reason.
+ */
+void *
+MCRT_VARARGFN
+memset(void * dest, int c, size_t len)
+{
+    return mini_memset(dest, (char)c, (unsigned int)len);
+}
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1940) && defined(_M_IX86)
 #pragma optimize("", on)
 #endif
@@ -216,6 +274,27 @@ mini_memcmp(const void * buf1, const void * buf2, unsigned int len)
         }
     }
     return 0;
+}
+
+/**
+ Implementation of memcmp using compiler standard function signature so
+ it will be used for any implicitly generated calls.
+
+ @param buf1 Pointer to the first memory block.
+
+ @param buf2 Pointer to the second memory block.
+
+ @param len The number of bytes to compare.
+
+ @return -1 to indicate the first block is less than the second, 1 to
+         indicate the first is greater than the second, and 0 to indicate
+         the two are equal.
+ */
+int
+MCRT_VARARGFN
+memcmp(void const * buf1, void const * buf2, size_t len)
+{
+    return mini_memcmp(buf1, buf2, (unsigned int)len);
 }
 
 // vim:sw=4:ts=4:et:

@@ -57,6 +57,11 @@
 #define MCRT_VARARGFN
 #endif
 
+void *     MCRT_VARARGFN memcpy(void * dest, void const * src, size_t len);
+int        MCRT_VARARGFN memcmp(void const * buf1, void const * buf2, size_t len);
+void *     MCRT_VARARGFN memmove(void * dest, void const * src, size_t len);
+void *     MCRT_VARARGFN memset(void * dest, int c, size_t len);
+
 void *     MCRT_FN mini_memcpy(void * dest, const void * src, unsigned int len);
 int        MCRT_FN mini_memcmp(const void * buf1, const void * buf2, unsigned int len);
 void *     MCRT_FN mini_memmove(void * dest, const void * src, unsigned int len);
