@@ -103,14 +103,14 @@ YoriLibDisplayAttributes(
     __in_opt PWORD AttributeArray,
     __in WORD DefaultAttribute,
     __in DWORD Length,
-    __in COORD StartPoint,
+    __in PCOORD StartPoint,
     __out LPDWORD CharsWritten
     )
 {
     if (AttributeArray) {
-        WriteConsoleOutputAttribute(ConsoleHandle, AttributeArray, Length, StartPoint, CharsWritten);
+        WriteConsoleOutputAttribute(ConsoleHandle, AttributeArray, Length, *StartPoint, CharsWritten);
     } else {
-        FillConsoleOutputAttribute(ConsoleHandle, DefaultAttribute, Length, StartPoint, CharsWritten);
+        FillConsoleOutputAttribute(ConsoleHandle, DefaultAttribute, Length, *StartPoint, CharsWritten);
     }
 }
 
@@ -200,7 +200,7 @@ YoriLibClearPreviousSelectionDisplay(
         StartPoint.X = Selection->PreviouslyDisplayed.Left;
         StartPoint.Y = LineIndex;
 
-        YoriLibDisplayAttributes(ConsoleHandle, AttributeReadPoint, 0x07, LineLength, StartPoint, &CharsWritten);
+        YoriLibDisplayAttributes(ConsoleHandle, AttributeReadPoint, 0x07, LineLength, &StartPoint, &CharsWritten);
 
         if (AttributeReadPoint) {
             AttributeReadPoint += LineLength;
@@ -256,7 +256,7 @@ YoriLibReadConsoleOutputAttributeForSelection(
     __in HANDLE hConsole,
     __out_ecount(nLength) LPWORD lpAttribute,
     __in DWORD nLength,
-    __in COORD dwReadCoord,
+    __in PCOORD dwReadCoord,
     __out LPDWORD lpNumberOfAttrsRead
     )
 {
@@ -297,10 +297,10 @@ YoriLibReadConsoleOutputAttributeForSelection(
     dwBufferSize.Y = 1;
     dwBufferCoord.X = 0;
     dwBufferCoord.Y = 0;
-    ReadRegion.Left = dwReadCoord.X;
-    ReadRegion.Top = dwReadCoord.Y;
-    ReadRegion.Right = (SHORT)(dwReadCoord.X + nLength - 1);
-    ReadRegion.Bottom = dwReadCoord.Y;
+    ReadRegion.Left = dwReadCoord->X;
+    ReadRegion.Top = dwReadCoord->Y;
+    ReadRegion.Right = (SHORT)(dwReadCoord->X + nLength - 1);
+    ReadRegion.Bottom = dwReadCoord->Y;
 
     if (!ReadConsoleOutput(hConsole, CharInfo, dwBufferSize, dwBufferCoord, &ReadRegion)) {
         return FALSE;
@@ -347,7 +347,7 @@ YoriLibReadConsoleOutputCharacterForSelection(
     __in HANDLE hConsole,
     __out_ecount(nLength) LPTSTR lpCharacter,
     __in DWORD nLength,
-    __in COORD dwReadCoord,
+    __in PCOORD dwReadCoord,
     __out LPDWORD lpNumberOfCharsRead
     )
 {
@@ -387,10 +387,10 @@ YoriLibReadConsoleOutputCharacterForSelection(
     dwBufferSize.Y = 1;
     dwBufferCoord.X = 0;
     dwBufferCoord.Y = 0;
-    ReadRegion.Left = dwReadCoord.X;
-    ReadRegion.Top = dwReadCoord.Y;
-    ReadRegion.Right = (SHORT)(dwReadCoord.X + nLength - 1);
-    ReadRegion.Bottom = dwReadCoord.Y;
+    ReadRegion.Left = dwReadCoord->X;
+    ReadRegion.Top = dwReadCoord->Y;
+    ReadRegion.Right = (SHORT)(dwReadCoord->X + nLength - 1);
+    ReadRegion.Bottom = dwReadCoord->Y;
 
     if (!ReadConsoleOutput(hConsole, CharInfo, dwBufferSize, dwBufferCoord, &ReadRegion)) {
         return FALSE;
@@ -541,7 +541,7 @@ YoriLibDrawCurrentSelectionDisplay(
         StartPoint.Y = LineIndex;
 
         if (AttributeWritePoint != NULL) {
-            YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
+            YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, LineLength, &StartPoint, &CharsWritten);
             AttributeWritePoint += LineLength;
         }
 
@@ -636,7 +636,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
             StartPoint.Y = LineIndex;
 
             if (AttributeWritePoint != NULL) {
-                YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
+                YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, LineLength, &StartPoint, &CharsWritten);
                 AttributeWritePoint += LineLength;
             }
 
@@ -662,7 +662,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
                 }
 
                 if (AttributeWritePoint != NULL) {
-                    YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
+                    YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, RunLength, &StartPoint, &CharsWritten);
                     AttributeWritePoint += RunLength;
                 }
 
@@ -721,7 +721,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
                 StartPoint.Y = LineIndex;
 
                 if (AttributeWritePoint != NULL) {
-                    YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
+                    YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, RunLength, &StartPoint, &CharsWritten);
                     AttributeWritePoint += RunLength;
                 }
 
@@ -761,7 +761,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
                     BufferPointer = NULL;
                 }
 
-                YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
+                YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, &StartPoint, &CharsWritten);
 
             } else {
 
@@ -786,7 +786,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
                         BufferPointer = NULL;
                     }
 
-                    YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
+                    YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, &StartPoint, &CharsWritten);
 
                 }
 
@@ -815,7 +815,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
                         BufferPointer = NULL;
                     }
 
-                    YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
+                    YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, &StartPoint, &CharsWritten);
                 }
             }
         }
@@ -1458,7 +1458,7 @@ YoriLibCopySelectionIfPresent(
         StartPoint.X = Selection->CurrentlySelected.Left;
         StartPoint.Y = LineIndex;
 
-        YoriLibReadConsoleOutputCharacterForSelection(Selection, ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
+        YoriLibReadConsoleOutputCharacterForSelection(Selection, ConsoleHandle, TextWritePoint, LineLength, &StartPoint, &CharsWritten);
 
         TextWritePoint += LineLength;
     }
@@ -1520,7 +1520,7 @@ YoriLibCopySelectionIfPresent(
             StartPoint.X = Selection->CurrentlySelected.Left;
             StartPoint.Y = LineIndex;
 
-            YoriLibReadConsoleOutputCharacterForSelection(Selection, ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
+            YoriLibReadConsoleOutputCharacterForSelection(Selection, ConsoleHandle, TextWritePoint, LineLength, &StartPoint, &CharsWritten);
             while (CharsWritten > 0) {
                 if (TextWritePoint[CharsWritten - 1] != ' ') {
                     break;

@@ -264,7 +264,8 @@ YoriLibSetConsoleDisplayMode(
         return FALSE;
     }
 
-    *lpNewScreenBufferDimensions = Packet.u.mSetDisplayMode.ScreenBufferDimensions;
+    lpNewScreenBufferDimensions->X = Packet.u.mSetDisplayMode.ScreenBufferDimensions.X;
+    lpNewScreenBufferDimensions->Y = Packet.u.mSetDisplayMode.ScreenBufferDimensions.Y;
 
     return TRUE;
 }

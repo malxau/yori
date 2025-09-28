@@ -71,7 +71,7 @@ YoriLibInitializeCompressContext(
     SYSTEM_INFO SystemInfo;
     GetSystemInfo(&SystemInfo);
 
-    CompressContext->CompressionAlgorithm = CompressionAlgorithm;
+    CompressContext->CompressionAlgorithm.EntireAlgorithm = CompressionAlgorithm.EntireAlgorithm;
 
     //
     //  Create threads equal to the number of CPUs.  The system can compress

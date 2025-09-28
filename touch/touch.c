@@ -275,7 +275,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 if (i + 1 < ArgC) {
-                    TouchContext.NewFileSize = YoriLibStringToFileSize(&ArgV[i + 1]);
+                    YoriLibStringToFileSize(&ArgV[i + 1], &TouchContext.NewFileSize);
                     ArgumentUnderstood = TRUE;
                     i++;
                 }

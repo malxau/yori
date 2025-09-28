@@ -897,7 +897,7 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringLitIns(&Arg, _T("s")) == 0) {
                 if (i + 1 < ArgC) {
-                    DuContext.MinimumDirectorySizeToDisplay = YoriLibStringToFileSize(&ArgV[i + 1]);
+                    YoriLibStringToFileSize(&ArgV[i + 1], &DuContext.MinimumDirectorySizeToDisplay);
                     ArgumentUnderstood = TRUE;
                     i++;
                 }

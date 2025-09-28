@@ -281,7 +281,7 @@ VhdToolCreateNewVhd(
 
     CreateParams.Version = 1;
     if (SizeAsString != NULL) {
-        FileSize = YoriLibStringToFileSize(SizeAsString);
+        YoriLibStringToFileSize(SizeAsString, &FileSize);
         CreateParams.Version1.MaximumSize = FileSize.QuadPart;
     }
     CreateParams.Version1.BlockSizeInBytes = 0;
@@ -386,7 +386,7 @@ VhdToolCreateNewVhdx(
 
     CreateParams.Version = 2;
     if (SizeAsString != NULL) {
-        FileSize = YoriLibStringToFileSize(SizeAsString);
+        YoriLibStringToFileSize(SizeAsString, &FileSize);
         CreateParams.Version2.MaximumSize = FileSize.QuadPart;
     }
     CreateParams.Version2.BlockSizeInBytes = 0;
@@ -669,7 +669,7 @@ VhdToolExpand(
         return FALSE;
     }
 
-    FileSize = YoriLibStringToFileSize(SizeAsString);
+    YoriLibStringToFileSize(SizeAsString, &FileSize);
 
     StorageType.DeviceId = VIRTUAL_STORAGE_TYPE_DEVICE_UNKNOWN;
     StorageType.VendorId = VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN;
@@ -829,7 +829,7 @@ VhdToolShrink(
         return FALSE;
     }
 
-    FileSize = YoriLibStringToFileSize(SizeAsString);
+    YoriLibStringToFileSize(SizeAsString, &FileSize);
 
     StorageType.DeviceId = VIRTUAL_STORAGE_TYPE_DEVICE_UNKNOWN;
     StorageType.VendorId = VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN;

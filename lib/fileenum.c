@@ -741,8 +741,9 @@ YoriLibForEachFile(
 
     SubstituteValues.LengthInChars = CharsToOperator;
 
+    YoriLibInitEmptyString(&MatchValue);
     if (SingleCharMode) {
-        MatchValue = SubstituteValues;
+        MatchValue.StartOfString = SubstituteValues.StartOfString;
         MatchValue.LengthAllocated = MatchValue.LengthInChars;
         MatchValue.LengthInChars = 1;
         YoriLibInitEmptyString(&NewFileSpec);
@@ -768,7 +769,7 @@ YoriLibForEachFile(
         YoriLibFreeStringContents(&NewFileSpec);
     } else {
         while(TRUE) {
-            MatchValue = SubstituteValues;
+            MatchValue.StartOfString = SubstituteValues.StartOfString;
             CharsToOperator = YoriLibCntStringNotWithChars(&SubstituteValues, _T(","));
 
             MatchValue.LengthInChars = CharsToOperator;
@@ -958,9 +959,12 @@ YoriLibUpdateFindDataFromFileInformation (
 
         if (GetFileInformationByHandle(hFile, &FileInfo)) {
             FindData->dwFileAttributes = FileInfo.dwFileAttributes;
-            FindData->ftCreationTime = FileInfo.ftCreationTime;
-            FindData->ftLastAccessTime = FileInfo.ftLastAccessTime;
-            FindData->ftLastWriteTime = FileInfo.ftLastWriteTime;
+            FindData->ftCreationTime.dwLowDateTime = FileInfo.ftCreationTime.dwLowDateTime;
+            FindData->ftCreationTime.dwHighDateTime = FileInfo.ftCreationTime.dwHighDateTime;
+            FindData->ftLastAccessTime.dwLowDateTime = FileInfo.ftLastAccessTime.dwLowDateTime;
+            FindData->ftLastAccessTime.dwHighDateTime = FileInfo.ftLastAccessTime.dwHighDateTime;
+            FindData->ftLastWriteTime.dwLowDateTime = FileInfo.ftLastWriteTime.dwLowDateTime;
+            FindData->ftLastWriteTime.dwHighDateTime = FileInfo.ftLastWriteTime.dwHighDateTime;
             FindData->nFileSizeHigh = FileInfo.nFileSizeHigh;
             FindData->nFileSizeLow  = FileInfo.nFileSizeLow;
         } else {

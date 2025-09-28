@@ -40,25 +40,27 @@ CONST TCHAR YoriLibSizeSuffixes[] = {'b', 'k', 'm', 'g', 't', '?'};
 
  @param String Pointer to the string to parse.
 
- @return The parsed, 64 bit unsigned integer value from the string.
+ @param FileSize On successful completion, the parsed, 64 bit unsigned integer
+        value from the string.
  */
-LARGE_INTEGER
+VOID
 YoriLibStringToFileSize(
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __out PLARGE_INTEGER FileSize
     )
 {
     DWORD SuffixLevel = 0;
-    LARGE_INTEGER FileSize;
+    LARGE_INTEGER LocalFileSize;
     DWORD i;
     YORI_ALLOC_SIZE_T CharsConsumed;
     YORI_MAX_SIGNED_T llTemp;
 
     llTemp = 0;
     if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed)) {
-        YoriLibLiAssignUnsigned(&FileSize, llTemp);
-        return FileSize;
+        YoriLibLiAssignUnsigned(FileSize, llTemp);
+        return;
     }
-    YoriLibLiAssignUnsigned(&FileSize, llTemp);
+    YoriLibLiAssignUnsigned(&LocalFileSize, llTemp);
 
     if (CharsConsumed < String->LengthInChars) {
         TCHAR SuffixChar = String->StartOfString[CharsConsumed];
@@ -72,14 +74,15 @@ YoriLibStringToFileSize(
 
         while(SuffixLevel) {
 
-            FileSize.HighPart = (FileSize.HighPart << 10) + (FileSize.LowPart >> 22);
-            FileSize.LowPart = (FileSize.LowPart << 10);
+            LocalFileSize.HighPart = (LocalFileSize.HighPart << 10) + (LocalFileSize.LowPart >> 22);
+            LocalFileSize.LowPart = (LocalFileSize.LowPart << 10);
 
             SuffixLevel--;
         }
     }
 
-    return FileSize;
+    FileSize->HighPart = LocalFileSize.HighPart;
+    FileSize->LowPart = LocalFileSize.LowPart;
 }
 
 /**

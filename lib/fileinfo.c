@@ -354,7 +354,8 @@ YoriLibCollectAllocationSize (
             FILE_STANDARD_INFO StandardInfo;
 
             if (DllKernel32.pGetFileInformationByHandleEx(hFile, FileStandardInfo, &StandardInfo, sizeof(StandardInfo))) {
-                Entry->AllocationSize = StandardInfo.AllocationSize;
+                Entry->AllocationSize.LowPart = StandardInfo.AllocationSize.LowPart;
+                Entry->AllocationSize.HighPart = StandardInfo.AllocationSize.HighPart;
                 RealAllocSize = TRUE;
             }
 
@@ -1275,8 +1276,10 @@ YoriLibCollectFragmentCount (
                 }
 
                 PriorRunLength.QuadPart = u.Extents.Extents[BytesReturned].NextVcn.QuadPart - PriorNextVcn.QuadPart;
-                PriorNextVcn = u.Extents.Extents[BytesReturned].NextVcn;
-                PriorLcn = u.Extents.Extents[BytesReturned].Lcn;
+                PriorNextVcn.LowPart = u.Extents.Extents[BytesReturned].NextVcn.LowPart;
+                PriorNextVcn.HighPart = u.Extents.Extents[BytesReturned].NextVcn.HighPart;
+                PriorLcn.LowPart = u.Extents.Extents[BytesReturned].Lcn.LowPart;
+                PriorLcn.HighPart = u.Extents.Extents[BytesReturned].Lcn.HighPart;
             }
 
             StartBuffer.StartingVcn.QuadPart = u.Extents.Extents[u.Extents.ExtentCount - 1].NextVcn.QuadPart;
@@ -2860,7 +2863,7 @@ YoriLibGenerateAllocationSize(
     __in PYORI_STRING String
     )
 {
-    Entry->AllocationSize = YoriLibStringToFileSize(String);
+    YoriLibStringToFileSize(String, &Entry->AllocationSize);
     return TRUE;
 }
 
@@ -2984,7 +2987,7 @@ YoriLibGenerateCompressedFileSize(
     __in PYORI_STRING String
     )
 {
-    Entry->CompressedFileSize = YoriLibStringToFileSize(String);
+    YoriLibStringToFileSize(String, &Entry->CompressedFileSize);
     return TRUE;
 }
 
@@ -3267,7 +3270,7 @@ YoriLibGenerateFileSize(
     __in PYORI_STRING String
     )
 {
-    Entry->FileSize = YoriLibStringToFileSize(String);
+    YoriLibStringToFileSize(String, &Entry->FileSize);
     return TRUE;
 }
 
@@ -3678,7 +3681,8 @@ YoriLibGenerateVersion(
         }
     }
 
-    Entry->FileVersion = FileVersion;
+    Entry->FileVersion.HighPart = FileVersion.HighPart;
+    Entry->FileVersion.LowPart = FileVersion.LowPart;
     return TRUE;
 }
 

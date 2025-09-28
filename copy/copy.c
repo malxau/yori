@@ -1019,7 +1019,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("ds")) == 0) {
                 if (i + 1 < ArgC) {
-                    CopyContext.DeviceSize = YoriLibStringToFileSize(&ArgV[i + 1]);
+                    YoriLibStringToFileSize(&ArgV[i + 1], &CopyContext.DeviceSize);
                     ArgumentUnderstood = TRUE;
                     i++;
                 }

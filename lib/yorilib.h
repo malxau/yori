@@ -3992,9 +3992,10 @@ YoriLibHexBufferToString(
     __in PYORI_STRING String
     );
 
-LARGE_INTEGER
+VOID
 YoriLibStringToFileSize(
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __out PLARGE_INTEGER FileSize
     );
 
 __success(return)
