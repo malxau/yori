@@ -3,7 +3,7 @@
  *
  * Yori shell display and manipulate file extents
  *
- * Copyright (c) 2018-2024 Malcolm J. Smith
+ * Copyright (c) 2018-2025 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,8 @@ CHAR strExtentsHelpText[] =
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -d             Return directories rather than directory contents\n"
+        "   -dd            Display contents of the file from the disk\n"
+        "   -dv            Display contents of the file from the volume\n"
         "   -h             Display output in hexadecimal\n"
         "   -m vcn lcn cnt Move a range of a file to a new position\n"
         "   -s             Process files from all subdirectories\n";
@@ -86,6 +88,16 @@ typedef struct _EXTENTS_CONTEXT {
      */
     BOOLEAN DisplayHex;
 
+    /**
+     If TRUE, display file contents via a disk handle.
+     */
+    BOOLEAN DisplayDiskContents;
+
+    /**
+     If TRUE, display file contents via a volume handle.
+     */
+    BOOLEAN DisplayVolumeContents;
+
 } EXTENTS_CONTEXT, *PEXTENTS_CONTEXT;
 
 /**
@@ -103,6 +115,228 @@ ExtentsHelp(VOID)
 }
 
 /**
+ Display the contents of a file by reading underlying extents from a device.
+
+ @param ExtentsContext Pointer to the application context.
+
+ @param FileHandle Specifies the handle to the file whose extents should
+        be queried.
+
+ @param DeviceHandle Specifies the handle to the device to read from.
+
+ @param BytesPerCluster Specifies the bytes per cluster to use in display
+        calculations.
+
+ @param DeviceOffset Specifies the offset within the device where cluster
+        allocations start.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+ExtentsDisplayData(
+    __in PEXTENTS_CONTEXT ExtentsContext,
+    __in HANDLE FileHandle,
+    __in HANDLE DeviceHandle,
+    __in DWORD BytesPerCluster,
+    __in DWORDLONG DeviceOffset
+    )
+{
+    STARTING_VCN_INPUT_BUFFER StartingVcn;
+    PRETRIEVAL_POINTERS_BUFFER RetrievalPointers;
+    YORI_ALLOC_SIZE_T RetrievalPointerSize;
+    PVOID Buffer;
+    BOOLEAN MoreToGo;
+    DWORD Index;
+    DWORD BytesReturned;
+    SYSERR Error;
+    LPTSTR ErrText;
+
+    UNREFERENCED_PARAMETER(ExtentsContext);
+
+    RetrievalPointerSize = 4096;
+    RetrievalPointers = YoriLibMalloc(RetrievalPointerSize);
+    if (RetrievalPointers == NULL) {
+        return FALSE;
+    }
+    Buffer = YoriLibMalloc(BytesPerCluster);
+    if (Buffer == NULL) {
+        YoriLibFree(RetrievalPointers);
+        return FALSE;
+    }
+
+    YoriLibLiAssignUnsigned(&StartingVcn.StartingVcn, 0);
+
+    MoreToGo = TRUE;
+    while (MoreToGo) {
+        MoreToGo = FALSE;
+        Error = ERROR_SUCCESS;
+        if (!DeviceIoControl(FileHandle,
+                             FSCTL_GET_RETRIEVAL_POINTERS,
+                             &StartingVcn,
+                             sizeof(StartingVcn),
+                             RetrievalPointers,
+                             RetrievalPointerSize,
+                             &BytesReturned,
+                             NULL)) {
+
+            Error = GetLastError();
+            if (Error == ERROR_MORE_DATA) {
+                MoreToGo = TRUE;
+                Error = ERROR_SUCCESS;
+            }
+        }
+
+        if (Error == ERROR_SUCCESS) {
+            YORI_MAX_UNSIGNED_T FileOffset;
+            YORI_MAX_UNSIGNED_T Lcn;
+            YORI_MAX_SIGNED_T CurrentVcn;
+            YORI_MAX_UNSIGNED_T DeviceExtentOffset;
+            YORI_MAX_UNSIGNED_T ExtentLength;
+            LARGE_INTEGER liDeviceExtentOffset;
+            DWORD ExtentIndex;
+            DWORD BytesRead;
+
+            //
+            //  Loop over all extents returned from this call.
+            //  Note this is not necessarily all extents for
+            //  the file.
+            //
+
+            CurrentVcn = RetrievalPointers->StartingVcn.QuadPart;
+            for (Index = 0; Index < RetrievalPointers->ExtentCount; Index++) {
+
+                FileOffset = CurrentVcn * BytesPerCluster;
+                Lcn = RetrievalPointers->Extents[Index].Lcn.QuadPart;
+                ExtentLength = RetrievalPointers->Extents[Index].NextVcn.QuadPart - CurrentVcn;
+
+                for (ExtentIndex = 0; ExtentIndex < ExtentLength; ExtentIndex++) {
+
+                    DeviceExtentOffset = (Lcn + ExtentIndex) * BytesPerCluster + DeviceOffset;
+                    YoriLibLiAssignUnsigned(&liDeviceExtentOffset, DeviceExtentOffset);
+
+                    if (!SetFilePointer(DeviceHandle, liDeviceExtentOffset.LowPart, &liDeviceExtentOffset.HighPart, FILE_BEGIN)) {
+                        Error = GetLastError();
+                        ErrText = YoriLibGetWinErrorText(Error);
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: get retrieval pointers failed: %s"), ErrText);
+                        YoriLibFreeWinErrorText(ErrText);
+                        MoreToGo = FALSE;
+                        break;
+                    }
+
+                    if (!ReadFile(DeviceHandle, Buffer, BytesPerCluster, &BytesRead, NULL)) {
+                        Error = GetLastError();
+                        ErrText = YoriLibGetWinErrorText(Error);
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: reading data at offset 0x%llx failed: %s"), DeviceExtentOffset, ErrText);
+                        YoriLibFreeWinErrorText(ErrText);
+                        MoreToGo = FALSE;
+                        break;
+                    }
+
+                    YoriLibHexDump(Buffer, DeviceExtentOffset, BytesPerCluster, sizeof(DWORD), YORI_LIB_HEX_FLAG_DISPLAY_CHARS | YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET);
+                }
+
+                CurrentVcn = RetrievalPointers->Extents[Index].NextVcn.QuadPart;
+            }
+
+            //
+            //  Find the start point for the next call, or indicate that
+            //  the end of file has been reached.
+            //
+
+            if (!MoreToGo) {
+                FileOffset = CurrentVcn * BytesPerCluster;
+                break;
+            } else if (CurrentVcn > StartingVcn.StartingVcn.QuadPart) {
+                StartingVcn.StartingVcn.QuadPart = CurrentVcn;
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: get retrieval pointers did not advance, previous start vcn %lli, new start vcn %lli\n"), StartingVcn.StartingVcn.QuadPart, CurrentVcn);
+                MoreToGo = FALSE;
+            }
+        } else {
+            MoreToGo = FALSE;
+        }
+    }
+
+    YoriLibFree(RetrievalPointers);
+    YoriLibFree(Buffer);
+
+    return TRUE;
+}
+
+/**
+ Display the contents of a file by opening a disk handle and reading contents
+ from it.
+
+ @param ExtentsContext Pointer to the application context.
+
+ @param FileHandle Specifies the handle to the file whose extents should
+        be queried.
+
+ @param BytesPerCluster Specifies the bytes per cluster to use in display
+        calculations.
+
+ @param PartitionOffset Specifies the offset within the partition where
+        cluster allocations start.
+
+ @param VolumeDiskExtents Specifies the location of the volume within the
+        disk to use in display calculations.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+ExtentsDisplayDiskData(
+    __in PEXTENTS_CONTEXT ExtentsContext,
+    __in HANDLE FileHandle,
+    __in DWORD BytesPerCluster,
+    __in DWORDLONG PartitionOffset,
+    __in PYORI_VOLUME_DISK_EXTENTS VolumeDiskExtents
+    )
+{
+    HANDLE DeviceHandle;
+    YORI_STRING DevicePath;
+    BOOLEAN Result;
+    SYSERR Error;
+    LPTSTR ErrText;
+
+    if (VolumeDiskExtents->NumberOfDiskExtents != 1) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: cannot display data from disk unless partition maps to single disk region\n"));
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&DevicePath);
+    YoriLibYPrintf(&DevicePath, _T("\\\\.\\PhysicalDrive%i"), VolumeDiskExtents->Extents[0].DiskNumber);
+    if (DevicePath.StartOfString == NULL) {
+        return FALSE;
+    }
+
+    DeviceHandle = CreateFile(DevicePath.StartOfString,
+                              FILE_READ_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                              NULL,
+                              OPEN_EXISTING,
+                              FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_OPEN_NO_RECALL,
+                              NULL);
+    if (DeviceHandle == INVALID_HANDLE_VALUE) {
+        Error = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Error);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: open of %y failed: %s\n"), &DevicePath, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        YoriLibFreeStringContents(&DevicePath);
+        return FALSE;
+    }
+
+    Result = ExtentsDisplayData(ExtentsContext,
+                                FileHandle,
+                                DeviceHandle,
+                                BytesPerCluster,
+                                PartitionOffset + VolumeDiskExtents->Extents[0].StartingOffset.QuadPart);
+
+    YoriLibFreeStringContents(&DevicePath);
+    CloseHandle(DeviceHandle);
+    return Result;
+}
+
+/**
  Display the extents used by a single file.
 
  @param ExtentsContext Pointer to the application context.
@@ -111,6 +345,8 @@ ExtentsHelp(VOID)
 
  @param FileHandle Specifies the handle to the file whose extents should
         be displayed.
+
+ @param VolumePath Specifies the path to the volume for display.
 
  @param BytesPerCluster Specifies the bytes per cluster to use in display
         calculations.
@@ -128,6 +364,7 @@ ExtentsDisplayExtents(
     __in PEXTENTS_CONTEXT ExtentsContext,
     __in PYORI_STRING FilePath,
     __in HANDLE FileHandle,
+    __in PYORI_STRING VolumePath,
     __in DWORD BytesPerCluster,
     __in DWORDLONG RetrievalPointerBase,
     __in PYORI_VOLUME_DISK_EXTENTS VolumeDiskExtents
@@ -139,7 +376,7 @@ ExtentsDisplayExtents(
     BOOLEAN MoreToGo;
     DWORD Index;
     DWORD BytesReturned;
-    DWORD Error;
+    SYSERR Error;
     LPTSTR ErrText;
 
     RetrievalPointerSize = 4096;
@@ -187,6 +424,11 @@ ExtentsDisplayExtents(
                     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
                 }
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y:\n"), FilePath);
+                if (VolumeDiskExtents->NumberOfDiskExtents == 1) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  (on volume %y, \\\\.\\PhysicalDrive%i):\n"), VolumePath, VolumeDiskExtents->Extents[0].DiskNumber);
+                } else {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  (on volume %y):\n"), VolumePath);
+                }
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  File Offset    |    Cluster    |   Partition Offset"));
             
                 if (VolumeDiskExtents->NumberOfDiskExtents == 1) {
@@ -310,7 +552,7 @@ ExtentsMoveFile(
 {
     MOVE_FILE_DATA MoveData;
     DWORD BytesReturned;
-    DWORD Error;
+    SYSERR Error;
     LPTSTR ErrText;
 
     MoveData.FileHandle = FileHandle;
@@ -365,7 +607,7 @@ ExtentsFileFoundCallback(
     HANDLE VolumeHandle;
     HANDLE FileHandle;
     DWORD BytesReturned;
-    DWORD Error;
+    SYSERR Error;
     LPTSTR ErrText;
     DWORD SectorsPerCluster;
     DWORD SectorSize;
@@ -445,6 +687,8 @@ ExtentsFileFoundCallback(
     DesiredAccess = FILE_READ_ATTRIBUTES | FILE_TRAVERSE;
     if (ExtentsContext->ClusterCount != 0) {
         DesiredAccess = FILE_READ_ATTRIBUTES | FILE_READ_DATA | FILE_WRITE_DATA;
+    } else if (ExtentsContext->DisplayVolumeContents) {
+        DesiredAccess = FILE_READ_ATTRIBUTES | FILE_TRAVERSE | FILE_READ_DATA;
     }
 
     VolumeHandle = CreateFile(VolRootName.StartOfString,
@@ -507,6 +751,10 @@ ExtentsFileFoundCallback(
                          &BytesReturned,
                          NULL)) {
 
+        Error = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Error);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: warning: volume disk extents unavailable on %y: %s\n"), &VolRootName, ErrText);
+
         VolumeDiskExtents.NumberOfDiskExtents = 0;
     }
 
@@ -537,9 +785,19 @@ ExtentsFileFoundCallback(
         ExtentsDisplayExtents(ExtentsContext,
                               FilePath,
                               FileHandle,
+                              &VolRootName,
                               BytesPerCluster,
                               RetrievalPointerBase,
                               &VolumeDiskExtents);
+
+        if (ExtentsContext->DisplayVolumeContents) {
+            ExtentsDisplayData(ExtentsContext, FileHandle, VolumeHandle, BytesPerCluster, RetrievalPointerBase);
+        }
+
+        if (ExtentsContext->DisplayDiskContents) {
+            ExtentsDisplayDiskData(ExtentsContext, FileHandle, BytesPerCluster, RetrievalPointerBase, &VolumeDiskExtents);
+        }
+
     } else if (ExtentsContext->FilesFound == 0) {
         ExtentsMoveFile(ExtentsContext, FilePath, VolumeHandle, FileHandle);
     } else {
@@ -608,13 +866,19 @@ ENTRYPOINT(
                 ExtentsHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2024"));
+                YoriLibDisplayMitLicense(_T("2018-2025"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("d")) == 0) {
                 ReturnDirectories = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("dd")) == 0) {
+                ExtentsContext.DisplayDiskContents = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("dv")) == 0) {
+                ExtentsContext.DisplayVolumeContents = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("h")) == 0) {
                 ExtentsContext.DisplayHex = TRUE;
