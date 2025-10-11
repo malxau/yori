@@ -2239,6 +2239,36 @@ typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
 #define PROCESS_MODE_BACKGROUND_BEGIN 0x00100000
 #endif
 
+#ifndef FSCTL_GET_NTFS_FILE_RECORD
+/**
+ Specifies the FSCTL_GET_NTFS_FILE_RECORD numerical representation if the
+ compilation environment doesn't provide it.
+ */
+#define FSCTL_GET_NTFS_FILE_RECORD       CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 26,  METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/**
+ A structure describing an NTFS file record.
+ */
+typedef struct _NTFS_FILE_RECORD_OUTPUT_BUFFER {
+
+    /**
+     The file record number.
+     */
+    LARGE_INTEGER FileReferenceNumber;
+
+    /**
+     The length of the file record, in bytes.
+     */
+    DWORD FileRecordLength;
+
+    /**
+     An array long enough to contain the file record.
+     */
+    UCHAR FileRecordBuffer[1];
+} NTFS_FILE_RECORD_OUTPUT_BUFFER, *PNTFS_FILE_RECORD_OUTPUT_BUFFER;
+
+#endif
+
 #ifndef INVALID_LCN
 /**
  A value describing an invalid LCN (region not allocated) for compilation

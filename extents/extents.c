@@ -40,6 +40,7 @@ CHAR strExtentsHelpText[] =
         "   -b             Use basic search criteria for files only\n"
         "   -d             Return directories rather than directory contents\n"
         "   -dd            Display contents of the file from the disk\n"
+        "   -df            Display contents of the NTFS file record\n"
         "   -dv            Display contents of the file from the volume\n"
         "   -h             Display output in hexadecimal\n"
         "   -m vcn lcn cnt Move a range of a file to a new position\n"
@@ -84,14 +85,19 @@ typedef struct _EXTENTS_CONTEXT {
     LONGLONG FilesFoundThisArg;
 
     /**
-     Output offsets in hex rather than decimal.
-     */
-    BOOLEAN DisplayHex;
-
-    /**
      If TRUE, display file contents via a disk handle.
      */
     BOOLEAN DisplayDiskContents;
+
+    /**
+     If TRUE, display contents of an NTFS file record.
+     */
+    BOOLEAN DisplayFileRecord;
+
+    /**
+     Output offsets in hex rather than decimal.
+     */
+    BOOLEAN DisplayHex;
 
     /**
      If TRUE, display file contents via a volume handle.
@@ -111,6 +117,81 @@ ExtentsHelp(VOID)
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strExtentsHelpText);
+    return TRUE;
+}
+
+/**
+ Display the contents of an NTFS file record.
+
+ @param ExtentsContext Pointer to the application context.
+
+ @param FileHandle Specifies the handle to the file whose file record should
+        be displayed.
+
+ @param DeviceHandle Specifies the volume handle to read the file record from.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+ExtentsDisplayFileRecord(
+    __in PEXTENTS_CONTEXT ExtentsContext,
+    __in HANDLE FileHandle,
+    __in HANDLE DeviceHandle
+    )
+{
+    BY_HANDLE_FILE_INFORMATION FileInfo;
+    LARGE_INTEGER FileNumber;
+    PNTFS_FILE_RECORD_OUTPUT_BUFFER FileRecord;
+    YORI_ALLOC_SIZE_T FileRecordSize;
+    DWORD BytesReturned;
+    SYSERR Error;
+    LPTSTR ErrText;
+
+    UNREFERENCED_PARAMETER(ExtentsContext);
+
+    if (!GetFileInformationByHandle(FileHandle, &FileInfo)) {
+        Error = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Error);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: get file information failed: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
+    }
+
+    FileNumber.LowPart = FileInfo.nFileIndexLow;
+    FileNumber.HighPart = FileInfo.nFileIndexHigh;
+
+    //
+    //  NTFS supports 1Kb and 4Kb file records.  4Kb plus the size of the
+    //  structure header should be sufficient for any NTFS volume.
+    //
+
+    FileRecordSize = sizeof(NTFS_FILE_RECORD_OUTPUT_BUFFER) + 4096;
+    FileRecord = YoriLibMalloc(FileRecordSize);
+    if (FileRecord == NULL) {
+        return FALSE;
+    }
+
+    if (!DeviceIoControl(DeviceHandle,
+                         FSCTL_GET_NTFS_FILE_RECORD,
+                         &FileNumber,
+                         sizeof(FileNumber),
+                         FileRecord,
+                         FileRecordSize,
+                         &BytesReturned,
+                         NULL)) {
+
+        Error = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Error);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("extents: get file record failed: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        YoriLibFree(FileRecord);
+        return FALSE;
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\nNTFS file record:\n"));
+    YoriLibHexDump(FileRecord->FileRecordBuffer, 0, FileRecord->FileRecordLength, sizeof(DWORD), YORI_LIB_HEX_FLAG_DISPLAY_CHARS | YORI_LIB_HEX_FLAG_DISPLAY_OFFSET);
+
+    YoriLibFree(FileRecord);
     return TRUE;
 }
 
@@ -195,6 +276,10 @@ ExtentsDisplayData(
             LARGE_INTEGER liDeviceExtentOffset;
             DWORD ExtentIndex;
             DWORD BytesRead;
+
+            if (StartingVcn.StartingVcn.QuadPart == 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\nFile contents:\n"));
+            }
 
             //
             //  Loop over all extents returned from this call.
@@ -790,6 +875,10 @@ ExtentsFileFoundCallback(
                               RetrievalPointerBase,
                               &VolumeDiskExtents);
 
+        if (ExtentsContext->DisplayFileRecord) {
+            ExtentsDisplayFileRecord(ExtentsContext, FileHandle, VolumeHandle);
+        }
+
         if (ExtentsContext->DisplayVolumeContents) {
             ExtentsDisplayData(ExtentsContext, FileHandle, VolumeHandle, BytesPerCluster, RetrievalPointerBase);
         }
@@ -876,6 +965,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("dd")) == 0) {
                 ExtentsContext.DisplayDiskContents = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("df")) == 0) {
+                ExtentsContext.DisplayFileRecord = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("dv")) == 0) {
                 ExtentsContext.DisplayVolumeContents = TRUE;
