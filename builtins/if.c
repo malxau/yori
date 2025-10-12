@@ -334,7 +334,7 @@ YoriCmd_IF(
     StartArg = EscapedStartArg;
     if (!IfFindOffsetOfNextComponentInArgs(EscapedArgC - StartArg,
                                            &EscapedArgV[StartArg],
-                                           &ArgContainsQuotes[StartArg],
+                                           (ArgContainsQuotes != NULL?&ArgContainsQuotes[StartArg]:NULL),
                                            0,
                                            TempArgV,
                                            &TestCommand,
@@ -358,7 +358,7 @@ YoriCmd_IF(
 
     if (!IfFindOffsetOfNextComponentInArgs(ArgC - StartArg,
                                            &EscapedArgV[StartArg],
-                                           &ArgContainsQuotes[StartArg],
+                                           (ArgContainsQuotes != NULL?&ArgContainsQuotes[StartArg]:NULL),
                                            StartCharIndex,
                                            TempArgV,
                                            &TrueCommand,
@@ -374,7 +374,7 @@ YoriCmd_IF(
 
     if (!IfFindOffsetOfNextComponentInArgs(ArgC - StartArg,
                                            &EscapedArgV[StartArg],
-                                           &ArgContainsQuotes[StartArg],
+                                           (ArgContainsQuotes != NULL?&ArgContainsQuotes[StartArg]:NULL),
                                            StartCharIndex,
                                            TempArgV,
                                            &FalseCommand,
