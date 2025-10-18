@@ -2021,6 +2021,8 @@ YoriShPerformArgumentTabCompletion(
         //  aliases and path to an unambiguous thing to execute.
         //
 
+        YoriShExpandAlias(CmdContext);
+
         if (!YoriShResolveCommandToExecutable(&CurrentExecContext->CmdToExec, &ExecutableFound)) {
             YoriLibShFreeExecPlan(&ExecPlan);
             return;
