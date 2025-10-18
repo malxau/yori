@@ -27,6 +27,11 @@
 #include <yoripch.h>
 #include <yorilib.h>
 
+/**
+ The maximum number of supposedly involved lines.
+ */
+#define MAX_LINE_COUNT (1*1024*1024)
+
 #pragma warning(disable: 4220) // Varargs matches remaining parameters
 
 /**
@@ -79,6 +84,11 @@ typedef struct _TAIL_CONTEXT {
      Specifies the number of lines to display in each matching file.
      */
     YORI_ALLOC_SIZE_T LinesToDisplay;
+
+    /**
+     Specifies the first line to display in each matching file.
+     */
+    YORI_ALLOC_SIZE_T StartLine;
 
     /**
      The first error encountered when enumerating objects from a single arg.
@@ -190,7 +200,10 @@ TailProcessStream(
             }
         }
 
-        if (TailContext->LinesFound > TailContext->LinesToDisplay) {
+        if (TailContext->StartLine) {
+            StartLine = TailContext->StartLine;
+            break;
+        } else if (TailContext->LinesFound > TailContext->LinesToDisplay) {
             StartLine = TailContext->LinesFound - TailContext->LinesToDisplay;
             break;
         } else if (SeekToEndOffset != 0) {
@@ -457,8 +470,12 @@ ENTRYPOINT(
                     YORI_MAX_SIGNED_T LineCount;
                     YORI_ALLOC_SIZE_T CharsConsumed;
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &LineCount, &CharsConsumed) &&
-                        LineCount != 0 && LineCount < 1 * 1024 * 1024 && LineCount < YORI_MAX_ALLOC_SIZE) {
+                        LineCount != 0 && LineCount <= MAX_LINE_COUNT && LineCount <= YORI_MAX_ALLOC_SIZE) {
 
+                        if (ArgV[i + 1].StartOfString[0] == '+') {
+                            TailContext.StartLine = (YORI_ALLOC_SIZE_T)LineCount;
+                            LineCount = MAX_LINE_COUNT < YORI_MAX_ALLOC_SIZE ? MAX_LINE_COUNT : YORI_MAX_ALLOC_SIZE;
+                        }
                         TailContext.LinesToDisplay = (YORI_ALLOC_SIZE_T)LineCount;
                         ArgumentUnderstood = TRUE;
                         i++;
