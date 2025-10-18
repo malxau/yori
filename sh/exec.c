@@ -414,6 +414,8 @@ YoriShExecExecPlan(
             break;
         }
 
+        YoriShExpandAlias(&ExecContext->CmdToExec);
+
         if (YoriLibIsPathUrl(&ExecContext->CmdToExec.ArgV[0])) {
             YoriShGlobal.ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
         } else if (ExecContext->CmdToExec.ArgC >= 2 &&

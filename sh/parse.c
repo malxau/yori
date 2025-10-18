@@ -53,8 +53,6 @@ YoriShResolveCommandToExecutable(
 
     YoriLibInitEmptyString(&FoundExecutable);
 
-    YoriShExpandAlias(CmdContext);
-
     if (!YoriLibExpandHomeDirectories(&CmdContext->ArgV[0], &ExpandedCmd)) {
         YoriLibCloneString(&ExpandedCmd, &CmdContext->ArgV[0]);
     }
