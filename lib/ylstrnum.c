@@ -219,8 +219,6 @@ YoriLibStringToNumber(
                 Negative = TRUE;
             }
             Index++;
-        } else if (String->StartOfString[Index] == '+') {
-            Index++;
         } else {
             break;
         }

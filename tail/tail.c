@@ -127,6 +127,11 @@ typedef struct _TAIL_CONTEXT {
      */
     BOOLEAN Recursive;
 
+    /**
+     TRUE if StartLine contains a meaningful value.
+     */
+    BOOLEAN StartLineSpecified;
+
 } TAIL_CONTEXT, *PTAIL_CONTEXT;
 
 /**
@@ -164,7 +169,10 @@ TailProcessStream(
     //  from the end, assuming an average line size of 256 bytes.
     //
 
-    if (FileType == FILE_TYPE_DISK && TailContext->FinalLine == 0) {
+    if (FileType == FILE_TYPE_DISK &&
+        !TailContext->StartLineSpecified &&
+        TailContext->FinalLine == 0) {
+
         SeekToEndOffset = 256 * TailContext->LinesToDisplay;
     }
 
@@ -200,7 +208,7 @@ TailProcessStream(
             }
         }
 
-        if (TailContext->StartLine) {
+        if (TailContext->StartLineSpecified) {
             StartLine = TailContext->StartLine;
             break;
         } else if (TailContext->LinesFound > TailContext->LinesToDisplay) {
@@ -469,14 +477,28 @@ ENTRYPOINT(
                 if (ArgC > i + 1) {
                     YORI_MAX_SIGNED_T LineCount;
                     YORI_ALLOC_SIZE_T CharsConsumed;
-                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &LineCount, &CharsConsumed) &&
+                    YORI_STRING NumberString;
+                    BOOLEAN StartingPosition;
+
+                    YoriLibInitEmptyString(&NumberString);
+                    NumberString.StartOfString = ArgV[i + 1].StartOfString;
+                    NumberString.LengthInChars = ArgV[i + 1].LengthInChars;
+                    StartingPosition = FALSE;
+                    if (NumberString.LengthInChars >= 1 && NumberString.StartOfString[0] == '+') {
+                        NumberString.StartOfString++;
+                        NumberString.LengthInChars--;
+                        StartingPosition = TRUE;
+                    }
+
+                    if (YoriLibStringToNumber(&NumberString, TRUE, &LineCount, &CharsConsumed) &&
                         LineCount != 0 && LineCount <= MAX_LINE_COUNT && LineCount <= YORI_MAX_ALLOC_SIZE) {
 
-                        if (ArgV[i + 1].StartOfString[0] == '+') {
+                        if (StartingPosition) {
                             TailContext.StartLine = (YORI_ALLOC_SIZE_T)LineCount;
-                            LineCount = MAX_LINE_COUNT < YORI_MAX_ALLOC_SIZE ? MAX_LINE_COUNT : YORI_MAX_ALLOC_SIZE;
+                            TailContext.StartLineSpecified = TRUE;
+                        } else {
+                            TailContext.LinesToDisplay = (YORI_ALLOC_SIZE_T)LineCount;
                         }
-                        TailContext.LinesToDisplay = (YORI_ALLOC_SIZE_T)LineCount;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }
