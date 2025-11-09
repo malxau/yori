@@ -38,7 +38,9 @@ CHAR strTimeThisHelpText[] =
         "\n"
         "Runs a child program and times its execution.\n"
         "\n"
-        "TIMETHIS [-license] [-f <fmt>] <command>\n"
+        "TIMETHIS [-license] [-r] [-f <fmt>] <command>\n"
+        "\n"
+        "   -r                 Wait for all processes within the tree\n"
         "\n"
         "Format specifiers are:\n"
         "   $CHILDCPU$         Amount of CPU time used by the child process\n"
@@ -287,6 +289,7 @@ ENTRYPOINT(
     YORI_STRING CmdLine;
     DWORD ExitCode;
     BOOLEAN ArgumentUnderstood;
+    BOOLEAN Recursive = FALSE;
     YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_ALLOC_SIZE_T i;
     YORI_STRING Arg;
@@ -297,7 +300,8 @@ ENTRYPOINT(
     PYORI_STRING ChildArgs;
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
-    HANDLE hJob;
+    HANDLE hJob = NULL;
+    HANDLE hPort = NULL;
     FILETIME ftCreationTime;
     FILETIME ftExitTime;
     FILETIME ftKernelTime;
@@ -329,6 +333,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
+                Recursive = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
                     YoriLibFreeStringContents(&AllocatedFormatString);
@@ -385,8 +392,6 @@ ENTRYPOINT(
 
     ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
 
-    hJob = YoriLibCreateJobObject();
-
     memset(&StartupInfo, 0, sizeof(StartupInfo));
     StartupInfo.cb = sizeof(StartupInfo);
 
@@ -399,13 +404,20 @@ ENTRYPOINT(
         YoriLibFreeStringContents(&CmdLine);
         YoriLibFreeStringContents(&Executable);
         YoriLibFreeStringContents(&AllocatedFormatString);
-        if (hJob != NULL) {
-            CloseHandle(hJob);
-        }
         return EXIT_FAILURE;
     }
 
+    hJob = YoriLibCreateJobObject();
     if (hJob != NULL) {
+        if (Recursive) {
+            hPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
+            if (hPort != NULL) {
+                JOBOBJECT_ASSOCIATE_COMPLETION_PORT Port;
+                Port.CompletionKey = hJob;
+                Port.CompletionPort = hPort;
+                SetInformationJobObject(hJob, JobObjectAssociateCompletionPortInformation, &Port, sizeof(Port));
+            }
+        }
         YoriLibAssignProcessToJobObject(hJob, ProcessInfo.hProcess);
     }
 
@@ -471,8 +483,6 @@ ENTRYPOINT(
 
     //
     //  Save off times from all processes within the job, if it exists.
-    //  Note that currently we're not waiting for all processes within the
-    //  job to terminate.
     //
 
     TimeThisContext.KernelTimeTreeInMs.QuadPart = TimeThisContext.KernelTimeInMs.QuadPart;
@@ -481,6 +491,16 @@ ENTRYPOINT(
     if (hJob != NULL) {
         YORI_JOB_BASIC_ACCOUNTING_INFORMATION JobInfo;
         DWORD BytesReturned;
+
+        if (hPort != NULL) {
+            DWORD CompletionCode;
+            ULONG_PTR CompletionKey;
+            LPOVERLAPPED Overlapped;
+            while (GetQueuedCompletionStatus(hPort, &CompletionCode, &CompletionKey, &Overlapped, INFINITE) &&
+                !((HANDLE)CompletionKey == hJob && CompletionCode == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO)) {
+            }
+            CloseHandle(hPort);
+        }
 
         if (DllKernel32.pQueryInformationJobObject != NULL &&
             DllKernel32.pQueryInformationJobObject(hJob, 1, &JobInfo, sizeof(JobInfo), &BytesReturned)) {
