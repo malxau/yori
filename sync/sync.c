@@ -114,7 +114,7 @@ SyncFileFoundCallback(
 {
     HANDLE FileHandle;
     DWORD DesiredAccess;
-    DWORD LastError;
+    SYSERR LastError;
     DWORD BytesReturned;
     LPTSTR ErrText;
     PSYNC_CONTEXT SyncContext = (PSYNC_CONTEXT)Context;
@@ -324,12 +324,12 @@ ENTRYPOINT(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sync: missing argument\n"));
         return EXIT_FAILURE;
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES;
         if (Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -339,7 +339,7 @@ ENTRYPOINT(
             if (SyncContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     SyncFileFoundCallback(&FullPath, NULL, 0, &SyncContext);
                     YoriLibFreeStringContents(&FullPath);
                 }

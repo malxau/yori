@@ -125,7 +125,7 @@ ENTRYPOINT(
 
     for (i = StartArg; i < ArgC; i++) {
         YORI_STRING FullPath;
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+        if (!YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mkdir: could not resolve full path: %y\n"), &ArgV[i]);
             Result = EXIT_FAILURE;
         } else {

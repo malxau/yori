@@ -127,7 +127,7 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg + 1], TRUE, &NewFileName)) {
+    if (!YoriLibUserToSingleFilePath(&ArgV[StartArg + 1], TRUE, &NewFileName)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("get: failed to resolve %y\n"), &ArgV[StartArg + 1]);
         return EXIT_FAILURE;
     }

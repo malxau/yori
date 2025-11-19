@@ -479,7 +479,7 @@ YoriLibIsFileNameDeviceName(
  */
 __success(return)
 BOOL
-YoriLibUserStringToSingleFilePath(
+YoriLibUserToSingleFilePath(
     __in PCYORI_STRING UserString,
     __in BOOL ReturnEscapedPath,
     __out PYORI_STRING FullPath
@@ -540,7 +540,7 @@ YoriLibUserStringToSingleFilePath(
  */
 __success(return)
 BOOL
-YoriLibUserStringToSingleFilePathOrDevice(
+YoriLibUserToSingleFileOrDevice(
     __in PCYORI_STRING UserString,
     __in BOOL ReturnEscapedPath,
     __out PYORI_STRING FullPath
@@ -566,7 +566,7 @@ YoriLibUserStringToSingleFilePathOrDevice(
         }
         return TRUE;
     }
-    return YoriLibUserStringToSingleFilePath(UserString, ReturnEscapedPath, FullPath);
+    return YoriLibUserToSingleFilePath(UserString, ReturnEscapedPath, FullPath);
 }
 
 // vim:sw=4:ts=4:et:

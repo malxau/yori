@@ -430,7 +430,7 @@ CopyAsLink(
     PVOID ReparseData;
     HANDLE SourceFileHandle;
     HANDLE DestFileHandle;
-    DWORD LastError;
+    SYSERR LastError;
     DWORD BytesReturned;
     DWORD BytesToAllocate;
     LPTSTR ErrText;
@@ -580,7 +580,7 @@ CopyAsDumbDataMove(
     DWORD SectorSize;
     HANDLE SourceHandle;
     HANDLE DestHandle;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
     LONGLONG TotalBytesCopied;
 
@@ -784,7 +784,7 @@ CopyFileFoundCallback(
     PYORI_STRING DestNameToDisplay;
     YORI_ALLOC_SIZE_T SlashesFound;
     YORI_ALLOC_SIZE_T Index;
-    DWORD LastError;
+    SYSERR LastError;
 
     CopyContext->FilesFoundThisArg++;
 
@@ -1110,13 +1110,13 @@ ENTRYPOINT(
     } else if (FileCount == 1) {
         YORI_STRING RelativeCurrentDirectory;
         YoriLibConstantString(&RelativeCurrentDirectory, _T("."));
-        if (!YoriLibUserStringToSingleFilePathOrDevice(&RelativeCurrentDirectory, TRUE, &CopyContext.Dest)) {
+        if (!YoriLibUserToSingleFileOrDevice(&RelativeCurrentDirectory, TRUE, &CopyContext.Dest)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: could not resolve %y\n"), &RelativeCurrentDirectory);
             CopyFreeCopyContext(&CopyContext);
             return EXIT_FAILURE;
         }
     } else {
-        if (!YoriLibUserStringToSingleFilePathOrDevice(&ArgV[LastFileArg], TRUE, &CopyContext.Dest)) {
+        if (!YoriLibUserToSingleFileOrDevice(&ArgV[LastFileArg], TRUE, &CopyContext.Dest)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: could not resolve %y\n"), &ArgV[LastFileArg]);
             CopyFreeCopyContext(&CopyContext);
             return EXIT_FAILURE;
@@ -1139,7 +1139,7 @@ ENTRYPOINT(
     if (CopyContext.DestAttributes == 0xFFFFFFFF) {
         if (Recursive) {
             if (!CreateDirectory(CopyContext.Dest.StartOfString, NULL)) {
-                DWORD LastError = GetLastError();
+                SYSERR LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateDirectory failed: %y: %s"), &CopyContext.Dest, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -1193,24 +1193,24 @@ ENTRYPOINT(
             //  intent was not to copy an empty directory.
             //
 
-            MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+            MatchFlags = YORILIB_ENUM_RETURN_FILES;
             if (BasicEnumeration) {
-                MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+                MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
             }
             if (Recursive) {
-                MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RETURN_DIRECTORIES;
+                MatchFlags |= YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_RETURN_DIRECTORIES;
                 if (CopyContext.CopyAsLinks) {
-                    MatchFlags |= YORILIB_FILEENUM_NO_LINK_TRAVERSE;
+                    MatchFlags |= YORILIB_ENUM_NO_LINK_TRAVERSE;
                 }
             } else {
-                MatchFlags |= YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+                MatchFlags |= YORILIB_ENUM_DIRECTORY_CONTENTS;
             }
 
             CopyContext.FilesFoundThisArg = 0;
             YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CopyFileFoundCallback, NULL, &CopyContext);
             if (CopyContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
-                if (YoriLibUserStringToSingleFilePathOrDevice(&ArgV[i], TRUE, &FullPath)) {
+                if (YoriLibUserToSingleFileOrDevice(&ArgV[i], TRUE, &FullPath)) {
                     CopyFileFoundCallback(&FullPath, NULL, 0, &CopyContext);
                     YoriLibFreeStringContents(&FullPath);
                 }

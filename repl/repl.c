@@ -257,7 +257,7 @@ ReplFileFoundCallback(
                                 NULL);
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("repl: open of %y failed: %s"), FilePath, ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -291,7 +291,7 @@ ReplFileFoundCallback(
 BOOL
 ReplFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -451,12 +451,12 @@ ENTRYPOINT(
 
         ReplProcessStream(GetStdHandle(STD_INPUT_HANDLE), &ReplContext);
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS;
         if (ReplContext.Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {

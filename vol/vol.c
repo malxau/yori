@@ -526,7 +526,7 @@ ENTRYPOINT(
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FullPathName)) {
+    if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &FullPathName)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("vol: failed to resolve %y\n"), &ArgV[StartArg]);
         YoriLibFreeStringContents(&VolResult.VolumeLabel);
         YoriLibFreeStringContents(&VolResult.FsName);

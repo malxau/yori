@@ -99,6 +99,26 @@ YoriLibLiAssignUnsigned(
 }
 
 /**
+ Get an unsigned value from a large integer.  This is an abstraction to allow
+ the large integer to be larger than the compiler's native type.
+
+ @param Li Pointer to the large integer to obtain a value from.
+
+ @return The unsigned value in the compiler's native type.
+ */
+YORI_MAX_UNSIGNED_T
+YoriLibLiGetUnsigned(
+    __in PLARGE_INTEGER Li
+    )
+{
+#if YORI_LARGE_INT_NO_QUADPART
+    return Li->LowPart;
+#else
+    return Li->QuadPart;
+#endif
+}
+
+/**
  Convert a noninheritable handle into an inheritable handle.
 
  @param OriginalHandle A handle to convert, which is presumably not
@@ -150,7 +170,7 @@ CONST LPTSTR NoWinErrorText = _T("Could not fetch error text.");
  */
 LPTSTR
 YoriLibGetWinErrorText(
-    __in DWORD ErrorCode
+    __in SYSERR ErrorCode
     )
 {
     LPTSTR OutputBuffer = NULL;
@@ -186,7 +206,7 @@ YoriLibGetWinErrorText(
  */
 LPTSTR
 YoriLibGetNtErrorText(
-    __in DWORD ErrorCode
+    __in SYSERR ErrorCode
     )
 {
     LPTSTR OutputBuffer = NULL;

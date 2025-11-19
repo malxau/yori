@@ -466,7 +466,7 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
     } else {
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FullFilePath)) {
+        if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &FullFilePath)) {
             Err = GetLastError();
             ErrText = YoriLibGetWinErrorText(Err);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("base64: resolving path failed: %s"), ErrText);

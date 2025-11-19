@@ -304,7 +304,7 @@ YoriPkgBackupPackage(
     YoriLibInitializeListHead(&Context->FileList);
 
     if (TargetDirectory != NULL) {
-        if (!YoriLibUserStringToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
+        if (!YoriLibUserToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
             YoriLibFree(Context);
             return ERROR_NOT_ENOUGH_MEMORY;
         }

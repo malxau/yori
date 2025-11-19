@@ -84,44 +84,44 @@ typedef struct _LINES_CONTEXT {
      when the program falls back to interpreting the argument as a literal,
      if that still doesn't work, this is the error code that is displayed.
      */
-    DWORD SavedErrorThisArg;
+    SYSERR SavedErrorThisArg;
 
     /**
      Records the total number of files processed.
      */
-    YORI_MAX_SIGNED_T FilesFound;
+    YORI_MAX_UNSIGNED_T FilesFound;
 
     /**
      Records the total number of files processed within a single command line
      argument.
      */
-    YORI_MAX_SIGNED_T FilesFoundThisArg;
+    YORI_MAX_UNSIGNED_T FilesFoundThisArg;
 
     /**
      Records the number of lines found in a single file.
      */
-    YORI_MAX_SIGNED_T FileLinesFound;
+    YORI_MAX_UNSIGNED_T FileLinesFound;
 
     /**
      The shortest line within a single file.
      */
-    YORI_MAX_UNSIGNED_T FileShortestLine;
+    YORI_ALLOC_SIZE_T FileShortestLine;
 
     /**
      The longest line within a single file.
      */
-    YORI_MAX_UNSIGNED_T FileLongestLine;
+    YORI_ALLOC_SIZE_T FileLongestLine;
 
     /**
      The total number of characters within all lines in a single file, used
      to display an average if one is requested.
      */
-    YORI_MAX_SIGNED_T FileTotalChars;
+    YORI_MAX_UNSIGNED_T FileTotalChars;
 
     /**
      Records the total number of lines processed for all files.
      */
-    YORI_MAX_SIGNED_T TotalLinesFound;
+    YORI_MAX_UNSIGNED_T TotalLinesFound;
 } LINES_CONTEXT, *PLINES_CONTEXT;
 
 /**
@@ -222,7 +222,7 @@ LinesFileFoundCallback(
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
             if (LinesContext->SavedErrorThisArg == ERROR_SUCCESS) {
-                DWORD LastError = GetLastError();
+                SYSERR LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lines: open of %y failed: %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -284,7 +284,7 @@ LinesFileFoundCallback(
 BOOL
 LinesFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -362,7 +362,7 @@ ENTRYPOINT(
     LINES_CONTEXT LinesContext;
     YORI_STRING Arg;
 
-    ZeroMemory(&LinesContext, sizeof(LinesContext));
+    ZeroMemory(&LinesContext, (DWORD)sizeof(LinesContext));
 
     for (i = 1; i < ArgC; i++) {
 
@@ -431,12 +431,12 @@ ENTRYPOINT(
 
         LinesProcessStream(GetStdHandle(STD_INPUT_HANDLE), &LinesContext);
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS;
         if (LinesContext.Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -446,7 +446,7 @@ ENTRYPOINT(
 
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
-                                 0,
+                                 0L,
                                  LinesFileFoundCallback,
                                  LinesFileEnumerateErrorCallback,
                                  &LinesContext);
@@ -454,8 +454,8 @@ ENTRYPOINT(
             if (LinesContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
-                    LinesFileFoundCallback(&FullPath, NULL, 0, &LinesContext);
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    LinesFileFoundCallback(&FullPath, NULL, 0L, &LinesContext);
                     YoriLibFreeStringContents(&FullPath);
                 }
                 if (LinesContext.SavedErrorThisArg != ERROR_SUCCESS) {

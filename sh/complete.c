@@ -1022,7 +1022,7 @@ YoriShFileTabCompletionCallback(
 BOOL
 YoriShFileTabCompletionErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -1220,7 +1220,7 @@ YoriShFindMatchingStreamsForStringOrCursorPosition(
         EnumContext->CharsToFinalSlash = YoriShFindFinalSlashIfSpecified(&FileMidpointSearchString);
         EnumContext->SearchString = FileMidpointSearchString.StartOfString;
 
-        YoriLibForEachStream(&FileMidpointSearchString, YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, YoriShFileTabCompletionCallback, YoriShFileTabCompletionErrorCallback, EnumContext);
+        YoriLibForEachStream(&FileMidpointSearchString, YORILIB_ENUM_RETURN_DIRECTORIES, 0, YoriShFileTabCompletionCallback, YoriShFileTabCompletionErrorCallback, EnumContext);
 
         YoriLibInitEmptyString(&EnumContext->Suffix);
         YoriLibFreeStringContents(&FileMidpointSearchString);
@@ -1306,10 +1306,10 @@ YoriShPerformFileTabCompletion(
     //
 
     if (IncludeFiles) {
-        MatchFlags |= YORILIB_FILEENUM_RETURN_FILES;
+        MatchFlags |= YORILIB_ENUM_RETURN_FILES;
     }
     if (IncludeDirectories) {
-        MatchFlags |= YORILIB_FILEENUM_RETURN_DIRECTORIES;
+        MatchFlags |= YORILIB_ENUM_RETURN_DIRECTORIES;
     }
 
     //

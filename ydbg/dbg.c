@@ -81,7 +81,7 @@ YDbgDumpProcess(
 {
     HANDLE ProcessHandle;
     HANDLE FileHandle;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
     YORI_STRING FullPath;
 
@@ -102,7 +102,7 @@ YDbgDumpProcess(
 
     YoriLibInitEmptyString(&FullPath);
 
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullPath)) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: getfullpathname of %y failed: %s"), FileName, ErrText);
@@ -217,7 +217,7 @@ YDbgBuildThreadArrayForProcessId(
 
         LocalHandleArray[Index] = DllKernel32.pOpenThread(STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xFFFF, FALSE, (DWORD)(DWORD_PTR)CurrentThread->ThreadId);
         if (LocalHandleArray[Index] == NULL) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: OpenThread of %i failed: %s"), CurrentThread->ThreadId, ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -257,7 +257,7 @@ YDbgDumpProcessKernelStacks(
     YORI_ALLOC_SIZE_T BufferLength;
     LONG NtStatus;
     HANDLE FileHandle;
-    DWORD LastError;
+    SYSERR LastError;
     DWORD Index;
     LPTSTR ErrText;
     YORI_STRING FullPath;
@@ -335,7 +335,7 @@ YDbgDumpProcessKernelStacks(
 
     YoriLibInitEmptyString(&FullPath);
 
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullPath)) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: getfullpathname of %y failed: %s"), FileName, ErrText);
@@ -390,7 +390,7 @@ YDbgDumpKernel(
 {
     YORI_SYSDBG_LIVEDUMP_CONTROL Ctrl;
     HANDLE FileHandle;
-    DWORD LastError;
+    SYSERR LastError;
     DWORD BytesWritten;
     LONG NtStatus;
     BOOL Result;
@@ -410,7 +410,7 @@ YDbgDumpKernel(
 
     YoriLibInitEmptyString(&FullPath);
 
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullPath)) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: getfullpathname of %y failed: %s"), FileName, ErrText);
@@ -1100,7 +1100,7 @@ YDbgDebugChildProcess(
     }
 
     if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, ProcessFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: execution failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);

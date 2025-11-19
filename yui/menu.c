@@ -1559,7 +1559,7 @@ YuiFileFoundCallback(
 BOOL
 YuiFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -1665,7 +1665,7 @@ YuiMenuMonitorFileSystemChanges(
     YoriLibInitEmptyString(&FullPath);
 
     YoriLibConstantString(&EnumDir, _T("~PROGRAMS"));
-    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -1691,7 +1691,7 @@ YuiMenuMonitorFileSystemChanges(
     YoriLibFreeStringContents(&FullPath);
 
     YoriLibConstantString(&EnumDir, _T("~START"));
-    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -1717,7 +1717,7 @@ YuiMenuMonitorFileSystemChanges(
     YoriLibFreeStringContents(&FullPath);
 
     YoriLibConstantString(&EnumDir, _T("~COMMONPROGRAMS"));
-    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -1743,7 +1743,7 @@ YuiMenuMonitorFileSystemChanges(
     YoriLibFreeStringContents(&FullPath);
 
     YoriLibConstantString(&EnumDir, _T("~COMMONSTART"));
-    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(&EnumDir, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -1789,8 +1789,8 @@ YuiMenuPopulate(
     BOOLEAN SleepSupported;
     BOOLEAN HibernateSupported;
 
-    MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
-    MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+    MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES;
+    MatchFlags |= YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
 
     //
     //  Load everything from the user's start menu directory, ignoring
@@ -1799,7 +1799,7 @@ YuiMenuPopulate(
 
     YoriLibInitEmptyString(&YuiContext->FilterDirectory);
     YoriLibConstantString(&EnumDir, _T("~PROGRAMS"));
-    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &YuiContext->FilterDirectory)) {
+    if (!YoriLibUserToSingleFilePath(&EnumDir, TRUE, &YuiContext->FilterDirectory)) {
         YoriLibInitEmptyString(&YuiContext->FilterDirectory);
     }
 
@@ -1833,7 +1833,7 @@ YuiMenuPopulate(
     //
 
     YoriLibConstantString(&EnumDir, _T("~COMMONPROGRAMS"));
-    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &YuiContext->FilterDirectory)) {
+    if (!YoriLibUserToSingleFilePath(&EnumDir, TRUE, &YuiContext->FilterDirectory)) {
         YoriLibInitEmptyString(&YuiContext->FilterDirectory);
     }
 

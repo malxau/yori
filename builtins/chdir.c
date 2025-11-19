@@ -80,7 +80,7 @@ YoriCmd_CHDIR(
     YORI_ALLOC_SIZE_T i;
     YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_STRING Arg;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
 
     YoriLibLoadNtDllFunctions();
@@ -236,7 +236,7 @@ YoriCmd_CHDIR(
 
             if (YoriLibCompareStringLit(&Component, _T(".")) == 0) {
 
-                if (!YoriLibUserStringToSingleFilePath(NewDir, SetToLongPath, &NewCurrentDirectory)) {
+                if (!YoriLibUserToSingleFilePath(NewDir, SetToLongPath, &NewCurrentDirectory)) {
                     LastError = GetLastError();
                     ErrText = YoriLibGetWinErrorText(LastError);
                     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not resolve full path: %y: %s"), NewDir, ErrText);

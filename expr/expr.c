@@ -40,7 +40,13 @@ CHAR strExprHelpText[] =
         "\n"
         "   -h             Output result as hex rather than decimal\n"
         "   -o             Output result as oct rather than decimal\n"
-        "   -b             Output result as bin rather than decimal\n"
+        "   -b             Output result as bin rather than decimal\n";
+
+/**
+ Help text to display to the user.
+ */
+const
+CHAR strExprHelpText2[] =
         "   -int8          Output result as a signed 8 bit value\n"
         "   -int16         Output result as a signed 16 bit value\n"
         "   -int32         Output result as a signed 32 bit value\n"
@@ -59,7 +65,7 @@ ExprHelp(VOID)
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strExprHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs%hs"), strExprHelpText, strExprHelpText2);
     return TRUE;
 }
 
@@ -175,7 +181,7 @@ ENTRYPOINT(
     YORI_ALLOC_SIZE_T i;
     YORI_ALLOC_SIZE_T StartArg = 0;
     YORI_ALLOC_SIZE_T CharsConsumed;
-    DWORD BitsInOutput = 63;
+    UCHAR BitsInOutput = 63;
     YORI_STRING RemainingString;
     EXPR_NUMBER Temp;
     EXPR_NUMBER Result;
@@ -370,7 +376,8 @@ ENTRYPOINT(
                     goto ParseFailure;
                 }
                 {
-                    EXPR_NUMBER Temp2 = Result;
+                    EXPR_NUMBER Temp2;
+                    Temp2.Value = Result.Value;
                     while (Temp.Value > 1) {
                         Result.Value *= Temp2.Value;
                         Temp.Value--;
@@ -393,7 +400,7 @@ ENTRYPOINT(
             Result.Value = (YORI_MAX_SIGNED_T)(DWORD)Result.Value;
             break;
         case 31:
-            Result.Value = (YORI_MAX_SIGNED_T)(INT)Result.Value;
+            Result.Value = (YORI_MAX_SIGNED_T)(LONG)Result.Value;
             break;
         case 16:
             Result.Value = (YORI_MAX_SIGNED_T)(WORD)Result.Value;

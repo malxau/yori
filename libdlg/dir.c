@@ -524,7 +524,7 @@ YoriDlgDirRefreshView(
     UINT DriveProbeResult;
     YORI_STRING_ARRAY NewListItems;
 
-    if (!YoriLibUserStringToSingleFilePath(Directory, TRUE, &FullDir)) {
+    if (!YoriLibUserToSingleFilePath(Directory, TRUE, &FullDir)) {
         return;
     }
 
@@ -561,7 +561,7 @@ YoriDlgDirRefreshView(
 
     YoriWinListClearAllItems(DirList);
     YoriStringArrayInitialize(&NewListItems);
-    YoriLibForEachFile(&SearchString, YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES | YORILIB_FILEENUM_BASIC_EXPANSION, 0, YoriDlgDirDirFoundCallback, NULL, &NewListItems);
+    YoriLibForEachFile(&SearchString, YORILIB_ENUM_RETURN_DIRECTORIES | YORILIB_ENUM_INCLUDE_DOTFILES | YORILIB_ENUM_BASIC_EXPANSION, 0, YoriDlgDirDirFoundCallback, NULL, &NewListItems);
     YoriLibSortStringArray(NewListItems.Items, NewListItems.Count);
     YoriWinListAddItems(DirList, NewListItems.Items, NewListItems.Count);
     YoriStringArrayCleanup(&NewListItems);

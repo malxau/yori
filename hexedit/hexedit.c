@@ -810,7 +810,7 @@ HexEditOpenDialog(
     }
     YoriLibInitEmptyString(&FullName);
 
-    if (!YoriLibUserStringToSingleFilePath(&Text, TRUE, &FullName)) {
+    if (!YoriLibUserToSingleFilePath(&Text, TRUE, &FullName)) {
         YoriLibFreeStringContents(&Text);
         return;
     }
@@ -911,7 +911,7 @@ HexEditSaveAsDialog(
     }
     YoriLibInitEmptyString(&FullName);
 
-    if (!YoriLibUserStringToSingleFilePath(&Text, TRUE, &FullName)) {
+    if (!YoriLibUserToSingleFilePath(&Text, TRUE, &FullName)) {
         YoriLibFreeStringContents(&Text);
         return;
     }
@@ -2872,7 +2872,7 @@ ENTRYPOINT(
     YoriLibLoadAdvApi32Functions();
 
     if (StartArg > 0 && StartArg < ArgC) {
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &GlobalHexEditContext.OpenFileName)) {
+        if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &GlobalHexEditContext.OpenFileName)) {
             return EXIT_FAILURE;
         }
     }

@@ -428,7 +428,7 @@ YoriLibReadLineToStringEx(
 {
     PYORI_LIB_LINE_READ_CONTEXT ReadContext;
     YORI_ALLOC_SIZE_T Count = 0;
-    DWORD LastError;
+    SYSERR LastError;
     YORI_ALLOC_SIZE_T BytesToRead;
     DWORD BytesRead;
     YORI_ALLOC_SIZE_T CharsToCopy;

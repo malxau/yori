@@ -262,8 +262,8 @@ ENTRYPOINT(
         DesiredAccess = GENERIC_READ | GENERIC_WRITE;
     } else {
 
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FileName)) {
-            DWORD LastError = GetLastError();
+        if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &FileName)) {
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("tee: getfullpathname of %y failed: %s"), &ArgV[StartArg], ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -281,7 +281,7 @@ ENTRYPOINT(
                                   NULL);
 
     if (TeeContext.hFile == INVALID_HANDLE_VALUE || TeeContext.hFile == NULL) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("tee: open of %y failed: %s"), &FileName, ErrText);
         YoriLibFreeWinErrorText(ErrText);

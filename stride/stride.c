@@ -73,7 +73,7 @@ typedef struct _STRIDE_CONTEXT {
      when the program falls back to interpreting the argument as a literal,
      if that still doesn't work, this is the error code that is displayed.
      */
-    DWORD SavedErrorThisArg;
+    SYSERR SavedErrorThisArg;
 
     /**
      Specifies the number of lines to offset from the interval.
@@ -220,7 +220,7 @@ StrideFileFoundCallback(
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
             if (StrideContext->SavedErrorThisArg == ERROR_SUCCESS) {
-                DWORD LastError = GetLastError();
+                SYSERR LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("stride: open of %y failed: %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -256,7 +256,7 @@ StrideFileFoundCallback(
 BOOL
 StrideFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -427,12 +427,12 @@ ENTRYPOINT(
 
         StrideProcessStream(GetStdHandle(STD_INPUT_HANDLE), &StrideContext);
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS;
         if (StrideContext.Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -450,7 +450,7 @@ ENTRYPOINT(
             if (StrideContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     StrideFileFoundCallback(&FullPath, NULL, 0, &StrideContext);
                     YoriLibFreeStringContents(&FullPath);
                 }

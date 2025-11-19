@@ -32,7 +32,9 @@
  */
 #define MAX_LINE_COUNT (1*1024*1024)
 
+#if defined(_MSC_VER) && _MSC_VER >= 900
 #pragma warning(disable: 4220) // Varargs matches remaining parameters
+#endif
 
 /**
  Help text to display to the user.
@@ -72,13 +74,13 @@ typedef struct _TAIL_CONTEXT {
     /**
      Records the total number of files processed.
      */
-    DWORDLONG FilesFound;
+    YORI_MAX_UNSIGNED_T FilesFound;
 
     /**
      Records the total number of files processed within a single command line
      argument.
      */
-    DWORDLONG FilesFoundThisArg;
+    YORI_MAX_UNSIGNED_T FilesFoundThisArg;
 
     /**
      Specifies the number of lines to display in each matching file.
@@ -96,20 +98,20 @@ typedef struct _TAIL_CONTEXT {
      when the program falls back to interpreting the argument as a literal,
      if that still doesn't work, this is the error code that is displayed.
      */
-    DWORD SavedErrorThisArg;
+    SYSERR SavedErrorThisArg;
 
     /**
      If nonzero, specifies the final line to display from each file.  This
      implies that tail is running in context mode, looking for a region in
      the middle of the file.
      */
-    DWORDLONG FinalLine;
+    YORI_MAX_UNSIGNED_T FinalLine;
 
     /**
      Specifies the number of lines that have been found from the current
      stream.
      */
-    DWORDLONG LinesFound;
+    YORI_MAX_UNSIGNED_T LinesFound;
 
     /**
      An array of LinesToDisplay YORI_STRING structures.
@@ -152,8 +154,8 @@ TailProcessStream(
     )
 {
     PVOID LineContext = NULL;
-    DWORDLONG StartLine = 0;
-    DWORDLONG CurrentLine;
+    YORI_MAX_UNSIGNED_T StartLine = 0;
+    YORI_MAX_UNSIGNED_T CurrentLine;
     PYORI_STRING LineString;
     YORI_LIB_LINE_ENDING LineEnding;
     BOOL TimeoutReached;
@@ -184,7 +186,7 @@ TailProcessStream(
         if (SeekToEndOffset != 0) {
             if (!SetFilePointer(hSource, -1 * SeekToEndOffset, NULL, FILE_END)) {
                 SeekToEndOffset = 0;
-                SetFilePointer(hSource, 0, NULL, FILE_BEGIN);
+                SetFilePointer(hSource, 0L, NULL, FILE_BEGIN);
             }
         }
         TailContext->LinesFound = 0;
@@ -230,7 +232,7 @@ TailProcessStream(
                 SeekToEndOffset = DesiredSeek;
             } else {
                 SeekToEndOffset = 0;
-                SetFilePointer(hSource, 0, NULL, FILE_BEGIN);
+                SetFilePointer(hSource, 0L, NULL, FILE_BEGIN);
             }
             YoriLibLineReadCloseOrCache(LineContext);
             LineContext = NULL;
@@ -255,7 +257,7 @@ TailProcessStream(
                 //  Check if the target handle is still around
                 //
 
-                if (!WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), NULL, 0, &BytesWritten, NULL)) {
+                if (!WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), NULL, 0L, &BytesWritten, NULL)) {
                     Err = GetLastError();
                     if (Err == ERROR_NO_DATA ||
                         Err == ERROR_PIPE_NOT_CONNECTED) {
@@ -267,7 +269,7 @@ TailProcessStream(
                     break;
                 }
 
-                Sleep(200);
+                Sleep(200L);
                 continue;
             }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &TailContext->LinesArray[0]);
@@ -294,7 +296,7 @@ TailProcessStream(
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
-BOOL
+BOOL WINAPI
 TailFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in_opt PWIN32_FIND_DATA FileInfo,
@@ -322,7 +324,7 @@ TailFileFoundCallback(
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
             if (TailContext->SavedErrorThisArg == ERROR_SUCCESS) {
-                DWORD LastError = GetLastError();
+                SYSERR LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("tail: open of %y failed: %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -355,10 +357,10 @@ TailFileFoundCallback(
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
-BOOL
+BOOL WINAPI
 TailFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -560,12 +562,12 @@ ENTRYPOINT(
 
         TailProcessStream(GetStdHandle(STD_INPUT_HANDLE), &TailContext);
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS;
         if (TailContext.Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -575,7 +577,7 @@ ENTRYPOINT(
 
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
-                                 0,
+                                 0L,
                                  TailFileFoundCallback,
                                  TailFileEnumerateErrorCallback,
                                  &TailContext);
@@ -583,8 +585,8 @@ ENTRYPOINT(
             if (TailContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
-                    TailFileFoundCallback(&FullPath, NULL, 0, &TailContext);
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    TailFileFoundCallback(&FullPath, NULL, 0L, &TailContext);
                     YoriLibFreeStringContents(&FullPath);
                 }
 

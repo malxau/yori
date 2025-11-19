@@ -81,7 +81,7 @@ typedef struct _YORI_LIB_CAB_EXPAND_CONTEXT {
     /**
      Error code describing the result of the operation.
      */
-    DWORD ErrorCode;
+    SYSERR ErrorCode;
 
     /**
      Optionally points to a string to populate with error information to
@@ -649,7 +649,7 @@ __success(return != INVALID_HANDLE_VALUE)
 DWORD_PTR
 YoriLibCabFileOpenForExtract(
     __in PYORI_STRING FullPath,
-    __inout PDWORD ErrorCode,
+    __inout PSYSERR ErrorCode,
     __inout_opt PYORI_STRING ErrorString
     )
 {
@@ -1383,7 +1383,7 @@ YoriLibExtractCab(
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback,
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback,
     __in_opt PVOID UserContext,
-    __inout_opt PDWORD ErrorCode,
+    __inout_opt PSYSERR ErrorCode,
     __inout_opt PYORI_STRING ErrorString
     )
 {
@@ -1431,7 +1431,7 @@ YoriLibExtractCab(
     ExpandContext.ErrorCode = ERROR_SUCCESS;
     ExpandContext.ErrorString = ErrorString;
 
-    if (!YoriLibUserStringToSingleFilePath(CabFileName, FALSE, &FullCabFileName)) {
+    if (!YoriLibUserToSingleFilePath(CabFileName, FALSE, &FullCabFileName)) {
         if (ErrorCode != NULL) {
             *ErrorCode = GetLastError();
         }
@@ -1441,7 +1441,7 @@ YoriLibExtractCab(
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
+    if (!YoriLibUserToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
         if (ErrorCode != NULL) {
             *ErrorCode = GetLastError();
         }

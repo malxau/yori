@@ -55,7 +55,7 @@ CalHelp(VOID)
  The number of days in each month.  This is a static set, but due to leap
  years this static set is re-evaluated for the second month at run time.
  */
-DWORD CalStaticDaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+WORD CalStaticDaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 /**
  A list of names for each month.
@@ -145,18 +145,18 @@ CalOutputCalendarForMonth(
 {
     SYSTEMTIME SysTimeAtYearStart;
     FILETIME FileTime;
-    DWORD LineCount;
-    DWORD DayCount;
-    DWORD ThisDayNumber;
+    WORD LineCount;
+    WORD DayCount;
+    WORD ThisDayNumber;
     YORI_ALLOC_SIZE_T DesiredOffset;
-    DWORD CurrentOffset;
-    DWORD MonthIndex;
+    YORI_ALLOC_SIZE_T CurrentOffset;
+    WORD MonthIndex;
     YORI_ALLOC_SIZE_T MonthNameLength;
-    DWORD RealDaysInMonth[12];
-    DWORD DayIndexAtStartOfMonth[12];
+    WORD RealDaysInMonth[12];
+    WORD DayIndexAtStartOfMonth[12];
     YORI_STRING Line;
 
-    ZeroMemory(&SysTimeAtYearStart, sizeof(SysTimeAtYearStart));
+    ZeroMemory(&SysTimeAtYearStart, (DWORD)sizeof(SysTimeAtYearStart));
 
     //
     //  To buffer a single console row, we need one month, which consists
@@ -195,7 +195,7 @@ CalOutputCalendarForMonth(
         if (MonthIndex == 0) {
             DayIndexAtStartOfMonth[MonthIndex] = SysTimeAtYearStart.wDayOfWeek;
         } else {
-            DayIndexAtStartOfMonth[MonthIndex] = (DayIndexAtStartOfMonth[MonthIndex - 1] + RealDaysInMonth[MonthIndex - 1]) % 7;
+            DayIndexAtStartOfMonth[MonthIndex] = (WORD)((DayIndexAtStartOfMonth[MonthIndex - 1] + RealDaysInMonth[MonthIndex - 1]) % 7);
         }
     }
 
@@ -252,7 +252,7 @@ CalOutputCalendarForMonth(
             DesiredOffset = CAL_CHARS_PER_DAY;
             CurrentOffset = 0;
             if (LineCount > 0 || DayCount >= DayIndexAtStartOfMonth[Month]) {
-                ThisDayNumber = LineCount * CAL_DAYS_PER_WEEK + DayCount - DayIndexAtStartOfMonth[Month] + 1;
+                ThisDayNumber = (WORD)(LineCount * CAL_DAYS_PER_WEEK + DayCount - DayIndexAtStartOfMonth[Month] + 1);
                 if (ThisDayNumber <= RealDaysInMonth[Month]) {
                     if (Today != NULL &&
                         Today->wYear == Year &&
@@ -305,20 +305,20 @@ CalOutputCalendarForYear(
 {
     SYSTEMTIME SysTimeAtYearStart;
     FILETIME FileTime;
-    DWORD LineCount;
-    DWORD DayCount;
-    DWORD ThisDayNumber;
-    DWORD Quarter;
-    DWORD Month;
+    WORD LineCount;
+    WORD DayCount;
+    WORD ThisDayNumber;
+    WORD Quarter;
+    WORD Month;
     WORD MonthIndex;
     YORI_ALLOC_SIZE_T DesiredOffset;
-    DWORD CurrentOffset;
+    YORI_ALLOC_SIZE_T CurrentOffset;
     YORI_ALLOC_SIZE_T MonthNameLength;
-    DWORD RealDaysInMonth[12];
-    DWORD DayIndexAtStartOfMonth[12];
+    WORD RealDaysInMonth[12];
+    WORD DayIndexAtStartOfMonth[12];
     YORI_STRING Line;
 
-    ZeroMemory(&SysTimeAtYearStart, sizeof(SysTimeAtYearStart));
+    ZeroMemory(&SysTimeAtYearStart, (DWORD)sizeof(SysTimeAtYearStart));
 
     //
     //  To buffer a single console row, we need N months, each of which
@@ -358,7 +358,7 @@ CalOutputCalendarForYear(
         if (Month == 0) {
             DayIndexAtStartOfMonth[Month] = SysTimeAtYearStart.wDayOfWeek;
         } else {
-            DayIndexAtStartOfMonth[Month] = (DayIndexAtStartOfMonth[Month - 1] + RealDaysInMonth[Month - 1]) % 7;
+            DayIndexAtStartOfMonth[Month] = (WORD)((DayIndexAtStartOfMonth[Month - 1] + RealDaysInMonth[Month - 1]) % 7);
         }
     }
 
@@ -437,12 +437,12 @@ CalOutputCalendarForYear(
 
         for (LineCount = 0; LineCount < CAL_ROWS_PER_MONTH; LineCount++) {
             for (MonthIndex = 0; MonthIndex < CAL_MONTHS_PER_ROW; MonthIndex++) {
-                Month = Quarter * CAL_MONTHS_PER_ROW + MonthIndex;
+                Month = (WORD)(Quarter * CAL_MONTHS_PER_ROW + MonthIndex);
                 for (DayCount = 0; DayCount < CAL_DAYS_PER_WEEK; DayCount++) {
                     DesiredOffset = CAL_CHARS_PER_DAY;
                     CurrentOffset = 0;
                     if (LineCount > 0 || DayCount >= DayIndexAtStartOfMonth[Month]) {
-                        ThisDayNumber = LineCount * CAL_DAYS_PER_WEEK + DayCount - DayIndexAtStartOfMonth[Month] + 1;
+                        ThisDayNumber = (WORD)(LineCount * CAL_DAYS_PER_WEEK + DayCount - DayIndexAtStartOfMonth[Month] + 1);
                         if (ThisDayNumber <= RealDaysInMonth[Month]) {
                             if (Today != NULL &&
                                 Today->wYear == Year &&
@@ -568,7 +568,7 @@ ENTRYPOINT(
             TargetYear = 0;
         }
 
-        if (TargetYear > 0 && TargetYear <= (LONGLONG)(sizeof(CalMonthNames)/sizeof(CalMonthNames[0]))) {
+        if (TargetYear > 0 && TargetYear <= (YORI_MAX_SIGNED_T)(sizeof(CalMonthNames)/sizeof(CalMonthNames[0]))) {
             GetLocalTime(&CurrentSysTime);
             CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)(TargetYear - 1), &CurrentSysTime);
             return EXIT_SUCCESS;

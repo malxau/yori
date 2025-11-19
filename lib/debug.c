@@ -46,7 +46,7 @@ YoriLibDbgRealAssert(
     __in DWORD Line
     )
 {
-    DWORD LastError;
+    SYSERR LastError;
     TCHAR szLine[1024];
 
     LastError = GetLastError();

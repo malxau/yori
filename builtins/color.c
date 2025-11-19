@@ -76,7 +76,7 @@ ColorLoadScheme(
     UCHAR Color;
 
     YoriLibInitEmptyString(&FullFileName);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullFileName)) {
         return FALSE;
     }
 
@@ -148,7 +148,7 @@ ColorSaveScheme(
     YORI_CONSOLE_SCREEN_BUFFER_INFOEX BufferInfoEx;
 
     YoriLibInitEmptyString(&FullFileName);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullFileName)) {
         return FALSE;
     }
 

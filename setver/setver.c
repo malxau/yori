@@ -838,7 +838,7 @@ ENTRYPOINT(
     StartupInfo.cb = sizeof(StartupInfo);
 
     if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, DEBUG_PROCESS | CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo)) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("setver: execution failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);

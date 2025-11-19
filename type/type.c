@@ -77,7 +77,7 @@ typedef struct _TYPE_CONTEXT {
      when the program falls back to interpreting the argument as a literal,
      if that still doesn't work, this is the error code that is displayed.
      */
-    DWORD SavedErrorThisArg;
+    SYSERR SavedErrorThisArg;
 
     /**
      Specifies the number of lines from the top of each file to display.
@@ -87,18 +87,18 @@ typedef struct _TYPE_CONTEXT {
     /**
      Records the total number of files processed.
      */
-    DWORDLONG FilesFound;
+    YORI_MAX_UNSIGNED_T FilesFound;
 
     /**
      Records the total number of files processed for this command line
      argument.
      */
-    DWORDLONG FilesFoundThisArg;
+    YORI_MAX_UNSIGNED_T FilesFoundThisArg;
 
     /**
      Records the number of lines found from a specific file.
      */
-    DWORDLONG FileLinesFound;
+    YORI_MAX_UNSIGNED_T FileLinesFound;
 
 } TYPE_CONTEXT, *PTYPE_CONTEXT;
 
@@ -190,7 +190,7 @@ TypeProcessStream(
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
-BOOL
+BOOL WINAPI
 TypeFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in_opt PWIN32_FIND_DATA FileInfo,
@@ -218,7 +218,7 @@ TypeFileFoundCallback(
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
             if (TypeContext->SavedErrorThisArg == ERROR_SUCCESS) {
-                DWORD LastError = GetLastError();
+                SYSERR LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("type: open of %y failed: %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -251,10 +251,10 @@ TypeFileFoundCallback(
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
-BOOL
+BOOL WINAPI
 TypeFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -331,7 +331,7 @@ ENTRYPOINT(
     TYPE_CONTEXT TypeContext;
     YORI_STRING Arg;
 
-    ZeroMemory(&TypeContext, sizeof(TypeContext));
+    ZeroMemory(&TypeContext, (DWORD)sizeof(TypeContext));
 
     for (i = 1; i < ArgC; i++) {
 
@@ -427,12 +427,12 @@ ENTRYPOINT(
 
         TypeProcessStream(GetStdHandle(STD_INPUT_HANDLE), &TypeContext);
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS;
         if (TypeContext.Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -442,7 +442,7 @@ ENTRYPOINT(
 
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
-                                 0,
+                                 0L,
                                  TypeFileFoundCallback,
                                  TypeFileEnumerateErrorCallback,
                                  &TypeContext);
@@ -450,8 +450,8 @@ ENTRYPOINT(
             if (TypeContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
-                    TypeFileFoundCallback(&FullPath, NULL, 0, &TypeContext);
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    TypeFileFoundCallback(&FullPath, NULL, 0L, &TypeContext);
                     YoriLibFreeStringContents(&FullPath);
                 }
                 if (TypeContext.SavedErrorThisArg != ERROR_SUCCESS) {

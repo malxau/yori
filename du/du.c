@@ -511,7 +511,7 @@ DuCalculateSpaceUsedByFile(
                                 FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_OPEN_NO_RECALL | FILE_FLAG_BACKUP_SEMANTICS,
                                 NULL);
         if (FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD ErrorCode = GetLastError();
+            SYSERR ErrorCode = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of %y failed, results inaccurate: %s"), FilePath, ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -587,7 +587,7 @@ DuCalculateSpaceUsedByFile(
         hFind = DllKernel32.pFindFirstStreamW(FilePath->StartOfString, 0, &FindStreamData, 0);
         if (hFind == INVALID_HANDLE_VALUE) {
             if (!ReportedOpenError) {
-                DWORD ErrorCode = GetLastError();
+                SYSERR ErrorCode = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of %y failed, results inaccurate: %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -800,7 +800,7 @@ DuFileFoundCallback(
 BOOL
 DuFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -948,12 +948,12 @@ ENTRYPOINT(
     YoriLibCancelEnable(FALSE);
 #endif
 
-    MatchFlags = YORILIB_FILEENUM_RETURN_FILES |
-                 YORILIB_FILEENUM_RETURN_DIRECTORIES |
-                 YORILIB_FILEENUM_RECURSE_BEFORE_RETURN |
-                 YORILIB_FILEENUM_NO_LINK_TRAVERSE;
+    MatchFlags = YORILIB_ENUM_RETURN_FILES |
+                 YORILIB_ENUM_RETURN_DIRECTORIES |
+                 YORILIB_ENUM_REC_BEFORE_RETURN |
+                 YORILIB_ENUM_NO_LINK_TRAVERSE;
     if (BasicEnumeration) {
-        MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
     }
 
     //

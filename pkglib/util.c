@@ -970,7 +970,7 @@ YoriPkgConvertUserPackagePathToMirroredPath(
     }
 
     if (!YoriLibIsPathUrl(PackagePath)) {
-        if (!YoriLibUserStringToSingleFilePath(PackagePath, FALSE, &HumanFullPath)) {
+        if (!YoriLibUserToSingleFilePath(PackagePath, FALSE, &HumanFullPath)) {
             YoriLibInitEmptyString(&HumanFullPath);
             goto Exit;
         }
@@ -1104,7 +1104,7 @@ YoriPkgPackagePathToLocalPath(
 
     if (IniFilePath == NULL) {
         if (!YoriLibIsPathUrl(PackagePath)) {
-            if (!YoriLibUserStringToSingleFilePath(PackagePath, FALSE, &MirroredPath)) {
+            if (!YoriLibUserToSingleFilePath(PackagePath, FALSE, &MirroredPath)) {
                 YoriLibCloneString(&MirroredPath, PackagePath);
             }
         } else {
@@ -1211,7 +1211,7 @@ Exit:
  */
 VOID
 YoriPkgDisplayErrorStringForInstallFailure(
-    __in DWORD ErrorCode
+    __in SYSERR ErrorCode
     )
 {
     LPTSTR ErrText;

@@ -1244,7 +1244,7 @@ EditOpenButtonClicked(
 
     YoriLibInitEmptyString(&FullName);
 
-    if (!YoriLibUserStringToSingleFilePath(&Text, TRUE, &FullName)) {
+    if (!YoriLibUserToSingleFilePath(&Text, TRUE, &FullName)) {
         YoriLibFreeStringContents(&Text);
         return;
     }
@@ -1403,7 +1403,7 @@ EditSaveAsButtonClicked(
     }
     YoriLibInitEmptyString(&FullName);
 
-    if (!YoriLibUserStringToSingleFilePath(&Text, TRUE, &FullName)) {
+    if (!YoriLibUserToSingleFilePath(&Text, TRUE, &FullName)) {
         YoriLibFreeStringContents(&Text);
         return;
     }
@@ -3266,7 +3266,7 @@ ENTRYPOINT(
     }
 
     if (StartArg > 0 && StartArg < ArgC) {
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &GlobalEditContext.OpenFileName)) {
+        if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &GlobalEditContext.OpenFileName)) {
             return EXIT_FAILURE;
         }
     }

@@ -398,7 +398,7 @@ ENTRYPOINT(
             InputPumpThread = CreateThread(NULL, 0, CvtvtInputPumpThread, hControl, 0, NULL);
         }
     } else if (UserFileName != NULL) {
-        if (!YoriLibUserStringToSingleFilePath(UserFileName, TRUE, &FileName)) {
+        if (!YoriLibUserToSingleFilePath(UserFileName, TRUE, &FileName)) {
             return EXIT_FAILURE;
         }
 

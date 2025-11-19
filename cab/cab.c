@@ -375,7 +375,7 @@ CabExpandFileFoundCallback(
 {
     PCAB_EXPAND_CONTEXT ExpandContext = (PCAB_EXPAND_CONTEXT)Context;
     YORI_STRING ErrorString;
-    DWORD ErrorCode;
+    SYSERR ErrorCode;
 
     UNREFERENCED_PARAMETER(FileInfo);
     UNREFERENCED_PARAMETER(Depth);
@@ -410,7 +410,7 @@ CabExpandFileFoundCallback(
 BOOL
 CabCreateFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -470,7 +470,7 @@ CabCreateFileEnumerateErrorCallback(
 BOOL
 CabExpandFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -638,13 +638,13 @@ ENTRYPOINT(
         YoriLibInitializeListHead(&CreateContext.ExcludeList);
         YoriLibInitializeListHead(&CreateContext.IncludeList);
 
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES;
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
         if (Recursive) {
             CreateContext.Recursive = TRUE;
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN;
+            MatchFlags |= YORILIB_ENUM_REC_AFTER_RETURN;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -675,13 +675,13 @@ ENTRYPOINT(
             return FALSE;
         }
 
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES;
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
         if (Recursive) {
             CreateContext.Recursive = TRUE;
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN;
+            MatchFlags |= YORILIB_ENUM_REC_AFTER_RETURN;
         }
 
         for (i = StartArg + 1; i < ArgC; i++) {
@@ -701,17 +701,17 @@ ENTRYPOINT(
         ZeroMemory(&ExpandContext, sizeof(ExpandContext));
 
         YoriLibConstantString(&TargetDirectory, _T("."));
-        if (!YoriLibUserStringToSingleFilePath(&TargetDirectory, FALSE, &ExpandContext.FullTargetDirectory)) {
+        if (!YoriLibUserToSingleFilePath(&TargetDirectory, FALSE, &ExpandContext.FullTargetDirectory)) {
             return EXIT_FAILURE;
         }
 
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES;
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
         if (Recursive) {
             ExpandContext.Recursive = TRUE;
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN;
+            MatchFlags |= YORILIB_ENUM_REC_AFTER_RETURN;
         }
 
         for (i = StartArg; i < ArgC; i++) {

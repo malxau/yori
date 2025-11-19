@@ -185,7 +185,7 @@ YoriShDisplayPrompt(VOID)
     YORI_STRING PromptAfterEnvExpansion;
     YORI_STRING DisplayString;
     PYORI_STRING StringToUse;
-    DWORD SavedErrorLevel = YoriShGlobal.ErrorLevel;
+    SYSERR SavedErrorLevel = YoriShGlobal.ErrorLevel;
 
     //
     //  Don't update taskbar UI while executing processes executed as part of

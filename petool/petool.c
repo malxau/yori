@@ -399,7 +399,7 @@ PeToolCalculateChecksum(
     }
 
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -444,7 +444,7 @@ PeToolUpdateChecksum(
     }
 
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -503,7 +503,7 @@ PeToolUpdateSubsystemVersion(
     }
 
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullPath)) {
         return FALSE;
     }
 

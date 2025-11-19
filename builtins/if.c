@@ -243,7 +243,7 @@ YoriCmd_IF(
     YORI_STRING TrueCommand;
     YORI_STRING FalseCommand;
     YORI_STRING Arg;
-    DWORD SavedErrorLevel;
+    SYSERR SavedErrorLevel;
 
     DWORD TempArgC;
     YORI_ALLOC_SIZE_T EscapedArgC;

@@ -765,7 +765,7 @@ ForExecuteCommand(
     StartupInfo.cb = sizeof(StartupInfo);
 
     if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo)) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("for: execution failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);
@@ -1030,16 +1030,16 @@ ENTRYPOINT(
 
     MatchFlags = 0;
     if (MatchDirectories) {
-        MatchFlags = YORILIB_FILEENUM_RETURN_DIRECTORIES;
+        MatchFlags = YORILIB_ENUM_RETURN_DIRECTORIES;
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES;
     }
 
     if (Recurse) {
-        MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+        MatchFlags |= YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
     }
     if (BasicEnumeration) {
-        MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
     }
 
     if (StepMode) {

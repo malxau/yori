@@ -141,7 +141,7 @@ SetupFindLocalPkgPath(
         //  Turn that into a full path for the benefit of Win32
         //
 
-        if (!YoriLibUserStringToSingleFilePath(&RelativePathToProbe, TRUE, &FullPathToProbe)) {
+        if (!YoriLibUserToSingleFilePath(&RelativePathToProbe, TRUE, &FullPathToProbe)) {
             YoriLibFreeStringContents(&RelativePathToProbe);
             YoriLibInitEmptyString(&FullPathToProbe);
             return FALSE;
@@ -278,7 +278,7 @@ SetupGetDefaultInstallDir(
     if (YoriLibIsCurrentUserInGroup(&Administrators, &IsAdmin) && !IsAdmin) {
         YORI_STRING PerUserDir;
         YoriLibConstantString(&PerUserDir, _T("~LOCALAPPDATA\\Yori"));
-        if (YoriLibUserStringToSingleFilePath(&PerUserDir, FALSE, InstallDir)) {
+        if (YoriLibUserToSingleFilePath(&PerUserDir, FALSE, InstallDir)) {
             return TRUE;
         }
     }
@@ -659,7 +659,7 @@ SetupInstallSelectedWithOptions(
             YoriLibInitEmptyString(&ShortcutNameFullPath[ShortcutCount]);
 
             YoriLibConstantString(&RelativeShortcutName, _T("~Desktop\\Yori.lnk"));
-            if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath[ShortcutCount])) {
+            if (!YoriLibUserToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath[ShortcutCount])) {
                 YoriLibFreeStringContents(&YoriExeFullPath);
                 YoriLibConstantString(ErrorText, _T("Installation failed."));
                 goto Exit;
@@ -679,7 +679,7 @@ SetupInstallSelectedWithOptions(
                 YoriLibInitEmptyString(&ShortcutNameFullPath[ShortcutCount]);
 
                 YoriLibConstantString(&RelativeShortcutName, _T("~Programs\\Yori.lnk"));
-                if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath[ShortcutCount])) {
+                if (!YoriLibUserToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath[ShortcutCount])) {
                     YoriLibFreeStringContents(&YoriExeFullPath);
                     YoriLibConstantString(ErrorText, _T("Installation failed."));
                     goto Exit;

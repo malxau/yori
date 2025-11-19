@@ -882,8 +882,8 @@ YoriCmd_INCLUDE(
         return EXIT_FAILURE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FileName)) {
-        DWORD LastError = GetLastError();
+    if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &FileName)) {
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ys: getfullpathname of %y failed: %s"), &ArgV[StartArg], ErrText);
         YoriLibFreeWinErrorText(ErrText);
@@ -1293,8 +1293,8 @@ YoriCmd_YS(
         return EXIT_FAILURE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FileName)) {
-        DWORD LastError = GetLastError();
+    if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &FileName)) {
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ys: getfullpathname of %y failed: %s"), &ArgV[StartArg], ErrText);
         YoriLibFreeWinErrorText(ErrText);

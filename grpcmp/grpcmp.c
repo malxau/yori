@@ -194,7 +194,7 @@ ENTRYPOINT(
         DomainNameSize = sizeof(Domain);
 
         if (!DllAdvApi32.pLookupAccountNameW(NULL, ArgV[StartArg].StartOfString, &Sid, &SidSize, Domain, &DomainNameSize, &Use)) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("grpcmp: could not find group: %s"), ErrText);
             YoriLibFreeWinErrorText(ErrText);

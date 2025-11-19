@@ -652,7 +652,7 @@ YoriPkgInstallPackage(
     }
 
     if (TargetDirectory != NULL) {
-        if (!YoriLibUserStringToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
+        if (!YoriLibUserToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
             YoriLibInitEmptyString(&FullTargetDirectory);
             goto Exit;
         }

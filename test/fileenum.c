@@ -141,7 +141,7 @@ TestEnumFileFoundCallback(
 BOOL
 TestEnumFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -173,7 +173,7 @@ TestEnumRoot(VOID)
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\*"));
     if (!YoriLibForEachFile(&TestContext.FileSpec,
-                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES,
+                            YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES,
                             0,
                             TestEnumFileFoundCallback,
                             TestEnumFileEnumerateErrorCallback,
@@ -195,7 +195,7 @@ TestEnumRoot(VOID)
 
     YoriLibConstantString(&TestContext.FileSpec, _T("\\"));
     if (!YoriLibForEachFile(&TestContext.FileSpec,
-                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS,
+                            YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES | YORILIB_ENUM_DIRECTORY_CONTENTS,
                             0,
                             TestEnumFileFoundCallback,
                             TestEnumFileEnumerateErrorCallback,
@@ -222,7 +222,7 @@ TestEnumRoot(VOID)
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
     if (!YoriLibForEachFile(&TestContext.FileSpec,
-                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES,
+                            YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES,
                             0,
                             TestEnumFileFoundCallback,
                             TestEnumFileEnumerateErrorCallback,
@@ -256,7 +256,7 @@ TestEnumRoot(VOID)
 
     YoriLibConstantString(&TestContext.FileSpec, _T("Windows"));
     if (!YoriLibForEachFile(&TestContext.FileSpec,
-                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES,
+                            YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES,
                             0,
                             TestEnumFileFoundCallback,
                             TestEnumFileEnumerateErrorCallback,
@@ -284,7 +284,7 @@ TestEnumRoot(VOID)
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
     if (!YoriLibForEachFile(&TestContext.FileSpec,
-                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS,
+                            YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES | YORILIB_ENUM_DIRECTORY_CONTENTS,
                             0,
                             TestEnumFileFoundCallback,
                             TestEnumFileEnumerateErrorCallback,
@@ -306,7 +306,7 @@ TestEnumRoot(VOID)
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:*"));
     if (!YoriLibForEachFile(&TestContext.FileSpec,
-                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS,
+                            YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES | YORILIB_ENUM_DIRECTORY_CONTENTS,
                             0,
                             TestEnumFileFoundCallback,
                             TestEnumFileEnumerateErrorCallback,
@@ -348,7 +348,7 @@ TestEnumWindows(VOID)
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
     if (!YoriLibForEachFile(&TestContext.FileSpec,
-                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES,
+                            YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES,
                             0,
                             TestEnumFileFoundCallback,
                             TestEnumFileEnumerateErrorCallback,
@@ -370,7 +370,7 @@ TestEnumWindows(VOID)
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
     if (!YoriLibForEachFile(&TestContext.FileSpec,
-                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS,
+                            YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES | YORILIB_ENUM_DIRECTORY_CONTENTS,
                             0,
                             TestEnumFileFoundCallback,
                             TestEnumFileEnumerateErrorCallback,

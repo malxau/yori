@@ -86,7 +86,7 @@ IniToolDeleteFromIniFile(
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+    if (!YoriLibUserToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
 
@@ -122,7 +122,7 @@ IniToolListSectionFromIniFile(
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+    if (!YoriLibUserToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
 
@@ -169,7 +169,7 @@ IniToolListSectionsFromIniFile(
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+    if (!YoriLibUserToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
 
@@ -220,7 +220,7 @@ IniToolReadFromIniFile(
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+    if (!YoriLibUserToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
 
@@ -270,7 +270,7 @@ IniToolWriteToIniFile(
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+    if (!YoriLibUserToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
 

@@ -520,7 +520,7 @@ YoriLibShCreateProcess(
     STARTUPINFO StartupInfo;
     YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     DWORD CreationFlags = 0;
-    DWORD LastError;
+    SYSERR LastError;
 
     ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
     if (FailedInRedirection != NULL) {

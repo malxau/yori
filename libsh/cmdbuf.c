@@ -290,7 +290,7 @@ YoriLibShCmdBufferPump(
                 ThisBuffer->BytesAllocated = NewBytesAllocated;
             }
         } else {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
 
             AcquireMutex(ThisBuffer->Mutex);
 

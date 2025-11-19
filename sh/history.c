@@ -278,7 +278,7 @@ YoriShLoadHistoryFromFile(VOID)
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(&UserHistFileName, TRUE, &FilePath)) {
+    if (!YoriLibUserToSingleFilePath(&UserHistFileName, TRUE, &FilePath)) {
         YoriLibFreeStringContents(&UserHistFileName);
         return FALSE;
     }
@@ -294,7 +294,7 @@ YoriShLoadHistoryFromFile(VOID)
                             NULL);
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         if (LastError != ERROR_FILE_NOT_FOUND) {
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yori: open of %y failed: %s"), &FilePath, ErrText);
@@ -367,7 +367,7 @@ YoriShSaveHistoryToFile(VOID)
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(&UserHistFileName, TRUE, &FilePath)) {
+    if (!YoriLibUserToSingleFilePath(&UserHistFileName, TRUE, &FilePath)) {
         YoriLibFreeStringContents(&UserHistFileName);
         return FALSE;
     }
@@ -383,7 +383,7 @@ YoriShSaveHistoryToFile(VOID)
                             NULL);
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yori: open of %y failed: %s"), &FilePath, ErrText);
         YoriLibFreeWinErrorText(ErrText);

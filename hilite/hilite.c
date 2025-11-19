@@ -40,7 +40,13 @@ CHAR strHiliteHelpText[] =
         "       [-i] [-m] [-s] [-t <string> <color>] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
-        "   -c             Highlight lines containing <string> with <color>\n"
+        "   -c             Highlight lines containing <string> with <color>\n";
+
+/**
+ Help text to display to the user, part 2.
+ */
+const
+CHAR strHiliteHelpText2[] =
         "   -h             Highlight lines starting with <string> with <color>\n"
         "   -i             Match insensitively\n"
         "   -m             Highlight matching text (as opposed to matching lines)\n"
@@ -57,7 +63,7 @@ HiliteHelp(VOID)
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHiliteHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs%hs"), strHiliteHelpText, strHiliteHelpText2);
     return TRUE;
 }
 
@@ -105,7 +111,7 @@ typedef struct _HILITE_CONTEXT {
     /**
      Records the total number of files processed.
      */
-    LONGLONG FilesFound;
+    YORI_MAX_UNSIGNED_T FilesFound;
 
     /**
      TRUE if matches should be applied case insensitively, FALSE if they
@@ -452,7 +458,7 @@ HiliteProcessStream(
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
-BOOL
+BOOL WINAPI
 HiliteFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
@@ -477,7 +483,7 @@ HiliteFileFoundCallback(
                                 NULL);
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hilite: open of %y failed: %s"), FilePath, ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -508,10 +514,10 @@ HiliteFileFoundCallback(
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
-BOOL
-HiliteFileEnumerateErrorCallback(
+BOOL WINAPI
+HiliteFileEnumErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -617,7 +623,7 @@ ENTRYPOINT(
     PHILITE_MATCH_CRITERIA NewCriteria;
     YORI_STRING Arg;
 
-    ZeroMemory(&HiliteContext, sizeof(HiliteContext));
+    ZeroMemory(&HiliteContext, (DWORD)sizeof(HiliteContext));
 
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
         HiliteContext.DefaultColor.Ctrl = 0;
@@ -746,12 +752,12 @@ ENTRYPOINT(
 
         HiliteProcessStream(GetStdHandle(STD_INPUT_HANDLE), &HiliteContext);
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS;
         if (HiliteContext.Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -760,7 +766,7 @@ ENTRYPOINT(
                                  MatchFlags,
                                  0,
                                  HiliteFileFoundCallback,
-                                 HiliteFileEnumerateErrorCallback,
+                                 HiliteFileEnumErrorCallback,
                                  &HiliteContext);
         }
     }

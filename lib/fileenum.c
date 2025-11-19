@@ -232,7 +232,7 @@ YoriLibForEachFileEnum(
     if (Depth == 0) {
         YORI_STRING NewFileSpec;
         DWORD FileAttributes;
-        if ((MatchFlags & YORILIB_FILEENUM_DIRECTORY_CONTENTS) != 0) {
+        if ((MatchFlags & YORILIB_ENUM_DIRECTORY_CONTENTS) != 0) {
 
             FileAttributes = GetFileAttributes(ForEachContext->EffectiveFileSpec.StartOfString);
             if (FileAttributes != (DWORD)-1 &&
@@ -251,8 +251,8 @@ YoriLibForEachFileEnum(
                 }
                 memcpy(&ForEachContext->EffectiveFileSpec, &NewFileSpec, sizeof(YORI_STRING));
             }
-        } else if ((MatchFlags & (YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_BEFORE_RETURN)) != 0 ||
-                   (MatchFlags & (YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_RETURN_FILES)) == YORILIB_FILEENUM_RETURN_DIRECTORIES) {
+        } else if ((MatchFlags & (YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_REC_BEFORE_RETURN)) != 0 ||
+                   (MatchFlags & (YORILIB_ENUM_RETURN_DIRECTORIES | YORILIB_ENUM_RETURN_FILES)) == YORILIB_ENUM_RETURN_DIRECTORIES) {
             FileAttributes = GetFileAttributes(FileSpec->StartOfString);
             if (FileAttributes != (DWORD)-1 &&
                 (FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
@@ -304,7 +304,7 @@ YoriLibForEachFileEnum(
     }
 
     ForEachContext->NumberPhases = 1;
-    if ((MatchFlags & (YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_BEFORE_RETURN)) != 0) {
+    if ((MatchFlags & (YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_REC_BEFORE_RETURN)) != 0) {
         ForEachContext->NumberPhases++;
     }
 
@@ -359,16 +359,16 @@ YoriLibForEachFileEnum(
     for (ForEachContext->CurrentPhase = 0; ForEachContext->CurrentPhase < ForEachContext->NumberPhases; ForEachContext->CurrentPhase++) {
 
         RecursePhase = FALSE;
-        if ((MatchFlags & (YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_BEFORE_RETURN)) ==
-            (YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_BEFORE_RETURN)) {
+        if ((MatchFlags & (YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_REC_BEFORE_RETURN)) ==
+            (YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_REC_BEFORE_RETURN)) {
             if (ForEachContext->CurrentPhase == 0) {
                 RecursePhase = TRUE;
             }
-        } else if ((MatchFlags & YORILIB_FILEENUM_RECURSE_AFTER_RETURN) != 0) {
+        } else if ((MatchFlags & YORILIB_ENUM_REC_AFTER_RETURN) != 0) {
             if (ForEachContext->CurrentPhase == 1) {
                 RecursePhase = TRUE;
             }
-        } else if ((MatchFlags & YORILIB_FILEENUM_RECURSE_BEFORE_RETURN) != 0) {
+        } else if ((MatchFlags & YORILIB_ENUM_REC_BEFORE_RETURN) != 0) {
             if (ForEachContext->CurrentPhase == 0) {
                 RecursePhase = TRUE;
             }
@@ -381,7 +381,7 @@ YoriLibForEachFileEnum(
         //
 
         if (RecursePhase &&
-            (MatchFlags & YORILIB_FILEENUM_RECURSE_PRESERVE_WILD) != 0) {
+            (MatchFlags & YORILIB_ENUM_REC_PRESERVE_WILD) != 0) {
 
             ForEachContext->FullPath.LengthInChars =
                 YoriLibSPrintfS(ForEachContext->FullPath.StartOfString,
@@ -482,7 +482,7 @@ YoriLibForEachFileEnum(
                 if (_tcscmp(ForEachContext->FileInfo.cFileName, _T(".")) == 0 ||
                     _tcscmp(ForEachContext->FileInfo.cFileName, _T("..")) == 0) {
 
-                    if ((MatchFlags & YORILIB_FILEENUM_INCLUDE_DOTFILES) == 0) {
+                    if ((MatchFlags & YORILIB_ENUM_INCLUDE_DOTFILES) == 0) {
                         ReportObject = FALSE;
                     }
                     DotFile = TRUE;
@@ -494,11 +494,11 @@ YoriLibForEachFileEnum(
                 //
 
                 if ((ForEachContext->FileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-                    if ((MatchFlags & YORILIB_FILEENUM_RETURN_DIRECTORIES) == 0) {
+                    if ((MatchFlags & YORILIB_ENUM_RETURN_DIRECTORIES) == 0) {
                         ReportObject = FALSE;
                     }
                 } else {
-                    if ((MatchFlags & YORILIB_FILEENUM_RETURN_FILES) == 0) {
+                    if ((MatchFlags & YORILIB_ENUM_RETURN_FILES) == 0) {
                         ReportObject = FALSE;
                     }
                 }
@@ -509,7 +509,7 @@ YoriLibForEachFileEnum(
                 //
 
                 IsLink = FALSE;
-                if ((MatchFlags & YORILIB_FILEENUM_NO_LINK_TRAVERSE) != 0 &&
+                if ((MatchFlags & YORILIB_ENUM_NO_LINK_TRAVERSE) != 0 &&
                     (ForEachContext->FileInfo.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 &&
                     (ForEachContext->FileInfo.dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT ||
                      ForEachContext->FileInfo.dwReserved0 == IO_REPARSE_TAG_SYMLINK)) {
@@ -529,7 +529,7 @@ YoriLibForEachFileEnum(
                     YORI_ALLOC_SIZE_T FileNameLen = (YORI_ALLOC_SIZE_T)_tcslen(ForEachContext->FileInfo.cFileName);
                     YORI_ALLOC_SIZE_T WildLength = 2;
 
-                    if ((MatchFlags & YORILIB_FILEENUM_RECURSE_PRESERVE_WILD) != 0) {
+                    if ((MatchFlags & YORILIB_ENUM_REC_PRESERVE_WILD) != 0) {
 
                         WildLength = ForEachContext->EffectiveFileSpec.LengthInChars - ForEachContext->CharsToFinalSlash;
                     }
@@ -558,7 +558,7 @@ YoriLibForEachFileEnum(
                     //  wild.
                     //
 
-                    if ((MatchFlags & YORILIB_FILEENUM_RECURSE_PRESERVE_WILD) != 0) {
+                    if ((MatchFlags & YORILIB_ENUM_REC_PRESERVE_WILD) != 0) {
                         if (FinalSlashFound) {
                             _tcscpy(&ForEachContext->RecurseCriteria.StartOfString[ForEachContext->RecurseCriteria.LengthInChars],
                                     &ForEachContext->EffectiveFileSpec.StartOfString[ForEachContext->CharsToFinalSlash]);
@@ -693,7 +693,7 @@ YoriLibForEachFile(
     YORI_ALLOC_SIZE_T CharsToOperator;
     BOOL SingleCharMode;
 
-    if (MatchFlags & YORILIB_FILEENUM_BASIC_EXPANSION) {
+    if (MatchFlags & YORILIB_ENUM_BASIC_EXPANSION) {
         return YoriLibForEachFileEnum(FileSpec, MatchFlags, Depth, Callback, ErrorCallback, Context);
     }
 

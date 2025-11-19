@@ -276,7 +276,7 @@ ENTRYPOINT(
     hTarget = GetStdHandle(STD_OUTPUT_HANDLE);
     if (StartArg != 0 && StartArg < ArgC) {
         YoriLibInitEmptyString(&FullFilePath);
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FullFilePath)) {
+        if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &FullFilePath)) {
             SpongeFreeBuffer(&SpongeBuffer);
             return EXIT_FAILURE;
         }
@@ -296,7 +296,7 @@ ENTRYPOINT(
                              0,
                              NULL);
         if (hTarget == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             SpongeFreeBuffer(&SpongeBuffer);
             YoriLibFreeStringContents(&FullFilePath);

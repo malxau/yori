@@ -334,7 +334,7 @@ typedef struct _SDIR_ITEM_FOUND_CONTEXT {
 BOOL
 SdirEnumerateErrorCallback(
     __in PYORI_STRING FullPath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -727,7 +727,7 @@ SdirEnumeratePathWithDepth (
         //
 
         ItemFoundContext.ItemsFound = 0;
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES | YORILIB_ENUM_INCLUDE_DOTFILES;
 
         //
         //  MSFIX This isn't really correct without a major refactor.  What
@@ -737,7 +737,7 @@ SdirEnumeratePathWithDepth (
         //
 
         if (Depth > 0 || Opts->BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         YoriLibInitEmptyString(&ItemFoundContext.StreamFullPath);
@@ -1219,8 +1219,8 @@ SdirForEachPathSpec (
 
             YoriLibFreeStringContents(&FindStr);
 
-            if (!YoriLibUserStringToSingleFilePath(&ArgV[CurrentArg], TRUE, &FindStr)) {
-                SdirDisplayError(GetLastError(), _T("YoriLibUserStringToSingleFilePath"));
+            if (!YoriLibUserToSingleFilePath(&ArgV[CurrentArg], TRUE, &FindStr)) {
+                SdirDisplayError(GetLastError(), _T("YoriLibUserToSingleFilePath"));
                 return FALSE;
             }
 
@@ -1569,7 +1569,7 @@ SdirEnumerateAndDisplayRecursive (
         if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
 
             YoriLibInitEmptyString(&FindStr);
-            if (!YoriLibUserStringToSingleFilePath(&ArgV[CurrentArg], TRUE, &FindStr)) {
+            if (!YoriLibUserToSingleFilePath(&ArgV[CurrentArg], TRUE, &FindStr)) {
                 return FALSE;
             }
 
@@ -1585,7 +1585,7 @@ SdirEnumerateAndDisplayRecursive (
     if (!EnumerateUserSpecified) {
         YoriLibConstantString(&Arg, _T("*"));
         YoriLibInitEmptyString(&FindStr);
-        if (!YoriLibUserStringToSingleFilePath(&Arg, TRUE, &FindStr)) {
+        if (!YoriLibUserToSingleFilePath(&Arg, TRUE, &FindStr)) {
             return FALSE;
         }
         if (!SdirEnumerateAndDisplaySubtree(0, &FindStr)) {

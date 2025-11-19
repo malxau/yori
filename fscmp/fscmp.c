@@ -277,9 +277,9 @@ ENTRYPOINT(
         goto cleanup_and_exit;
     }
 
-    MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
+    MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES;
     if (BasicExpansion) {
-        MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
     }
 
     for (i = StartArg; i < ArgC && !FsCmpContext.ConditionMet; i++) {

@@ -322,9 +322,9 @@ YoriShExecuteInitScripts(
     //
 
     YoriLibConstantString(&RelativeYoriInitName, _T("~AppDir\\YoriInit.d\\*"));
-    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_ENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
     YoriLibConstantString(&RelativeYoriInitName, _T("~AppDir\\YoriInit*"));
-    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_ENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
 
     //
     //  Execute all user YoriInit scripts.
@@ -332,9 +332,9 @@ YoriShExecuteInitScripts(
 
     if (!IgnoreUserScripts) {
         YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit.d\\*"));
-        YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+        YoriLibForEachFile(&RelativeYoriInitName, YORILIB_ENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
         YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit*"));
-        YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+        YoriLibForEachFile(&RelativeYoriInitName, YORILIB_ENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
     }
 
     //

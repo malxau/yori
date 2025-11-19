@@ -124,7 +124,7 @@ LsofFileFoundCallback(
                             NULL);
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         if (LastError == ERROR_ACCESS_DENIED &&
             DllNtDll.pRtlGetLastNtStatus != NULL &&
             DllNtDll.pRtlGetLastNtStatus() == STATUS_DELETE_PENDING) {
@@ -445,12 +445,12 @@ ENTRYPOINT(
         //  the file and use that
         //
 
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES;
         if (Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -460,7 +460,7 @@ ENTRYPOINT(
             if (LsofContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     LsofFileFoundCallback(&FullPath, NULL, 0, &LsofContext);
                     YoriLibFreeStringContents(&FullPath);
                 }

@@ -74,7 +74,7 @@ MklinkCreateHardLink(
     __in LPTSTR ExistingFile
     )
 {
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
 
     if (DllKernel32.pCreateHardLinkW == NULL) {
@@ -113,7 +113,7 @@ MklinkCreateSymbolicLink(
     __in DWORD Flags
     )
 {
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
 
     if (DllKernel32.pCreateSymbolicLinkW == NULL) {
@@ -154,7 +154,7 @@ MklinkCreateJunction(
     DWORD ExistingFileLength;
     HANDLE NewFileHandle;
     DWORD BytesReturned;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
 
     ExistingFileLength = _tcslen(ExistingFile);
@@ -326,12 +326,12 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &NewLinkName)) {
+    if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &NewLinkName)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mklink: failed to resolve %y\n"), &ArgV[StartArg]);
         return EXIT_FAILURE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg + 1], TRUE, &ExistingFileName)) {
+    if (!YoriLibUserToSingleFilePath(&ArgV[StartArg + 1], TRUE, &ExistingFileName)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mklink: failed to resolve %y\n"), &ArgV[StartArg + 1]);
         YoriLibFreeStringContents(&NewLinkName);
         return EXIT_FAILURE;

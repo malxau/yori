@@ -233,7 +233,7 @@ YoriLibPathSupportsLongNames(
         goto Exit;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(PathName, TRUE, &FullPathName)) {
+    if (!YoriLibUserToSingleFilePath(PathName, TRUE, &FullPathName)) {
         goto Exit;
     }
 

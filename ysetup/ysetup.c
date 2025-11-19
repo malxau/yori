@@ -254,7 +254,7 @@ ymain(
         //  can be passed to create shortcuts etc which can't handle them.
         //
 
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], FALSE, &NewDirectory)) {
+        if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], FALSE, &NewDirectory)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: install failed\n"));
             return EXIT_FAILURE;
         }

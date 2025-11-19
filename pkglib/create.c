@@ -169,7 +169,7 @@ YoriPkgCreateBinaryPackage(
         DllKernel32.pWritePrivateProfileStringW(_T("Replaces"), Replaces[Count].StartOfString, _T("1"), TempFile.StartOfString);
     }
 
-    if (!YoriLibUserStringToSingleFilePath(FileListFile, TRUE, &FullFileListFile)) {
+    if (!YoriLibUserToSingleFilePath(FileListFile, TRUE, &FullFileListFile)) {
         YoriLibFreeStringContents(&TempFile);
         return FALSE;
     }
@@ -511,7 +511,7 @@ YoriPkgCreateSourceFileFoundCallback(
 BOOL
 YoriPkgCreateSourceEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -685,7 +685,7 @@ YoriPkgCreateSourcePackage(
     CreateSourceContext.PackageVersion = Version;
 
     YoriLibForEachFile(FileRoot,
-                       YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS | YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_NO_LINK_TRAVERSE,
+                       YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS | YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_NO_LINK_TRAVERSE,
                        0,
                        YoriPkgCreateSourceFileFoundCallback,
                        YoriPkgCreateSourceEnumerateErrorCallback,

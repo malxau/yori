@@ -289,7 +289,7 @@ YoriLibStreamEnumFileFoundCallback(
 BOOL
 YoriLibStreamEnumErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )

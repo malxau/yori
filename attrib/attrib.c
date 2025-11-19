@@ -143,7 +143,7 @@ typedef struct _ATTRIB_CONTEXT {
      when the program falls back to interpreting the argument as a literal,
      if that still doesn't work, this is the error code that is displayed.
      */
-    DWORD SavedErrorThisArg;
+    SYSERR SavedErrorThisArg;
 
     /**
      The set of attribute flags to set on each matching file.
@@ -165,12 +165,12 @@ typedef struct _ATTRIB_CONTEXT {
      Records the total number of files processed within a single command line
      argument.
      */
-    DWORDLONG FilesFoundThisArg;
+    YORI_MAX_UNSIGNED_T FilesFoundThisArg;
 
     /**
      Records the total number of files processed.
      */
-    DWORDLONG FilesFound;
+    YORI_MAX_UNSIGNED_T FilesFound;
 
 } ATTRIB_CONTEXT, *PATTRIB_CONTEXT;
 
@@ -189,7 +189,7 @@ typedef struct _ATTRIB_CONTEXT {
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
-BOOL
+BOOL WINAPI
 AttribFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in_opt PWIN32_FIND_DATA FileInfo,
@@ -198,7 +198,7 @@ AttribFileFoundCallback(
     )
 {
     PATTRIB_CONTEXT AttribContext = (PATTRIB_CONTEXT)Context;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
     DWORD ExistingAttributes;
     DWORD NewAttributes;
@@ -284,10 +284,10 @@ AttribFileFoundCallback(
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
-BOOL
-AttribFileEnumerateErrorCallback(
+BOOL WINAPI
+AttribFileEnumErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -496,24 +496,24 @@ ENTRYPOINT(
 #endif
 
     Result = EXIT_SUCCESS;
-    MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+    MatchFlags = YORILIB_ENUM_RETURN_FILES;
     if (AttribContext.IncludeDirectories) {
-        MatchFlags |= YORILIB_FILEENUM_RETURN_DIRECTORIES;
+        MatchFlags |= YORILIB_ENUM_RETURN_DIRECTORIES;
     }
     if (AttribContext.Recursive) {
-        MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN;
+        MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN;
         if (!AttribContext.IncludeDirectories) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_PRESERVE_WILD;
         }
     }
     if (BasicEnumeration) {
-        MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
     }
 
     if (MatchAllFiles) {
         YoriLibConstantString(&Arg, _T("*"));
 
-        if (!YoriLibUserStringToSingleFilePath(&Arg, TRUE, &FullPath)) {
+        if (!YoriLibUserToSingleFilePath(&Arg, TRUE, &FullPath)) {
             return EXIT_FAILURE;
         }
 
@@ -522,9 +522,9 @@ ENTRYPOINT(
 
         YoriLibForEachFile(&FullPath,
                            MatchFlags,
-                           0,
+                           0L,
                            AttribFileFoundCallback,
-                           AttribFileEnumerateErrorCallback,
+                           AttribFileEnumErrorCallback,
                            &AttribContext);
 
         YoriLibFreeStringContents(&FullPath);
@@ -541,15 +541,15 @@ ENTRYPOINT(
 
             YoriLibForEachFile(&ArgV[i],
                                MatchFlags,
-                               0,
+                               0L,
                                AttribFileFoundCallback,
-                               AttribFileEnumerateErrorCallback,
+                               AttribFileEnumErrorCallback,
                                &AttribContext);
 
             if (AttribContext.FilesFoundThisArg == 0) {
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
-                    AttribFileFoundCallback(&FullPath, NULL, 0, &AttribContext);
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    AttribFileFoundCallback(&FullPath, NULL, 0L, &AttribContext);
                     YoriLibFreeStringContents(&FullPath);
                 }
             }

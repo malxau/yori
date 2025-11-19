@@ -84,7 +84,7 @@ typedef struct _HASH_CONTEXT {
      when the program falls back to interpreting the argument as a literal,
      if that still doesn't work, this is the error code that is displayed.
      */
-    DWORD SavedErrorThisArg;
+    SYSERR SavedErrorThisArg;
 
     /**
      The algorithm to use in CALG_* format.
@@ -259,7 +259,7 @@ HashFileFoundCallback(
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
         if (HashContext->SavedErrorThisArg == ERROR_SUCCESS) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: open of %y failed: %s"), FilePath, ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -362,7 +362,7 @@ HashInitializeContext(
     )
 {
     DWORD_PTR hHash;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
     DWORD Index;
     DWORD HashLength;
@@ -484,7 +484,7 @@ HashInitializeContext(
 BOOL
 HashFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -676,12 +676,12 @@ ENTRYPOINT(
         }
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &HashContext.HashString);
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS;
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
         if (HashContext.Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_AFTER_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -699,7 +699,7 @@ ENTRYPOINT(
             if (HashContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     HashFileFoundCallback(&FullPath, NULL, 0, &HashContext);
                     YoriLibFreeStringContents(&FullPath);
                 }

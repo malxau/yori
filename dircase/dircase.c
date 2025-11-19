@@ -187,7 +187,7 @@ DirCaseFileFoundCallback(
 BOOL
 DirCaseFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -340,12 +340,12 @@ ENTRYPOINT(
     YoriLibCancelEnable(FALSE);
 #endif
 
-    MatchFlags = YORILIB_FILEENUM_RETURN_DIRECTORIES;
+    MatchFlags = YORILIB_ENUM_RETURN_DIRECTORIES;
     if (DirCaseContext.Recursive) {
-        MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN;
+        MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN;
     }
     if (BasicEnumeration) {
-        MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
     }
 
     for (i = StartArg; i < ArgC; i++) {

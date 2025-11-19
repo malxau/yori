@@ -104,7 +104,7 @@ typedef struct _HEXDUMP_CONTEXT {
      when the program falls back to interpreting the argument as a literal,
      if that still doesn't work, this is the error code that is displayed.
      */
-    DWORD SavedErrorThisArg;
+    SYSERR SavedErrorThisArg;
 
     /**
      If TRUE, hide the offset display within the buffer.
@@ -1277,7 +1277,7 @@ HexDumpCommonFileFoundCallback(
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
             if (HexDumpContext->SavedErrorThisArg == ERROR_SUCCESS) {
-                DWORD LastError = GetLastError();
+                SYSERR LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: open of %y failed: %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -1400,7 +1400,7 @@ HexDumpBinaryFileFoundCallback(
 BOOL
 HexDumpFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -1534,12 +1534,12 @@ HexDumpDisplayDiff(
 
         YoriLibInitEmptyString(&Objects[Count].FullFileName);
         if (Count == 0) {
-            if (!YoriLibUserStringToSingleFilePath(FileA, TRUE, &Objects[Count].FullFileName)) {
+            if (!YoriLibUserToSingleFilePath(FileA, TRUE, &Objects[Count].FullFileName)) {
                 YoriLibInitEmptyString(&Objects[Count].FullFileName);
                 goto Exit;
             }
         } else {
-            if (!YoriLibUserStringToSingleFilePath(FileB, TRUE, &Objects[Count].FullFileName)) {
+            if (!YoriLibUserToSingleFilePath(FileB, TRUE, &Objects[Count].FullFileName)) {
                 YoriLibInitEmptyString(&Objects[Count].FullFileName);
                 goto Exit;
             }
@@ -1558,7 +1558,7 @@ HexDumpDisplayDiff(
                                                NULL);
 
         if (Objects[Count].FileHandle == NULL || Objects[Count].FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: open of %y failed: %s"), &Objects[Count].FullFileName, ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -1581,7 +1581,7 @@ HexDumpDisplayDiff(
 
         SetFilePointer(Objects[Count].FileHandle, StreamOffset.LowPart, &StreamOffset.HighPart, FILE_BEGIN);
         if (GetLastError() != NO_ERROR) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: seek of %y failed: %s"), &Objects[Count].FullFileName, ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -1893,12 +1893,12 @@ ENTRYPOINT(
             HexDumpProcessStream(GetStdHandle(STD_INPUT_HANDLE), &HexDumpContext);
         }
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_DIRECTORY_CONTENTS;
         if (HexDumpContext.Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
@@ -1932,7 +1932,7 @@ ENTRYPOINT(
             if (HexDumpContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePathOrDevice(&ArgV[i], TRUE, &FullPath)) {
+                if (YoriLibUserToSingleFileOrDevice(&ArgV[i], TRUE, &FullPath)) {
                     if (BinaryEncode) {
                         HexDumpBinaryFileFoundCallback(&FullPath, NULL, 0, &HexDumpContext);
                     } else if (Reverse) {

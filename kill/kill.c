@@ -66,7 +66,7 @@ KillTerminateProcessById(
     )
 {
     HANDLE ProcessHandle;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
 
     ProcessHandle = OpenProcess(PROCESS_TERMINATE, FALSE, ProcessPid);

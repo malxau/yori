@@ -307,7 +307,7 @@ CoPopulateList(
     YoriLibInitEmptyString(&FileSpec);
     YoriLibYPrintf(&FileSpec, _T("%y\\*"), &CoContext->CurrentDirectory);
     YoriLibForEachFile(&FileSpec,
-                       YORILIB_FILEENUM_BASIC_EXPANSION | YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES,
+                       YORILIB_ENUM_BASIC_EXPANSION | YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES | YORILIB_ENUM_INCLUDE_DOTFILES,
                        0,
                        CoFileFoundCallback,
                        NULL,
@@ -505,7 +505,7 @@ CoGetTargetDirectory(
     }
 
     YoriLibInitEmptyString(&FullDir);
-    if (!YoriLibUserStringToSingleFilePath(&Directory, TRUE, &FullDir)) {
+    if (!YoriLibUserToSingleFilePath(&Directory, TRUE, &FullDir)) {
         YoriLibFreeStringContents(&Directory);
         return FALSE;
     }
@@ -566,7 +566,7 @@ CoGetTargetDirectory(
         }
 
         if (!CreateDirectory(FullDir.StartOfString, NULL)) {
-            DWORD LastError;
+            SYSERR LastError;
             LPTSTR ErrText;
             LastError = GetLastError();
             ErrText = YoriLibGetWinErrorText(LastError);
@@ -630,7 +630,7 @@ CoChdirButtonClicked(
     YORI_STRING Title;
     YORI_STRING Label;
     YORI_STRING FullDir;
-    DWORD LastError;
+    SYSERR LastError;
     DWORD FileAttr;
     LPTSTR ErrText;
 
@@ -708,7 +708,7 @@ CoDeleteButtonClicked(
     for (Index = 0; Index < CoContext.FilesFoundCount; Index++) {
         if (YoriWinListIsOptionSelected(CoContext.List, Index)) {
             if (!DeleteFile(CoContext.FileArray[Index]->FullFilePath.StartOfString)) {
-                DWORD LastError;
+                SYSERR LastError;
                 LPTSTR ErrText;
                 LastError = GetLastError();
                 ErrText = YoriLibGetWinErrorText(LastError);
@@ -748,7 +748,7 @@ CoMoveButtonClicked(
     YORI_STRING FullDir;
     YORI_STRING FullDest;
     YORI_ALLOC_SIZE_T Index;
-    DWORD LastError;
+    SYSERR LastError;
     BOOLEAN ListChanged = FALSE;
     YORI_STRING Buttons[1];
     YORI_STRING Title;
@@ -828,7 +828,7 @@ CoCopyButtonClicked(
     YORI_STRING FullDir;
     YORI_STRING FullDest;
     YORI_ALLOC_SIZE_T Index;
-    DWORD LastError;
+    SYSERR LastError;
     BOOLEAN ListChanged = FALSE;
     YORI_STRING Buttons[1];
     YORI_STRING Title;

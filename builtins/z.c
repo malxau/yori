@@ -337,7 +337,7 @@ ZResolveSpecificationToFullPath(
 
     } else {
 
-        if (!YoriLibUserStringToSingleFilePath(UserSpecification, FALSE, &LocalDir)) {
+        if (!YoriLibUserToSingleFilePath(UserSpecification, FALSE, &LocalDir)) {
             return FALSE;
         }
     }
@@ -688,7 +688,7 @@ YoriCmd_Z(
     OldCurrentDirectory.LengthInChars = (YORI_ALLOC_SIZE_T)GetCurrentDirectory(OldCurrentDirectory.LengthAllocated, OldCurrentDirectory.StartOfString);
     if (OldCurrentDirectory.LengthInChars == 0 ||
         OldCurrentDirectory.LengthInChars >= OldCurrentDirectory.LengthAllocated) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("z: Could not query current directory: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);
@@ -721,7 +721,7 @@ YoriCmd_Z(
 
     Result = YoriCallSetCurrentDirectory(&BestMatch);
     if (!Result) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("z: Could not change directory: %y: %s"), &BestMatch, ErrText);
         YoriLibFreeWinErrorText(ErrText);

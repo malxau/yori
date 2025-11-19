@@ -159,7 +159,7 @@ TouchFileFoundCallback(
                             NULL);
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("touch: open of %y failed: %s"), FilePath, ErrText);
         YoriLibFreeWinErrorText(ErrText);
@@ -169,10 +169,12 @@ TouchFileFoundCallback(
     TouchContext->FilesFoundThisArg++;
 
     if (FileInfo == NULL) {
-        if (TouchContext->NewFileSize.QuadPart != 0) {
+        if (TouchContext->NewFileSize.HighPart != 0 ||
+            TouchContext->NewFileSize.LowPart != 0) {
+
             SetFilePointer(FileHandle, TouchContext->NewFileSize.LowPart, &TouchContext->NewFileSize.HighPart, FILE_BEGIN);
             if (!SetEndOfFile(FileHandle)) {
-                DWORD LastError = GetLastError();
+                SYSERR LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("touch: setting file size of %y failed: %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -185,7 +187,7 @@ TouchFileFoundCallback(
     }
 
     if (!SetFileTime(FileHandle, &TouchContext->NewCreationTime, &TouchContext->NewAccessTime, &TouchContext->NewWriteTime)) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("touch: updating timestamps of %y failed: %s"), FilePath, ErrText);
         YoriLibFreeWinErrorText(ErrText);
@@ -241,7 +243,7 @@ ENTRYPOINT(
     TOUCH_CONTEXT TouchContext;
     YORI_STRING Arg;
 
-    ZeroMemory(&TouchContext, sizeof(TouchContext));
+    ZeroMemory(&TouchContext, (DWORD)sizeof(TouchContext));
     GetSystemTime(&CurrentSystemTime);
     if (!SystemTimeToFileTime(&CurrentSystemTime, &TimestampToUse)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("touch: could not query system time\n"));
@@ -289,7 +291,7 @@ ENTRYPOINT(
                 if (i + 1 < ArgC) {
                     SYSTEMTIME NewTime;
                     FILETIME LocalNewTime;
-                    ZeroMemory(&NewTime, sizeof(NewTime));
+                    ZeroMemory(&NewTime, (DWORD)sizeof(NewTime));
                     if (YoriLibStringToDateTime(&ArgV[i + 1], &NewTime)) {
                         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
                                       _T("Setting time to %i/%i/%i:%i:%i:%i\n"),
@@ -359,23 +361,23 @@ ENTRYPOINT(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("touch: missing argument\n"));
         return EXIT_FAILURE;
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
+        MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES;
         if (Recursive) {
-            MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+            MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
         }
         if (BasicEnumeration) {
-            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+            MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
         }
 
         for (i = StartArg; i < ArgC; i++) {
 
             TouchContext.FilesFoundThisArg = 0;
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, TouchFileFoundCallback, NULL, &TouchContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0L, TouchFileFoundCallback, NULL, &TouchContext);
             if (TouchContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
-                    TouchFileFoundCallback(&FullPath, NULL, 0, &TouchContext);
+                if (YoriLibUserToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    TouchFileFoundCallback(&FullPath, NULL, 0L, &TouchContext);
                     YoriLibFreeStringContents(&FullPath);
                 }
             }

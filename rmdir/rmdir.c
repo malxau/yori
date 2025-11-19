@@ -89,7 +89,7 @@ typedef struct _RMDIR_CONTEXT {
 BOOL
 RmdirFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     );
@@ -241,7 +241,7 @@ RmdirFileFoundCallback(
 BOOL
 RmdirFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -391,18 +391,18 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    MatchFlags = YORILIB_FILEENUM_RETURN_DIRECTORIES;
+    MatchFlags = YORILIB_ENUM_RETURN_DIRECTORIES;
     if (RmdirContext.DeleteFiles) {
-        MatchFlags |= YORILIB_FILEENUM_RETURN_FILES;
+        MatchFlags |= YORILIB_ENUM_RETURN_FILES;
     }
     if (Recursive) {
-        MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RETURN_FILES;
+        MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_RETURN_FILES;
     }
     if (BasicEnumeration) {
-        MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
     }
     if (DeleteLinks) {
-        MatchFlags |= YORILIB_FILEENUM_NO_LINK_TRAVERSE;
+        MatchFlags |= YORILIB_ENUM_NO_LINK_TRAVERSE;
     }
 
     for (i = StartArg; i < ArgC; i++) {

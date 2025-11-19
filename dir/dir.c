@@ -994,7 +994,7 @@ DirFileFoundCallback(
 BOOL
 DirFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -1217,20 +1217,20 @@ ENTRYPOINT(
     //  If no file name is specified, use *
     //
 
-    MatchFlags = YORILIB_FILEENUM_RETURN_FILES |
-                 YORILIB_FILEENUM_RETURN_DIRECTORIES |
-                 YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+    MatchFlags = YORILIB_ENUM_RETURN_FILES |
+                 YORILIB_ENUM_RETURN_DIRECTORIES |
+                 YORILIB_ENUM_DIRECTORY_CONTENTS;
     if (!DirContext.MinimalDisplay) {
-        MatchFlags |= YORILIB_FILEENUM_INCLUDE_DOTFILES;
+        MatchFlags |= YORILIB_ENUM_INCLUDE_DOTFILES;
     }
     if (DirContext.Recursive) {
-        MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+        MatchFlags |= YORILIB_ENUM_REC_BEFORE_RETURN | YORILIB_ENUM_REC_PRESERVE_WILD;
     }
     if (DirContext.NoLinkTraverse) {
-        MatchFlags |= YORILIB_FILEENUM_NO_LINK_TRAVERSE;
+        MatchFlags |= YORILIB_ENUM_NO_LINK_TRAVERSE;
     }
     if (BasicEnumeration) {
-        MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
     }
 
     if (StartArg == 0 || StartArg == ArgC) {

@@ -131,11 +131,11 @@ VhdToolCloneIso(
     YoriLibInitEmptyString(&FullPath);
     YoriLibInitEmptyString(&FullSourcePath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(SourcePath, TRUE, &FullSourcePath)) {
+    if (!YoriLibUserToSingleFilePath(SourcePath, TRUE, &FullSourcePath)) {
         YoriLibFreeStringContents(&FullPath);
         return FALSE;
     }
@@ -275,7 +275,7 @@ VhdToolCreateNewVhd(
     YoriLibInitEmptyString(&FullPath);
     YoriLibInitEmptyString(&FullSourcePath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -288,7 +288,7 @@ VhdToolCreateNewVhd(
     CreateParams.Version1.SectorSizeInBytes = 0x200;
     CreateParams.Version1.ParentPath = NULL;
     if (SourceFile != NULL) {
-        if (!YoriLibUserStringToSingleFilePath(SourceFile, TRUE, &FullSourcePath)) {
+        if (!YoriLibUserToSingleFilePath(SourceFile, TRUE, &FullSourcePath)) {
             YoriLibFreeStringContents(&FullPath);
             return FALSE;
         }
@@ -380,7 +380,7 @@ VhdToolCreateNewVhdx(
     YoriLibInitEmptyString(&FullPath);
     YoriLibInitEmptyString(&FullSourcePath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -406,7 +406,7 @@ VhdToolCreateNewVhdx(
     }
     CreateParams.Version2.ParentPath = NULL;
     if (SourceFile != NULL) {
-        if (!YoriLibUserStringToSingleFilePath(SourceFile, TRUE, &FullSourcePath)) {
+        if (!YoriLibUserToSingleFilePath(SourceFile, TRUE, &FullSourcePath)) {
             return FALSE;
         }
         CreateParams.Version2.SourcePath = FullSourcePath.StartOfString;
@@ -494,11 +494,11 @@ VhdToolCreateDiffVhd(
     YoriLibInitEmptyString(&FullPath);
     YoriLibInitEmptyString(&FullParentPath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(ParentPath, TRUE, &FullParentPath)) {
+    if (!YoriLibUserToSingleFilePath(ParentPath, TRUE, &FullParentPath)) {
         YoriLibFreeStringContents(&FullPath);
         return FALSE;
     }
@@ -577,11 +577,11 @@ VhdToolCreateDiffVhdx(
     YoriLibInitEmptyString(&FullPath);
     YoriLibInitEmptyString(&FullParentPath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
-    if (!YoriLibUserStringToSingleFilePath(ParentPath, TRUE, &FullParentPath)) {
+    if (!YoriLibUserToSingleFilePath(ParentPath, TRUE, &FullParentPath)) {
         YoriLibFreeStringContents(&FullPath);
         return FALSE;
     }
@@ -665,7 +665,7 @@ VhdToolExpand(
 
     YoriLibInitEmptyString(&FullPath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -739,7 +739,7 @@ VhdToolCompact(
 
     YoriLibInitEmptyString(&FullPath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -825,7 +825,7 @@ VhdToolShrink(
 
     YoriLibInitEmptyString(&FullPath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -899,7 +899,7 @@ VhdToolMerge(
 
     YoriLibInitEmptyString(&FullPath);
 
-    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 

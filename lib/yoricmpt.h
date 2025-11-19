@@ -47,6 +47,11 @@
  */
 typedef DWORD SYSERR;
 
+/**
+ Pointer to OS error type.
+ */
+typedef SYSERR * PSYSERR;
+
 #ifndef FILE_SHARE_DELETE
 /**
  Definition for share delete for compilers that don't contain it.

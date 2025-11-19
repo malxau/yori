@@ -131,7 +131,7 @@ SplitOpenTargetForCurrentPart(
                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                            NULL);
     if (hDestFile == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: open of %s failed: %s"), NewFileName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
@@ -222,7 +222,7 @@ SplitProcessStream(
             SplitContext->CurrentPartNumber++;
 
             if (!WriteFile(hDestFile, Buffer, BytesRead, &BytesRead, NULL)) {
-                DWORD LastError = GetLastError();
+                SYSERR LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: write failed: %s"), ErrText);
                 YoriLibFreeWinErrorText(ErrText);
@@ -266,7 +266,7 @@ SplitJoin(
     YORI_MAX_SIGNED_T CurrentFragment;
     LPTSTR FragmentFileName;
     YORI_STRING NumberString;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
 
     ASSERT(YoriLibIsStringNullTerminated(OutputFile));
@@ -456,7 +456,7 @@ ENTRYPOINT(
                 if (ArgC > i + 1) {
                     ArgumentUnderstood = TRUE;
                     YoriLibFreeStringContents(&SplitContext.Prefix);
-                    if (!YoriLibUserStringToSingleFilePath(&ArgV[i + 1], TRUE, &SplitContext.Prefix)) {
+                    if (!YoriLibUserToSingleFilePath(&ArgV[i + 1], TRUE, &SplitContext.Prefix)) {
                         YoriLibInitEmptyString(&SplitContext.Prefix);
                     }
                     i++;
@@ -485,7 +485,7 @@ ENTRYPOINT(
         if (StartArg != 0 && !JoinMode) {
             YORI_STRING DefaultPrefix;
 
-            if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &DefaultPrefix)) {
+            if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &DefaultPrefix)) {
                 return EXIT_FAILURE;
             }
             YoriLibYPrintf(&SplitContext.Prefix, _T("%y."), &DefaultPrefix);
@@ -552,7 +552,7 @@ ENTRYPOINT(
             HANDLE FileHandle;
             YORI_STRING FilePath;
 
-            if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FilePath)) {
+            if (!YoriLibUserToSingleFilePath(&ArgV[StartArg], TRUE, &FilePath)) {
                 Result = EXIT_FAILURE;
             }
 
@@ -567,7 +567,7 @@ ENTRYPOINT(
                                         NULL);
 
                 if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-                    DWORD LastError = GetLastError();
+                    SYSERR LastError = GetLastError();
                     LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: open of %y failed: %s"), &FilePath, ErrText);
                     YoriLibFreeWinErrorText(ErrText);

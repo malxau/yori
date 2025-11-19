@@ -630,7 +630,7 @@ ENTRYPOINT(
             goto Cleanup;
         }
     } else {
-        if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+        if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullFileName)) {
             YoriLibInitEmptyString(&FullFileName);
             Result = EXIT_FAILURE;
             goto Cleanup;

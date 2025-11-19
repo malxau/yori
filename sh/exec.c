@@ -52,7 +52,7 @@ YoriShExecViaShellExecute(
     YORI_LIBSH_CMD_CONTEXT ArgContext;
     YORI_SHELLEXECUTEINFO sei;
     YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
-    DWORD LastError;
+    SYSERR LastError;
 
     YoriLibLoadShell32Functions();
 

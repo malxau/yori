@@ -240,7 +240,7 @@ ConToolSetFullscreen(
     DWORD DisplayMode;
     COORD NewSize;
     BOOLEAN Failed;
-    DWORD LastError;
+    SYSERR LastError;
     LPTSTR ErrText;
     DWORD RetryCount;
 

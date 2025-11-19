@@ -90,7 +90,7 @@ MountMountIso(
     }
 
     YoriLibInitEmptyString(&FullFileName);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullFileName)) {
         return FALSE;
     }
 
@@ -192,7 +192,7 @@ MountMountVhd(
     }
 
     YoriLibInitEmptyString(&FullFileName);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullFileName)) {
         return FALSE;
     }
 
@@ -291,7 +291,7 @@ MountUnmount(
     }
 
     YoriLibInitEmptyString(&FullFileName);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullFileName)) {
         return FALSE;
     }
 

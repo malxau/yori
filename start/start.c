@@ -188,7 +188,7 @@ StartShellExecute(
     LPTSTR ErrText = NULL;
     BOOLEAN AllocatedError = FALSE;
     YORI_SHELLEXECUTEINFO sei;
-    DWORD LastError;
+    SYSERR LastError;
     BOOL Result;
 
     ZeroMemory(&sei, sizeof(sei));

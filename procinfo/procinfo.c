@@ -481,7 +481,7 @@ ENTRYPOINT(
     if (DumpHandles) {
         hProcess = OpenProcess(PROCESS_DUP_HANDLE, FALSE, Pid);
         if (hProcess == NULL) {
-            DWORD LastError = GetLastError();
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("procinfo: open process failed: %s"), ErrText);
             YoriLibFreeWinErrorText(ErrText);
@@ -498,7 +498,7 @@ ENTRYPOINT(
 
     hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, Pid);
     if (hProcess == NULL) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("procinfo: open process failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);

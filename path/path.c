@@ -284,7 +284,7 @@ ENTRYPOINT(
 
     ZeroMemory(&PathComponents, sizeof(PathComponents));
 
-    if (YoriLibUserStringToSingleFilePath(&ArgV[StartArg], UseLongPath, &PathComponents.EntireNaturalPath)) {
+    if (YoriLibUserToSingleFilePath(&ArgV[StartArg], UseLongPath, &PathComponents.EntireNaturalPath)) {
         YORI_ALLOC_SIZE_T CharIndex;
         BOOLEAN ExtensionFound = FALSE;
         BOOLEAN FileComponentFound = FALSE;

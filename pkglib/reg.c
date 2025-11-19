@@ -367,7 +367,7 @@ YoriPkgAppendInstallDirToPath(
     if (TargetDirectory == NULL) {
         YORI_STRING AppDir;
         YoriLibConstantString(&AppDir, _T("~APPDIR"));
-        if (!YoriLibUserStringToSingleFilePath(&AppDir, FALSE, &LocalTargetDirectory)) {
+        if (!YoriLibUserToSingleFilePath(&AppDir, FALSE, &LocalTargetDirectory)) {
             return FALSE;
         }
     } else {

@@ -387,7 +387,7 @@ HistoryLoadHistoryFromFile(
                             NULL);
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         if (LastError != ERROR_FILE_NOT_FOUND) {
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("history: open of %y failed: %s"), &FilePath, ErrText);
@@ -518,8 +518,8 @@ YoriCmd_HISTORY(
         }
     } else if (Op == HistoryLoadHistory) {
         YORI_STRING FileName;
-        if (!YoriLibUserStringToSingleFilePath(SourceFile, TRUE, &FileName)) {
-            DWORD LastError = GetLastError();
+        if (!YoriLibUserToSingleFilePath(SourceFile, TRUE, &FileName)) {
+            SYSERR LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("history: getfullpathname of %y failed: %s"), &ArgV[StartArg], ErrText);
             YoriLibFreeWinErrorText(ErrText);

@@ -651,7 +651,7 @@ YoriLibExtractCab(
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback,
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback,
     __in_opt PVOID UserContext,
-    __inout_opt PDWORD ErrorCode,
+    __inout_opt PSYSERR ErrorCode,
     __inout_opt PYORI_STRING ErrorString
     );
 
@@ -1536,7 +1536,7 @@ YoriLibGetWofVersionAvailable(
 /**
  A prototype for a callback function to invoke for each matching file.
  */
-typedef BOOL YORILIB_FILE_ENUM_ERROR_FN(PYORI_STRING FileName, DWORD ErrorCode, DWORD Depth, PVOID Context);
+typedef BOOL WINAPI YORILIB_FILE_ENUM_ERROR_FN(PYORI_STRING FileName, SYSERR ErrorCode, DWORD Depth, PVOID Context);
 
 /**
  A pointer to a callback function to invoke for each matching file.
@@ -1546,7 +1546,7 @@ typedef YORILIB_FILE_ENUM_ERROR_FN *PYORILIB_FILE_ENUM_ERROR_FN;
 /**
  A prototype for a callback function to invoke for each matching file.
  */
-typedef BOOL YORILIB_FILE_ENUM_FN(PYORI_STRING FileName, PWIN32_FIND_DATA FileInfo, DWORD Depth, PVOID Context);
+typedef BOOL WINAPI YORILIB_FILE_ENUM_FN(PYORI_STRING FileName, PWIN32_FIND_DATA FileInfo, DWORD Depth, PVOID Context);
 
 /**
  A pointer to a callback function to invoke for each matching file.
@@ -1556,54 +1556,54 @@ typedef YORILIB_FILE_ENUM_FN *PYORILIB_FILE_ENUM_FN;
 /**
  Indicates the enumeration callback should be invoked for each file found.
  */
-#define YORILIB_FILEENUM_RETURN_FILES            0x00000001
+#define YORILIB_ENUM_RETURN_FILES            0x00000001
 
 /**
  Indicates the enumeration callback should be invoked for each directory
  found.
  */
-#define YORILIB_FILEENUM_RETURN_DIRECTORIES      0x00000002
+#define YORILIB_ENUM_RETURN_DIRECTORIES      0x00000002
 
 /**
  Indicates any child directories should be traversed after returning all
  results from a given directory.
  */
-#define YORILIB_FILEENUM_RECURSE_AFTER_RETURN    0x00000004
+#define YORILIB_ENUM_REC_AFTER_RETURN        0x00000004
 
 /**
  Indicates any child directories should be traversed before returning all
  results from a given directory.
  */
-#define YORILIB_FILEENUM_RECURSE_BEFORE_RETURN   0x00000008
+#define YORILIB_ENUM_REC_BEFORE_RETURN       0x00000008
 
 /**
  Indicates that when traversing a directory heirarchy, only files matching
  the specified enumeration criteria should be returned.  If not specified,
  all child objects will be returned.
  */
-#define YORILIB_FILEENUM_RECURSE_PRESERVE_WILD   0x00000010
+#define YORILIB_ENUM_REC_PRESERVE_WILD       0x00000010
 
 /**
  Indicates that basic file name expansion should be used only.
  */
-#define YORILIB_FILEENUM_BASIC_EXPANSION         0x00000020
+#define YORILIB_ENUM_BASIC_EXPANSION         0x00000020
 
 /**
  Indicates that symbolic links and mount points should not be traversed
  when recursing.
  */
-#define YORILIB_FILEENUM_NO_LINK_TRAVERSE        0x00000040
+#define YORILIB_ENUM_NO_LINK_TRAVERSE        0x00000040
 
 /**
  Include dot and dotdot files during enumerate.
  */
-#define YORILIB_FILEENUM_INCLUDE_DOTFILES        0x00000080
+#define YORILIB_ENUM_INCLUDE_DOTFILES        0x00000080
 
 /**
  If the top level object is a directory, enumerate its children without
  requiring explicit wildcards.
  */
-#define YORILIB_FILEENUM_DIRECTORY_CONTENTS      0x00000100
+#define YORILIB_ENUM_DIRECTORY_CONTENTS      0x00000100
 
 __success(return)
 BOOL
@@ -2542,7 +2542,7 @@ YoriLibIsFileNameDeviceName(
 
 __success(return)
 BOOL
-YoriLibUserStringToSingleFilePath(
+YoriLibUserToSingleFilePath(
     __in PCYORI_STRING UserString,
     __in BOOL bReturnEscapedPath,
     __out PYORI_STRING FullPath
@@ -2550,7 +2550,7 @@ YoriLibUserStringToSingleFilePath(
 
 __success(return)
 BOOL
-YoriLibUserStringToSingleFilePathOrDevice(
+YoriLibUserToSingleFileOrDevice(
     __in PCYORI_STRING UserString,
     __in BOOL bReturnEscapedPath,
     __out PYORI_STRING FullPath
@@ -4132,6 +4132,11 @@ VOID
 YoriLibLiAssignUnsigned(
     __out PLARGE_INTEGER Li,
     __in YORI_MAX_UNSIGNED_T Value
+    );
+
+YORI_MAX_UNSIGNED_T
+YoriLibLiGetUnsigned(
+    __in PLARGE_INTEGER Li
     );
 
 BOOLEAN

@@ -482,7 +482,7 @@ EnvDiffLoadFileIntoEnvironmentBlock(
     HANDLE FileHandle;
 
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(FileName, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -496,7 +496,7 @@ EnvDiffLoadFileIntoEnvironmentBlock(
 
     YoriLibFreeStringContents(&FullPath);
     if (FileHandle == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
+        SYSERR LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("envdiff: open file failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);

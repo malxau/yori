@@ -119,7 +119,7 @@ MoveFileFoundCallback(
 {
     PMOVE_CONTEXT MoveContext = (PMOVE_CONTEXT)Context;
     YORI_STRING FullDest;
-    DWORD LastError;
+    SYSERR LastError;
     BOOLEAN TrailingSlash;
 
     UNREFERENCED_PARAMETER(Depth);
@@ -205,7 +205,7 @@ MoveFileFoundCallback(
 BOOL
 MoveFileEnumerateErrorCallback(
     __in PYORI_STRING FilePath,
-    __in DWORD ErrorCode,
+    __in SYSERR ErrorCode,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -329,7 +329,7 @@ ENTRYPOINT(
     } else if (FileCount == 1) {
         YoriLibConstantString(&MoveContext.Dest, _T("."));
     } else {
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[LastFileArg], TRUE, &MoveContext.Dest)) {
+        if (!YoriLibUserToSingleFilePath(&ArgV[LastFileArg], TRUE, &MoveContext.Dest)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: could not resolve %y\n"), &ArgV[LastFileArg]);
             return EXIT_FAILURE;
         }
@@ -352,9 +352,9 @@ ENTRYPOINT(
 
     for (i = 1; i < ArgC; i++) {
         if (!YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
-            MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
+            MatchFlags = YORILIB_ENUM_RETURN_FILES | YORILIB_ENUM_RETURN_DIRECTORIES;
             if (BasicEnumeration) {
-                MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+                MatchFlags |= YORILIB_ENUM_BASIC_EXPANSION;
             }
             YoriLibForEachFile(&ArgV[i],
                                MatchFlags,

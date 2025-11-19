@@ -127,7 +127,7 @@ YoriPkgGetTerminalProfilePath(
 
     YoriLibConstantString(&RelativePath, _T("~LocalAppData\\Microsoft\\Windows Terminal\\Fragments\\Yori\\Yori.json"));
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibUserStringToSingleFilePath(&RelativePath, TRUE, &FullPath)) {
+    if (!YoriLibUserToSingleFilePath(&RelativePath, TRUE, &FullPath)) {
         return FALSE;
     }
 
@@ -166,7 +166,7 @@ YoriPkgGetYoriExecutablePath(
 
     if (UseAppDir) {
         YoriLibConstantString(&RelativePath, _T("~APPDIR\\Yori.exe"));
-        if (!YoriLibUserStringToSingleFilePath(&RelativePath, FALSE, &LocalExePath)) {
+        if (!YoriLibUserToSingleFilePath(&RelativePath, FALSE, &LocalExePath)) {
             return FALSE;
         }
     }
@@ -195,7 +195,7 @@ YoriPkgGetYuiExecutablePath(
 
     YoriLibConstantString(&RelativePath, _T("~APPDIR\\Yui.exe"));
     YoriLibInitEmptyString(&LocalExePath);
-    if (!YoriLibUserStringToSingleFilePath(&RelativePath, FALSE, &LocalExePath)) {
+    if (!YoriLibUserToSingleFilePath(&RelativePath, FALSE, &LocalExePath)) {
         return FALSE;
     }
 
@@ -383,13 +383,13 @@ YoriPkgCreateAppShortcut(
         YoriLibCloneString(&LocalExePath, YoriExeFullPath);
     }
 
-    if (!YoriLibUserStringToSingleFilePath(ShortcutPath, TRUE, &FullShortcutPath)) {
+    if (!YoriLibUserToSingleFilePath(ShortcutPath, TRUE, &FullShortcutPath)) {
         YoriLibFreeStringContents(&LocalExePath);
         return FALSE;
     }
 
     YoriLibConstantString(&HomeDir, _T("~"));
-    if (!YoriLibUserStringToSingleFilePath(&HomeDir, FALSE, &WorkingDir)) {
+    if (!YoriLibUserToSingleFilePath(&HomeDir, FALSE, &WorkingDir)) {
         YoriLibFreeStringContents(&FullShortcutPath);
         YoriLibFreeStringContents(&LocalExePath);
         return FALSE;
@@ -636,7 +636,7 @@ YoriPkgSetSchemeAsDefault(
     UCHAR Color;
 
     YoriLibInitEmptyString(&FullFileName);
-    if (!YoriLibUserStringToSingleFilePath(SchemeFile, TRUE, &FullFileName)) {
+    if (!YoriLibUserToSingleFilePath(SchemeFile, TRUE, &FullFileName)) {
         return FALSE;
     }
 
