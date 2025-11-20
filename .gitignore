@@ -8,6 +8,7 @@ cache.mk
 **/*.obj
 **/*.pdb
 **/*.pru
+**/*.nativecodeanalysis.xml
 doc/**
 beta/**
 bin/**
