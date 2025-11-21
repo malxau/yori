@@ -156,6 +156,20 @@
 #pragma warning(disable: 26832) // Allocation size from narrowing conversion
 #pragma warning(disable: 26833) // Potential overflow before a bounds check 
 #endif
+
+#if (_MSC_VER >= 1950)
+//
+//  Similar to above, this one is for any arithmetic generating a value to
+//  allocate which was signed.  Unfortunately this happens here due to API
+//  signatures that return signed values.  While underflows are possible,
+//  those indicate APIs that are returning bogus values.  Note in particular
+//  that if the API were unsigned and returned bogus values, the exact
+//  same underflow occurs - the existence of signed math is a red herring.
+//
+
+#pragma warning(disable: 26838) // Allocation size is the result of a signed
+                                // to unsigned conversion
+#endif
 #endif
 
 #include <winsock.h>
