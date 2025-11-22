@@ -412,10 +412,10 @@ ENTRYPOINT(
         if (Recursive) {
             hPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
             if (hPort != NULL) {
-                JOBOBJECT_ASSOCIATE_COMPLETION_PORT Port;
-                Port.CompletionKey = hJob;
-                Port.CompletionPort = hPort;
-                SetInformationJobObject(hJob, JobObjectAssociateCompletionPortInformation, &Port, sizeof(Port));
+                YORI_JOB_ASSOCIATE_COMPLETION_PORT Port;
+                Port.Key = hJob;
+                Port.Port = hPort;
+                DllKernel32.pSetInformationJobObject(hJob, JobObjectAssociateCompletionPortInformation, &Port, sizeof(Port));
             }
         }
         YoriLibAssignProcessToJobObject(hJob, ProcessInfo.hProcess);
