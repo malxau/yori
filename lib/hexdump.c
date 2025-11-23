@@ -111,12 +111,12 @@ YoriLibHexByteCStyle(
             if (WordIndex + 1 == BytesToDisplay && !MoreFollowing) {
                 Subset.LengthInChars = YoriLibSPrintfS(Subset.StartOfString,
                                                        Subset.LengthAllocated,
-                                                       _T("%02x"),
+                                                       _T("0x%02x"),
                                                        WordToDisplay);
             } else {
                 Subset.LengthInChars = YoriLibSPrintfS(Subset.StartOfString,
                                                        Subset.LengthAllocated,
-                                                       _T("%02x, "),
+                                                       _T("0x%02x, "),
                                                        WordToDisplay);
             }
             OutputIndex = OutputIndex + Subset.LengthInChars;
@@ -821,6 +821,8 @@ YoriLibHexDump(
     //  16 chars per byte: 6 chars to initiate a highlight; 4 to end it; and 4
     //  is the worst case for the data itself, being two hex digits, a space,
     //  and a character.
+    //
+    //  YoriLibHexByteCStyle() neglects highlights so has space for 0x prefix.
     //
 
     CharsPerLine = 16 * YORI_LIB_HEXDUMP_BYTES_PER_LINE + 32;
