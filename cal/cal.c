@@ -579,7 +579,8 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
 
-        CalOutputCalendarForYear((WORD)TargetYear, NULL);
+        GetLocalTime(&CurrentSysTime);
+        CalOutputCalendarForYear((WORD)TargetYear, &CurrentSysTime);
     } else {
         GetLocalTime(&CurrentSysTime);
         CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)(CurrentSysTime.wMonth - 1), &CurrentSysTime);
