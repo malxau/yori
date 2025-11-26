@@ -147,6 +147,17 @@ typedef struct _HEXEDIT_CONTEXT {
     DWORD EditClearMenuIndex;
 
     /**
+     The index of the search menu.  This is used to check and uncheck menu
+     items based on the state of the control.
+     */
+    DWORD SearchMenuIndex;
+
+    /**
+     The index of the search new location menu item.
+     */
+    DWORD SearchNewLocationMenuIndex;
+
+    /**
      The index of the view menu.  This is used to check and uncheck menu
      items based on the state of the control.
      */
@@ -209,6 +220,12 @@ typedef struct _HEXEDIT_CONTEXT {
      hexediting.
      */
     BOOLEAN ReadOnly;
+
+    /**
+     TRUE if the current file is opened as a device, FALSE if it is opened
+     as a file.  Only devices support offset and length.
+     */
+    BOOLEAN OpenAsDevice;
 
 } HEXEDIT_CONTEXT, *PHEXEDIT_CONTEXT;
 
@@ -313,7 +330,7 @@ HexEditLoadFile(
     YORI_ALLOC_SIZE_T ReadLength;
     PUCHAR Buffer;
     DWORD BytesRead;
-    DWORD Err;
+    SYSERR Err;
 
     if (FileName->StartOfString == NULL) {
         return ERROR_INVALID_NAME;
@@ -432,7 +449,7 @@ HexEditSaveFile(
 {
     YORI_ALLOC_SIZE_T Index;
     DWORD Attributes;
-    DWORD Err;
+    SYSERR Err;
     LPTSTR ErrText;
     YORI_STRING ParentDirectory;
     YORI_STRING Prefix;
@@ -519,6 +536,12 @@ HexEditSaveFile(
 
     if (EffectiveDataLength != 0 &&
         EffectiveDataLength != BufferLength) {
+
+        CloseHandle(WriteHandle);
+        if (TempFileName.LengthInChars > 0) {
+            DeleteFile(TempFileName.StartOfString);
+        }
+        YoriLibFreeStringContents(&TempFileName);
 
         YoriLibYPrintf(&Text, _T("Device length %i bytes does not match buffer length %i bytes"), EffectiveDataLength, BufferLength);
         goto DisplayErrorAndFail;
@@ -718,32 +741,6 @@ HexEditPromptForSaveIfModified(
 }
 
 /**
- A callback invoked when the new menu item is invoked.
-
- @param Ctrl Pointer to the menu bar control.
- */
-VOID
-HexEditNewButtonClicked(
-    __in PYORI_WIN_CTRL_HANDLE Ctrl
-    )
-{
-    PHEXEDIT_CONTEXT HexEditContext;
-    PYORI_WIN_CTRL_HANDLE Parent;
-
-    Parent = YoriWinGetControlParent(Ctrl);
-    HexEditContext = YoriWinGetControlContext(Parent);
-
-    if (!HexEditPromptForSaveIfModified(Ctrl, HexEditContext)) {
-        return;
-    }
-
-    YoriWinHexEditClear(HexEditContext->HexEdit);
-    YoriLibFreeStringContents(&HexEditContext->OpenFileName);
-    HexEditUpdateOpenedFileCaption(HexEditContext);
-    YoriWinHexEditSetModifyState(HexEditContext->HexEdit, FALSE);
-}
-
-/**
  Display an open dialog.  The open may be for files or devices.
 
  @param Parent Handle to the main window.
@@ -765,7 +762,7 @@ HexEditOpenDialog(
     YORI_STRING FullName;
     YORI_DLG_FILE_CUSTOM_VALUE ReadOnlyValues[2];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[1];
-    DWORD Err;
+    SYSERR Err;
     DWORDLONG DeviceOffset;
     DWORDLONG DeviceLength;
 
@@ -842,6 +839,7 @@ HexEditOpenDialog(
         return;
     }
 
+    HexEditContext->OpenAsDevice = OpenDevice;
     YoriLibFreeStringContents(&HexEditContext->OpenFileName);
     memcpy(&HexEditContext->OpenFileName, &FullName, sizeof(YORI_STRING));
     HexEditUpdateOpenedFileCaption(HexEditContext);
@@ -925,6 +923,265 @@ HexEditSaveAsDialog(
 
     YoriLibFreeStringContents(&HexEditContext->OpenFileName);
     memcpy(&HexEditContext->OpenFileName, &FullName, sizeof(YORI_STRING));
+    HexEditUpdateOpenedFileCaption(HexEditContext);
+    YoriWinHexEditSetModifyState(HexEditContext->HexEdit, FALSE);
+}
+
+/**
+ A callback invoked when the ok button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HexEditOkButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    Parent = YoriWinGetControlParent(Ctrl);
+    YoriWinCloseWindow(Parent, TRUE);
+}
+
+/**
+ A callback invoked when the cancel button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HexEditCancelButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    Parent = YoriWinGetControlParent(Ctrl);
+    YoriWinCloseWindow(Parent, FALSE);
+}
+
+/**
+ Display a new location.  The open can only refer to a device, not a file,
+ since devices can be opened and saved in-place whereas files are always
+ written to new files.
+
+ @param Parent Handle to the main window.
+
+ @param HexEditContext Pointer to the hexedit context.
+ */
+VOID
+HexEditNewLocationDialog(
+    __in PYORI_WIN_CTRL_HANDLE Parent,
+    __in PHEXEDIT_CONTEXT HexEditContext
+    )
+{
+    YORI_STRING Title;
+    YORI_STRING Text;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+    YORI_MAX_SIGNED_T Signed;
+    YORI_MAX_UNSIGNED_T NewOffset;
+    YORI_MAX_UNSIGNED_T NewLength;
+    YORI_ALLOC_SIZE_T CharsConsumed;
+    PYORI_WIN_WINDOW_HANDLE DlgWindow;
+    COORD WindowSize;
+    SMALL_RECT LabelArea;
+    SMALL_RECT EditArea;
+    SMALL_RECT ButtonArea;
+    YORI_STRING Caption;
+    WORD ButtonWidth;
+    PYORI_WIN_CTRL_HANDLE CtrlHandle;
+    PYORI_WIN_CTRL_HANDLE EditOffset;
+    PYORI_WIN_CTRL_HANDLE EditLength;
+    DWORD Style;
+    DWORD_PTR Result;
+    SYSERR Err;
+
+    WinMgrHandle = YoriWinGetWindowManagerHandle(Parent);
+    YoriLibConstantString(&Title, _T("New Location"));
+
+    if (!YoriWinCreateWindow(WinMgrHandle, 50, 14, 70, 14, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Title, &DlgWindow)) {
+        return;
+    }
+
+    YoriWinGetClientSize(DlgWindow, &WindowSize);
+
+    YoriLibConstantString(&Caption, _T("O&ffset:"));
+
+    LabelArea.Left = 1;
+    LabelArea.Top = 2;
+    LabelArea.Right = (WORD)(LabelArea.Left + Caption.LengthInChars - 2);
+    LabelArea.Bottom = LabelArea.Top;
+
+    CtrlHandle = YoriWinLabelCreate(DlgWindow, &LabelArea, &Caption, 0);
+    if (CtrlHandle == NULL) {
+        YoriWinDestroyWindow(Parent);
+        return;
+    }
+
+    EditArea.Left = (WORD)(LabelArea.Right + 2);
+    EditArea.Top = 1;
+    EditArea.Right = (WORD)(WindowSize.X - 2);
+    EditArea.Bottom = 3;
+
+    YoriLibInitEmptyString(&Caption);
+    YoriLibYPrintf(&Caption, _T("0x%llx"), HexEditContext->DataOffset);
+    Style = YORI_WIN_EDIT_STYLE_NUMERIC;
+
+    EditOffset = YoriWinEditCreate(DlgWindow, &EditArea, &Caption, Style);
+    if (EditOffset == NULL) {
+        YoriWinDestroyWindow(DlgWindow);
+        YoriLibFreeStringContents(&Caption);
+        return;
+    }
+    YoriWinEditSetSelectionRange(EditOffset, 0, Caption.LengthInChars);
+    YoriLibFreeStringContents(&Caption);
+
+    YoriLibConstantString(&Caption, _T("&Length:"));
+    LabelArea.Top = (WORD)(LabelArea.Top + 4);
+    LabelArea.Bottom = LabelArea.Top;
+
+    CtrlHandle = YoriWinLabelCreate(DlgWindow, &LabelArea, &Caption, 0);
+    if (CtrlHandle == NULL) {
+        YoriWinDestroyWindow(Parent);
+        return;
+    }
+
+    EditArea.Top = (WORD)(EditArea.Bottom + 2);
+    EditArea.Bottom = (WORD)(EditArea.Top + 2);
+
+    YoriLibInitEmptyString(&Caption);
+    YoriLibYPrintf(&Caption, _T("0x%llx"), HexEditContext->DataLength);
+
+    EditLength = YoriWinEditCreate(DlgWindow, &EditArea, &Caption, Style);
+    if (EditLength == NULL) {
+        YoriWinDestroyWindow(DlgWindow);
+        return;
+    }
+    YoriWinEditSetSelectionRange(EditLength, 0, Caption.LengthInChars);
+    YoriLibFreeStringContents(&Caption);
+
+    ButtonWidth = (WORD)(8);
+
+    ButtonArea.Top = (SHORT)(EditArea.Bottom + 2);
+    ButtonArea.Bottom = (SHORT)(ButtonArea.Top + 2);
+
+    YoriLibConstantString(&Caption, _T("&Ok"));
+
+    ButtonArea.Left = (SHORT)(1);
+    ButtonArea.Right = (WORD)(ButtonArea.Left + 1 + ButtonWidth);
+
+    CtrlHandle = YoriWinButtonCreate(DlgWindow, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, HexEditOkButtonClicked);
+    if (CtrlHandle == NULL) {
+        YoriWinDestroyWindow(DlgWindow);
+        return;
+    }
+
+    ButtonArea.Left = (WORD)(ButtonArea.Left + ButtonWidth + 3);
+    ButtonArea.Right = (WORD)(ButtonArea.Right + ButtonWidth + 3);
+
+    YoriLibConstantString(&Caption, _T("&Cancel"));
+    CtrlHandle = YoriWinButtonCreate(DlgWindow, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, HexEditCancelButtonClicked);
+    if (CtrlHandle == NULL) {
+        YoriWinDestroyWindow(DlgWindow);
+        return;
+    }
+
+    Result = FALSE;
+    if (!YoriWinProcessInputForWindow(DlgWindow, &Result)) {
+        Result = FALSE;
+    }
+
+    if (!Result) {
+        YoriWinDestroyWindow(DlgWindow);
+        return;
+    }
+
+    YoriLibInitEmptyString(&Text);
+    if (!YoriWinEditGetText(EditOffset, &Text)) {
+        YoriWinDestroyWindow(DlgWindow);
+        return;
+    }
+
+    if (YoriLibStringToNumber(&Text, FALSE, &Signed, &CharsConsumed) &&
+        CharsConsumed > 0) {
+
+        if (Signed < 0) {
+            NewOffset = 0;
+        } else {
+            NewOffset = (YORI_MAX_UNSIGNED_T)Signed;
+        }
+    } else {
+        YoriWinDestroyWindow(DlgWindow);
+        return;
+    }
+
+    YoriLibFreeStringContents(&Text);
+
+    if (!YoriWinEditGetText(EditLength, &Text)) {
+        YoriWinDestroyWindow(DlgWindow);
+        return;
+    }
+
+    if (YoriLibStringToNumber(&Text, FALSE, &Signed, &CharsConsumed) &&
+        CharsConsumed > 0) {
+
+        if (Signed < 0) {
+            NewLength = 0;
+        } else {
+            NewLength = (YORI_MAX_UNSIGNED_T)Signed;
+        }
+    } else {
+        YoriWinDestroyWindow(DlgWindow);
+        return;
+    }
+
+    YoriLibFreeStringContents(&Text);
+
+    YoriWinDestroyWindow(DlgWindow);
+
+    Err = HexEditLoadFile(HexEditContext, &HexEditContext->OpenFileName, NewOffset, NewLength);
+    if (Err != ERROR_SUCCESS) {
+        YORI_STRING DialogText;
+        LPTSTR ErrText;
+
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibInitEmptyString(&DialogText);
+        YoriLibYPrintf(&DialogText, _T("Could not open file: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+
+        YoriLibConstantString(&Caption, _T("Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &DialogText,
+                          1,
+                          &Caption,
+                          0,
+                          0);
+
+        YoriLibFreeStringContents(&DialogText);
+    }
+}
+
+/**
+ A callback invoked when the new menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditNewButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PHEXEDIT_CONTEXT HexEditContext;
+    PYORI_WIN_CTRL_HANDLE Parent;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    if (!HexEditPromptForSaveIfModified(Ctrl, HexEditContext)) {
+        return;
+    }
+
+    YoriWinHexEditClear(HexEditContext->HexEdit);
+    YoriLibFreeStringContents(&HexEditContext->OpenFileName);
     HexEditUpdateOpenedFileCaption(HexEditContext);
     YoriWinHexEditSetModifyState(HexEditContext->HexEdit, FALSE);
 }
@@ -1195,6 +1452,33 @@ HexEditClearButtonClicked(
     YoriWinHexEditSetModifyState(HexEditContext->HexEdit, TRUE);
 }
 
+/**
+ A callback invoked when the search menu is opened.
+
+ @param Ctrl Pointer to the menubar control.
+ */
+VOID
+HexEditSearchButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE SearchMenu;
+    PYORI_WIN_CTRL_HANDLE NewLocationItem;
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    SearchMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, HexEditContext->SearchMenuIndex);
+    NewLocationItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, SearchMenu, HexEditContext->SearchNewLocationMenuIndex);
+
+    if (HexEditContext->OpenAsDevice) {
+        YoriWinMenuBarEnableMenuItem(NewLocationItem);
+    } else {
+        YoriWinMenuBarDisableMenuItem(NewLocationItem);
+    }
+}
 
 /**
  Search forward through a memory buffer looking for a matching sub-buffer.
@@ -1889,6 +2173,31 @@ HexEditGoToButtonClicked(
 }
 
 /**
+ A callback invoked when the new location menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditNewLocationButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    if (HexEditContext->OpenFileName.StartOfString == NULL) {
+        HexEditOpenButtonClicked(Ctrl);
+        return;
+    }
+
+    HexEditNewLocationDialog(Parent, HexEditContext);
+}
+
+/**
  A callback invoked when the view button is clicked.
 
  @param Ctrl Pointer to the button that was clicked.
@@ -2355,7 +2664,7 @@ HexEditPopulateMenuBar(
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[8];
     YORI_WIN_MENU_ENTRY EditMenuEntries[4];
-    YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
+    YORI_WIN_MENU_ENTRY SearchMenuEntries[7];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[8];
     YORI_WIN_MENU_ENTRY ToolsMenuEntries[1];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
@@ -2460,6 +2769,12 @@ HexEditPopulateMenuBar(
     SearchMenuEntries[MenuIndex].NotifyCallback = HexEditGoToButtonClicked;
     MenuIndex++;
 
+    HexEditContext->SearchNewLocationMenuIndex = MenuIndex;
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("Reopen new &location..."));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+L"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = HexEditNewLocationButtonClicked;
+    MenuIndex++;
+
     ZeroMemory(&ViewMenuEntries, sizeof(ViewMenuEntries));
     MenuIndex = 0;
     HexEditContext->ViewBytesMenuIndex = MenuIndex;
@@ -2529,7 +2844,9 @@ HexEditPopulateMenuBar(
     MenuEntries[MenuIndex].ChildMenu.Items = EditMenuEntries;
     MenuIndex++;
 
+    HexEditContext->SearchMenuIndex = MenuIndex;
     YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Search"));
+    MenuEntries[MenuIndex].NotifyCallback = HexEditSearchButtonClicked;
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(SearchMenuEntries)/sizeof(SearchMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = SearchMenuEntries;
     MenuIndex++;
