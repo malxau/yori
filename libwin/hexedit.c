@@ -117,6 +117,13 @@ typedef struct _YORI_WIN_CTRL_HEX_EDIT {
     UCHAR BytesPerWord;
 
     /**
+     An extra value to add to buffer offset for visual display.  Only
+     meaningful to the user; all buffer offsets except this are relative
+     to the start of the buffer allocation.
+     */
+    YORI_MAX_UNSIGNED_T VisualBufferOffset;
+
+    /**
      The index within LineArray that is displayed at the top of the control.
      */
     YORI_ALLOC_SIZE_T ViewportTop;
@@ -1462,9 +1469,10 @@ YoriWinHexEditPaintSingleLine(
         if (HexEdit->OffsetWidth == 64) {
             DWORDLONG LongOffset;
             LongOffset = Offset;
+            LongOffset = LongOffset + HexEdit->VisualBufferOffset;
             String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x`%08x: "), (DWORD)(LongOffset >> 32), (DWORD)LongOffset);
         } else if (HexEdit->OffsetWidth == 32) {
-            String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x: "), Offset);
+            String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x: "), Offset + (DWORD)HexEdit->VisualBufferOffset);
         }
 
         for (ColumnIndex = 0; ColumnIndex < String.LengthInChars; ColumnIndex++) {
@@ -3869,6 +3877,40 @@ YoriWinHexEditDeleteSelection(
                                             CursorOffset,
                                             BitShift);
     YoriWinHexEditClearSelectionInternal(HexEdit);
+    return TRUE;
+}
+
+/**
+ Set the visual buffer offset of the hex edit control.  The first element
+ in the allocated buffer will indicate that it came from this offset; it
+ is added to all buffer elements.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param VisualBufferOffset Additional offset to add to offsets in visual
+        display.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinHexEditSetVisualBufferOffset(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in YORI_MAX_UNSIGNED_T VisualBufferOffset
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+    if (VisualBufferOffset != HexEdit->VisualBufferOffset) {
+        HexEdit->VisualBufferOffset = VisualBufferOffset;
+        YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (YORI_ALLOC_SIZE_T)-1);
+
+        YoriWinHexEditEnsureCursorVisible(HexEdit);
+        YoriWinHexEditPaint(HexEdit);
+    }
+
     return TRUE;
 }
 

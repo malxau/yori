@@ -412,6 +412,7 @@ HexEditLoadFile(
         return ERROR_NOT_ENOUGH_MEMORY;
     }
     YoriLibDereference(Buffer);
+    YoriWinHexEditSetVisualBufferOffset(HexEditContext->HexEdit, DataOffset);
 
     HexEditContext->DataOffset = DataOffset;
     HexEditContext->DataLength = ReadLength;

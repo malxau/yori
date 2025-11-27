@@ -446,6 +446,12 @@ YoriWinHexEditSetViewportLocation(
     __in YORI_ALLOC_SIZE_T NewViewportTop
     );
 
+BOOLEAN
+YoriWinHexEditSetVisualBufferOffset(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in YORI_MAX_UNSIGNED_T VisualBufferOffset
+    );
+
 VOID
 YoriWinHexEditClearSelection(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
