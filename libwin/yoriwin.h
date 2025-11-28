@@ -297,22 +297,27 @@ typedef YORI_WIN_NOTIFY_HEX_EDIT_CURSOR_MOVE *PYORI_WIN_NOTIFY_HEX_EDIT_CURSOR_M
 /**
  The hex edit should display a vertical scroll bar.
  */
-#define YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR    (0x0001)
+#define YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR         (0x0001)
 
 /**
  The hex edit should be read only.
  */
-#define YORI_WIN_HEX_EDIT_STYLE_READ_ONLY     (0x0002)
+#define YORI_WIN_HEX_EDIT_STYLE_READ_ONLY          (0x0002)
 
 /**
  The hex edit should contain 32 bit offset values.
  */
-#define YORI_WIN_HEX_EDIT_STYLE_OFFSET        (0x0004)
+#define YORI_WIN_HEX_EDIT_STYLE_OFFSET             (0x0004)
 
 /**
  The hex edit should contain 64 bit offset values.
  */
-#define YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET  (0x0008)
+#define YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET       (0x0008)
+
+/**
+ The hex edit should contain a vertical seperator.
+ */
+#define YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR (0x0010)
 
 BOOLEAN
 YoriWinHexEditClear(

@@ -220,6 +220,7 @@ RegeditEditBinaryValue(
 
     Style = ValueReadOnly?YORI_WIN_HEX_EDIT_STYLE_READ_ONLY:0;
     Style = Style | YORI_WIN_HEX_EDIT_STYLE_OFFSET;
+    Style = Style | YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR;
 
     ValueEdit = YoriWinHexEditCreate(Parent, NULL, &Area, 1, Style);
     if (ValueEdit == NULL) {

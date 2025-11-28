@@ -210,6 +210,24 @@ typedef struct _YORI_WIN_CTRL_HEX_EDIT {
     WORD CaptionAttributes;
 
     /**
+     The offset in nonclient coordinates for the vertical seperator.
+     Only meaningful if VerticalSeperator is TRUE.
+     */
+    WORD VerticalSplitOffset;
+
+    /**
+     The attributes to display any split bar between hex digits and
+     characters. Only meaningful if VerticalSeperator is TRUE.
+     */
+    WORD VerticalSplitAttributes;
+
+    /**
+     The character to display any split bar between hex digits and
+     characters. Only meaningful if VerticalSeperator is TRUE.
+     */
+    TCHAR VerticalSplitChar;
+
+    /**
      Specifies the number of bits to use for the buffer offset.  Currently
      supported values are 0, 32 and 64.
      */
@@ -254,17 +272,13 @@ typedef struct _YORI_WIN_CTRL_HEX_EDIT {
      */
     BOOLEAN MouseButtonDown;
 
+    /**
+     TRUE if a vertical seperator should be drawn between the hex digits
+     and character view.  FALSE if this should be ommitted.
+     */
+    BOOLEAN VerticalSeperator;
+
 } YORI_WIN_CTRL_HEX_EDIT, *PYORI_WIN_CTRL_HEX_EDIT;
-
-/**
- The hex edit should display a vertical scroll bar.
- */
-#define YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR  (0x0001)
-
-/**
- The hex edit should be read only.
- */
-#define YORI_WIN_HEX_EDIT_STYLE_READ_ONLY   (0x0002)
 
 /**
  A list of possible meanings behind each displayed cell.
@@ -505,8 +519,18 @@ YoriWinHexEditCellType(
         }
         return YoriWinHexEditCellTypeHexDigitPadding;
     }
-
     DataOffset = DataOffset - 2;
+
+    if (HexEdit->VerticalSeperator) {
+        if (DataOffset < 1) {
+            if (ByteOffset != NULL) {
+                *ByteOffset = HexEdit->BytesPerWord;
+            }
+            return YoriWinHexEditCellTypeHexDigitPadding;
+        }
+        DataOffset = DataOffset - 1;
+    }
+
     if (DataOffset >= HexEdit->BytesPerLine) {
         return YoriWinHexEditCellTypeWhitespace;
     }
@@ -1369,6 +1393,36 @@ YoriWinHexEditPaintNonClient(
 
     WindowAttributes = HexEdit->TextAttributes;
     YoriWinDrawBorderOnControl(&HexEdit->Ctrl, &BorderLocation, WindowAttributes, BorderFlags);
+    if (HexEdit->VerticalSeperator) {
+
+        //
+        //  Account for the offset.  If an offset is present, add the space.
+        //  Add another cell for the border, unconditionally.
+        //
+
+        ColumnIndex = (WORD)YoriWinHexEditOffsetSizeInCells(HexEdit);
+        if (ColumnIndex > 0) {
+            ColumnIndex++;
+        }
+        ColumnIndex++;
+
+        //
+        //  Add as much space as is used for hex digits
+        //
+
+        ColumnIndex = (WORD)(ColumnIndex + (YORI_LIB_HEXDUMP_BYTES_PER_LINE / HexEdit->BytesPerWord) * (2 * HexEdit->BytesPerWord + 1));
+
+        //
+        //  8 is special because there's still a seperator between each 4
+        //
+
+        if (HexEdit->BytesPerWord == 8) {
+            ColumnIndex = (WORD)(ColumnIndex + 2);
+        }
+
+        HexEdit->VerticalSplitOffset = ColumnIndex;
+        YoriWinDrawVerticalSplitOnControl(&HexEdit->Ctrl, &BorderLocation, ColumnIndex, WindowAttributes, BorderFlags, &HexEdit->VerticalSplitAttributes, &HexEdit->VerticalSplitChar);
+    }
 
     if (HexEdit->Caption.LengthInChars > 0) {
         DWORD CaptionCharsToDisplay;
@@ -1522,9 +1576,20 @@ YoriWinHexEditPaintSingleLine(
 
         if (CharInfoBufferPopulated < CharInfoBufferAllocated) {
             Cell = &CharInfoBuffer[CharInfoBufferPopulated];
-            Cell->Char.UnicodeChar = ' ';
-            Cell->Attributes = TextAttributes;
-            CharInfoBufferPopulated++;
+
+            if (HexEdit->VerticalSeperator) {
+                ASSERT(HexEdit->Ctrl.ClientRect.Left + CharInfoBufferPopulated == HexEdit->VerticalSplitOffset);
+                Cell->Char.UnicodeChar = HexEdit->VerticalSplitChar;
+                Cell->Attributes = HexEdit->VerticalSplitAttributes;
+                CharInfoBufferPopulated++;
+                Cell = &CharInfoBuffer[CharInfoBufferPopulated];
+            }
+
+            if (CharInfoBufferPopulated < CharInfoBufferAllocated) {
+                Cell->Char.UnicodeChar = ' ';
+                Cell->Attributes = TextAttributes;
+                CharInfoBufferPopulated++;
+            }
 
             for (WordIndex = 0;
                  WordIndex < HexEdit->BytesPerLine && CharInfoBufferPopulated < CharInfoBufferAllocated;
@@ -1557,7 +1622,13 @@ YoriWinHexEditPaintSingleLine(
         }
     }
     for (; ColumnIndex < ClientSize->X; ColumnIndex++) {
-        YoriWinSetControlClientCell(&HexEdit->Ctrl, ColumnIndex, RowIndex, ' ', WindowAttributes);
+        if (HexEdit->VerticalSeperator &&
+            ColumnIndex + HexEdit->Ctrl.ClientRect.Left == HexEdit->VerticalSplitOffset) {
+
+            YoriWinSetControlClientCell(&HexEdit->Ctrl, ColumnIndex, RowIndex, HexEdit->VerticalSplitChar, HexEdit->VerticalSplitAttributes);
+        } else {
+            YoriWinSetControlClientCell(&HexEdit->Ctrl, ColumnIndex, RowIndex, ' ', WindowAttributes);
+        }
     }
 
     YoriLibFreeStringContents(&String);
@@ -2699,6 +2770,17 @@ YoriWinHexEditSetSelectionByte(
         YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
     } else if (NewValue > *SelectionByte) {
         FirstDirtyLine = (YORI_ALLOC_SIZE_T)(*SelectionByte / HexEdit->BytesPerLine);
+
+        //
+        //  The selection visually extends into whitespace if there is more
+        //  selection following.  As a result of this, it is necessary to
+        //  redraw whitespace if the selection extends and the previous
+        //  selection was at line end.
+        //
+
+        if (FirstDirtyLine > 0 && ((*SelectionByte) % HexEdit->BytesPerLine) == 0) {
+            FirstDirtyLine--;
+        }
         LastDirtyLine = (YORI_ALLOC_SIZE_T)(NewValue / HexEdit->BytesPerLine);
         YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
     }
@@ -3503,6 +3585,7 @@ YoriWinHexEditSetBytesPerWord(
     YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (YORI_ALLOC_SIZE_T)-1);
 
     YoriWinHexEditEnsureCursorVisible(HexEdit);
+    YoriWinHexEditPaintNonClient(HexEdit);
     YoriWinHexEditPaint(HexEdit);
 
     return TRUE;
@@ -3534,12 +3617,18 @@ YoriWinHexEditSetStyle(
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
 
-    if (NewStyle & ~(YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) {
+    if (NewStyle & ~(YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR)) {
         return FALSE;
     }
 
     if ((NewStyle & (YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) == (YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) {
         return FALSE;
+    }
+
+    if (NewStyle & YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR) {
+        HexEdit->VerticalSeperator = TRUE;
+    } else {
+        HexEdit->VerticalSeperator = FALSE;
     }
 
     CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
@@ -3558,6 +3647,7 @@ YoriWinHexEditSetStyle(
     YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (YORI_ALLOC_SIZE_T)-1);
 
     YoriWinHexEditEnsureCursorVisible(HexEdit);
+    YoriWinHexEditPaintNonClient(HexEdit);
     YoriWinHexEditPaint(HexEdit);
     return TRUE;
 }
@@ -5472,11 +5562,18 @@ YoriWinHexEditCreate(
     HexEdit->SelectedAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorEditSelectedText);
     HexEdit->CaptionAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMultilineCaption);
 
-    YoriWinHexEditSetCursorLocationToZero(HexEdit);
+    if (Style & YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR) {
+        HexEdit->VerticalSeperator = TRUE;
+    }
 
-    YoriWinHexEditExpandDirtyRange(HexEdit, 0, (DWORD)-1);
     YoriWinHexEditPaintNonClient(HexEdit);
-    YoriWinHexEditPaint(HexEdit);
+    YoriWinHexEditExpandDirtyRange(HexEdit, 0, (DWORD)-1);
+
+    //
+    //  SetCursorLocation implicitly paints the client area
+    //
+
+    YoriWinHexEditSetCursorLocationToZero(HexEdit);
 
     return &HexEdit->Ctrl;
 }

@@ -740,34 +740,34 @@ YoriWinMgrSetAsciiDrawing(
  Top left corner, top line, top right corner, left line, right line,
  bottom left corner, bottom line, bottom right corner
  */
-CONST TCHAR YoriWinSingleLineBorder[] = { 0x250c, 0x2500, 0x2510, 0x2502, 0x2502, 0x2514, 0x2500, 0x2518 };
+CONST TCHAR YoriWinSingleLineBorder[] = { 0x250c, 0x2500, 0x252c, 0x2510, 0x2502, 0x251c, 0x2502, 0x2500, 0x2502, 0x2524, 0x2514, 0x2500, 0x2534, 0x2518 };
 
 /**
  Characters forming a double line rectangle border, in order of appearance
  */
-CONST TCHAR YoriWinDoubleLineBorder[] = { 0x2554, 0x2550, 0x2557, 0x2551, 0x2551, 0x255A, 0x2550, 0x255D };
+CONST TCHAR YoriWinDoubleLineBorder[] = { 0x2554, 0x2550, 0x2566, 0x2557, 0x2551, 0x2560, 0x2551, 0x2550, 0x2551, 0x2563, 0x255A, 0x2550, 0x2569, 0x255D };
 
 /**
  Characters forming a solid full height character border, in order of appearance
  */
-CONST TCHAR YoriWinFullSolidBorder[] =  { 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588 };
+CONST TCHAR YoriWinFullSolidBorder[] =  { 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588 };
 
 /**
  Characters forming a solid half height character border, in order of appearance
  */
-CONST TCHAR YoriWinHalfSolidBorder[] =  { 0x2588, 0x2580, 0x2588, 0x2588, 0x2588, 0x2588, 0x2584, 0x2588 };
+CONST TCHAR YoriWinHalfSolidBorder[] =  { 0x2588, 0x2580, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2580, 0x2588, 0x2588, 0x2588, 0x2584, 0x2588, 0x2588 };
 
 /**
  Characters forming a single line rectangular border using only ASCII
  characters, in order of appearance
  */
-CONST TCHAR YoriWinSingleLineAsciiBorder[] = { '+', '-', '+', '|', '|', '+', '-', '+' };
+CONST TCHAR YoriWinSingleLineAsciiBorder[] = { '+', '-', '+', '+', '|', '+', '|', '-', '|', '+', '+', '-', '+', '+' };
 
 /**
  Characters forming a double line rectangular border using only ASCII
  characters, in order of appearance
  */
-CONST TCHAR YoriWinDoubleLineAsciiBorder[] = { '+', '=', '+', '|', '|', '+', '=', '+' };
+CONST TCHAR YoriWinDoubleLineAsciiBorder[] = { '+', '=', '+', '+', '|', '+', '|', '=', '|', '+', '+', '=', '+', '+' };
 
 /**
  Characters forming a menu, left T, horizontal line, right T, check, expand

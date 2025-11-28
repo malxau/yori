@@ -169,22 +169,74 @@ YoriWinDrawBorderOnControl(
 
     YoriWinTranslateAttributesAndBorderStyle(WinMgrHandle, Attributes, BorderType, &TopAttributes, &BottomAttributes, &BorderChars);
 
-    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Left, Dimensions->Top, BorderChars[0], TopAttributes);
+    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Left, Dimensions->Top, BorderChars[YORIWIN_DRAW_TOP_LEFT], TopAttributes);
     for (CellIndex = (WORD)(Dimensions->Left + 1); CellIndex < Dimensions->Right; CellIndex++) {
-        YoriWinSetControlNonClientCell(Ctrl, CellIndex, Dimensions->Top, BorderChars[1], TopAttributes);
+        YoriWinSetControlNonClientCell(Ctrl, CellIndex, Dimensions->Top, BorderChars[YORIWIN_DRAW_TOP_LINE], TopAttributes);
     }
-    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Right, Dimensions->Top, BorderChars[2], BottomAttributes);
+    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Right, Dimensions->Top, BorderChars[YORIWIN_DRAW_TOP_RIGHT], BottomAttributes);
 
     for (RowIndex = (WORD)(Dimensions->Top + 1); RowIndex <= Dimensions->Bottom - 1; RowIndex++) {
-        YoriWinSetControlNonClientCell(Ctrl, Dimensions->Left, RowIndex, BorderChars[3], TopAttributes);
-        YoriWinSetControlNonClientCell(Ctrl, Dimensions->Right, RowIndex, BorderChars[4], BottomAttributes);
+        YoriWinSetControlNonClientCell(Ctrl, Dimensions->Left, RowIndex, BorderChars[YORIWIN_DRAW_LEFT_LINE], TopAttributes);
+        YoriWinSetControlNonClientCell(Ctrl, Dimensions->Right, RowIndex, BorderChars[YORIWIN_DRAW_RIGHT_LINE], BottomAttributes);
     }
-    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Left, Dimensions->Bottom, BorderChars[5], TopAttributes);
+    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Left, Dimensions->Bottom, BorderChars[YORIWIN_DRAW_BOTTOM_LEFT], TopAttributes);
     for (CellIndex = (WORD)(Dimensions->Left + 1); CellIndex < Dimensions->Right; CellIndex++) {
-        YoriWinSetControlNonClientCell(Ctrl, CellIndex, Dimensions->Bottom, BorderChars[6], BottomAttributes);
+        YoriWinSetControlNonClientCell(Ctrl, CellIndex, Dimensions->Bottom, BorderChars[YORIWIN_DRAW_BOTTOM_LINE], BottomAttributes);
     }
-    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Right, Dimensions->Bottom, BorderChars[7], BottomAttributes);
+    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Right, Dimensions->Bottom, BorderChars[YORIWIN_DRAW_BOTTOM_RIGHT], BottomAttributes);
 
+    return TRUE;
+}
+
+/**
+ Draw a vertical split on the top and bottom of a border.  This routine
+ assumes the border has already been drawn.
+
+ @param Ctrl Pointer to the control to draw the split markers on.
+
+ @param Dimensions The dimensions of the border, used to determine the top
+        and bottom locations for split characters.
+
+ @param SplitOffset The horizontal offset to draw the split bar.
+
+ @param Attributes The color to use for the border.
+
+ @param BorderType Specifies if the border should be single or double line,
+        raised, lowered, or flat
+
+ @param MiddleAttributes On successful completion, updated to contain the
+        attributes to use to draw the split bar within the control's client
+        area.
+
+ @param MiddleChar On successful completion, updated to contain the
+        character to use to draw the split bar within the control's client
+        area.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinDrawVerticalSplitOnControl(
+    __inout PYORI_WIN_CTRL Ctrl,
+    __in PSMALL_RECT Dimensions,
+    __in WORD SplitOffset,
+    __in WORD Attributes,
+    __in WORD BorderType,
+    __out PWORD MiddleAttributes,
+    __out PTCHAR MiddleChar
+    )
+{
+    WORD TopAttributes;
+    WORD BottomAttributes;
+    CONST TCHAR* BorderChars;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(Ctrl));
+
+    YoriWinTranslateAttributesAndBorderStyle(WinMgrHandle, Attributes, BorderType, &TopAttributes, &BottomAttributes, &BorderChars);
+    YoriWinSetControlNonClientCell(Ctrl, SplitOffset, Dimensions->Top, BorderChars[YORIWIN_DRAW_TOP_T], TopAttributes);
+    YoriWinSetControlNonClientCell(Ctrl, SplitOffset, Dimensions->Bottom, BorderChars[YORIWIN_DRAW_BOTTOM_T], BottomAttributes);
+    *MiddleAttributes = TopAttributes;
+    *MiddleChar = BorderChars[YORIWIN_DRAW_MIDDLE_VERT_LINE];
     return TRUE;
 }
 

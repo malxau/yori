@@ -194,15 +194,15 @@ YoriDlgFindHex(
         return FALSE;
     }
 
-    Style = YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR;
+    Style = YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR | YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR;
 
     //
     //  The dialog wants space for three borders on the left, 16 3 cell
-    //  hex values, a space, 16 cell values, and 3 cells of borders on
-    //  the right.
+    //  hex values, a seperator, a space, 16 cell values, and 3 cells of
+    //  borders on the right.
     //
 
-    DialogWidth = 3 + 3 * 16 + 1 + 16 + 3;
+    DialogWidth = 3 + 3 * 16 + 1 + 1 + 16 + 3;
 
     //
     //  If the window manager can also fit an extra 10 cells for 8 chars of

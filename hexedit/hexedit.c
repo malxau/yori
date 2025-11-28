@@ -3,7 +3,7 @@
  *
  * Yori shell hex editor
  *
- * Copyright (c) 2020-2023 Malcolm J. Smith
+ * Copyright (c) 2020-2025 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,7 +53,7 @@ CHAR strHexEditHelpText[] =
  The copyright year string to display with license text.
  */
 const
-TCHAR strHexEditCopyrightYear[] = _T("2020-2023");
+TCHAR strHexEditCopyrightYear[] = _T("2020-2025");
 
 /**
  Display usage text to the user.
@@ -2364,7 +2364,7 @@ HexEditViewNoOffsetButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
 
-    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, 0)) {
+    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR)) {
         HexEditContext->OffsetWidth = 0;
     }
 }
@@ -2385,7 +2385,7 @@ HexEditViewShortOffsetButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
 
-    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, YORI_WIN_HEX_EDIT_STYLE_OFFSET)) {
+    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR | YORI_WIN_HEX_EDIT_STYLE_OFFSET)) {
         HexEditContext->OffsetWidth = 32;
     }
 }
@@ -2406,7 +2406,7 @@ HexEditViewLongOffsetButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
 
-    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) {
+    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) {
         HexEditContext->OffsetWidth = 64;
     }
 }
@@ -3008,10 +3008,16 @@ HexEditCreateMainWindow(
         return FALSE;
     }
 
+    //
+    //  The window consists of a border, possibly offset, hex digits and char
+    //  (4 cells per byte), a seperator, space, and another border.  See how
+    //  much offset, if any, fits within the window and default to that.
+    //
+
     if (HexEditContext->OffsetWidth == (UCHAR)-1) {
-        if (WindowSize.X < 77) {
+        if (WindowSize.X < (1 + 10 + YORI_LIB_HEXDUMP_BYTES_PER_LINE * 4 + 1 + 1 + 1)) {
             HexEditContext->OffsetWidth = 0;
-        } else if (WindowSize.X < 86) {
+        } else if (WindowSize.X < (1 + 19 + YORI_LIB_HEXDUMP_BYTES_PER_LINE * 4 + 1 + 1 + 1)) {
             HexEditContext->OffsetWidth = 32;
         } else {
             HexEditContext->OffsetWidth = 64;
@@ -3043,7 +3049,9 @@ HexEditCreateMainWindow(
     } else if (HexEditContext->OffsetWidth == 32) {
         Style = YORI_WIN_HEX_EDIT_STYLE_OFFSET;
     }
-    HexEdit = YoriWinHexEditCreate(Parent, NULL, &Rect, HexEditContext->BytesPerWord, YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR | Style);
+
+    Style = Style | YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR | YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR;
+    HexEdit = YoriWinHexEditCreate(Parent, NULL, &Rect, HexEditContext->BytesPerWord, Style);
     if (HexEdit == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);

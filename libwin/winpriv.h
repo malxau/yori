@@ -538,6 +538,17 @@ YoriWinDrawSingleLineBorderOnControl(
     __in WORD BorderType
     );
 
+BOOLEAN
+YoriWinDrawVerticalSplitOnControl(
+    __inout PYORI_WIN_CTRL Ctrl,
+    __in PSMALL_RECT Dimensions,
+    __in WORD SplitOffset,
+    __in WORD Attributes,
+    __in WORD BorderType,
+    __out PWORD MiddleAttributes,
+    __out PTCHAR MiddleChar
+    );
+
 // COLOR.C
 
 /**
@@ -968,6 +979,80 @@ YoriWinZOrderListEntryFromWindow(
     );
 
 // WINMGR.C
+
+/**
+ The offset within CharacterSet for the top left character.
+ */
+#define YORIWIN_DRAW_TOP_LEFT                    (0x0000)
+
+/**
+ The offset within CharacterSet for the top line character.
+ */
+#define YORIWIN_DRAW_TOP_LINE                    (0x0001)
+
+/**
+ The offset within CharacterSet for a 'T' character indicating the start of
+ a vertical split.
+ */
+#define YORIWIN_DRAW_TOP_T                       (0x0002)
+
+/**
+ The offset within CharacterSet for the top right character.
+ */
+#define YORIWIN_DRAW_TOP_RIGHT                   (0x0003)
+
+/**
+ The offset within CharacterSet for the left line character.
+ */
+#define YORIWIN_DRAW_LEFT_LINE                   (0x0004)
+
+/**
+ The offset within CharacterSet for a 'T' character indicating the start of
+ a horizontal split.
+ */
+#define YORIWIN_DRAW_LEFT_T                      (0x0005)
+
+/**
+ The offset within CharacterSet for a vertical line used as part of a split.
+ */
+#define YORIWIN_DRAW_MIDDLE_VERT_LINE            (0x0006)
+
+/**
+ The offset within CharacterSet for a horizontal line used as part of a split.
+ */
+#define YORIWIN_DRAW_MIDDLE_HORIZ_LINE           (0x0007)
+
+/**
+ The offset within CharacterSet for the right line character.
+ */
+#define YORIWIN_DRAW_RIGHT_LINE                  (0x0008)
+
+/**
+ The offset within CharacterSet for a 'T' character indicating the end of
+ a horizontal split.
+ */
+#define YORIWIN_DRAW_RIGHT_T                     (0x0009)
+
+/**
+ The offset within CharacterSet for the bottom left character.
+ */
+#define YORIWIN_DRAW_BOTTOM_LEFT                 (0x000A)
+
+/**
+ The offset within CharacterSet for the bottom line character.
+ */
+#define YORIWIN_DRAW_BOTTOM_LINE                 (0x000B)
+
+/**
+ The offset within CharacterSet for a 'T' character indicating the end of
+ a vertical split.
+ */
+#define YORIWIN_DRAW_BOTTOM_T                    (0x000C)
+
+/**
+ The offset within CharacterSet for the bottom right character.
+ */
+#define YORIWIN_DRAW_BOTTOM_RIGHT                (0x000D)
 
 BOOLEAN
 YoriWinMgrAlwaysDisplayAccelerators(VOID);
