@@ -202,7 +202,7 @@ YoriDlgFindHex(
     //  borders on the right.
     //
 
-    DialogWidth = 3 + 3 * 16 + 1 + 1 + 16 + 3;
+    DialogWidth = 3 + 4 * YORI_LIB_HEXDUMP_BYTES_PER_LINE + 1 + 1 + 3;
 
     //
     //  If the window manager can also fit an extra 10 cells for 8 chars of

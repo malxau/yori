@@ -219,8 +219,22 @@ RegeditEditBinaryValue(
     Area.Bottom = (WORD)(WindowSize.Y - 4);
 
     Style = ValueReadOnly?YORI_WIN_HEX_EDIT_STYLE_READ_ONLY:0;
-    Style = Style | YORI_WIN_HEX_EDIT_STYLE_OFFSET;
     Style = Style | YORI_WIN_HEX_EDIT_STYLE_VERTICAL_SEPERATOR;
+
+    //
+    //  If the control is wide enough to display an offset, include it.
+    //  This needs a one cell border, 10 cells for "01234567: ", 3 cells
+    //  per hex representation of a byte, one cell per character
+    //  representation, a space and vertical seperator between them, and
+    //  a right border.
+    //
+
+    if ((Area.Right - Area.Left + 1) >=
+        (1 + 10 + 4 * YORI_LIB_HEXDUMP_BYTES_PER_LINE + 1 + 1 + 1)) {
+
+        Style = Style | YORI_WIN_HEX_EDIT_STYLE_OFFSET;
+    }
+
 
     ValueEdit = YoriWinHexEditCreate(Parent, NULL, &Area, 1, Style);
     if (ValueEdit == NULL) {
