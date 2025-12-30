@@ -3,7 +3,7 @@
  *
  * Yori shell registry editor
  *
- * Copyright (c) 2019-2022 Malcolm J. Smith
+ * Copyright (c) 2019-2025 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,7 @@ CHAR strRegeditHelpText[] =
  The copyright year string to display with license text.
  */
 const
-TCHAR strRegeditCopyrightYear[] = _T("2022");
+TCHAR strRegeditCopyrightYear[] = _T("2022-2025");
 
 /**
  Display usage text to the user.
@@ -657,7 +657,8 @@ RegeditEditSelectedValue(
     __in YORI_ALLOC_SIZE_T SelectedValueIndex
     )
 {
-    YORI_STRING ValueName;
+    YORI_STRING OriginalValueName;
+    YORI_STRING NewValueName;
     YORI_STRING Value;
     YORI_STRING Title;
     YORI_STRING ButtonText[1];
@@ -672,8 +673,9 @@ RegeditEditSelectedValue(
 
     UNREFERENCED_PARAMETER(KeyList);
 
-    YoriLibInitEmptyString(&ValueName);
-    YoriWinListGetItemText(ValueList, SelectedValueIndex, &ValueName);
+    YoriLibInitEmptyString(&OriginalValueName);
+    YoriLibInitEmptyString(&NewValueName);
+    YoriWinListGetItemText(ValueList, SelectedValueIndex, &OriginalValueName);
 
     //
     //  If the key can't be opened with KEY_SET_VALUE, open it with KEY_READ
@@ -687,7 +689,7 @@ RegeditEditSelectedValue(
         Err = DllAdvApi32.pRegOpenKeyExW(RegeditContext->ActiveRootKey, RegeditContext->Subkey.StartOfString, 0, KEY_READ, &Key);
     }
     if (Err != ERROR_SUCCESS) {
-        YoriLibFreeStringContents(&ValueName);
+        YoriLibFreeStringContents(&OriginalValueName);
         RegeditDisplayWin32Error(Parent, Err);
         return;
     }
@@ -699,11 +701,11 @@ RegeditEditSelectedValue(
     while(TRUE) {
 
         DataSize = Value.LengthAllocated * sizeof(TCHAR);
-        Err = DllAdvApi32.pRegQueryValueExW(Key, ValueName.StartOfString, NULL, &DataType, DataPtr, &DataSize);
+        Err = DllAdvApi32.pRegQueryValueExW(Key, OriginalValueName.StartOfString, NULL, &DataType, DataPtr, &DataSize);
         if (Err != ERROR_SUCCESS && Err != ERROR_MORE_DATA) {
             RegeditDisplayWin32Error(Parent, Err);
             DllAdvApi32.pRegCloseKey(Key);
-            YoriLibFreeStringContents(&ValueName);
+            YoriLibFreeStringContents(&OriginalValueName);
             YoriLibFreeStringContents(&Value);
             return;
         }
@@ -711,7 +713,7 @@ RegeditEditSelectedValue(
         if (!YoriLibIsSizeAllocatable(DataSize)) {
             RegeditDisplayWin32Error(Parent, ERROR_NOT_ENOUGH_MEMORY);
             DllAdvApi32.pRegCloseKey(Key);
-            YoriLibFreeStringContents(&ValueName);
+            YoriLibFreeStringContents(&OriginalValueName);
             YoriLibFreeStringContents(&Value);
             return;
         }
@@ -768,17 +770,19 @@ RegeditEditSelectedValue(
                     Value.LengthInChars--;
                 }
 
+                YoriLibCloneString(&NewValueName, &OriginalValueName);
+
                 if (RegeditEditStringValue(RegeditContext,
                                            YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
-                                           &ValueName,
-                                           TRUE,
+                                           &NewValueName,
+                                           FALSE,
                                            &Value,
                                            ReadOnly)) {
 
                     ASSERT(YoriLibIsStringNullTerminated(&Value));
                     Value.LengthInChars++;
 
-                    Err = DllAdvApi32.pRegSetValueExW(Key, ValueName.StartOfString, 0, DataType, (LPBYTE)Value.StartOfString, Value.LengthInChars * sizeof(TCHAR));
+                    Err = DllAdvApi32.pRegSetValueExW(Key, NewValueName.StartOfString, 0, DataType, (LPBYTE)Value.StartOfString, Value.LengthInChars * sizeof(TCHAR));
 
                     if (Err != ERROR_SUCCESS) {
                         RegeditDisplayWin32Error(Parent, Err);
@@ -794,15 +798,17 @@ RegeditEditSelectedValue(
                     LongData = Data;
                 }
 
+                YoriLibCloneString(&NewValueName, &OriginalValueName);
+
                 if (RegeditEditNumericValue(RegeditContext,
                                             YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
-                                            &ValueName,
-                                            TRUE,
+                                            &NewValueName,
+                                            FALSE,
                                             &LongData,
                                             ReadOnly)) {
 
                     Data = (DWORD)LongData;
-                    Err = DllAdvApi32.pRegSetValueExW(Key, ValueName.StartOfString, 0, DataType, (LPBYTE)&Data, sizeof(DWORD));
+                    Err = DllAdvApi32.pRegSetValueExW(Key, NewValueName.StartOfString, 0, DataType, (LPBYTE)&Data, sizeof(DWORD));
                     if (Err != ERROR_SUCCESS) {
                         RegeditDisplayWin32Error(Parent, Err);
                     }
@@ -814,14 +820,16 @@ RegeditEditSelectedValue(
                     Data = (YORI_MAX_UNSIGNED_T)(*(PDWORDLONG)Value.StartOfString);
                 }
 
+                YoriLibCloneString(&NewValueName, &OriginalValueName);
+
                 if (RegeditEditNumericValue(RegeditContext,
                                             YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
-                                            &ValueName,
-                                            TRUE,
+                                            &NewValueName,
+                                            FALSE,
                                             &Data,
                                             ReadOnly)) {
 
-                    Err = DllAdvApi32.pRegSetValueExW(Key, ValueName.StartOfString, 0, DataType, (LPBYTE)&Data, sizeof(DWORDLONG));
+                    Err = DllAdvApi32.pRegSetValueExW(Key, NewValueName.StartOfString, 0, DataType, (LPBYTE)&Data, sizeof(DWORDLONG));
                     if (Err != ERROR_SUCCESS) {
                         RegeditDisplayWin32Error(Parent, Err);
                     }
@@ -830,10 +838,11 @@ RegeditEditSelectedValue(
                 PUCHAR Data;
                 Data = (PUCHAR)Value.StartOfString;
                 NativeDataSize = (YORI_ALLOC_SIZE_T)DataSize;
+                YoriLibCloneString(&NewValueName, &OriginalValueName);
                 if (RegeditEditBinaryValue(RegeditContext,
                                            YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
-                                           &ValueName,
-                                           TRUE,
+                                           &NewValueName,
+                                           FALSE,
                                            &Data,
                                            &NativeDataSize,
                                            ReadOnly)) {
@@ -848,17 +857,32 @@ RegeditEditSelectedValue(
                     Value.StartOfString = (LPTSTR)Data;
                     DataSize = NativeDataSize;
 
-                    Err = DllAdvApi32.pRegSetValueExW(Key, ValueName.StartOfString, 0, DataType, (LPBYTE)Data, DataSize);
+                    Err = DllAdvApi32.pRegSetValueExW(Key, NewValueName.StartOfString, 0, DataType, (LPBYTE)Data, DataSize);
                     if (Err != ERROR_SUCCESS) {
                         RegeditDisplayWin32Error(Parent, Err);
                     }
                 }
             }
             // MSFIX multi string
+
+            if (YoriLibCompareString(&NewValueName, &OriginalValueName) != 0) {
+                Err = DllAdvApi32.pRegDeleteValueW(Key, OriginalValueName.StartOfString);
+                if (Err != ERROR_SUCCESS) {
+                    RegeditDisplayWin32Error(Parent, Err);
+                }
+                RegeditRefreshView(RegeditContext, Parent);
+            }
             break;
         }
 
         YoriLibFreeStringContents(&Value);
+
+        //
+        //  NewValueName should only be used once the value has been queried
+        //  and is being modified, so no attempt is made to free it here
+        //
+
+        ASSERT(NewValueName.MemoryToFree == NULL);
 
         //
         //  Allocate buffer, rounding up to the next TCHAR, since the values
@@ -868,12 +892,12 @@ RegeditEditSelectedValue(
         CharsRequired = (DataSize + sizeof(TCHAR) - 1) / sizeof(TCHAR);
         if (!YoriLibIsSizeAllocatable(CharsRequired)) {
             DllAdvApi32.pRegCloseKey(Key);
-            YoriLibFreeStringContents(&ValueName);
+            YoriLibFreeStringContents(&OriginalValueName);
             return;
         }
         if (!YoriLibAllocateString(&Value, (YORI_ALLOC_SIZE_T)CharsRequired)) {
             DllAdvApi32.pRegCloseKey(Key);
-            YoriLibFreeStringContents(&ValueName);
+            YoriLibFreeStringContents(&OriginalValueName);
             return;
         }
         DataPtr = Value.StartOfString;
@@ -881,7 +905,8 @@ RegeditEditSelectedValue(
 
     DllAdvApi32.pRegCloseKey(Key);
 
-    YoriLibFreeStringContents(&ValueName);
+    YoriLibFreeStringContents(&OriginalValueName);
+    YoriLibFreeStringContents(&NewValueName);
     YoriLibFreeStringContents(&Value);
 
     YoriWinListSetActiveOption(ValueList, SelectedValueIndex);

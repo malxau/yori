@@ -212,7 +212,7 @@ RegeditEditStringValue(
         YoriWinDestroyWindow(Parent);
         return FALSE;
     }
-    if (ValueNameReadOnly) {
+    if (ValueNameReadOnly || ValueName->LengthInChars > 0) {
         YoriWinSetFocus(Parent, ValueEdit);
     }
     YoriWinEditSetSelectionRange(ValueEdit, 0, Value->LengthInChars);

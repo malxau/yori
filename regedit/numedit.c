@@ -405,7 +405,7 @@ RegeditEditNumericValue(
         return FALSE;
     }
     YoriWinSetControlId(ValueEdit, RegeditNumeditControlValue);
-    if (ValueNameReadOnly) {
+    if (ValueNameReadOnly || ValueName->LengthInChars > 0) {
         YoriWinSetFocus(Parent, ValueEdit);
     }
     YoriWinEditSetSelectionRange(ValueEdit, 0, NewValue.LengthInChars);
