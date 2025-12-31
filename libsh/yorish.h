@@ -797,11 +797,4 @@ YoriLibShRemoveEscapesFromArgCArgV(
     __inout PYORI_STRING ArgV
     );
 
-__success(return)
-BOOLEAN
-YoriLibShRemoveEscapesFromCmdContext(
-    __in PYORI_LIBSH_CMD_CONTEXT EscapedCmdContext,
-    __out PYORI_LIBSH_CMD_CONTEXT NoEscapedCmdContext
-    );
-
 // vim:sw=4:ts=4:et:

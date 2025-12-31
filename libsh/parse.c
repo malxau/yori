@@ -1391,41 +1391,6 @@ YoriLibShRemoveEscapesFromArgCArgV(
 }
 
 /**
- Remove escapes from an existing CmdContext.  This is used before invoking a
- builtin which expects ArgC/ArgV formed arguments, but does not want escapes
- preserved.
-
- @param EscapedCmdContext Pointer to the command context which may contain
-        escapes.
-
- @param NoEscapedCmdContext On successful completion, updated to contain a
-        CmdContext which does not contain escapes.  This may refer to
-        referenced instances of the strings from EscapedCmdContext if no
-        changes needed to be made.
-
- @return TRUE to indicate all escapes were removed, FALSE if not all could
-         be successfully processed.
- */
-__success(return)
-BOOLEAN
-YoriLibShRemoveEscapesFromCmdContext(
-    __in PYORI_LIBSH_CMD_CONTEXT EscapedCmdContext,
-    __out PYORI_LIBSH_CMD_CONTEXT NoEscapedCmdContext
-    )
-{
-    //
-    //  MSFIX: This will perform a memory allocation which could be
-    //  optimized away if no escapes are found
-    //
-
-    if (!YoriLibShCopyCmdContext(NoEscapedCmdContext, EscapedCmdContext)) {
-        return FALSE;
-    }
-
-    return YoriLibShRemoveEscapesFromArgCArgV(NoEscapedCmdContext->ArgC, NoEscapedCmdContext->ArgV);
-}
-
-/**
  Take a command argument from one command context and "copy" it to another.
  Because memory is reference counted, this typically means copy a pointer
  and reference it.  This function is responsible for migrating the
