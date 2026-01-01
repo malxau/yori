@@ -99,6 +99,13 @@ typedef struct _CUT_CONTEXT {
     BOOLEAN CaseInsensitive;
 
     /**
+     TRUE if an entire line with a match should be displayed (similar to
+     grep.)  FALSE if the output should commence from the matching text,
+     subject to some offset, potentially negative.
+     */
+    BOOLEAN DisplayEntireMatchingLine;
+
+    /**
      Start processing the line from any matching text.  If empty, the entire
      line is used.
      */
@@ -127,7 +134,7 @@ typedef struct _CUT_CONTEXT {
     /**
      Indicates the offset of the line or field, in bytes, that is of interest.
      */
-    YORI_MAX_UNSIGNED_T DesiredOffset;
+    YORI_MAX_SIGNED_T DesiredOffset;
 
     /**
      Indicates the length of the range that is of interest.
@@ -167,6 +174,7 @@ CutProcessHandleLines(
     PVOID LineContext = NULL;
     YORI_STRING LineString;
     YORI_ALLOC_SIZE_T DesiredOffset;
+    YORI_ALLOC_SIZE_T ReverseOffset;
     YORI_ALLOC_SIZE_T DesiredLength;
 
     //
@@ -175,7 +183,8 @@ CutProcessHandleLines(
     //  unrealistic that anyone would actually want to support one.
     //  
 
-    DesiredOffset = (YORI_ALLOC_SIZE_T)CutContext->DesiredOffset;
+    DesiredOffset = (YORI_ALLOC_SIZE_T)(CutContext->DesiredOffset > 0 ? CutContext->DesiredOffset : 0);
+    ReverseOffset = (YORI_ALLOC_SIZE_T)(CutContext->DesiredOffset < 0 ? -CutContext->DesiredOffset : 0);
     DesiredLength = (YORI_ALLOC_SIZE_T)CutContext->DesiredLength;
 
     YoriLibInitEmptyString(&LineString);
@@ -205,8 +214,15 @@ CutProcessHandleLines(
             }
 
             if (MatchFound) {
-                MatchingSubset.StartOfString = &MatchingSubset.StartOfString[OffsetOfMatch];
-                MatchingSubset.LengthInChars = (YORI_ALLOC_SIZE_T)(MatchingSubset.LengthInChars - OffsetOfMatch);
+                if (!CutContext->DisplayEntireMatchingLine) {
+                    if (OffsetOfMatch >= ReverseOffset) {
+                        OffsetOfMatch -= ReverseOffset;
+                        MatchingSubset.StartOfString = &MatchingSubset.StartOfString[OffsetOfMatch];
+                        MatchingSubset.LengthInChars = (YORI_ALLOC_SIZE_T)(MatchingSubset.LengthInChars - OffsetOfMatch);
+                    } else { 
+                        MatchingSubset.LengthInChars = 0;
+                    }
+                }
             } else {
                 MatchingSubset.LengthInChars = 0;
             }
@@ -332,7 +348,7 @@ CutProcessStreamOffset(
         //
 
         CurrentOffset = YoriLibLiGetUnsigned(&StreamOffset);
-        if (CurrentOffset + BytesReturned <= CutContext->DesiredOffset) {
+        if (CurrentOffset + BytesReturned <= (YORI_MAX_UNSIGNED_T)CutContext->DesiredOffset) {
             YoriLibLiAssignUnsigned(&StreamOffset, CurrentOffset + BytesReturned);
             continue;
         }
@@ -346,7 +362,7 @@ CutProcessStreamOffset(
         //
 
         BufferDisplayOffset = 0;
-        if (CurrentOffset < CutContext->DesiredOffset) {
+        if (CurrentOffset < (YORI_MAX_UNSIGNED_T)CutContext->DesiredOffset) {
             BufferDisplayOffset = (DWORD)(CutContext->DesiredOffset - CurrentOffset);
             LengthToDisplay -= BufferDisplayOffset;
         }
@@ -590,11 +606,23 @@ ENTRYPOINT(
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("o")) == 0) {
-                if (ArgC > i + 1) {
+                if (CutContext.FieldDelimited) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Offsets incompatible with field delimiters\n"));
+                } else if (ArgC > i + 1) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
-                        CutContext.DesiredOffset = Temp;
-                        ArgumentUnderstood = TRUE;
-                        i++;
+                        if (Temp < 0 && CutContext.RawFile) {
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Negative offsets incompatible with raw file\n"));
+                        } else {
+                            if (ArgV[i + 1].LengthInChars > 0 &&
+                                ArgV[i + 1].StartOfString[0] == '-' &&
+                                Temp == 0) {
+
+                                CutContext.DisplayEntireMatchingLine = TRUE;
+                            }
+                            CutContext.DesiredOffset = Temp;
+                            ArgumentUnderstood = TRUE;
+                            i++;
+                        }
                     }
                 }
             } else if (YoriLibCompareStringLitIns(&Arg, _T("l")) == 0) {
@@ -610,6 +638,8 @@ ENTRYPOINT(
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
                         if (CutContext.RawFile) {
                             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Field delimiting incompatible with raw file\n"));
+                        } else if (CutContext.DesiredOffset != 0) {
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Offsets incompatible with field delimiters\n"));
                         } else {
                             CutContext.FieldDelimited = TRUE;
                             CutContext.FieldOfInterest = (YORI_ALLOC_SIZE_T)Temp;
@@ -632,6 +662,8 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringLitIns(&Arg, _T("r")) == 0) {
                 if (CutContext.FieldDelimited) {
                     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Field delimiting incompatible with raw file\n"));
+                } else if (CutContext.DesiredOffset < 0) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Negative offsets incompatible with raw file\n"));
                 } else {
                     CutContext.RawFile = TRUE;
                     ArgumentUnderstood = TRUE;
