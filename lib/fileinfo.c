@@ -367,6 +367,7 @@ YoriLibCollectAllocationSize (
         LPTSTR FinalSeperator;
         YORI_STRING ParentPath;
         DWORD ClusterSize;
+        YORI_MAX_UNSIGNED_T LongClusterSize;
 
         ClusterSize = 4 * 1024;
         YoriLibInitEmptyString(&ParentPath);
@@ -411,7 +412,9 @@ YoriLibCollectAllocationSize (
         Entry->AllocationSize.LowPart = FindData->nFileSizeLow;
         Entry->AllocationSize.HighPart = FindData->nFileSizeHigh;
 
-        Entry->AllocationSize.QuadPart = (Entry->AllocationSize.QuadPart + ClusterSize - 1) & (~(ClusterSize - 1));
+        LongClusterSize = ClusterSize;
+
+        Entry->AllocationSize.QuadPart = (Entry->AllocationSize.QuadPart + ClusterSize - 1) & (~(LongClusterSize - 1));
     }
 
     return TRUE;
