@@ -74,10 +74,10 @@ __success(return)
 DWORD
 YoriDlgMessageBox(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
-    __in PYORI_STRING Title,
-    __in PYORI_STRING Text,
+    __in PCYORI_STRING Title,
+    __in PCYORI_STRING Text,
     __in DWORD NumButtons,
-    __in PYORI_STRING ButtonTexts,
+    __in PCYORI_STRING ButtonTexts,
     __in DWORD DefaultIndex,
     __in DWORD CancelIndex
     )

@@ -341,7 +341,7 @@ PYORI_WIN_CTRL_HANDLE
 YoriWinButtonCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
     __in PSMALL_RECT Size,
-    __in PYORI_STRING Caption,
+    __in PCYORI_STRING Caption,
     __in DWORD Style,
     __in_opt PYORI_WIN_NOTIFY ClickCallback
     )

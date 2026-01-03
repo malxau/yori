@@ -407,7 +407,7 @@ YoriWinLabelTrimSwallowChars(
 YORI_ALLOC_SIZE_T
 YoriWinLabelCountLinesRequiredForText(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
-    __in PYORI_STRING Text,
+    __in PCYORI_STRING Text,
     __in YORI_ALLOC_SIZE_T CtrlWidth,
     __out_opt PYORI_ALLOC_SIZE_T MaximumWidth
     )
@@ -942,7 +942,7 @@ PYORI_WIN_CTRL_HANDLE
 YoriWinLabelCreate(
     __in PYORI_WIN_CTRL_HANDLE ParentHandle,
     __in PSMALL_RECT Size,
-    __in PYORI_STRING Caption,
+    __in PCYORI_STRING Caption,
     __in DWORD Style
     )
 {
