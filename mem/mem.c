@@ -3,7 +3,7 @@
  *
  * Yori shell display memory usage
  *
- * Copyright (c) 2019-2023 Malcolm J. Smith
+ * Copyright (c) 2019-2026 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,7 @@ CHAR strMemHelpText[] =
         "\n"
         "   -c             Display memory usage of processes the user has access to\n"
         "   -g             Count all processes with the same name together\n"
+        "   -k             Display kernel pool usage information\n"
         "\n"
         "Format specifiers are:\n"
         "   $AVAILABLECOMMIT$      The amount of memory that the system has available\n"
@@ -305,7 +306,6 @@ MemGroupProcessNames(
     return TRUE;
 }
 
-
 /**
  Display the memory used by all processes that the current user has access
  to.
@@ -487,6 +487,140 @@ MemDisplayProcessMemoryUsage(
     return TRUE;
 }
 
+/**
+ Display the memory used by different kernel pool tags.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+MemDisplayKernelPoolUsage(VOID)
+{
+    PYORI_POOLTAG_INFORMATION PoolTagInfo = NULL;
+    PYORI_SYSTEM_POOLTAG *SortedTags;
+    PYORI_SYSTEM_POOLTAG PoolTag;
+    DWORD BytesReturned;
+    YORI_ALLOC_SIZE_T BytesAllocated;
+    LONG Status;
+    DWORD TagIndex;
+    DWORD CurrentTagIndex;
+    LARGE_INTEGER liPaged;
+    LARGE_INTEGER liNonpaged;
+    YORI_STRING PagedString;
+    YORI_STRING NonpagedString;
+    TCHAR PagedBuffer[6];
+    TCHAR NonpagedBuffer[6];
+
+    YoriLibInitEmptyString(&PagedString);
+    YoriLibInitEmptyString(&NonpagedString);
+
+    PagedString.StartOfString = PagedBuffer;
+    PagedString.LengthAllocated = sizeof(PagedBuffer)/sizeof(PagedBuffer[0]);
+
+    NonpagedString.StartOfString = NonpagedBuffer;
+    NonpagedString.LengthAllocated = sizeof(NonpagedBuffer)/sizeof(NonpagedBuffer[0]);
+
+    if (DllNtDll.pNtQuerySystemInformation == NULL) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("OS support not present\n"));
+        return FALSE;
+    }
+
+    BytesAllocated = 0;
+
+    do {
+
+        if (PoolTagInfo != NULL) {
+            YoriLibFree(PoolTagInfo);
+        }
+
+        if (BytesAllocated == 0) {
+            BytesAllocated = YoriLibMaximumAllocationInRange(16 * 1024, 64 * 1024);
+        } else if (BytesAllocated <= 1024 * 1024) {
+            BytesAllocated = YoriLibMaximumAllocationInRange(BytesAllocated * 2, BytesAllocated * 4);
+        } else {
+            return FALSE;
+        }
+
+        if (BytesAllocated == 0) {
+            return FALSE;
+        }
+
+        PoolTagInfo = YoriLibMalloc(BytesAllocated);
+        if (PoolTagInfo == NULL) {
+            return FALSE;
+        }
+
+        Status = DllNtDll.pNtQuerySystemInformation(SystemPoolTagInformation, PoolTagInfo, BytesAllocated, &BytesReturned);
+    } while (Status == STATUS_INFO_LENGTH_MISMATCH);
+
+
+    if (Status != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("NtQuerySystemInformation returned %08x\n"), Status);
+        YoriLibFree(PoolTagInfo);
+        return FALSE;
+    }
+
+    if (BytesReturned == 0) {
+        YoriLibFree(PoolTagInfo);
+        return FALSE;
+    }
+
+    //
+    //  Allocate the sort array.
+    //
+
+    SortedTags = YoriLibMalloc(PoolTagInfo->u.Count * sizeof(PYORI_SYSTEM_POOLTAG));
+    if (SortedTags == NULL) {
+        YoriLibFree(PoolTagInfo);
+        return FALSE;
+    }
+
+    //
+    //  Go through the list of processes and calculate it into sorted order.
+    //
+
+    for (TagIndex = 0; TagIndex < PoolTagInfo->u.Count; TagIndex++) {
+        PoolTag = &PoolTagInfo->TagInfo[TagIndex];
+        CurrentTagIndex = TagIndex;
+        do {
+            if (CurrentTagIndex > 0 &&
+                SortedTags[CurrentTagIndex - 1]->PagedUsed + SortedTags[CurrentTagIndex - 1]->NonPagedUsed < PoolTag->PagedUsed + PoolTag->NonPagedUsed) {
+                SortedTags[CurrentTagIndex] = SortedTags[CurrentTagIndex - 1];
+            } else {
+                break;
+            }
+            CurrentTagIndex--;
+        } while(CurrentTagIndex > 0);
+        SortedTags[CurrentTagIndex] = PoolTag;
+    }
+
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" Tag | NonPaged   | Paged\n"));
+    for (TagIndex = 0; TagIndex < PoolTagInfo->u.Count; TagIndex++) {
+
+        PoolTag = SortedTags[TagIndex];
+
+        if (PoolTag->PagedUsed + PoolTag->NonPagedUsed == 0) {
+            break;
+        }
+
+        //
+        //  Hack to fix formats
+        //
+
+        liPaged.QuadPart = PoolTag->PagedUsed;
+        liNonpaged.QuadPart = PoolTag->NonPagedUsed;
+        YoriLibFileSizeToString(&PagedString, &liPaged);
+        YoriLibFileSizeToString(&NonpagedString, &liNonpaged);
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c%c%c%c | %-10y | %y\n"), PoolTag->TagChars[0], PoolTag->TagChars[1], PoolTag->TagChars[2], PoolTag->TagChars[3], &NonpagedString, &PagedString);
+    }
+
+    YoriLibFree(PoolTagInfo);
+    YoriLibFree(SortedTags);
+    return TRUE;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the mem builtin command.
@@ -519,6 +653,7 @@ ENTRYPOINT(
     YORI_ALLOC_SIZE_T i;
     YORI_ALLOC_SIZE_T StartArg = 0;
     BOOLEAN DisplayProcesses = FALSE;
+    BOOLEAN DisplayKernelPoolUsage = FALSE;
     BOOLEAN GroupProcesses = FALSE;
     BOOLEAN DisplayGraph = TRUE;
     YORI_STRING Arg;
@@ -543,13 +678,16 @@ ENTRYPOINT(
                 MemHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019"));
+                YoriLibDisplayMitLicense(_T("2019-2026"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("c")) == 0) {
                 DisplayProcesses = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringLitIns(&Arg, _T("g")) == 0) {
                 GroupProcesses = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringLitIns(&Arg, _T("k")) == 0) {
+                DisplayKernelPoolUsage = TRUE;
                 ArgumentUnderstood = TRUE;
             }
         } else {
@@ -574,6 +712,10 @@ ENTRYPOINT(
 
     if (DisplayProcesses) {
         MemDisplayProcessMemoryUsage(GroupProcesses);
+    }
+
+    if (DisplayKernelPoolUsage) {
+        MemDisplayKernelPoolUsage();
     }
 
     if (DllKernel32.pGlobalMemoryStatusEx != NULL) {

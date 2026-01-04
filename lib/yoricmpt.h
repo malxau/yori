@@ -1058,11 +1058,16 @@ typedef struct _YORI_LIB_PEB64 {
 #define SystemHandleInformation (16)
 
 /**
+ Definition of the system pool tag information enumeration class for
+ NtQuerySystemInformation .
+ */
+#define SystemPoolTagInformation (22)
+
+/**
  Definition of the system extended handle information enumeration class for
  NtQuerySystemInformation .
  */
 #define SystemExtendedHandleInformation (64)
-
 
 /**
  Information returned about every process in the system.
@@ -1355,6 +1360,75 @@ typedef struct _YORI_OBJECT_TYPE_INFORMATION {
      */
     DWORD Reserved[22];
 } YORI_OBJECT_TYPE_INFORMATION, *PYORI_OBJECT_TYPE_INFORMATION;
+
+/**
+ Information about a single pool tag.
+ */
+typedef struct _YORI_SYSTEM_POOLTAG {
+
+    /**
+     The pool tag in character format.
+     */
+    UCHAR TagChars[4];
+
+    /**
+     The number of paged allocations.
+     */
+    DWORD PagedAllocs;
+
+    /**
+     The number of paged frees.
+     */
+    DWORD PagedFrees;
+
+    /**
+     The amount of paged bytes used.
+     */
+    DWORD_PTR PagedUsed;
+
+    /**
+     The number of nonpaged allocations.
+     */
+    DWORD NonPagedAllocs;
+
+    /**
+     The number of nonpaged frees.
+     */
+    DWORD NonPagedFrees;
+
+    /**
+     The number of nonpaged bytes used.
+     */
+    DWORD_PTR NonPagedUsed;
+} YORI_SYSTEM_POOLTAG, *PYORI_SYSTEM_POOLTAG;
+
+/**
+ Information describing all of the pool tags observed by the system.
+ */
+typedef struct _YORI_POOLTAG_INFORMATION {
+
+    /**
+     Union of true type and padded type for 64 bit alignment.
+     */
+    union {
+
+        /**
+         The number of pool tags in the TagInfo array.
+         */
+        DWORD Count;
+
+        /**
+         Alignment for 64 bit systems.
+         */
+        DWORD_PTR CountPtr;
+    } u;
+
+    /**
+     A variable length array of information about all of the pool tags in the
+     system.
+     */
+    YORI_SYSTEM_POOLTAG TagInfo[1];
+} YORI_POOLTAG_INFORMATION, *PYORI_POOLTAG_INFORMATION;
 
 /**
  A structure describing how to take a live dump.
