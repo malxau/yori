@@ -4868,6 +4868,44 @@ typedef struct _YORI_MONITORINFO {
     DWORD dwFlags;
 } YORI_MONITORINFO, *PYORI_MONITORINFO;
 
+/**
+ The length of a device name, in characters.
+ */
+#define YORI_DEVICE_NAME_LENGTH 32
+
+/**
+ A context block of information returned from GetMonitorInfoW.
+ */
+typedef struct _YORI_MONITORINFOEX {
+
+    /**
+     The number of bytes in this structure.  Must be initialized before the
+     call to GetMonitorInfoW.
+     */
+    DWORD cbSize;
+
+    /**
+     The region of the virtual display occupied by this monitor.
+     */
+    RECT rcMonitor;
+
+    /**
+     The active work area within this monitor.
+     */
+    RECT rcWork;
+
+    /**
+     Flags.
+     */
+    DWORD dwFlags;
+
+    /**
+     The device name.
+     */
+    TCHAR szDevice[YORI_DEVICE_NAME_LENGTH];
+
+} YORI_MONITORINFOEX, *PYORI_MONITORINFOEX;
+
 #ifndef MONITORINFOF_PRIMARY
 /**
  A definition for the flag indicating a primary monitor if it is not defined
@@ -4895,6 +4933,78 @@ typedef struct _YORI_MONITORINFO {
  If the window is not clearly on a monitor, return the closest monitor.
  */
 #define MONITOR_DEFAULTTONEAREST 0x02
+#endif
+
+/**
+ Information about a display device, which in turn hosts a monitor.
+ */
+typedef struct _YORI_DISPLAY_DEVICE {
+
+    /**
+     The number of bytes in this structure.
+     */
+    DWORD cbSize;
+
+    /**
+     The device (monitor) name.
+     */
+    TCHAR szDeviceName[YORI_DEVICE_NAME_LENGTH];
+
+    /**
+     Human readable string describing the device.
+     */
+    TCHAR szDeviceString[128];
+
+    /**
+     Flags describing the state of the device.
+     */
+    DWORD dwStateFlags;
+
+    /**
+     Unique identifier for the device.
+     */
+    TCHAR szDeviceId[128];
+
+    /**
+     Registry key for the device.
+     */
+    TCHAR szDeviceKey[128];
+
+} YORI_DISPLAY_DEVICE, *PYORI_DISPLAY_DEVICE;
+
+#ifndef DISPLAY_DEVICE_ATTACHED_TO_DESKTOP
+/**
+ The device is used to display part of the desktop.
+ */
+#define DISPLAY_DEVICE_ATTACHED_TO_DESKTOP (0x0001)
+#endif
+
+#ifndef DISPLAY_DEVICE_MIRRORING_DRIVER
+/**
+ Multi driver.  Not documented?
+ */
+#define DISPLAY_DEVICE_MULTI_DRIVER        (0x0002)
+#endif
+
+#ifndef DISPLAY_DEVICE_PRIMARY_DEVICE
+/**
+ Primary device.
+ */
+#define DISPLAY_DEVICE_PRIMARY_DEVICE      (0x0004)
+#endif
+
+#ifndef DISPLAY_DEVICE_MIRRORING_DRIVER
+/**
+ The device is mirrored to a different device.
+ */
+#define DISPLAY_DEVICE_MIRRORING_DRIVER    (0x0008)
+#endif
+
+#ifndef DISPLAY_DEVICE_VGA_COMPATIBLE
+/**
+ The device is VGA compatible.
+ */
+#define DISPLAY_DEVICE_VGA_COMPATIBLE      (0x0010)
 #endif
 
 #ifndef MS_DEF_PROV
@@ -10498,6 +10608,18 @@ ENUM_CLIPBOARD_FORMATS(DWORD);
 typedef ENUM_CLIPBOARD_FORMATS *PENUM_CLIPBOARD_FORMATS;
 
 /**
+ A prototype for the EnumDisplayDevicesW function.
+ */
+typedef
+BOOL WINAPI
+ENUM_DISPLAY_DEVICESW(LPCTSTR, DWORD, PYORI_DISPLAY_DEVICE, DWORD);
+
+/**
+ A prototype for a pointer to the EnumDisplayDevicesW function.
+ */
+typedef ENUM_DISPLAY_DEVICESW *PENUM_DISPLAY_DEVICESW;
+
+/**
  A prototype for the EnumDisplayMonitors function.
  */
 typedef
@@ -10979,6 +11101,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to EnumClipboardFormats.
      */
     PENUM_CLIPBOARD_FORMATS pEnumClipboardFormats;
+
+    /**
+     If it's available on the current system, a pointer to EnumDisplayDevicesW.
+     */
+    PENUM_DISPLAY_DEVICESW pEnumDisplayDevicesW;
 
     /**
      If it's available on the current system, a pointer to EnumDisplayMonitors.

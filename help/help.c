@@ -139,6 +139,7 @@ CHAR strHelpHelpText3[] =
         "MEM       Display memory usage information\n"
         "MKDIR     Creates directories\n"
         "MKLINK    Creates hardlinks, symbolic links, or junctions\n"
+        "MONINFO   Return information about monitors in the system\n"
         "MORE      Displays text one page at a time with scrolling\n"
         "MOUNT     Mounts or unmounts an ISO image\n"
         "MOVE      Moves or renames one or more files\n"

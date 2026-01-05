@@ -3,6 +3,7 @@
 ..\for\yfor.exe|yfor.exe
 ..\intcmp\yintcmp.exe|yintcmp.exe
 ..\make\ymake.exe|ymake.exe
+..\moninfo\moninfo.exe|moninfo.exe
 ..\regedit\yregedit.exe|yregedit.exe
 ..\shutdn\yshutdn.exe|yshutdn.exe
 ..\speak\yspeak.exe|yspeak.exe

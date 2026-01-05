@@ -141,6 +141,7 @@ DIRS2=iconv      \
       mem        \
       mkdir      \
       mklink     \
+      moninfo    \
       more       \
       mount      \
       move       \

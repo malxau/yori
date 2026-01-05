@@ -1,0 +1,9 @@
+
+#include <windows.h>
+
+#define YORI_CUSTOM_MANIFEST 1
+#include "../lib/yoriver.inc"
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "moninfo.man"
+
+// vim:sw=4:ts=4:et:

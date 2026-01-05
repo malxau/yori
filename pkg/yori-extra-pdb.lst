@@ -3,6 +3,7 @@
 ..\for\yfor.pdb|yfor.pdb
 ..\intcmp\yintcmp.pdb|yintcmp.pdb
 ..\make\ymake.pdb|ymake.pdb
+..\moninfo\moninfo.pdb|moninfo.pdb
 ..\regedit\yregedit.pdb|yregedit.pdb
 ..\shutdn\yshutdn.pdb|yshutdn.pdb
 ..\speak\yspeak.pdb|yspeak.pdb
