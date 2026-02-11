@@ -2673,8 +2673,10 @@ YoriWinHexEditCheckSelectionState(
 
  @param Mouse If TRUE, the selection is being initiated by mouse operations.
         If FALSE, the selection is being initiated by keyboard operations.
+
+ @return TRUE if a selection is now active, FALSE if it is not.
  */
-VOID
+BOOLEAN
 YoriWinHexEditStartSelectionAtCursor(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __in BOOLEAN Mouse
@@ -2706,7 +2708,7 @@ YoriWinHexEditStartSelectionAtCursor(
     }
 
     if (HexEdit->BufferValid == 0) {
-        return;
+        return FALSE;
     }
 
     //
@@ -2742,6 +2744,7 @@ YoriWinHexEditStartSelectionAtCursor(
 
         YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, FirstDirtyLine);
     }
+    return TRUE;
 }
 
 /**
@@ -3053,21 +3056,6 @@ YoriWinHexEditScrollForMouseSelect(
         NewCursorOffset = NewViewportLeft + MousePos->Pos.X;
     }
 
-    if (SetTimer) {
-        if (HexEdit->Timer == NULL) {
-            PYORI_WIN_WINDOW TopLevelWindow;
-            TopLevelWindow = YoriWinGetTopLevelWindow(&HexEdit->Ctrl);
-            HexEdit->Timer = YoriWinMgrAllocateRecurringTimer(YoriWinGetWindowManagerHandle(TopLevelWindow),
-                                                              &HexEdit->Ctrl,
-                                                              100);
-        }
-    } else {
-        if (HexEdit->Timer != NULL) {
-            YoriWinMgrFreeTimer(HexEdit->Timer);
-            HexEdit->Timer = NULL;
-        }
-    }
-
     CellType = YoriWinHexEditCellType(HexEdit, NewCursorLine, NewCursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
     BufferOffset = NewCursorLine;
     BufferOffset = BufferOffset * HexEdit->BytesPerLine + ByteOffset;
@@ -3090,11 +3078,30 @@ YoriWinHexEditScrollForMouseSelect(
             HexEdit->Selection.Active == YoriWinHexEditSelectMouseFromBottomUp) {
             YoriWinHexEditExtendSelectionToCursor(HexEdit, TRUE);
         } else {
-            YoriWinHexEditStartSelectionAtCursor(HexEdit, TRUE);
+            if (!YoriWinHexEditStartSelectionAtCursor(HexEdit, TRUE)) {
+                SetTimer = FALSE;
+            }
+        }
+
+        if (SetTimer) {
+            if (HexEdit->Timer == NULL) {
+                PYORI_WIN_WINDOW TopLevelWindow;
+                TopLevelWindow = YoriWinGetTopLevelWindow(&HexEdit->Ctrl);
+                HexEdit->Timer = YoriWinMgrAllocateRecurringTimer(YoriWinGetWindowManagerHandle(TopLevelWindow),
+                                                                  &HexEdit->Ctrl,
+                                                                  100);
+            }
         }
 
         YoriWinHexEditEnsureCursorVisible(HexEdit);
         YoriWinHexEditPaint(HexEdit);
+    }
+
+    if (!SetTimer) {
+        if (HexEdit->Timer != NULL) {
+            YoriWinMgrFreeTimer(HexEdit->Timer);
+            HexEdit->Timer = NULL;
+        }
     }
 }
 
@@ -4882,8 +4889,9 @@ YoriWinHexEditMouseDown(
         } else {
             YoriWinHexEditSetCursorLocationInternal(HexEdit, NewCursorChar, NewCursorLine);
         }
-        YoriWinHexEditStartSelectionAtCursor(HexEdit, TRUE);
-        HexEdit->MouseButtonDown = TRUE;
+        if (YoriWinHexEditStartSelectionAtCursor(HexEdit, TRUE)) {
+            HexEdit->MouseButtonDown = TRUE;
+        }
 
         YoriWinHexEditEnsureCursorVisible(HexEdit);
         YoriWinHexEditPaint(HexEdit);
